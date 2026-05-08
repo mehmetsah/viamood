@@ -27,9 +27,12 @@ const envSchema = z.object({
 
   // Shopify
   SHOPIFY_STORE_DOMAIN: z.string(),
-  SHOPIFY_ADMIN_ACCESS_TOKEN: z.string().optional(),
+  SHOPIFY_ADMIN_ACCESS_TOKEN: z.string().optional(), // legacy, custom app fallback
   SHOPIFY_API_VERSION: z.string().default('2025-01'),
   SHOPIFY_WEBHOOK_SECRET: z.string().optional(),
+  SHOPIFY_CLIENT_ID: z.string().optional(),
+  SHOPIFY_CLIENT_SECRET: z.string().optional(),
+  SHOPIFY_SCOPES: z.string().default('read_products,write_products,read_orders,write_orders,read_inventory,write_inventory,read_fulfillments,write_fulfillments,read_customers,read_locations'),
 
   // Iyzico
   IYZICO_API_KEY: z.string().optional(),
