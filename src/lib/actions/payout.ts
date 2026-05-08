@@ -7,6 +7,7 @@ import { z } from 'zod';
 import { db } from '@/db/client';
 import { commissionLedger, payouts, vendors } from '@/db/schema';
 import { auth } from '@/lib/auth';
+import { auditUser } from '@/lib/audit/logger';
 import type { ActionResult } from './auth';
 
 async function requireAdmin() {
@@ -132,12 +133,13 @@ export async function approvePayoutAction(formData: FormData): Promise<void> {
     })
     .where(eq(payouts.id, payoutId));
 
+  await auditUser(admin.id!, 'payout.approve', 'payout', payoutId);
   revalidatePath('/admin/payouts');
   revalidatePath(`/admin/payouts/${payoutId}`);
 }
 
 export async function markPayoutPaidAction(formData: FormData): Promise<void> {
-  await requireAdmin();
+  const admin = await requireAdmin();
   const payoutId = z.string().uuid().parse(formData.get('payoutId'));
   const externalRef = String(formData.get('externalReference') ?? '').slice(0, 200);
 
@@ -169,6 +171,31 @@ export async function markPayoutPaidAction(formData: FormData): Promise<void> {
       })
       .where(eq(vendors.id, p.vendorId));
   });
+
+  await auditUser(admin.id!, 'payout.paid', 'payout', payoutId, {
+    after: { externalReference: externalRef },
+  });
+
+  // Email vendor
+  const [info] = await db
+    .select({
+      vendorName: vendors.name,
+      vendorEmail: vendors.email,
+      netAmount: payouts.netAmountCents,
+    })
+    .from(payouts)
+    .innerJoin(vendors, eq(vendors.id, payouts.vendorId))
+    .where(eq(payouts.id, payoutId))
+    .limit(1);
+  if (info) {
+    const formatted = `${(Number(info.netAmount) / 100).toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ₺`;
+    const { payoutPaidEmail } = await import('@/lib/email/templates');
+    const { sendEmail } = await import('@/lib/email/sender');
+    void sendEmail({
+      to: info.vendorEmail,
+      ...payoutPaidEmail(info.vendorName, formatted, externalRef || null),
+    });
+  }
 
   revalidatePath('/admin/payouts');
   revalidatePath(`/admin/payouts/${payoutId}`);

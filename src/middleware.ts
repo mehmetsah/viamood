@@ -13,7 +13,7 @@ const PUBLIC_PATHS = new Set([
 ]);
 
 const ADMIN_PREFIX = '/admin';
-const VENDOR_PREFIXES = ['/dashboard', '/products', '/orders', '/inventory', '/payouts', '/onboarding'];
+const VENDOR_PREFIXES = ['/dashboard', '/products', '/orders', '/inventory', '/payouts', '/onboarding', '/profile'];
 
 export default auth((req) => {
   const { pathname } = req.nextUrl;

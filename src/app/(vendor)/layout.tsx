@@ -38,6 +38,9 @@ export default async function VendorLayout({ children }: { children: React.React
           <Link href="/payouts" className="px-3 py-2 rounded-lg hover:bg-neutral-100">
             💰 Ödemeler
           </Link>
+          <Link href="/profile" className="px-3 py-2 rounded-lg hover:bg-neutral-100">
+            ⚙️ Profil
+          </Link>
         </nav>
         <div className="p-3 border-t text-xs">
           <div className="text-neutral-500">{session.user.email}</div>

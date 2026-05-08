@@ -94,6 +94,10 @@ export async function vendorOnboardingAction(formData: FormData): Promise<Action
     slug = `${baseSlug}-${Math.random().toString(36).slice(2, 6)}`;
   }
 
+  // Welcome email (transaction'dan sonra ki tx commit olsun)
+  let createdVendorName = data.name;
+  let createdVendorEmail = data.email;
+
   // Transaction: vendor + membership
   await db.transaction(async (tx) => {
     const [created] = await tx
@@ -129,6 +133,18 @@ export async function vendorOnboardingAction(formData: FormData): Promise<Action
       acceptedAt: new Date(),
     });
   });
+
+  // Welcome email (best-effort)
+  try {
+    const { vendorWelcomeEmail } = await import('@/lib/email/templates');
+    const { sendEmail } = await import('@/lib/email/sender');
+    void sendEmail({
+      to: createdVendorEmail,
+      ...vendorWelcomeEmail(createdVendorName),
+    });
+  } catch {
+    // ignore
+  }
 
   redirect('/dashboard');
 }
