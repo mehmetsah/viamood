@@ -8,6 +8,10 @@ export const metadata: Metadata = {
   },
   description: 'Via Mood pazaryeri operatör paneli ve tedarikçi paneli',
   robots: { index: false, follow: false }, // private platform
+  icons: {
+    icon: [{ url: '/favicon.svg', type: 'image/svg+xml' }],
+    apple: '/favicon.svg',
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

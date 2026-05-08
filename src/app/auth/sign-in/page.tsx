@@ -6,6 +6,7 @@ import { useState, type FormEvent } from 'react';
 import { signIn } from 'next-auth/react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { Logo } from '@/components/ui/Logo';
 
 export default function SignInPage() {
   const router = useRouter();
@@ -38,15 +39,7 @@ export default function SignInPage() {
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <Link href="/" className="inline-block mb-4">
-            <svg viewBox="0 0 254.18 156.78" width="120" aria-label="Via Mood">
-              <polygon
-                fill="#e1691f"
-                points="243.74 82.24 127.45 6.94 10.44 82.24 15.97 82.25 127.45 10.5 238.17 82.21 243.74 82.24"
-              />
-              <text x="127" y="100" textAnchor="middle" fontSize="48" fontWeight="700" fill="#e1691f">
-                VIA MOOD
-              </text>
-            </svg>
+            <Logo width={140} />
           </Link>
           <h1 className="text-2xl font-bold">Giriş Yap</h1>
           <p className="text-sm text-neutral-600 mt-1">Tedarikçi paneline hoş geldin</p>

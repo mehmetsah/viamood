@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { auth } from '@/lib/auth';
 import { signOutAction } from '@/lib/actions/auth';
+import { Logo } from '@/components/ui/Logo';
 
 export default async function VendorLayout({ children }: { children: React.ReactNode }) {
   const session = await auth();
@@ -17,15 +18,7 @@ export default async function VendorLayout({ children }: { children: React.React
       <aside className="w-60 bg-white border-r flex flex-col">
         <div className="p-6 border-b">
           <Link href="/dashboard" className="block">
-            <svg viewBox="0 0 254.18 156.78" width="120" aria-label="Via Mood">
-              <polygon
-                fill="#e1691f"
-                points="243.74 82.24 127.45 6.94 10.44 82.24 15.97 82.25 127.45 10.5 238.17 82.21 243.74 82.24"
-              />
-              <text x="127" y="100" textAnchor="middle" fontSize="48" fontWeight="700" fill="#e1691f">
-                VIA MOOD
-              </text>
-            </svg>
+            <Logo width={120} />
           </Link>
           <div className="text-xs text-neutral-500 mt-2">Tedarikçi Paneli</div>
         </div>
