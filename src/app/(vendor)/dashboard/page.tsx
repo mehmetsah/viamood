@@ -8,6 +8,11 @@ export default async function DashboardPage() {
   const session = await auth();
   if (!session?.user?.id) redirect('/auth/sign-in');
 
+  // Admin / super_admin vendor değil — admin paneline yönlendir
+  if (session.user.role === 'admin' || session.user.role === 'super_admin') {
+    redirect('/admin');
+  }
+
   const [membership] = await db
     .select({
       vendorId: vendors.id,

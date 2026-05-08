@@ -27,6 +27,15 @@ export default function OnboardingPage() {
           <p className="text-neutral-600 text-sm">
             Bilgileri girdikten sonra başvurun admin onayına düşer. Onay sonrası ürün ekleyebilirsin.
           </p>
+          <p className="text-xs text-neutral-500 mt-3">
+            Yanlış hesap mı?{' '}
+            <a
+              href="/api/auth/signout?callbackUrl=/auth/sign-in"
+              className="text-[var(--color-brand-orange)] font-semibold hover:underline"
+            >
+              Çıkış yap
+            </a>
+          </p>
         </div>
 
         <form action={formAction} className="bg-white rounded-2xl shadow-sm border p-8 flex flex-col gap-5">

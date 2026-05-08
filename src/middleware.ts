@@ -50,6 +50,16 @@ export default auth((req) => {
   }
 
   if (VENDOR_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`))) {
+    // Admin / super_admin onboarding'e takılmasın — admin paneline yönlendir
+    if (
+      (role === 'admin' || role === 'super_admin') &&
+      (pathname === '/onboarding' || pathname.startsWith('/onboarding/'))
+    ) {
+      const url = req.nextUrl.clone();
+      url.pathname = '/admin';
+      return NextResponse.redirect(url);
+    }
+
     if (
       role !== 'vendor' &&
       role !== 'vendor_admin' &&
