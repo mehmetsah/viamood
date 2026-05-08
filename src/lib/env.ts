@@ -37,8 +37,12 @@ const envSchema = z.object({
   IYZICO_BASE_URL: z.string().url().default('https://sandbox-api.iyzipay.com'),
 
   // KargoLab
-  KARGOLAB_API_URL: z.string().url().optional(),
-  KARGOLAB_API_KEY: z.string().optional(),
+  KARGOLAB_API_URL: z.string().url().default('https://kargolab.com/api/v1'),
+  KARGOLAB_HOST_HEADER: z.string().default('kargolab.com'),
+  KARGOLAB_USER_EMAIL: z.string().email().optional(),
+  KARGOLAB_USER_PASSWORD: z.string().optional(),
+  KARGOLAB_MEMBER_ID: z.coerce.number().optional(),
+  KARGOLAB_API_KEY: z.string().optional(), // legacy
 
   // Storage
   S3_ENDPOINT: z.string().url().optional(),
