@@ -6,6 +6,7 @@ import { redirect } from 'next/navigation';
 import { z } from 'zod';
 import { db } from '@/db/client';
 import {
+  commissionLedger,
   inventoryLevels,
   orderEvents,
   orderLineItems,
@@ -101,6 +102,14 @@ export async function createTestOrderAction(formData: FormData): Promise<void> {
 
   const variantMap = new Map(variantRows.map((v) => [v.variantId, v]));
 
+  // Vendor commission rates (snapshot at sale time)
+  const uniqueVendorIds = Array.from(new Set(variantRows.map((v) => v.vendorId)));
+  const vendorRows = await db
+    .select({ id: vendors.id, commissionRate: vendors.commissionRate })
+    .from(vendors)
+    .where(sql`${vendors.id} = ANY(${uniqueVendorIds}::uuid[])`);
+  const commissionMap = new Map(vendorRows.map((v) => [v.id, v.commissionRate]));
+
   // Subtotal hesapla
   let subtotalCents = 0n;
   for (const li of data.lineItems) {
@@ -153,19 +162,40 @@ export async function createTestOrderAction(formData: FormData): Promise<void> {
       allVendorIds.add(v.vendorId);
 
       const totalPrice = BigInt(v.priceCents) * BigInt(li.quantity);
-      await tx.insert(orderLineItems).values({
-        orderId: created.id,
+      const [insertedLi] = await tx
+        .insert(orderLineItems)
+        .values({
+          orderId: created.id,
+          vendorId: v.vendorId,
+          productId: v.productId,
+          variantId: v.variantId,
+          shopifyLineItemId: `test_li_${i}_${Date.now()}`,
+          title: v.productTitle,
+          variantTitle: v.variantTitle,
+          sku: v.sku,
+          quantity: li.quantity,
+          unitPriceCents: BigInt(v.priceCents),
+          totalPriceCents: totalPrice,
+          status: 'pending',
+        })
+        .returning({ id: orderLineItems.id });
+
+      // Commission ledger — accrued status, vendor başına komisyon snapshot
+      const commissionRateBps = commissionMap.get(v.vendorId) ?? 0;
+      const commissionAmount = (totalPrice * BigInt(commissionRateBps)) / 10000n;
+      const payoutAmount = totalPrice - commissionAmount;
+
+      await tx.insert(commissionLedger).values({
         vendorId: v.vendorId,
-        productId: v.productId,
-        variantId: v.variantId,
-        shopifyLineItemId: `test_li_${i}_${Date.now()}`,
-        title: v.productTitle,
-        variantTitle: v.variantTitle,
-        sku: v.sku,
-        quantity: li.quantity,
-        unitPriceCents: BigInt(v.priceCents),
-        totalPriceCents: totalPrice,
-        status: 'pending',
+        orderId: created.id,
+        orderLineItemId: insertedLi?.id ?? null,
+        type: 'sale',
+        status: 'accrued',
+        grossAmountCents: totalPrice,
+        commissionRateBps,
+        commissionAmountCents: commissionAmount,
+        payoutAmountCents: payoutAmount,
+        currency: 'TRY',
       });
 
       // Stok rezerve et (mevcut available'dan düş)
