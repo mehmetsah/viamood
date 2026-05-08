@@ -27,7 +27,7 @@ export const authConfig: NextAuthConfig = {
     error: '/auth/error',
   },
   callbacks: {
-    // Edge-safe versions — DB query yok (middleware için)
+    // Edge-safe — DB query yok
     authorized({ auth, request }) {
       const session = auth;
       const { pathname } = request.nextUrl;
@@ -43,6 +43,15 @@ export const authConfig: NextAuthConfig = {
       if (pathname.startsWith('/api/auth') || pathname.startsWith('/api/health')) return true;
 
       return !!session?.user;
+    },
+    // Token'daki userId + role'u session.user'a kopyala (middleware için şart)
+    async session({ session, token }) {
+      if (session.user) {
+        if (token.userId) session.user.id = token.userId as string;
+        // @ts-expect-error — role custom alan
+        session.user.role = (token.role as string) ?? 'customer';
+      }
+      return session;
     },
   },
 };
