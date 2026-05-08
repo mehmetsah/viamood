@@ -1,12 +1,16 @@
+/**
+ * Tam auth config — server actions / API routes'ta kullanılır.
+ * Bcrypt + DB query içerir, Edge runtime'da çalışmaz.
+ * Middleware için auth.config.ts kullanılır.
+ */
 import { DrizzleAdapter } from '@auth/drizzle-adapter';
+import { eq } from 'drizzle-orm';
 import NextAuth, { type DefaultSession, type NextAuthConfig } from 'next-auth';
-import type { Provider } from 'next-auth/providers';
 import Credentials from 'next-auth/providers/credentials';
-import EmailProvider from 'next-auth/providers/nodemailer';
-import Google from 'next-auth/providers/google';
 import { db } from '@/db/client';
 import * as schema from '@/db/schema';
-import { env } from './env';
+import { authConfig } from './auth.config';
+import { verifyPassword } from './password';
 
 declare module 'next-auth' {
   interface Session {
@@ -17,68 +21,77 @@ declare module 'next-auth' {
   }
 }
 
-const providers: Provider[] = [
-  // Email + password (credentials)
-  Credentials({
-    name: 'Email & Password',
-    credentials: {
-      email: { label: 'Email', type: 'email' },
-      password: { label: 'Şifre', type: 'password' },
-    },
-    async authorize(credentials) {
-      // TODO: Phase 1'de implement edilecek — bcrypt hash compare
-      if (!credentials?.email || !credentials?.password) return null;
-      return null; // placeholder
-    },
-  }),
-];
-
-// Optional providers — env'de ayarlandıysa eklenir
-if (env.AUTH_GOOGLE_ID && env.AUTH_GOOGLE_SECRET) {
-  providers.push(
-    Google({
-      clientId: env.AUTH_GOOGLE_ID,
-      clientSecret: env.AUTH_GOOGLE_SECRET,
-    }),
-  );
-}
-
-if (env.RESEND_API_KEY) {
-  providers.push(
-    EmailProvider({
-      server: {
-        // Resend SMTP gateway veya transport API
-        host: 'smtp.resend.com',
-        port: 465,
-        auth: { user: 'resend', pass: env.RESEND_API_KEY },
-      },
-      from: env.EMAIL_FROM,
-    }),
-  );
-}
-
 export const { handlers, auth, signIn, signOut } = NextAuth({
+  ...authConfig,
   adapter: DrizzleAdapter(db, {
     usersTable: schema.users,
     accountsTable: schema.accounts,
     sessionsTable: schema.sessions,
     verificationTokensTable: schema.verificationTokens,
   }),
-  providers,
-  session: { strategy: 'database' },
-  pages: {
-    signIn: '/auth/sign-in',
-    verifyRequest: '/auth/verify',
-    error: '/auth/error',
-  },
+  providers: [
+    ...authConfig.providers,
+    Credentials({
+      name: 'Email & Password',
+      credentials: {
+        email: { label: 'Email', type: 'email' },
+        password: { label: 'Şifre', type: 'password' },
+      },
+      async authorize(credentials) {
+        if (!credentials?.email || !credentials?.password) return null;
+        const email = String(credentials.email).toLowerCase().trim();
+        const password = String(credentials.password);
+
+        const [user] = await db
+          .select()
+          .from(schema.users)
+          .where(eq(schema.users.email, email))
+          .limit(1);
+        if (!user || !user.passwordHash) return null;
+
+        const valid = await verifyPassword(password, user.passwordHash);
+        if (!valid) return null;
+
+        return {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          image: user.image,
+        };
+      },
+    }),
+  ],
   callbacks: {
-    async session({ session, user }) {
-      if (session.user && user) {
-        session.user.id = user.id;
-        // @ts-expect-error — role kolonu var, Auth.js default tipte yok
-        session.user.role = user.role ?? 'customer';
+    ...authConfig.callbacks,
+    async jwt({ token, user, trigger }) {
+      if (user?.id) {
+        token.userId = user.id;
+        const [u] = await db
+          .select({ role: schema.users.role })
+          .from(schema.users)
+          .where(eq(schema.users.id, user.id))
+          .limit(1);
+        token.role = u?.role ?? 'customer';
+      }
+
+      if (trigger === 'update' && token.userId) {
+        const [u] = await db
+          .select({ role: schema.users.role })
+          .from(schema.users)
+          .where(eq(schema.users.id, token.userId as string))
+          .limit(1);
+        if (u) token.role = u.role;
+      }
+
+      return token;
+    },
+    async session({ session, token }) {
+      if (session.user) {
+        session.user.id = (token.userId as string) ?? session.user.id;
+        // @ts-expect-error — role kolonu var, default tipte yok
+        session.user.role = (token.role as string) ?? 'customer';
       }
       return session;
     },
   },
-});
+} satisfies NextAuthConfig);
