@@ -81,7 +81,7 @@ export default auth((req) => {
 
 export const config = {
   matcher: [
-    // Exclude: _next, all common static asset extensions
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|css|js|woff|woff2|ttf|otf)).*)',
+    // Exclude: _next, all common static asset extensions (html dahil — public/access-* gibi)
+    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|css|js|woff|woff2|ttf|otf|html|pdf|txt|xml|json|map)).*)',
   ],
 };
