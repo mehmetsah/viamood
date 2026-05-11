@@ -5,23 +5,34 @@ import { env } from '../env';
  * Shopify webhook HMAC verification.
  * Header: x-shopify-hmac-sha256 base64.
  * Body MUST be raw request body (read before any parsing).
+ *
+ * OAuth (Partners) app'lerde signing secret = SHOPIFY_CLIENT_SECRET.
+ * Custom legacy webhook'lar için ayrı SHOPIFY_WEBHOOK_SECRET kullanılır.
+ * Önce client secret denenir, varsa ek webhook secret de kontrol edilir.
  */
 export function verifyShopifyWebhook(rawBody: string | Buffer, hmacHeader: string): boolean {
-  if (!env.SHOPIFY_WEBHOOK_SECRET) {
-    console.warn('[shopify webhook] SHOPIFY_WEBHOOK_SECRET not set — verification skipped');
+  const candidates: string[] = [];
+  if (env.SHOPIFY_CLIENT_SECRET) candidates.push(env.SHOPIFY_CLIENT_SECRET);
+  if (env.SHOPIFY_WEBHOOK_SECRET) candidates.push(env.SHOPIFY_WEBHOOK_SECRET);
+
+  if (candidates.length === 0) {
+    console.warn(
+      '[shopify webhook] SHOPIFY_CLIENT_SECRET / SHOPIFY_WEBHOOK_SECRET set değil — verify skip',
+    );
     return false;
   }
 
-  const computed = crypto
-    .createHmac('sha256', env.SHOPIFY_WEBHOOK_SECRET)
-    .update(typeof rawBody === 'string' ? rawBody : rawBody)
-    .digest('base64');
+  const bodyBuf = typeof rawBody === 'string' ? Buffer.from(rawBody, 'utf8') : rawBody;
+  const headerBuf = Buffer.from(hmacHeader);
 
-  // timing-safe compare
-  const a = Buffer.from(computed);
-  const b = Buffer.from(hmacHeader);
-  if (a.length !== b.length) return false;
-  return crypto.timingSafeEqual(a, b);
+  for (const secret of candidates) {
+    const computed = crypto.createHmac('sha256', secret).update(bodyBuf).digest('base64');
+    const compBuf = Buffer.from(computed);
+    if (compBuf.length === headerBuf.length && crypto.timingSafeEqual(compBuf, headerBuf)) {
+      return true;
+    }
+  }
+  return false;
 }
 
 /**

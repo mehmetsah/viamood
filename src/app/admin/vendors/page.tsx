@@ -1,7 +1,10 @@
-import { desc, eq } from 'drizzle-orm';
+import { count, desc, eq } from 'drizzle-orm';
 import { db } from '@/db/client';
 import { vendors } from '@/db/schema';
 import { approveVendorAction, rejectVendorAction, setCommissionAction, suspendVendorAction } from '@/lib/actions/admin';
+import { Pagination, parsePage } from '@/components/ui/Pagination';
+
+const PAGE_SIZE = 15;
 
 const STATUS_LABELS: Record<string, { label: string; cls: string }> = {
   pending: { label: 'Bekliyor', cls: 'bg-yellow-100 text-yellow-900' },
@@ -12,23 +15,35 @@ const STATUS_LABELS: Record<string, { label: string; cls: string }> = {
 };
 
 interface PageProps {
-  searchParams: Promise<{ status?: string }>;
+  searchParams: Promise<{ status?: string; page?: string }>;
 }
 
 export default async function AdminVendorsPage({ searchParams }: PageProps) {
-  const { status: statusFilter } = await searchParams;
+  const sp = await searchParams;
+  const { status: statusFilter } = sp;
+  const page = parsePage(sp.page);
 
-  const baseQuery = db.select().from(vendors);
-  const list = statusFilter
-    ? await baseQuery.where(eq(vendors.status, statusFilter as 'pending' | 'active' | 'suspended' | 'rejected' | 'archived')).orderBy(desc(vendors.createdAt))
-    : await baseQuery.orderBy(desc(vendors.createdAt));
+  const whereClause = statusFilter
+    ? eq(vendors.status, statusFilter as 'pending' | 'active' | 'suspended' | 'rejected' | 'archived')
+    : undefined;
+
+  const _cnt_total = await db .select({ total: count() }).from(vendors).where(whereClause);
+  const total = _cnt_total[0]?.total ?? 0;
+
+  const list = await db
+    .select()
+    .from(vendors)
+    .where(whereClause)
+    .orderBy(desc(vendors.createdAt))
+    .limit(PAGE_SIZE)
+    .offset((page - 1) * PAGE_SIZE);
 
   return (
     <div className="p-8">
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-3xl font-bold">Tedarikçiler</h1>
-          <p className="text-neutral-600 text-sm mt-1">{list.length} kayıt</p>
+          <p className="text-neutral-600 text-sm mt-1">{total} kayıt</p>
         </div>
         <div className="flex gap-2 text-sm">
           <a href="/admin/vendors" className={`px-3 py-1.5 rounded-lg border ${!statusFilter ? 'bg-[var(--color-brand-ink)] text-white' : 'hover:bg-neutral-100'}`}>
@@ -46,7 +61,7 @@ export default async function AdminVendorsPage({ searchParams }: PageProps) {
         </div>
       </div>
 
-      {list.length === 0 ? (
+      {total === 0 ? (
         <div className="bg-white rounded-xl p-12 border text-center text-neutral-500">
           Bu filtrede tedarikçi yok
         </div>
@@ -159,6 +174,14 @@ export default async function AdminVendorsPage({ searchParams }: PageProps) {
               </div>
             );
           })}
+          <div className="bg-white rounded-xl border overflow-hidden">
+            <Pagination
+              totalCount={total}
+              currentPage={page}
+              pageSize={PAGE_SIZE}
+              searchParams={sp}
+            />
+          </div>
         </div>
       )}
     </div>

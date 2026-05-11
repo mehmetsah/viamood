@@ -9,6 +9,9 @@ import { auth } from '@/lib/auth';
 import { auditUser } from '@/lib/audit/logger';
 import { sendEmail } from '@/lib/email/sender';
 import { vendorApprovedEmail, vendorRejectedEmail } from '@/lib/email/templates';
+import { createSubmerchant } from '@/lib/iyzico/client';
+import { registerShopifyWebhooks } from '@/lib/shopify/webhooks-register';
+import type { ActionResult } from './auth';
 
 async function requireAdmin() {
   const session = await auth();
@@ -43,6 +46,12 @@ export async function approveVendorAction(formData: FormData): Promise<void> {
     after: { status: 'active' },
   });
 
+  // Iyzico submerchant — vendor onaylanır onaylanmaz subaccount yarat (best-effort).
+  // Hata olursa sadece audit log kalır, vendor approve etkilenmez.
+  void createIyzicoSubmerchantForVendor(vendorId, admin.id!).catch((err) => {
+    console.error('[iyzico submerchant] create failed:', err);
+  });
+
   // Email notification
   const [v] = await db.select({ name: vendors.name, email: vendors.email }).from(vendors).where(eq(vendors.id, vendorId)).limit(1);
   if (v) {
@@ -50,6 +59,66 @@ export async function approveVendorAction(formData: FormData): Promise<void> {
   }
 
   revalidatePath('/admin/vendors');
+}
+
+async function createIyzicoSubmerchantForVendor(
+  vendorId: string,
+  adminUserId: string,
+): Promise<void> {
+  const [v] = await db
+    .select({
+      id: vendors.id,
+      name: vendors.name,
+      legalName: vendors.legalName,
+      email: vendors.email,
+      phone: vendors.phone,
+      taxId: vendors.taxId,
+      taxOffice: vendors.taxOffice,
+      iban: vendors.iban,
+      addressLine1: vendors.addressLine1,
+      city: vendors.city,
+      district: vendors.district,
+      postalCode: vendors.postalCode,
+      country: vendors.country,
+      iyzicoSubmerchantKey: vendors.iyzicoSubmerchantKey,
+    })
+    .from(vendors)
+    .where(eq(vendors.id, vendorId))
+    .limit(1);
+
+  if (!v) return;
+  if (v.iyzicoSubmerchantKey) return; // Zaten var
+  if (!v.iban) {
+    console.warn(`[iyzico] vendor ${vendorId} IBAN yok, submerchant create skip`);
+    return;
+  }
+
+  const isCorporate = !!v.taxOffice && !!v.taxId && v.taxId.length === 10;
+  const result = await createSubmerchant({
+    vendorId: v.id,
+    legalName: v.legalName ?? v.name,
+    taxId: v.taxId ?? '',
+    iban: v.iban,
+    contactName: v.name,
+    email: v.email,
+    gsmNumber: v.phone ?? undefined,
+    addressLine: [v.addressLine1, v.district, v.city].filter(Boolean).join(', '),
+    city: v.city ?? undefined,
+    country: v.country ?? 'TR',
+    zipCode: v.postalCode ?? undefined,
+    taxOffice: v.taxOffice ?? undefined,
+    identityNumber: !isCorporate && v.taxId?.length === 11 ? v.taxId : undefined,
+    subMerchantType: isCorporate ? 'LIMITED_OR_JOINT_STOCK_COMPANY' : 'PERSONAL',
+  });
+
+  await db
+    .update(vendors)
+    .set({ iyzicoSubmerchantKey: result.subMerchantKey, updatedAt: new Date() })
+    .where(eq(vendors.id, vendorId));
+
+  await auditUser(adminUserId, 'iyzico.submerchant.created', 'vendor', vendorId, {
+    after: { subMerchantKey: result.subMerchantKey },
+  });
 }
 
 export async function rejectVendorAction(formData: FormData): Promise<void> {
@@ -113,4 +182,57 @@ export async function setCommissionAction(formData: FormData): Promise<void> {
     after: { commissionRate: rateBps },
   });
   revalidatePath('/admin/vendors');
+}
+
+export async function syncIyzicoSubmerchantAction(
+  _prev: ActionResult | null,
+  formData: FormData,
+): Promise<ActionResult> {
+  const admin = await requireAdmin();
+  const vendorId = z.string().uuid().parse(formData.get('vendorId'));
+  try {
+    await createIyzicoSubmerchantForVendor(vendorId, admin.id!);
+    revalidatePath('/admin/vendors');
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : 'unknown' };
+  }
+}
+
+export async function registerWebhooksAction(
+  _prev: unknown,
+  formData: FormData,
+): Promise<{
+  success: boolean;
+  message: string;
+  details?: Awaited<ReturnType<typeof registerShopifyWebhooks>>;
+}> {
+  const admin = await requireAdmin();
+  const overrideUrl = String(formData.get('appUrl') ?? '').trim() || undefined;
+
+  try {
+    const result = await registerShopifyWebhooks(overrideUrl);
+    await auditUser(admin.id!, 'shopify.webhooks.register', 'shopify_connection', undefined, {
+      after: {
+        callbackUrl: result.callbackUrl,
+        created: result.created.length,
+        alreadyExists: result.alreadyExists.length,
+        errors: result.errors.length,
+      },
+    });
+    revalidatePath('/admin/shopify');
+    const messages: string[] = [];
+    if (result.created.length > 0)
+      messages.push(`${result.created.length} webhook oluşturuldu`);
+    if (result.alreadyExists.length > 0)
+      messages.push(`${result.alreadyExists.length} webhook zaten mevcut`);
+    if (result.errors.length > 0)
+      messages.push(`${result.errors.length} hata`);
+    return { success: result.errors.length === 0, message: messages.join(', ') || 'No-op', details: result };
+  } catch (err) {
+    return {
+      success: false,
+      message: err instanceof Error ? err.message : 'Bilinmeyen hata',
+    };
+  }
 }

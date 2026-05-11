@@ -3,13 +3,16 @@ import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 import { db } from '@/db/client';
 import {
+  fulfillments,
   orderEvents,
   orderLineItems,
   orders,
+  trackingEvents,
   vendorMemberships,
   vendors,
 } from '@/db/schema';
 import { auth } from '@/lib/auth';
+import { FulfillmentClient } from './FulfillmentClient';
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -26,6 +29,18 @@ const STATUS_LABEL: Record<string, { label: string; cls: string }> = {
   delivered: { label: 'Teslim edildi', cls: 'bg-green-100 text-green-900' },
   cancelled: { label: 'İptal', cls: 'bg-red-100 text-red-900' },
   refunded: { label: 'İade', cls: 'bg-orange-100 text-orange-900' },
+};
+
+const FULFILLMENT_STATUS_LABEL: Record<string, { label: string; cls: string }> = {
+  pending: { label: 'Etiket bekliyor', cls: 'bg-neutral-100 text-neutral-700' },
+  label_created: { label: 'Etiket basıldı', cls: 'bg-blue-100 text-blue-900' },
+  picked_up: { label: 'Kargocu aldı', cls: 'bg-indigo-100 text-indigo-900' },
+  in_transit: { label: 'Yolda', cls: 'bg-purple-100 text-purple-900' },
+  out_for_delivery: { label: 'Dağıtımda', cls: 'bg-amber-100 text-amber-900' },
+  delivered: { label: 'Teslim edildi', cls: 'bg-green-100 text-green-900' },
+  failed: { label: 'Başarısız', cls: 'bg-red-100 text-red-900' },
+  returned: { label: 'İade', cls: 'bg-orange-100 text-orange-900' },
+  cancelled: { label: 'İptal', cls: 'bg-red-100 text-red-900' },
 };
 
 export default async function VendorOrderDetailPage({ params }: PageProps) {
@@ -45,7 +60,6 @@ export default async function VendorOrderDetailPage({ params }: PageProps) {
   const [order] = await db.select().from(orders).where(eq(orders.id, id)).limit(1);
   if (!order) notFound();
 
-  // Sadece bu vendor'a ait line item'lar
   const items = await db
     .select()
     .from(orderLineItems)
@@ -53,9 +67,28 @@ export default async function VendorOrderDetailPage({ params }: PageProps) {
       and(eq(orderLineItems.orderId, order.id), eq(orderLineItems.vendorId, membership.vendorId)),
     );
 
-  if (items.length === 0) notFound(); // Bu vendor bu siparişte yok
+  if (items.length === 0) notFound();
 
   const myTotal = items.reduce((s, x) => s + Number(x.totalPriceCents), 0);
+
+  const [fulfillment] = await db
+    .select()
+    .from(fulfillments)
+    .where(
+      and(
+        eq(fulfillments.orderId, order.id),
+        eq(fulfillments.vendorId, membership.vendorId),
+      ),
+    )
+    .limit(1);
+
+  const trackingRows = fulfillment
+    ? await db
+        .select()
+        .from(trackingEvents)
+        .where(eq(trackingEvents.fulfillmentId, fulfillment.id))
+        .orderBy(trackingEvents.occurredAt)
+    : [];
 
   const events = await db
     .select()
@@ -78,11 +111,12 @@ export default async function VendorOrderDetailPage({ params }: PageProps) {
         </div>
         <div className="text-right">
           <div className="text-3xl font-bold">{formatTL(myTotal)}</div>
-          <div className="text-sm text-neutral-500 mt-1">Sana ait toplam · {items.length} kalem</div>
+          <div className="text-sm text-neutral-500 mt-1">
+            Sana ait toplam · {items.length} kalem
+          </div>
         </div>
       </div>
 
-      {/* Fulfillment mode info */}
       {items[0]?.fulfillmentMode && (
         <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6 text-sm">
           <strong>Fulfillment modu:</strong>{' '}
@@ -94,7 +128,6 @@ export default async function VendorOrderDetailPage({ params }: PageProps) {
         </div>
       )}
 
-      {/* Items */}
       <section className="bg-white rounded-xl border overflow-hidden mb-8">
         <div className="px-4 py-3 bg-neutral-50 border-b font-bold">Senin kalemlerin</div>
         <table className="w-full text-sm">
@@ -117,7 +150,9 @@ export default async function VendorOrderDetailPage({ params }: PageProps) {
                     {formatTL(it.totalPriceCents)}
                   </td>
                   <td className="px-4 py-3 w-36">
-                    <span className={`text-xs font-bold px-2 py-1 rounded ${st?.cls ?? 'bg-neutral-100'}`}>
+                    <span
+                      className={`text-xs font-bold px-2 py-1 rounded ${st?.cls ?? 'bg-neutral-100'}`}
+                    >
                       {st?.label ?? it.status}
                     </span>
                   </td>
@@ -128,7 +163,6 @@ export default async function VendorOrderDetailPage({ params }: PageProps) {
         </table>
       </section>
 
-      {/* Address */}
       <section className="bg-white rounded-xl border p-6 mb-8">
         <h3 className="font-bold mb-3">Teslimat Adresi</h3>
         {order.shippingAddress && (
@@ -144,13 +178,35 @@ export default async function VendorOrderDetailPage({ params }: PageProps) {
         )}
       </section>
 
-      {/* Phase 4 placeholder */}
-      <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-6 text-sm text-yellow-900">
-        <strong>🚚 Faz 4'te buraya geliyor:</strong> KargoLab etiket basma butonu, tracking
-        numarası, kargo durumu güncellemesi.
-      </div>
+      <FulfillmentClient
+        orderId={order.id}
+        fulfillment={
+          fulfillment
+            ? {
+                id: fulfillment.id,
+                status: fulfillment.status,
+                statusLabel:
+                  FULFILLMENT_STATUS_LABEL[fulfillment.status] ??
+                  FULFILLMENT_STATUS_LABEL.pending ?? { label: 'Etiket bekliyor', cls: 'bg-neutral-100 text-neutral-700' },
+                kargolabShipmentId: fulfillment.kargolabShipmentId,
+                trackingNumber: fulfillment.trackingNumber,
+                trackingUrl: fulfillment.trackingUrl,
+                labelUrl: fulfillment.labelUrl,
+                carrier: fulfillment.carrier,
+                labelCreatedAt: fulfillment.labelCreatedAt?.toISOString() ?? null,
+                deliveredAt: fulfillment.deliveredAt?.toISOString() ?? null,
+              }
+            : null
+        }
+        trackingEvents={trackingRows.map((t) => ({
+          id: t.id,
+          status: t.status,
+          description: t.description,
+          location: t.location,
+          occurredAt: t.occurredAt.toISOString(),
+        }))}
+      />
 
-      {/* Events (filtered to this order) */}
       <section className="bg-white rounded-xl border p-6 mt-8">
         <h3 className="font-bold mb-4">Olay Kaydı</h3>
         <div className="space-y-2 text-sm">

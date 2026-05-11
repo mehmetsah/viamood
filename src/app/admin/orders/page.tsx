@@ -1,7 +1,10 @@
-import { desc, eq } from 'drizzle-orm';
+import { count, desc, eq } from 'drizzle-orm';
 import Link from 'next/link';
 import { db } from '@/db/client';
 import { orders, routingDecisions } from '@/db/schema';
+import { Pagination, parsePage } from '@/components/ui/Pagination';
+
+const PAGE_SIZE = 25;
 
 const FIN_LABEL: Record<string, { label: string; cls: string }> = {
   paid: { label: 'Ödendi', cls: 'bg-green-100 text-green-900' },
@@ -31,7 +34,17 @@ function formatTL(cents: bigint | null): string {
   return `${(Number(cents) / 100).toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ₺`;
 }
 
-export default async function AdminOrdersPage() {
+interface PageProps {
+  searchParams: Promise<{ page?: string }>;
+}
+
+export default async function AdminOrdersPage({ searchParams }: PageProps) {
+  const sp = await searchParams;
+  const page = parsePage(sp.page);
+
+  const _cnt_total = await db .select({ total: count() }).from(orders);
+  const total = _cnt_total[0]?.total ?? 0;
+
   const list = await db
     .select({
       id: orders.id,
@@ -49,14 +62,15 @@ export default async function AdminOrdersPage() {
     .from(orders)
     .leftJoin(routingDecisions, eq(routingDecisions.orderId, orders.id))
     .orderBy(desc(orders.placedAt))
-    .limit(200);
+    .limit(PAGE_SIZE)
+    .offset((page - 1) * PAGE_SIZE);
 
   return (
     <div className="p-8 max-w-7xl mx-auto">
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-3xl font-bold">Tüm Siparişler</h1>
-          <p className="text-neutral-600 text-sm mt-1">{list.length} sipariş</p>
+          <p className="text-neutral-600 text-sm mt-1">{total} sipariş</p>
         </div>
         <Link
           href="/admin/orders/new"
@@ -66,20 +80,10 @@ export default async function AdminOrdersPage() {
         </Link>
       </div>
 
-      {list.length === 0 ? (
+      {total === 0 ? (
         <div className="bg-white rounded-xl p-16 border text-center">
           <div className="text-5xl mb-3">🛒</div>
           <h2 className="font-bold mb-2">Henüz sipariş yok</h2>
-          <p className="text-neutral-600 text-sm mb-6">
-            Phase 2.3'te Shopify webhook'u devreye girdiğinde otomatik gelecek. Şimdilik test
-            sipariş yaratabilirsin.
-          </p>
-          <Link
-            href="/admin/orders/new"
-            className="inline-flex px-5 py-2.5 bg-[var(--color-brand-ink)] text-white rounded-full font-semibold text-sm"
-          >
-            + Test sipariş yarat
-          </Link>
         </div>
       ) : (
         <div className="bg-white rounded-xl border overflow-hidden">
@@ -138,6 +142,12 @@ export default async function AdminOrdersPage() {
               })}
             </tbody>
           </table>
+          <Pagination
+            totalCount={total}
+            currentPage={page}
+            pageSize={PAGE_SIZE}
+            searchParams={sp}
+          />
         </div>
       )}
     </div>

@@ -2,6 +2,7 @@ import { eq } from 'drizzle-orm';
 import { db } from '@/db/client';
 import { shopifyConnections } from '@/db/schema';
 import { env } from '@/lib/env';
+import { WebhooksRegisterClient } from './WebhooksRegisterClient';
 
 interface PageProps {
   searchParams: Promise<{ connected?: string; shop?: string; error?: string }>;
@@ -129,6 +130,20 @@ export default async function ShopifyAdminPage({ searchParams }: PageProps) {
           </div>
         )}
       </section>
+
+      {isConnected && (
+        <section className="bg-white rounded-xl border p-6 mt-6">
+          <h2 className="font-bold mb-3">🔔 Webhook Subscriptions</h2>
+          <p className="text-sm text-neutral-600 mb-4">
+            Shopify'dan gelen sipariş ve uninstall event'leri için webhook'lar.
+            Callback URL: <code className="bg-neutral-100 px-1 rounded">{env.APP_URL}/api/shopify/webhooks</code>
+          </p>
+          <p className="text-xs text-neutral-500 mb-4">
+            ⚠ Localhost public erişilebilir değildir. Üretim için APP_URL public olmalı (ngrok / KargoLab AWS).
+          </p>
+          <WebhooksRegisterClient defaultUrl={env.APP_URL} />
+        </section>
+      )}
 
       <section className="bg-blue-50 border border-blue-200 rounded-xl p-5 mt-6 text-sm text-blue-900">
         <h3 className="font-bold mb-2">📘 OAuth Akışı</h3>

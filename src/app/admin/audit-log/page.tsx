@@ -1,10 +1,13 @@
-import { desc, eq, ilike, or } from 'drizzle-orm';
+import { and, count, desc, eq, ilike, or } from 'drizzle-orm';
 import Link from 'next/link';
 import { db } from '@/db/client';
 import { auditLog, users } from '@/db/schema';
+import { Pagination, parsePage } from '@/components/ui/Pagination';
+
+const PAGE_SIZE = 30;
 
 interface PageProps {
-  searchParams: Promise<{ q?: string; entity?: string }>;
+  searchParams: Promise<{ q?: string; entity?: string; page?: string }>;
 }
 
 const ACTION_GROUP_COLOR: Record<string, string> = {
@@ -17,9 +20,19 @@ const ACTION_GROUP_COLOR: Record<string, string> = {
 };
 
 export default async function AuditLogPage({ searchParams }: PageProps) {
-  const { q, entity } = await searchParams;
+  const sp = await searchParams;
+  const { q, entity } = sp;
+  const page = parsePage(sp.page);
 
-  const baseQuery = db
+  const conds = [];
+  if (entity) conds.push(eq(auditLog.entityType, entity));
+  if (q) conds.push(or(ilike(auditLog.action, `%${q}%`), ilike(auditLog.entityId, `%${q}%`)));
+  const whereClause = conds.length > 0 ? and(...conds) : undefined;
+
+  const _cnt_total = await db .select({ total: count() }).from(auditLog).where(whereClause);
+  const total = _cnt_total[0]?.total ?? 0;
+
+  const entries = await db
     .select({
       id: auditLog.id,
       action: auditLog.action,
@@ -34,19 +47,11 @@ export default async function AuditLogPage({ searchParams }: PageProps) {
       occurredAt: auditLog.occurredAt,
     })
     .from(auditLog)
-    .leftJoin(users, eq(users.id, auditLog.actorId));
-
-  let entries;
-  if (entity) {
-    entries = await baseQuery.where(eq(auditLog.entityType, entity)).orderBy(desc(auditLog.occurredAt)).limit(200);
-  } else if (q) {
-    entries = await baseQuery
-      .where(or(ilike(auditLog.action, `%${q}%`), ilike(auditLog.entityId, `%${q}%`)))
-      .orderBy(desc(auditLog.occurredAt))
-      .limit(200);
-  } else {
-    entries = await baseQuery.orderBy(desc(auditLog.occurredAt)).limit(200);
-  }
+    .leftJoin(users, eq(users.id, auditLog.actorId))
+    .where(whereClause)
+    .orderBy(desc(auditLog.occurredAt))
+    .limit(PAGE_SIZE)
+    .offset((page - 1) * PAGE_SIZE);
 
   return (
     <div className="p-8 max-w-7xl mx-auto">
@@ -84,7 +89,7 @@ export default async function AuditLogPage({ searchParams }: PageProps) {
         )}
       </form>
 
-      {entries.length === 0 ? (
+      {total === 0 ? (
         <div className="bg-white rounded-xl p-12 border text-center text-sm text-neutral-500">
           Audit kaydı yok
         </div>
@@ -157,6 +162,12 @@ export default async function AuditLogPage({ searchParams }: PageProps) {
               })}
             </tbody>
           </table>
+          <Pagination
+            totalCount={total}
+            currentPage={page}
+            pageSize={PAGE_SIZE}
+            searchParams={sp}
+          />
         </div>
       )}
     </div>

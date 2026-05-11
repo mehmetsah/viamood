@@ -1,7 +1,10 @@
-import { desc, eq, isNull, sql, and } from 'drizzle-orm';
+import { count, desc, eq, isNull, sql, and } from 'drizzle-orm';
 import Link from 'next/link';
 import { db } from '@/db/client';
 import { commissionLedger, payouts, vendors } from '@/db/schema';
+import { Pagination, parsePage } from '@/components/ui/Pagination';
+
+const PAGE_SIZE = 25;
 
 const STATUS_LABELS: Record<string, { label: string; cls: string }> = {
   draft: { label: 'Taslak', cls: 'bg-neutral-200 text-neutral-700' },
@@ -23,7 +26,17 @@ function formatTL(cents: bigint): string {
   return `${(Number(cents) / 100).toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ₺`;
 }
 
-export default async function AdminPayoutsPage() {
+interface PageProps {
+  searchParams: Promise<{ page?: string }>;
+}
+
+export default async function AdminPayoutsPage({ searchParams }: PageProps) {
+  const sp = await searchParams;
+  const page = parsePage(sp.page);
+
+  const _cnt_total = await db .select({ total: count() }).from(payouts);
+  const total = _cnt_total[0]?.total ?? 0;
+
   const list = await db
     .select({
       id: payouts.id,
@@ -40,7 +53,8 @@ export default async function AdminPayoutsPage() {
     .from(payouts)
     .innerJoin(vendors, eq(vendors.id, payouts.vendorId))
     .orderBy(desc(payouts.createdAt))
-    .limit(200);
+    .limit(PAGE_SIZE)
+    .offset((page - 1) * PAGE_SIZE);
 
   // Vendor bazında 'accrued' bekleyen toplam (yeni batch için ipucu)
   const pendingAgg = await db
@@ -60,7 +74,7 @@ export default async function AdminPayoutsPage() {
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-3xl font-bold">Ödemeler (Payouts)</h1>
-          <p className="text-neutral-600 text-sm mt-1">{list.length} payout</p>
+          <p className="text-neutral-600 text-sm mt-1">{total} payout</p>
         </div>
         <Link
           href="/admin/payouts/new"
@@ -87,7 +101,7 @@ export default async function AdminPayoutsPage() {
         </section>
       )}
 
-      {list.length === 0 ? (
+      {total === 0 ? (
         <div className="bg-white rounded-xl p-16 border text-center">
           <div className="text-5xl mb-3">💰</div>
           <h2 className="font-bold mb-2">Henüz payout yok</h2>
@@ -144,6 +158,12 @@ export default async function AdminPayoutsPage() {
               })}
             </tbody>
           </table>
+          <Pagination
+            totalCount={total}
+            currentPage={page}
+            pageSize={PAGE_SIZE}
+            searchParams={sp}
+          />
         </div>
       )}
     </div>

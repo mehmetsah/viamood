@@ -6,7 +6,9 @@ import { redirect } from 'next/navigation';
 import { z } from 'zod';
 import { db } from '@/db/client';
 import { inventoryLevels, products, productVariants, vendors } from '@/db/schema';
+import { auditUser } from '@/lib/audit/logger';
 import { canEdit, requireActiveVendor, requireVendor } from '@/lib/server/vendor-context';
+import { pushProductToShopify } from '@/lib/shopify/products';
 import type { ActionResult } from './auth';
 
 const productSchema = z.object({
@@ -223,6 +225,42 @@ export async function updateProductAction(
       })
       .where(eq(productVariants.productId, productId));
   });
+
+  revalidatePath('/products');
+  revalidatePath(`/products/${productId}`);
+  return { success: true };
+}
+
+export async function pushProductToShopifyAction(
+  productId: string,
+): Promise<ActionResult> {
+  const ctx = await requireActiveVendor();
+  if (!canEdit(ctx.role)) return { success: false, error: 'Yetkin yok' };
+
+  const [existing] = await db
+    .select({ id: products.id, shopifyProductId: products.shopifyProductId })
+    .from(products)
+    .where(and(eq(products.id, productId), eq(products.vendorId, ctx.vendorId)))
+    .limit(1);
+  if (!existing) return { success: false, error: 'Ürün bulunamadı' };
+
+  const result = await pushProductToShopify(productId);
+  if (!result.ok) {
+    return { success: false, error: result.error };
+  }
+
+  await auditUser(
+    ctx.userId,
+    'shopify.product.push',
+    'product',
+    productId,
+    {
+      after: {
+        shopifyProductId: result.shopifyProductId,
+        shopifyVariantId: result.shopifyVariantId,
+      },
+    },
+  );
 
   revalidatePath('/products');
   revalidatePath(`/products/${productId}`);

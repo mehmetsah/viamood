@@ -1,10 +1,13 @@
-import { and, desc, eq, isNull } from 'drizzle-orm';
+import { and, count, desc, eq, isNull } from 'drizzle-orm';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { db } from '@/db/client';
 import { products, vendors } from '@/db/schema';
 import { auth } from '@/lib/auth';
 import { vendorMemberships } from '@/db/schema';
+import { Pagination, parsePage } from '@/components/ui/Pagination';
+
+const PAGE_SIZE = 20;
 
 const STATUS_LABEL: Record<string, { label: string; cls: string }> = {
   active: { label: 'Yayında', cls: 'bg-green-100 text-green-900' },
@@ -17,11 +20,17 @@ function formatTL(cents: bigint | null): string {
   return `${(Number(cents) / 100).toLocaleString('tr-TR', { minimumFractionDigits: 2 })} TL`;
 }
 
-export default async function ProductsListPage() {
+interface PageProps {
+  searchParams: Promise<{ page?: string }>;
+}
+
+export default async function ProductsListPage({ searchParams }: PageProps) {
+  const sp = await searchParams;
+  const page = parsePage(sp.page);
+
   const session = await auth();
   if (!session?.user?.id) redirect('/auth/sign-in');
 
-  // Vendor lookup
   const [membership] = await db
     .select({ vendorId: vendors.id, status: vendors.status, name: vendors.name })
     .from(vendorMemberships)
@@ -33,31 +42,50 @@ export default async function ProductsListPage() {
 
   const isActive = membership.status === 'active';
 
+  const whereClause = and(
+    eq(products.vendorId, membership.vendorId),
+    isNull(products.deletedAt),
+  );
+
+  const _cnt_total = await db .select({ total: count() }).from(products).where(whereClause);
+  const total = _cnt_total[0]?.total ?? 0;
+
   const list = await db
     .select()
     .from(products)
-    .where(and(eq(products.vendorId, membership.vendorId), isNull(products.deletedAt)))
+    .where(whereClause)
     .orderBy(desc(products.createdAt))
-    .limit(100);
+    .limit(PAGE_SIZE)
+    .offset((page - 1) * PAGE_SIZE);
 
   return (
     <div className="p-8 max-w-6xl mx-auto">
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-3xl font-bold">Ürünler</h1>
-          <p className="text-neutral-600 text-sm mt-1">{list.length} ürün</p>
+          <p className="text-neutral-600 text-sm mt-1">{total} ürün</p>
         </div>
-        <Link
-          href={isActive ? '/products/new' : '#'}
-          className={`inline-flex items-center px-5 py-2.5 rounded-full font-semibold text-[15px] ${
-            isActive
-              ? 'bg-[var(--color-brand-ink)] text-white hover:opacity-90'
-              : 'bg-neutral-200 text-neutral-500 cursor-not-allowed'
-          }`}
-          aria-disabled={!isActive}
-        >
-          + Yeni Ürün
-        </Link>
+        <div className="flex gap-2">
+          {isActive && (
+            <Link
+              href="/products/import"
+              className="inline-flex items-center px-4 py-2.5 rounded-full font-semibold text-[15px] border-2 border-[var(--color-brand-ink)] text-[var(--color-brand-ink)] hover:bg-neutral-100"
+            >
+              📥 Toplu Yükle
+            </Link>
+          )}
+          <Link
+            href={isActive ? '/products/new' : '#'}
+            className={`inline-flex items-center px-5 py-2.5 rounded-full font-semibold text-[15px] ${
+              isActive
+                ? 'bg-[var(--color-brand-ink)] text-white hover:opacity-90'
+                : 'bg-neutral-200 text-neutral-500 cursor-not-allowed'
+            }`}
+            aria-disabled={!isActive}
+          >
+            + Yeni Ürün
+          </Link>
+        </div>
       </div>
 
       {!isActive && (
@@ -66,7 +94,7 @@ export default async function ProductsListPage() {
         </div>
       )}
 
-      {list.length === 0 ? (
+      {total === 0 ? (
         <div className="bg-white rounded-xl p-16 border text-center">
           <div className="text-5xl mb-3">📦</div>
           <h2 className="font-bold mb-2">Henüz ürün yok</h2>
@@ -102,6 +130,7 @@ export default async function ProductsListPage() {
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
                         {p.featuredImageUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
                           <img
                             src={p.featuredImageUrl}
                             alt=""
@@ -140,6 +169,12 @@ export default async function ProductsListPage() {
               })}
             </tbody>
           </table>
+          <Pagination
+            totalCount={total}
+            currentPage={page}
+            pageSize={PAGE_SIZE}
+            searchParams={sp}
+          />
         </div>
       )}
     </div>

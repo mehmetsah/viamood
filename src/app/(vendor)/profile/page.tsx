@@ -1,9 +1,10 @@
-import { eq } from 'drizzle-orm';
+import { and, desc, eq, isNull } from 'drizzle-orm';
 import { redirect } from 'next/navigation';
 import { db } from '@/db/client';
-import { vendorMemberships, vendors } from '@/db/schema';
+import { vendorApiTokens, vendorMemberships, vendors } from '@/db/schema';
 import { auth } from '@/lib/auth';
 import { ProfileForm } from './ProfileForm';
+import { ApiTokensClient } from './ApiTokensClient';
 
 export default async function VendorProfilePage() {
   const session = await auth();
@@ -18,6 +19,21 @@ export default async function VendorProfilePage() {
 
   if (!row) redirect('/onboarding');
   const v = row.vendor;
+
+  const tokens = await db
+    .select({
+      id: vendorApiTokens.id,
+      name: vendorApiTokens.name,
+      prefix: vendorApiTokens.prefix,
+      scopes: vendorApiTokens.scopes,
+      lastUsedAt: vendorApiTokens.lastUsedAt,
+      lastUsedIp: vendorApiTokens.lastUsedIp,
+      createdAt: vendorApiTokens.createdAt,
+      expiresAt: vendorApiTokens.expiresAt,
+    })
+    .from(vendorApiTokens)
+    .where(and(eq(vendorApiTokens.vendorId, v.id), isNull(vendorApiTokens.revokedAt)))
+    .orderBy(desc(vendorApiTokens.createdAt));
 
   return (
     <div className="p-8 max-w-3xl mx-auto">
@@ -46,6 +62,21 @@ export default async function VendorProfilePage() {
           taxOffice: v.taxOffice ?? '',
         }}
       />
+
+      <div className="mt-12">
+        <ApiTokensClient
+          tokens={tokens.map((t) => ({
+            id: t.id,
+            name: t.name,
+            prefix: t.prefix,
+            scopes: t.scopes ?? [],
+            lastUsedAt: t.lastUsedAt?.toISOString() ?? null,
+            lastUsedIp: t.lastUsedIp,
+            createdAt: t.createdAt.toISOString(),
+            expiresAt: t.expiresAt?.toISOString() ?? null,
+          }))}
+        />
+      </div>
     </div>
   );
 }

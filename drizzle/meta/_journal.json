@@ -15,6 +15,13 @@
       "when": 1778253228501,
       "tag": "0001_shopify_oauth",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1778509123728,
+      "tag": "0002_normal_james_howlett",
+      "breakpoints": true
     }
   ]
 }

@@ -22,6 +22,9 @@ export default auth((req) => {
   if (
     pathname.startsWith('/api/auth') ||
     pathname.startsWith('/api/health') ||
+    pathname.startsWith('/api/shopify/webhooks') ||
+    pathname.startsWith('/api/v1/vendor') ||
+    pathname.startsWith('/api/dev') ||
     pathname.startsWith('/_next') ||
     pathname.startsWith('/favicon')
   ) {

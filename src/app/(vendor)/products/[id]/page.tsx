@@ -62,7 +62,12 @@ export default async function EditProductPage({ params }: PageProps) {
         <h1 className="text-3xl font-bold">Ürünü Düzenle</h1>
         <span className="text-xs text-neutral-500 font-mono">ID: {row.id.slice(0, 8)}</span>
       </div>
-      <ProductEditClient productId={row.id} defaults={defaults} />
+      <ProductEditClient
+        productId={row.id}
+        defaults={defaults}
+        shopifyProductId={row.shopifyProductId}
+        shopifyHandle={row.shopifyHandle}
+      />
     </div>
   );
 }
