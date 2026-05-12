@@ -1,4 +1,4 @@
-import { and, count, desc, eq, ilike, or } from 'drizzle-orm';
+import { and, count, desc, eq, ilike, or, sql } from 'drizzle-orm';
 import Link from 'next/link';
 import { db } from '@/db/client';
 import { auditLog, users } from '@/db/schema';
@@ -47,7 +47,8 @@ export default async function AuditLogPage({ searchParams }: PageProps) {
       occurredAt: auditLog.occurredAt,
     })
     .from(auditLog)
-    .leftJoin(users, eq(users.id, auditLog.actorId))
+    // audit_log.actor_id text, users.id uuid → cast gerek
+    .leftJoin(users, sql`${users.id}::text = ${auditLog.actorId}`)
     .where(whereClause)
     .orderBy(desc(auditLog.occurredAt))
     .limit(PAGE_SIZE)
