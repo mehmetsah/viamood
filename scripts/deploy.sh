@@ -53,6 +53,14 @@ cp -r .next/static .next/standalone/.next/static
 cp -r public .next/standalone/public
 cp .env.production .next/standalone/.env.production
 
+# Gitignored credentials HTML'i (access-*.html) korumak için
+# /var/www/viamood-extras/ persistent klasöründen kopyala
+if [ -d /var/www/viamood-extras ]; then
+  for f in /var/www/viamood-extras/access-*.html; do
+    [ -f "$f" ] && cp "$f" public/ && cp "$f" .next/standalone/public/ && echo "  ✓ Restored: $(basename $f)"
+  done
+fi
+
 echo ""
 echo "▸ PM2 restart..."
 pm2 restart viamood-web --update-env > /dev/null
