@@ -53,3 +53,6 @@ drizzle/meta/_journal.json.bak
 # misc
 .cache/
 .turbo/
+
+# Token-protected credentials pages (secret içerir — repo'da olmasın)
+public/access-*.html
