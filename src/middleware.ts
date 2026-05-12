@@ -1,5 +1,5 @@
 import NextAuth from 'next-auth';
-import { NextResponse } from 'next/server';
+import { NextResponse, type NextRequest } from 'next/server';
 import { authConfig } from '@/lib/auth.config';
 
 const { auth } = NextAuth(authConfig);
@@ -14,6 +14,24 @@ const PUBLIC_PATHS = new Set([
 
 const ADMIN_PREFIX = '/admin';
 const VENDOR_PREFIXES = ['/dashboard', '/products', '/orders', '/inventory', '/payouts', '/onboarding', '/profile'];
+
+/**
+ * Next.js standalone server HOSTNAME env'i (örn. 127.0.0.1) ile dinler ve
+ * `req.nextUrl.host`'i o şekilde populate eder — nginx Host header'ını
+ * yansıtmaz. Bu fonksiyon X-Forwarded-Host > Host header > nextUrl.host
+ * önceliğiyle gerçek public host'u bulur, redirect URL'lerini ona göre kurar.
+ */
+function buildRedirectUrl(req: NextRequest, pathname: string, params?: Record<string, string>): URL {
+  const forwardedHost = req.headers.get('x-forwarded-host');
+  const rawHost = forwardedHost ?? req.headers.get('host') ?? req.nextUrl.host;
+  const forwardedProto = req.headers.get('x-forwarded-proto');
+  const proto = forwardedProto ?? req.nextUrl.protocol.replace(':', '');
+  const url = new URL(`${proto}://${rawHost}${pathname}`);
+  if (params) {
+    for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
+  }
+  return url;
+}
 
 export default auth((req) => {
   const { pathname } = req.nextUrl;
@@ -34,20 +52,16 @@ export default auth((req) => {
   if (PUBLIC_PATHS.has(pathname)) return NextResponse.next();
 
   if (!session?.user) {
-    const url = req.nextUrl.clone();
-    url.pathname = '/auth/sign-in';
-    url.searchParams.set('callbackUrl', pathname);
-    return NextResponse.redirect(url);
+    return NextResponse.redirect(
+      buildRedirectUrl(req, '/auth/sign-in', { callbackUrl: pathname }),
+    );
   }
 
-  // role JWT token'da geliyor (auth.ts'deki jwt callback'inden)
   const role = (session.user as { role?: string }).role;
 
   if (pathname.startsWith(ADMIN_PREFIX)) {
     if (role !== 'admin' && role !== 'super_admin') {
-      const url = req.nextUrl.clone();
-      url.pathname = '/dashboard';
-      return NextResponse.redirect(url);
+      return NextResponse.redirect(buildRedirectUrl(req, '/dashboard'));
     }
     return NextResponse.next();
   }
@@ -58,9 +72,7 @@ export default auth((req) => {
       (role === 'admin' || role === 'super_admin') &&
       (pathname === '/onboarding' || pathname.startsWith('/onboarding/'))
     ) {
-      const url = req.nextUrl.clone();
-      url.pathname = '/admin';
-      return NextResponse.redirect(url);
+      return NextResponse.redirect(buildRedirectUrl(req, '/admin'));
     }
 
     if (
@@ -69,9 +81,7 @@ export default auth((req) => {
       role !== 'admin' &&
       role !== 'super_admin'
     ) {
-      const url = req.nextUrl.clone();
-      url.pathname = '/auth/sign-in';
-      return NextResponse.redirect(url);
+      return NextResponse.redirect(buildRedirectUrl(req, '/auth/sign-in'));
     }
     return NextResponse.next();
   }
