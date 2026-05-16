@@ -20,6 +20,23 @@ interface MikroOpErr {
 }
 export type MikroOpResult<T = unknown> = MikroOpOk<T> | MikroOpErr;
 
+/** Mikro genelde {"IsSuccess":false,"ErrorMessage":"..."} formatında error döner. */
+function extractMikroError(err: unknown): { msg: string; raw: unknown } {
+  const baseMsg = err instanceof Error ? err.message : 'unknown';
+  const body =
+    err && typeof err === 'object' && 'body' in err ? (err as { body: unknown }).body : null;
+  if (body && typeof body === 'object') {
+    const b = body as Record<string, unknown>;
+    const detail =
+      (b.ErrorMessage as string | undefined) ||
+      (b.errorMessage as string | undefined) ||
+      (b.Message as string | undefined) ||
+      (b.message as string | undefined);
+    if (detail) return { msg: `${baseMsg} — ${detail}`, raw: body };
+  }
+  return { msg: baseMsg, raw: body };
+}
+
 /**
  * Yeni cari (müşteri) kaydı.
  * Yunus'a göre: aynı email/telefon ile boş cari de açabiliriz — dedupe yapmıyoruz.
@@ -32,12 +49,8 @@ export async function cariKayit(dto: MikroCariDto): Promise<MikroOpResult> {
     });
     return { ok: true, data };
   } catch (err) {
-    const msg = err instanceof Error ? err.message : 'unknown';
-    return {
-      ok: false,
-      error: msg,
-      raw: err && typeof err === 'object' && 'body' in err ? (err as { body: unknown }).body : null,
-    };
+    const { msg, raw } = extractMikroError(err);
+    return { ok: false, error: msg, raw };
   }
 }
 
@@ -50,12 +63,8 @@ export async function siparisEkle(evrak: MikroEvrak): Promise<MikroOpResult> {
     });
     return { ok: true, data };
   } catch (err) {
-    const msg = err instanceof Error ? err.message : 'unknown';
-    return {
-      ok: false,
-      error: msg,
-      raw: err && typeof err === 'object' && 'body' in err ? (err as { body: unknown }).body : null,
-    };
+    const { msg, raw } = extractMikroError(err);
+    return { ok: false, error: msg, raw };
   }
 }
 
@@ -68,11 +77,7 @@ export async function siparisOnayla(dto: MikroSiparisOnayDto): Promise<MikroOpRe
     });
     return { ok: true, data };
   } catch (err) {
-    const msg = err instanceof Error ? err.message : 'unknown';
-    return {
-      ok: false,
-      error: msg,
-      raw: err && typeof err === 'object' && 'body' in err ? (err as { body: unknown }).body : null,
-    };
+    const { msg, raw } = extractMikroError(err);
+    return { ok: false, error: msg, raw };
   }
 }
