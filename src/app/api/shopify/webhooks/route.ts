@@ -3,8 +3,10 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { db } from '@/db/client';
 import { orderLineItems, orders, shopifyConnections } from '@/db/schema';
 import { logAudit } from '@/lib/audit/logger';
+import { env } from '@/lib/env';
 import { routeOrder } from '@/lib/routing/engine';
 import { accrueCommissionForOrder } from '@/lib/server/commission-service';
+import { syncOrderToMikro } from '@/lib/server/mikro-sync';
 import { ingestShopifyOrder, type ShopifyOrderPayload } from '@/lib/shopify/order-ingest';
 import { verifyShopifyWebhook } from '@/lib/shopify/webhook';
 
@@ -64,6 +66,12 @@ export async function POST(req: NextRequest) {
           accrueCommissionForOrder(result.orderId).catch((err) => {
             console.error('[webhook orders/create] commission error:', err);
           });
+          // Mikro V17'ye push (auto-push aktifse) — muhasebe için CariKayit + SiparisEkle + SiparisOnayla
+          if (env.MIKRO_AUTO_PUSH && env.MIKRO_API_URL) {
+            syncOrderToMikro(result.orderId).catch((err) => {
+              console.error('[webhook orders/create] mikro sync error:', err);
+            });
+          }
         }
         await logAudit({
           actorType: 'system',

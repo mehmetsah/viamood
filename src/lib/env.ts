@@ -47,6 +47,27 @@ const envSchema = z.object({
   KARGOLAB_MEMBER_ID: z.coerce.number().optional(),
   KARGOLAB_API_KEY: z.string().optional(), // legacy
 
+  // Mikro V17 ERP
+  MIKRO_API_URL: z.string().url().optional(),         // örn. http://85.111.96.204:7781/api
+  MIKRO_USERNAME: z.string().optional(),
+  MIKRO_PASSWORD: z.string().optional(),
+  /** Sipariş onaylama userId (Mikro tarafı verir) */
+  MIKRO_APPROVER_USER_NO: z.coerce.number().default(1),
+  /** Project code: SHOPIFY / WOO / TRENDYOL / INSTAGRAM / WHATSAPP */
+  MIKRO_PROJE_KODU: z.string().default('SHOPIFY'),
+  /** Cari kodu prefix — Yunus: "120.20.01.E" sabit */
+  MIKRO_CARI_PREFIX: z.string().default('120.20.01.E'),
+  /** Cari sayacının başlangıcı (Yunus max ID + 1 verecek) */
+  MIKRO_CARI_SEED: z.coerce.number().default(10000),
+  /** Otomatik Mikro push aktif mi? (false → sadece DB'ye yazılır, manuel push gerek) */
+  MIKRO_AUTO_PUSH: z.coerce.boolean().default(true),
+  /** Default depo no */
+  MIKRO_DEPO_NO: z.coerce.number().default(1),
+  /** SRM merkez kodu */
+  MIKRO_SRM_MERKEZ: z.string().default('99'),
+  /** Ödeme planı no */
+  MIKRO_ODEME_PLANI_NO: z.coerce.number().default(99),
+
   // Storage
   S3_ENDPOINT: z.string().url().optional(),
   S3_REGION: z.string().optional(),

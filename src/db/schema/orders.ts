@@ -31,6 +31,15 @@ export const orderFulfillmentStatus = pgEnum('order_fulfillment_status', [
   'restocked',
 ]);
 
+export const mikroSyncStatus = pgEnum('mikro_sync_status', [
+  'pending',           // Henüz gönderilmedi
+  'customer_created',  // Cari oluşturuldu, sipariş bekliyor
+  'order_added',       // SiparisEkle başarılı, onay bekliyor
+  'approved',          // SiparisOnayla başarılı — faturaya hazır
+  'failed',            // Bir adımda hata — retry/manual
+  'skipped',           // Bilerek atlandı (örn. test sipariş)
+]);
+
 export const orderLineItemStatus = pgEnum('order_line_item_status', [
   'pending',         // Henüz routing yapılmadı
   'awaiting_pickup', // Vendor'a atandı, etiket bekliyor
@@ -101,6 +110,14 @@ export const orders = pgTable(
     // Idempotency
     rawShopifyPayload: jsonb('raw_shopify_payload'), // raw webhook body için (audit)
 
+    // ── Mikro V17 ERP entegrasyonu ──
+    mikroSyncStatus: mikroSyncStatus('mikro_sync_status').notNull().default('pending'),
+    mikroCariKodu: text('mikro_cari_kodu'),     // 120.20.01.E{n}
+    mikroEvrakSeri: text('mikro_evrak_seri'),   // = shopify order name
+    mikroEvrakSira: integer('mikro_evrak_sira').default(1),
+    mikroError: text('mikro_error'),
+    mikroSyncedAt: timestamp('mikro_synced_at', { withTimezone: true }),
+
     ...timestamps(),
   },
   (t) => [
@@ -108,8 +125,19 @@ export const orders = pgTable(
     index('orders_customer_idx').on(t.customerId),
     index('orders_financial_status_idx').on(t.financialStatus),
     index('orders_fulfillment_status_idx').on(t.fulfillmentStatus),
+    index('orders_mikro_status_idx').on(t.mikroSyncStatus),
   ],
 );
+
+/**
+ * Counter table — Mikro Cari kodu için global increment.
+ * Yunus'tan gelen max ID + 1 ile başlatılır, sipariş başına +1.
+ */
+export const mikroSequences = pgTable('mikro_sequences', {
+  key: text('key').primaryKey(),                       // 'cari_kodu_next'
+  value: integer('value').notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});
 
 /**
  * Order line items — siparişin her satırı, vendor'a göre filtrelenir.
