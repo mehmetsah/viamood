@@ -1,35 +1,13 @@
 import type { Metadata } from 'next';
-import { Cormorant_Garamond, DM_Sans } from 'next/font/google';
 import './globals.css';
-
-const serif = Cormorant_Garamond({
-  subsets: ['latin', 'latin-ext'],
-  weight: ['400', '500', '600', '700'],
-  variable: '--font-serif',
-  display: 'swap',
-});
-
-const sans = DM_Sans({
-  subsets: ['latin', 'latin-ext'],
-  weight: ['400', '500', '600', '700'],
-  variable: '--font-sans',
-  display: 'swap',
-});
 
 export const metadata: Metadata = {
   title: {
-    default: 'Via Mood — Doğanın Renkleriyle Modern Yaşam',
+    default: 'Via Mood Vendor Platform',
     template: '%s · Via Mood',
   },
-  description:
-    'Via Mood pazaryerinde el yapımı mutfak gereçleri, doğal baharatlar, Ege zeytinyağları ve Anadolu tekstil. Türkiye\'nin küçük üreticilerinin ürünleri tek çatı altında.',
-  openGraph: {
-    type: 'website',
-    locale: 'tr_TR',
-    siteName: 'Via Mood',
-    title: 'Via Mood — Doğanın Renkleriyle Modern Yaşam',
-    description: 'Küçük üreticilerin el yapımı ve doğal ürünleri',
-  },
+  description: 'Via Mood pazaryeri operatör paneli ve tedarikçi paneli',
+  robots: { index: false, follow: false }, // private platform
   icons: {
     icon: [{ url: '/favicon.svg', type: 'image/svg+xml' }],
     apple: '/favicon.svg',
@@ -38,7 +16,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="tr" className={`${serif.variable} ${sans.variable}`}>
+    <html lang="tr">
       <body>{children}</body>
     </html>
   );

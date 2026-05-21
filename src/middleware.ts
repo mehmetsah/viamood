@@ -10,16 +10,7 @@ const PUBLIC_PATHS = new Set([
   '/auth/sign-up',
   '/auth/verify',
   '/auth/error',
-  '/hakkimizda',
-  '/iletisim',
-  '/iade-ve-teslimat',
-  '/mesafeli-satis-sozlesmesi',
-  '/gizlilik-politikasi',
-  '/kvkk',
 ]);
-
-/** Storefront prefix'leri — bunlar tamamen public (auth gerekmez) */
-const PUBLIC_PREFIXES = ['/shop', '/koleksiyon'];
 
 const ADMIN_PREFIX = '/admin';
 const VENDOR_PREFIXES = ['/dashboard', '/products', '/bundles', '/orders', '/inventory', '/payouts', '/onboarding', '/profile'];
@@ -59,9 +50,6 @@ export default auth((req) => {
   }
 
   if (PUBLIC_PATHS.has(pathname)) return NextResponse.next();
-  if (PUBLIC_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`))) {
-    return NextResponse.next();
-  }
 
   if (!session?.user) {
     return NextResponse.redirect(
