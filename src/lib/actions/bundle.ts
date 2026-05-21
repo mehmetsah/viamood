@@ -14,6 +14,7 @@ import {
 } from '@/lib/server/bundle-service';
 import { canEdit, requireActiveVendor } from '@/lib/server/vendor-context';
 import { auth } from '@/lib/auth';
+import { pushBundleToShopify } from '@/lib/shopify/bundles';
 import type { ActionResult } from './auth';
 
 const componentSchema = z.object({
@@ -192,8 +193,39 @@ export async function toggleBundleStatusAction(formData: FormData): Promise<void
   const status = z.enum(['draft', 'active']).parse(formData.get('status'));
   await setBundleStatus(bundleId, status);
   await auditUser(session.user.id, `bundle.status.${status}`, 'bundle', bundleId);
+
+  // Aktif olunca otomatik Shopify push (best-effort, hata olursa log'la geç)
+  if (status === 'active') {
+    try {
+      const r = await pushBundleToShopify(bundleId);
+      if (r.ok) {
+        await auditUser(session.user.id, 'bundle.shopify.push.auto', 'bundle', bundleId, {
+          after: { productId: r.shopifyProductId, variantId: r.shopifyVariantId },
+        });
+      } else {
+        console.error('[bundle auto-push] failed:', r.error);
+      }
+    } catch (e) {
+      console.error('[bundle auto-push] exception:', e);
+    }
+  }
+
   revalidatePath(`/bundles/${bundleId}`);
   revalidatePath(`/admin/bundles/${bundleId}`);
+}
+
+export async function pushBundleToShopifyAction(formData: FormData): Promise<ActionResult> {
+  const session = await auth();
+  if (!session?.user?.id) return { success: false, error: 'Unauthorized' };
+  const bundleId = z.string().uuid().parse(formData.get('bundleId'));
+  const res = await pushBundleToShopify(bundleId);
+  if (!res.ok) return { success: false, error: res.error };
+  await auditUser(session.user.id, 'bundle.shopify.push.manual', 'bundle', bundleId, {
+    after: { productId: res.shopifyProductId, variantId: res.shopifyVariantId, handle: res.shopifyHandle },
+  });
+  revalidatePath(`/bundles/${bundleId}`);
+  revalidatePath(`/admin/bundles/${bundleId}`);
+  return { success: true };
 }
 
 export async function archiveBundleAction(formData: FormData): Promise<void> {

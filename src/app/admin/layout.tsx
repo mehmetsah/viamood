@@ -24,6 +24,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           <Link href="/admin" className="px-3 py-2 rounded-lg hover:bg-white/10">📊 Dashboard</Link>
           <Link href="/admin/vendors" className="px-3 py-2 rounded-lg hover:bg-white/10">🏢 Tedarikçiler</Link>
           <Link href="/admin/products" className="px-3 py-2 rounded-lg hover:bg-white/10">📦 Tüm Ürünler</Link>
+          <Link href="/admin/bundles" className="px-3 py-2 rounded-lg hover:bg-white/10">🎁 Set Ürünler</Link>
           <Link href="/admin/orders" className="px-3 py-2 rounded-lg hover:bg-white/10">🧾 Siparişler</Link>
           <Link href="/admin/payouts" className="px-3 py-2 rounded-lg hover:bg-white/10">💰 Ödemeler</Link>
           <Link href="/admin/routing-rules" className="px-3 py-2 rounded-lg hover:bg-white/10">🔀 Routing</Link>

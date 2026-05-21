@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react';
 import {
   archiveBundleAction,
   prepareBundleStockAction,
+  pushBundleToShopifyAction,
   toggleBundleStatusAction,
   unprepareBundleStockAction,
 } from '@/lib/actions/bundle';
@@ -71,6 +72,16 @@ export function BundleManageClient({
       const res = await unprepareBundleStockAction(fd);
       if (res.success) showMsg('ok', `${n} set bozuldu, komponentlere geri eklendi`);
       else showMsg('err', res.error ?? 'Hata');
+    });
+  }
+
+  function handlePush() {
+    const fd = new FormData();
+    fd.set('bundleId', bundleId);
+    startTransition(async () => {
+      const res = await pushBundleToShopifyAction(fd);
+      if (res.success) showMsg('ok', 'Shopify\'a gönderildi / güncellendi');
+      else showMsg('err', res.error ?? 'Shopify push hatası');
     });
   }
 
@@ -163,11 +174,23 @@ export function BundleManageClient({
           )}
         </form>
 
-        {isPushed && (
-          <p className="mt-3 text-sm text-green-700">
-            ✓ Shopify'a push edildi
-          </p>
-        )}
+        <div className="mt-4 pt-4 border-t flex items-center gap-3 flex-wrap">
+          <button
+            type="button"
+            onClick={handlePush}
+            disabled={pending || currentInventory <= 0}
+            className="px-4 py-2 border border-[var(--color-brand-ink)] text-[var(--color-brand-ink)] rounded-lg font-semibold text-sm disabled:opacity-50 hover:bg-neutral-50"
+          >
+            🛒 {isPushed ? 'Shopify\'da Güncelle' : 'Shopify\'a Push'}
+          </button>
+          {isPushed ? (
+            <span className="text-xs text-green-700">✓ Shopify'a push edildi</span>
+          ) : (
+            <span className="text-xs text-neutral-500">
+              Yayına aldığında otomatik push olur — manuel de tetikleyebilirsin
+            </span>
+          )}
+        </div>
       </section>
 
       {/* Arşivle */}
