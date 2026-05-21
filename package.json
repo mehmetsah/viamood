@@ -38,6 +38,7 @@
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
     "drizzle-orm": "^0.36.0",
+    "exceljs": "^4.4.0",
     "ioredis": "^5.4.1",
     "iyzipay": "^2.0.67",
     "lucide-react": "^0.460.0",
