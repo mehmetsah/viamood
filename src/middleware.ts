@@ -22,7 +22,7 @@ const PUBLIC_PATHS = new Set([
 const PUBLIC_PREFIXES = ['/shop', '/koleksiyon'];
 
 const ADMIN_PREFIX = '/admin';
-const VENDOR_PREFIXES = ['/dashboard', '/products', '/orders', '/inventory', '/payouts', '/onboarding', '/profile'];
+const VENDOR_PREFIXES = ['/dashboard', '/products', '/bundles', '/orders', '/inventory', '/payouts', '/onboarding', '/profile'];
 
 /**
  * Next.js standalone server HOSTNAME env'i (örn. 127.0.0.1) ile dinler ve

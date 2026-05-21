@@ -29,6 +29,9 @@ export default async function VendorLayout({ children }: { children: React.React
           <Link href="/products" className="px-3 py-2 rounded-lg hover:bg-neutral-100">
             📦 Ürünler
           </Link>
+          <Link href="/bundles" className="px-3 py-2 rounded-lg hover:bg-neutral-100">
+            🎁 Set Ürünler
+          </Link>
           <Link href="/inventory" className="px-3 py-2 rounded-lg hover:bg-neutral-100">
             📊 Stok
           </Link>
