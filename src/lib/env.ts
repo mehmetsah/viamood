@@ -57,8 +57,11 @@ const envSchema = z.object({
   MIKRO_PROJE_KODU: z.string().default('SHOPIFY'),
   /** Cari kodu prefix — Yunus: "120.20.01.E" sabit */
   MIKRO_CARI_PREFIX: z.string().default('120.20.01.E'),
-  /** Cari sayacının başlangıcı (Yunus max ID + 1 verecek) */
+  /** Cari sayacının başlangıcı (Yunus son cari: E3801, seed 10000 onaylı) */
   MIKRO_CARI_SEED: z.coerce.number().default(10000),
+  /** Stok kodu prefix — Yunus: ara depoya sevkiyat için "VIA" eklenir
+   *  (ör. bizim SKU '100' → Mikro stok kodu 'VIA100') */
+  MIKRO_STOK_PREFIX: z.string().default('VIA'),
   /** Otomatik Mikro push aktif mi? (false → sadece DB'ye yazılır, manuel push gerek) */
   MIKRO_AUTO_PUSH: z.coerce.boolean().default(true),
   /** Default depo no */

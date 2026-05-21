@@ -228,12 +228,34 @@ export async function syncOrderToMikro(orderId: string): Promise<SyncResult> {
   const evrakSeri = order.mikroEvrakSeri ?? order.shopifyOrderName;
   const evrakSira = order.mikroEvrakSira ?? 1;
 
+  // SKU normalize + Mikro stok kodu üret (Yunus kuralı: VIA prefix)
+  // Eğer satırlardan birinde SKU yoksa Mikro reddedeceğinden erken fail edelim
+  const missingSkuLines = lineItems.filter((li) => !(li.variantSku ?? li.sku));
+  if (missingSkuLines.length > 0) {
+    const titles = missingSkuLines.map((li) => li.title).join(', ');
+    const err = `SKU eksik satırlar: ${titles}`;
+    await db
+      .update(orders)
+      .set({
+        mikroSyncStatus: 'failed',
+        mikroError: err,
+        updatedAt: new Date(),
+      })
+      .where(eq(orders.id, orderId));
+    return { ok: false, orderId, step: 'siparis', error: err };
+  }
+
   const satirlar: MikroHareket[] = lineItems.map((li) => {
     const unitPriceTl = Number(li.unitPriceCents) / 100;
     const discountTl = Number(li.discountCents) / 100;
+    const rawSku = String(li.variantSku ?? li.sku ?? '').trim();
+    // Yunus: ara depoya sevkiyat için VIA prefix. Zaten VIA ile başlıyorsa tekrar ekleme.
+    const stokKodu = rawSku.toUpperCase().startsWith(env.MIKRO_STOK_PREFIX.toUpperCase())
+      ? rawSku
+      : `${env.MIKRO_STOK_PREFIX}${rawSku}`;
     return {
       Cinsi: 0, // Stok
-      StokKodu: li.variantSku ?? li.sku ?? '',
+      StokKodu: stokKodu,
       Barkodu: li.variantBarcode ?? '',
       KDV: li.variantIsTaxable === false ? 0 : 20,
       Miktar: li.quantity,
