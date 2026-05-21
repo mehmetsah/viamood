@@ -32,7 +32,7 @@ const envSchema = z.object({
   SHOPIFY_WEBHOOK_SECRET: z.string().optional(),
   SHOPIFY_CLIENT_ID: z.string().optional(),
   SHOPIFY_CLIENT_SECRET: z.string().optional(),
-  SHOPIFY_SCOPES: z.string().default('read_products,write_products,read_orders,write_orders,read_inventory,write_inventory,read_fulfillments,write_fulfillments,read_customers,read_locations'),
+  SHOPIFY_SCOPES: z.string().default('read_products,write_products,read_orders,write_orders,read_inventory,write_inventory,read_fulfillments,write_fulfillments,read_customers,write_customers,read_locations,read_shipping,read_themes,write_themes'),
 
   // Iyzico
   IYZICO_API_KEY: z.string().optional(),
