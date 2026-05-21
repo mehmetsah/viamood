@@ -158,17 +158,19 @@ export async function pushBundleToShopify(bundleId: string): Promise<BundlePushR
       const locGid = conn.primaryLocationId.startsWith('gid://')
         ? conn.primaryLocationId
         : `gid://shopify/Location/${conn.primaryLocationId}`;
+      // 2026-04 forward-compatible: ignoreCompareQuantity yerine
+      // per-entry compareQuantity: null (compare check'i atla).
       await shopifyGraphQL<InventorySetResp>(INVENTORY_SET, {
         input: {
           name: 'available',
           reason: 'correction',
-          ignoreCompareQuantity: true,
           referenceDocumentUri: `viamood://bundle-sync/${bundle.id}`,
           quantities: [
             {
               inventoryItemId: v.inventoryItem.id,
               locationId: locGid,
               quantity: bundle.inventoryQuantity,
+              compareQuantity: null,
             },
           ],
         },

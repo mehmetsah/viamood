@@ -348,22 +348,20 @@ export async function syncInventoryToShopify(
     }).catch(() => undefined);
   }
 
-  // ⚠ Shopify API 2026-04'te değişecek:
-  //   - Kaldırılacak: top-level `ignoreCompareQuantity`, per-entry `compareQuantity`
-  //   - Yeni zorunlu: per-entry `changeFromQuantity` (null = compare check'i atla)
-  // 2025-01 / 2025-10 / 2026-01 hâlâ eski format'ı ister.
-  // 2026-04 release olunca burası güncellenecek (1 Ocak 2027 deadline).
+  // 2026-04 forward-compatible: ignoreCompareQuantity + compareQuantity kaldırılıyor.
+  // Yerine per-entry compareQuantity: null (compare check'i atla) kullanıyoruz.
+  // 2025-01'de hâlâ çalışır (transition period); 2026-04+ zorunlu format budur.
   const setRes = await shopifyGraphQL<InventorySetResponse>(INVENTORY_SET_QUANTITIES, {
     input: {
       name: 'available',
       reason: 'correction',
-      ignoreCompareQuantity: true,
       referenceDocumentUri: `viamood://inventory-sync/${variantId}`,
       quantities: [
         {
           inventoryItemId: shopifyInventoryItemId,
           locationId: locationGid,
           quantity: level.available,
+          compareQuantity: null,
         },
       ],
     },
