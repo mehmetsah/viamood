@@ -267,6 +267,75 @@ export async function pushProductToShopifyAction(
   return { success: true };
 }
 
+/** Ersin'in fiyat hesap modülü — variant.pricing_config güncelleme */
+const pricingConfigSchema = z.object({
+  purchasePriceExclVat: z.coerce.number().min(0).optional(),
+  purchasePriceInclVat: z.coerce.number().min(0).optional(),
+  vatPct: z.coerce.number().min(0).max(100).optional(),
+  desi: z.coerce.number().min(0).optional(),
+  packagingCost: z.coerce.number().min(0).optional(),
+  advertisingCost: z.coerce.number().min(0).optional(),
+  targetProfitPct: z.coerce.number().min(0).max(500).optional(),
+  trendyolPrice: z.coerce.number().min(0).optional(),
+  trendyolCommissionBase: z.coerce.number().min(0).optional(),
+  trendyolCommissionPct: z.coerce.number().min(0).max(100).optional(),
+  paymentServicePct: z.coerce.number().min(0).max(100).optional(),
+  trendyolKargoOverride: z.coerce.number().min(0).optional(),
+  instagramPrice: z.coerce.number().min(0).optional(),
+  pttKargoOverride: z.coerce.number().min(0).optional(),
+});
+
+export async function updateVariantPricingAction(
+  variantId: string,
+  formData: FormData,
+): Promise<ActionResult> {
+  const ctx = await requireVendor();
+  if (!canEdit(ctx.role)) {
+    return { success: false, error: 'Yetkin yok' };
+  }
+
+  // Vendor scope kontrol — vendor sadece kendi variantını düzenleyebilir
+  const [variant] = await db
+    .select({ id: productVariants.id, vendorId: productVariants.vendorId, productId: productVariants.productId })
+    .from(productVariants)
+    .where(eq(productVariants.id, variantId))
+    .limit(1);
+  if (!variant) return { success: false, error: 'Variant bulunamadı' };
+  if (variant.vendorId !== ctx.vendorId) {
+    return { success: false, error: 'Bu varianta erişimin yok' };
+  }
+
+  // Form'u parse et — boş alanlar undefined olur
+  const raw: Record<string, unknown> = {};
+  for (const [k, v] of formData.entries()) {
+    if (typeof v === 'string' && v.trim() !== '') raw[k] = v;
+  }
+
+  const parsed = pricingConfigSchema.safeParse(raw);
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0]?.message ?? 'Form hatası' };
+  }
+
+  // Sadece dolu (defined) alanları sakla
+  const cleaned: Record<string, number> = {};
+  for (const [k, v] of Object.entries(parsed.data)) {
+    if (v != null) cleaned[k] = v;
+  }
+
+  await db
+    .update(productVariants)
+    .set({ pricingConfig: cleaned, updatedAt: new Date() })
+    .where(eq(productVariants.id, variantId));
+
+  await auditUser(ctx.userId, 'variant.pricing.update', 'variant', variantId, {
+    after: cleaned,
+  });
+
+  revalidatePath(`/products/${variant.productId}`);
+  revalidatePath(`/admin/products`);
+  return { success: true };
+}
+
 export async function deleteProductAction(formData: FormData): Promise<void> {
   const ctx = await requireVendor();
   if (!canEdit(ctx.role)) throw new Error('Yetkin yok');

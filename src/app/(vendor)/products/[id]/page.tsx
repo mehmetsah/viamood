@@ -3,8 +3,10 @@ import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 import { db } from '@/db/client';
 import { products, productVariants, vendorMemberships, vendors } from '@/db/schema';
+import type { PricingConfig } from '@/db/schema/products';
 import { auth } from '@/lib/auth';
 import { ProductEditClient } from './ProductEditClient';
+import { PricingConfigEditor } from '@/components/products/PricingConfigEditor';
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -68,6 +70,22 @@ export default async function EditProductPage({ params }: PageProps) {
         shopifyProductId={row.shopifyProductId}
         shopifyHandle={row.shopifyHandle}
       />
+
+      {variant && (
+        <section className="mt-10">
+          <div className="border-t pt-8">
+            <h2 className="text-2xl font-bold mb-1">🧮 Fiyat & Kâr Hesabı</h2>
+            <p className="text-sm text-neutral-600 mb-6">
+              Ersin&apos;in MoodDepo modeline göre Trendyol ve Instagram için canlı kâr analizi.
+              Alış KDVsiz / desi / hedef kâr girince önerilen satış fiyatları otomatik çıkar.
+            </p>
+            <PricingConfigEditor
+              variantId={variant.id}
+              current={(variant.pricingConfig ?? {}) as PricingConfig}
+            />
+          </div>
+        </section>
+      )}
     </div>
   );
 }

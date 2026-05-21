@@ -105,6 +105,13 @@ export const productVariants = pgTable(
     option2: text('option2'),
     option3: text('option3'),
 
+    /**
+     * Ersin'in fiyat hesap modülü için pricing config.
+     * Tüm para alanları TL cinsinden number (cents değil!).
+     * Calculator (/admin/calculator) ile aynı format.
+     */
+    pricingConfig: jsonb('pricing_config').$type<PricingConfig>().default({}),
+
     metadata: jsonb('metadata').$type<Record<string, unknown>>().default({}),
     ...timestamps(),
   },
@@ -115,3 +122,36 @@ export const productVariants = pgTable(
     unique('variants_shopify_uq').on(t.shopifyVariantId),
   ],
 );
+
+export interface PricingConfig {
+  /** Alış KDVsiz (TL) */
+  purchasePriceExclVat?: number;
+  /** Alış KDVli (TL) — purchasePriceExclVat varsa kullanılmaz, sadece referans */
+  purchasePriceInclVat?: number;
+  /** KDV % (default 20) */
+  vatPct?: number;
+  /** Desi (ondalıklı olabilir) */
+  desi?: number;
+  /** Paketleme maliyeti (TL, KDVsiz) */
+  packagingCost?: number;
+  /** Reklam maliyeti (TL, KDVsiz) */
+  advertisingCost?: number;
+  /** Hedef kâr % (default 25) */
+  targetProfitPct?: number;
+  // Trendyol
+  /** Trendyol KDVli satış fiyatı (TL) */
+  trendyolPrice?: number;
+  /** Trendyol komisyona esas fiyat KDVli (opsiyonel) */
+  trendyolCommissionBase?: number;
+  /** Trendyol komisyon % */
+  trendyolCommissionPct?: number;
+  /** Ödeme hizmeti % (default 2.85) */
+  paymentServicePct?: number;
+  /** Trendyol kargo override (TL) */
+  trendyolKargoOverride?: number;
+  // Instagram / PTT
+  /** Instagram / PTT KDVli satış fiyatı (TL) */
+  instagramPrice?: number;
+  /** PTT kargo override KDVli (TL) */
+  pttKargoOverride?: number;
+}
