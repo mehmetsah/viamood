@@ -42,6 +42,7 @@ export default auth((req) => {
     pathname.startsWith('/api/health') ||
     pathname.startsWith('/api/shopify/webhooks') ||
     pathname.startsWith('/api/shopify/shipping-rates') ||
+    pathname.startsWith('/api/v1/tr') ||
     pathname.startsWith('/api/v1/vendor') ||
     pathname.startsWith('/api/dev') ||
     pathname.startsWith('/_next') ||
