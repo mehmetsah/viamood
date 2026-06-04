@@ -13,3 +13,4 @@ export * from './audit';
 export * from './shopify';
 export * from './api-tokens';
 export * from './bundles';
+export * from './shipping';

@@ -31,6 +31,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           <Link href="/admin/profitability" className="px-3 py-2 rounded-lg hover:bg-white/10">📈 Kârlılık Raporu</Link>
           <Link href="/admin/routing-rules" className="px-3 py-2 rounded-lg hover:bg-white/10">🔀 Routing</Link>
           <Link href="/admin/shopify" className="px-3 py-2 rounded-lg hover:bg-white/10">🛒 Shopify</Link>
+          <Link href="/admin/shipping-rates" className="px-3 py-2 rounded-lg hover:bg-white/10">🚚 Kargo Tarifeleri</Link>
           <Link href="/admin/mikro" className="px-3 py-2 rounded-lg hover:bg-white/10">📦 Mikro V17</Link>
           <Link href="/admin/audit-log" className="px-3 py-2 rounded-lg hover:bg-white/10">📜 Audit Log</Link>
         </nav>
