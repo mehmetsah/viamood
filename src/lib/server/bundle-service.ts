@@ -97,13 +97,14 @@ interface CreateErr {
 export type BundleResult = CreateOk | CreateErr;
 
 // ============================================================================
-// Shipping rate (basit varsayım — vendor / env'den override edilebilir)
+// Shipping rate — KargoLab gerçek fiyatı (rates.ts) + acil fallback
 // ============================================================================
 
-/** kg başına TL cent. Default: 50 TL / kg + 30 TL base */
+/** Acil fallback için: 30 TL base + 50 TL/kg. KargoLab fail olursa kullanılır. */
 const SHIPPING_BASE_CENTS = 3000;
 const SHIPPING_PER_KG_CENTS = 5000;
 
+/** Synchronous fallback hesabı — sadece KargoLab unavailable durumunda */
 function calcShippingCents(weightGrams: number | null | undefined): number {
   if (!weightGrams || weightGrams <= 0) return SHIPPING_BASE_CENTS;
   const kg = weightGrams / 1000;
