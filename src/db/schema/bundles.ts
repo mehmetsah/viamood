@@ -48,7 +48,13 @@ export const productBundles = pgTable(
     handle: text('handle').notNull().unique(),
     sku: text('sku').notNull().unique(),
     description: text('description'),
+    /** Ana görsel — manuel olarak vendor/admin tarafından girilir */
     featuredImageUrl: text('featured_image_url'),
+    /**
+     * Galeri (sub) görselleri — seçilen komponent variant'ların imageUrl'lerinden
+     * otomatik türetilir. Vendor manuel düzenleyebilir (üzerine yazabilir).
+     */
+    galleryImageUrls: jsonb('gallery_image_urls').$type<string[]>().default([]).notNull(),
     status: bundleStatus('status').notNull().default('draft'),
 
     /** Vendor'un belirlediği özel set satış fiyatı (TL cent) */

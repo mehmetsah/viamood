@@ -78,6 +78,12 @@ const envSchema = z.object({
   S3_ACCESS_KEY: z.string().optional(),
   S3_SECRET_KEY: z.string().optional(),
 
+  // AI (shipment extraction etc.)
+  /** Anthropic API key for Claude — used by AI shipment extractor */
+  ANTHROPIC_API_KEY: z.string().optional(),
+  /** Default Claude model for cheap extraction tasks */
+  ANTHROPIC_MODEL_FAST: z.string().default('claude-haiku-4-5'),
+
   // Sentry
   SENTRY_DSN: z.string().url().optional(),
   SENTRY_AUTH_TOKEN: z.string().optional(),

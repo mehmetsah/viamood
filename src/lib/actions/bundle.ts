@@ -28,6 +28,8 @@ const createSchema = z.object({
   handle: z.string().min(2).max(120),
   description: z.string().max(8000).optional(),
   featuredImageUrl: z.string().url().optional().or(z.literal('')),
+  /** Auto-derived from component variants; manuel override edilebilir */
+  galleryImageUrls: z.array(z.string().url()).max(10).default([]),
   bundlePriceCents: z.coerce.number().int().min(1),
   initialSetCount: z.coerce.number().int().min(0).default(0),
   packageWeightGrams: z.coerce.number().int().min(0).optional(),
@@ -76,6 +78,20 @@ export async function createBundleAction(formData: FormData): Promise<void> {
     throw new Error('Geçersiz komponent verisi');
   }
 
+  // Gallery — auto-derived from variant images on client, JSON dizi olarak gelir
+  let galleryImageUrls: string[] = [];
+  try {
+    const raw = String(formData.get('galleryImageUrls') ?? '[]');
+    const parsed: unknown = JSON.parse(raw);
+    if (Array.isArray(parsed)) {
+      galleryImageUrls = parsed
+        .filter((x): x is string => typeof x === 'string' && x.length > 0)
+        .slice(0, 10);
+    }
+  } catch {
+    // boş bırak
+  }
+
   const isAdminMixed = formData.get('isAdminMixed') === '1' && isAdmin;
 
   const raw = {
@@ -84,6 +100,7 @@ export async function createBundleAction(formData: FormData): Promise<void> {
     handle: String(formData.get('handle') ?? '').trim() || slugifyHandle(String(formData.get('title') ?? '')) + '-set',
     description: String(formData.get('description') ?? ''),
     featuredImageUrl: String(formData.get('featuredImageUrl') ?? '').trim(),
+    galleryImageUrls,
     bundlePriceCents: moneyToCents(String(formData.get('bundlePrice') ?? '0')),
     initialSetCount: Number(formData.get('initialSetCount') ?? 0),
     packageWeightGrams: formData.get('packageWeightGrams')
@@ -125,6 +142,7 @@ export async function createBundleAction(formData: FormData): Promise<void> {
     handle: data.handle,
     description: data.description || undefined,
     featuredImageUrl: data.featuredImageUrl || undefined,
+    galleryImageUrls: data.galleryImageUrls,
     bundlePriceCents: data.bundlePriceCents,
     initialSetCount: data.initialSetCount,
     packageWeightGrams: data.packageWeightGrams,

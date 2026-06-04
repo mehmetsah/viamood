@@ -125,8 +125,19 @@ export async function pushBundleToShopify(bundleId: string): Promise<BundlePushR
   if (!isNew) {
     input.id = bundle.shopifyProductId;
   }
+  // Görseller: ana + galeri. Shopify ilk file'ı featured kabul eder.
+  const galleryRaw = (bundle.galleryImageUrls ?? []) as string[];
+  const files: Array<{ contentType: 'IMAGE'; originalSource: string }> = [];
   if (bundle.featuredImageUrl) {
-    input.files = [{ contentType: 'IMAGE', originalSource: bundle.featuredImageUrl }];
+    files.push({ contentType: 'IMAGE', originalSource: bundle.featuredImageUrl });
+  }
+  for (const url of galleryRaw) {
+    if (!url || url === bundle.featuredImageUrl) continue;
+    files.push({ contentType: 'IMAGE', originalSource: url });
+    if (files.length >= 10) break; // Shopify default media limit
+  }
+  if (files.length > 0) {
+    input.files = files;
   }
 
   let res: ProductSetResp;

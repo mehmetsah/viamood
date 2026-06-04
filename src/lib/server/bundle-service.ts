@@ -43,7 +43,13 @@ export interface CreateBundleInput {
   sku: string;
   handle: string;
   description?: string;
+  /** Ana görsel — vendor manuel girer */
   featuredImageUrl?: string;
+  /**
+   * Galeri görselleri — bundle UI'da seçilen komponent variantların
+   * imageUrl'lerinden otomatik derlenir. Manuel override mümkün.
+   */
+  galleryImageUrls?: string[];
   /** Vendor'un belirlediği özel satış fiyatı (TL cent) */
   bundlePriceCents: number;
   /** İlk batch'te kaç set hazırlanacak — komponentlerden bu kadar set için stok düşülür */
@@ -316,6 +322,7 @@ export async function createBundle(input: CreateBundleInput): Promise<BundleResu
         handle: input.handle.trim(),
         description: input.description ?? null,
         featuredImageUrl: input.featuredImageUrl ?? null,
+        galleryImageUrls: (input.galleryImageUrls ?? []).filter((u) => !!u).slice(0, 10),
         bundlePriceCents: BigInt(input.bundlePriceCents),
         inventoryQuantity: setCount,
         packageWeightGrams: input.packageWeightGrams ?? null,

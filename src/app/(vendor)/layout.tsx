@@ -38,6 +38,9 @@ export default async function VendorLayout({ children }: { children: React.React
           <Link href="/orders" className="px-3 py-2 rounded-lg hover:bg-neutral-100">
             🛒 Siparişler
           </Link>
+          <Link href="/orders/ai-shipment" className="px-3 py-2 rounded-lg hover:bg-neutral-100 text-sm">
+            🤖 AI Kargo
+          </Link>
           <Link href="/payouts" className="px-3 py-2 rounded-lg hover:bg-neutral-100">
             💰 Ödemeler
           </Link>

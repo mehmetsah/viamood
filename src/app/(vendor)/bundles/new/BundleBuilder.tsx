@@ -77,6 +77,12 @@ export function BundleBuilder({ variants, isAdminMixed }: Props) {
   const [packageH, setPackageH] = useState('');
   const [description, setDescription] = useState('');
   const [imageUrl, setImageUrl] = useState('');
+  /**
+   * Galeri (sub) görselleri — seçilen ürünlerin imageUrl'lerinden otomatik derlenir.
+   * Vendor manuel sıralayabilir veya silebilir (override). Boş string = silindi.
+   * Bu state'i otomatik komponent değişimi de tetikler (useEffect aşağıda).
+   */
+  const [galleryOverride, setGalleryOverride] = useState<string[] | null>(null);
   const [search, setSearch] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -86,6 +92,28 @@ export function BundleBuilder({ variants, isAdminMixed }: Props) {
     for (const v of variants) m.set(v.variantId, v);
     return m;
   }, [variants]);
+
+  /**
+   * Auto-galeri: seçilen variant'ların imageUrl'leri (unique, ana resme eşit olanı çıkar).
+   * Override varsa onu kullan — yoksa otomatik.
+   */
+  const autoGallery = useMemo(() => {
+    const seen = new Set<string>();
+    const out: string[] = [];
+    for (const s of selected) {
+      const v = variantMap.get(s.variantId);
+      const u = v?.imageUrl?.trim();
+      if (!u) continue;
+      if (u === imageUrl.trim()) continue; // ana resimi galeriye koyma
+      if (seen.has(u)) continue;
+      seen.add(u);
+      out.push(u);
+      if (out.length >= 10) break;
+    }
+    return out;
+  }, [selected, variantMap, imageUrl]);
+
+  const galleryUrls = galleryOverride ?? autoGallery;
 
   const visibleVariants = useMemo(() => {
     if (!search.trim()) return variants;
@@ -211,6 +239,8 @@ export function BundleBuilder({ variants, isAdminMixed }: Props) {
     fd.set('handle', slugify(title) + '-set');
     fd.set('description', description);
     fd.set('featuredImageUrl', imageUrl);
+    // Galeri: ana resim hariç, seçilen variant'ların image'ları (manuel override mümkün)
+    fd.set('galleryImageUrls', JSON.stringify(galleryUrls));
     fd.set('bundlePrice', bundlePriceTL);
     fd.set('initialSetCount', initialSetCount);
     if (packageWeight) fd.set('packageWeightGrams', packageWeight);
@@ -255,10 +285,77 @@ export function BundleBuilder({ variants, isAdminMixed }: Props) {
                 className="w-full border rounded-lg px-3 py-2 text-sm" />
             </label>
             <label className="block md:col-span-2">
-              <span className="text-xs font-semibold mb-1 block">Görsel URL</span>
+              <span className="text-xs font-semibold mb-1 block">
+                Ana Görsel URL <span className="text-neutral-500 font-normal">(manuel)</span>
+              </span>
               <input type="url" value={imageUrl} onChange={(e) => setImageUrl(e.target.value)}
                 placeholder="https://..." className="w-full border rounded-lg px-3 py-2 text-sm" />
+              <span className="text-[11px] text-neutral-500 mt-1 block">
+                Set'in Shopify'da görünen ana görseli. Genelde paket/lifestyle fotoğrafı.
+              </span>
             </label>
+
+            {/* Auto-galeri preview */}
+            <div className="md:col-span-2">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-semibold">
+                  Galeri Görselleri{' '}
+                  <span className="text-neutral-500 font-normal">
+                    (otomatik — seçilen ürünlerden)
+                  </span>
+                </span>
+                {galleryOverride !== null && (
+                  <button
+                    type="button"
+                    onClick={() => setGalleryOverride(null)}
+                    className="text-[11px] text-blue-600 hover:underline"
+                  >
+                    ⟲ Otomatiğe sıfırla
+                  </button>
+                )}
+              </div>
+              {galleryUrls.length === 0 ? (
+                <div className="text-[11px] text-neutral-500 italic border border-dashed rounded-lg p-3">
+                  Henüz ürün seçilmedi — galeri otomatik dolacak.
+                </div>
+              ) : (
+                <div className="grid grid-cols-5 sm:grid-cols-8 gap-2">
+                  {galleryUrls.map((url, idx) => (
+                    <div
+                      key={url + idx}
+                      className="relative group aspect-square rounded-lg overflow-hidden border bg-neutral-50"
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={url}
+                        alt={`Galeri ${idx + 1}`}
+                        className="w-full h-full object-cover"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const next = (galleryOverride ?? autoGallery).filter(
+                            (_, i) => i !== idx,
+                          );
+                          setGalleryOverride(next);
+                        }}
+                        title="Galeriden çıkar"
+                        className="absolute top-1 right-1 bg-black/70 text-white text-[10px] w-5 h-5 rounded-full opacity-0 group-hover:opacity-100 transition"
+                      >
+                        ×
+                      </button>
+                      <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-[10px] text-center py-0.5">
+                        {idx + 1}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <span className="text-[11px] text-neutral-500 mt-1 block">
+                Set'i oluşturan ürünlerin görselleri otomatik eklenir (max 10). Üzerine
+                gel → × ile çıkar. "Otomatiğe sıfırla" ile orijinal listeye dön.
+              </span>
+            </div>
           </div>
         </section>
 
