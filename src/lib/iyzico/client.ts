@@ -318,11 +318,15 @@ export async function initializeCheckoutForm(
     }),
   };
 
+  const checkoutFormInitialize = client.checkoutFormInitialize;
+  const createFn = checkoutFormInitialize?.create?.bind(checkoutFormInitialize) as
+    | ((req: Record<string, unknown>, cb: (err: unknown, result: CheckoutInitResp) => void) => void)
+    | undefined;
+  if (!createFn) {
+    throw new Error('iyzipay checkoutFormInitialize.create mevcut değil (SDK versiyonu?)');
+  }
   const res = await callbackToPromise<CheckoutInitResp>((cb) =>
-    client.checkoutFormInitialize.create(
-      request,
-      cb as IyzicoCallback<Record<string, unknown> & { status?: string }>,
-    ),
+    createFn(request, cb as (err: unknown, result: CheckoutInitResp) => void),
   );
 
   if (!res.token || !res.checkoutFormContent) {
@@ -346,8 +350,15 @@ export async function retrieveCheckoutForm(token: string): Promise<{
   raw: CheckoutRetrieveResp;
 }> {
   const client = getClient();
+  const checkoutForm = client.checkoutForm;
+  const retrieveFn = checkoutForm?.retrieve?.bind(checkoutForm) as
+    | ((req: Record<string, unknown>, cb: (err: unknown, result: CheckoutRetrieveResp) => void) => void)
+    | undefined;
+  if (!retrieveFn) {
+    throw new Error('iyzipay checkoutForm.retrieve mevcut değil (SDK versiyonu?)');
+  }
   return new Promise((resolve, reject) => {
-    client.checkoutForm.retrieve(
+    retrieveFn(
       { locale: 'tr', token },
       (err: unknown, result: CheckoutRetrieveResp) => {
         if (err) return reject(err);
