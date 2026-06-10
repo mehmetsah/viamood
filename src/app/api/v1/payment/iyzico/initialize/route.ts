@@ -14,15 +14,16 @@ import { env } from '@/lib/env';
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
+const DEFAULT_ORIGIN = 'https://via-mood.myshopify.com';
 const ALLOWED_ORIGINS = [
-  'https://via-mood.myshopify.com',
+  DEFAULT_ORIGIN,
   'https://d3z34m-iw.myshopify.com',
   'https://viamood.com',
   'https://www.viamood.com',
 ];
 
 function corsHeaders(origin: string | null): Record<string, string> {
-  const allow = origin && ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
+  const allow = origin && ALLOWED_ORIGINS.includes(origin) ? origin : DEFAULT_ORIGIN;
   return {
     'Access-Control-Allow-Origin': allow,
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
