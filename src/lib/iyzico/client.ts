@@ -211,3 +211,158 @@ export async function disapproveMarketplaceTransaction(
     client.disapproval.create(request, cb as IyzicoCallback<Record<string, unknown> & { status?: string }>),
   );
 }
+
+// ============================================================================
+// CheckoutForm (hosted ödeme — kart bilgisi İyzico iframe'inde)
+// ============================================================================
+
+export interface CheckoutItemInput {
+  id: string;
+  name: string;
+  category: string;
+  price: string; // "100.00"
+}
+
+export interface CheckoutAddressInput {
+  contactName: string;
+  city: string;
+  country: string;
+  address: string;
+  zipCode?: string;
+}
+
+export interface CheckoutBuyerInput {
+  id: string;
+  name: string;
+  surname: string;
+  gsmNumber: string; // +905...
+  email: string;
+  identityNumber: string; // TC veya test "11111111111"
+  registrationAddress: string;
+  city: string;
+  country: string;
+  zipCode?: string;
+}
+
+export interface InitializeCheckoutInput {
+  conversationId: string;
+  price: string; // ürünler toplamı (kargo HARİÇ)
+  paidPrice: string; // tahsil edilen toplam (kargo DAHİL)
+  callbackUrl: string;
+  buyer: CheckoutBuyerInput;
+  shippingAddress: CheckoutAddressInput;
+  billingAddress: CheckoutAddressInput;
+  basketItems: CheckoutItemInput[];
+}
+
+interface CheckoutInitResp extends IyzicoResp {
+  token?: string;
+  checkoutFormContent?: string;
+  paymentPageUrl?: string;
+  tokenExpireTime?: number;
+}
+
+interface CheckoutRetrieveResp extends IyzicoResp {
+  token?: string;
+  paymentStatus?: string; // SUCCESS / FAILURE / INIT_THREEDS ...
+  paymentId?: string;
+  price?: string;
+  paidPrice?: string;
+  basketId?: string;
+  fraudStatus?: number;
+}
+
+export async function initializeCheckoutForm(
+  input: InitializeCheckoutInput,
+): Promise<{ token: string; checkoutFormContent: string; paymentPageUrl?: string }> {
+  const client = getClient();
+  const request = {
+    locale: 'tr',
+    conversationId: input.conversationId,
+    price: input.price,
+    paidPrice: input.paidPrice,
+    currency: 'TRY',
+    basketId: input.conversationId,
+    paymentGroup: 'PRODUCT',
+    callbackUrl: input.callbackUrl,
+    enabledInstallments: [1, 2, 3, 6, 9],
+    buyer: {
+      id: input.buyer.id,
+      name: input.buyer.name,
+      surname: input.buyer.surname,
+      gsmNumber: input.buyer.gsmNumber,
+      email: input.buyer.email,
+      identityNumber: input.buyer.identityNumber,
+      registrationAddress: input.buyer.registrationAddress,
+      city: input.buyer.city,
+      country: input.buyer.country,
+      zipCode: input.buyer.zipCode ?? '34000',
+      ip: '85.34.78.112',
+    },
+    shippingAddress: input.shippingAddress,
+    billingAddress: input.billingAddress,
+    basketItems: input.basketItems.map((it) => {
+      const item: Record<string, unknown> = {
+        id: it.id,
+        name: it.name,
+        category1: it.category,
+        itemType: 'PHYSICAL',
+        price: it.price,
+      };
+      // Marketplace hesabı ise her item'a subMerchant gerekir
+      if (env.IYZICO_DEFAULT_SUBMERCHANT_KEY) {
+        item.subMerchantKey = env.IYZICO_DEFAULT_SUBMERCHANT_KEY;
+        item.subMerchantPrice = it.price; // tüm tutar satıcıya (komisyon İyzico panelinden)
+      }
+      return item;
+    }),
+  };
+
+  const res = await callbackToPromise<CheckoutInitResp>((cb) =>
+    client.checkoutFormInitialize.create(
+      request,
+      cb as IyzicoCallback<Record<string, unknown> & { status?: string }>,
+    ),
+  );
+
+  if (!res.token || !res.checkoutFormContent) {
+    throw new IyzicoError('CHECKOUT_INIT_INCOMPLETE', 'token/form içeriği yok', undefined, res);
+  }
+  return {
+    token: res.token,
+    checkoutFormContent: res.checkoutFormContent,
+    paymentPageUrl: res.paymentPageUrl,
+  };
+}
+
+/**
+ * Ödeme sonucu sorgula. callbackToPromise kullanmıyoruz çünkü
+ * FAILURE durumunda da status:'success' döner (API çağrısı başarılı, ödeme başarısız).
+ */
+export async function retrieveCheckoutForm(token: string): Promise<{
+  paymentStatus: string;
+  paymentId?: string;
+  paidPrice?: string;
+  raw: CheckoutRetrieveResp;
+}> {
+  const client = getClient();
+  return new Promise((resolve, reject) => {
+    client.checkoutForm.retrieve(
+      { locale: 'tr', token },
+      (err: unknown, result: CheckoutRetrieveResp) => {
+        if (err) return reject(err);
+        if (!result || result.status !== 'success') {
+          return reject(
+            new IyzicoError(result?.errorCode, result?.errorMessage, result?.errorGroup, result),
+          );
+        }
+        resolve({
+          paymentStatus: result.paymentStatus ?? 'UNKNOWN',
+          paymentId: result.paymentId,
+          paidPrice: result.paidPrice,
+          raw: result,
+        });
+      },
+    );
+  });
+}

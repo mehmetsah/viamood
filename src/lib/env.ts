@@ -38,6 +38,8 @@ const envSchema = z.object({
   IYZICO_API_KEY: z.string().optional(),
   IYZICO_SECRET_KEY: z.string().optional(),
   IYZICO_BASE_URL: z.string().url().default('https://sandbox-api.iyzipay.com'),
+  IYZICO_CALLBACK_BASE: z.string().url().default('http://localhost:3000'),
+  IYZICO_DEFAULT_SUBMERCHANT_KEY: z.string().optional(),
 
   // KargoLab
   KARGOLAB_API_URL: z.string().url().default('https://kargolab.com/api/v1'),
