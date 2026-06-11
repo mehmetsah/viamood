@@ -9,7 +9,6 @@
  */
 import { NextResponse, type NextRequest } from 'next/server';
 import { initializeCheckoutForm } from '@/lib/iyzico/client';
-import { shopifyRest } from '@/lib/shopify/client';
 import { env } from '@/lib/env';
 
 interface DraftOrderResp {
@@ -47,10 +46,25 @@ async function createDraftOrder(body: InitBody): Promise<number | null> {
         use_customer_default_address: false,
       },
     };
-    const res = await shopifyRest<DraftOrderResp>('/admin/api/2025-01/draft_orders.json', {
-      method: 'POST',
-      body: JSON.stringify(payload),
-    });
+    // Direct fetch + env token (shopifyRest retry body-reuse bug'ını bypass eder)
+    const token = env.SHOPIFY_ADMIN_ACCESS_TOKEN;
+    if (!token) {
+      _lastDraftError = 'SHOPIFY_ADMIN_ACCESS_TOKEN yok';
+      return null;
+    }
+    const resp = await fetch(
+      `https://${env.SHOPIFY_STORE_DOMAIN}/admin/api/${env.SHOPIFY_API_VERSION}/draft_orders.json`,
+      {
+        method: 'POST',
+        headers: { 'X-Shopify-Access-Token': token, 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      },
+    );
+    if (!resp.ok) {
+      _lastDraftError = `HTTP ${resp.status}: ${(await resp.text()).slice(0, 200)}`;
+      return null;
+    }
+    const res = (await resp.json()) as DraftOrderResp;
     return res.draft_order?.id ?? null;
   } catch (e) {
     _lastDraftError = e instanceof Error ? e.message : String(e);
