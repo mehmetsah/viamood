@@ -42,7 +42,7 @@ async function createDraftOrder(body: InitBody): Promise<number | null> {
         billing_address: addr,
         email: body.email,
         tags: 'via-mood-storefront,iyzico-pending',
-        note: `Pre-checkout adres — ${body.first_name} ${body.last_name} · ${body.province}/${body.city}`,
+        note: `📍 ${body.first_name} ${body.last_name} · ${body.province}/${body.city}\n${buildInvoiceNote(body)}`,
         use_customer_default_address: false,
       },
     };
@@ -111,6 +111,33 @@ interface InitBody {
   zip?: string;
   identity_number?: string;
   draft_order_id?: number; // Shopify draft order id (callback'te complete için)
+  // Fatura bilgileri
+  invoice_type?: string; // bireysel | kurumsal
+  tc_no?: string;
+  firma_adi?: string;
+  vergi_no?: string;
+  vergi_dairesi?: string;
+  billing_diff?: string; // '1' | '0'
+  billing_address1?: string;
+  billing_il?: string;
+  billing_ilce?: string;
+}
+
+function buildInvoiceNote(b: InitBody): string {
+  const lines: string[] = [];
+  if (b.invoice_type === 'kurumsal') {
+    lines.push('🏢 KURUMSAL FATURA');
+    if (b.firma_adi) lines.push(`   Firma: ${b.firma_adi}`);
+    if (b.vergi_no) lines.push(`   Vergi No: ${b.vergi_no} · Dairesi: ${b.vergi_dairesi || '-'}`);
+  } else {
+    lines.push('👤 BİREYSEL FATURA');
+    if (b.tc_no) lines.push(`   TC: ${b.tc_no}`);
+  }
+  if (b.billing_diff === '1' && b.billing_address1) {
+    lines.push('📋 FARKLI FATURA ADRESİ:');
+    lines.push(`   ${b.billing_address1} · ${b.billing_il || ''}/${b.billing_ilce || ''}`);
+  }
+  return lines.join('\n');
 }
 
 function toMoney(n: number): string {
