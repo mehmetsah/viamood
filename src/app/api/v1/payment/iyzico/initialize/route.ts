@@ -21,6 +21,7 @@ interface DraftOrderResp {
  * Ödeme başarılı olunca callback bu draft'ı complete eder (sipariş = ödendi).
  * Hata olursa null döner — ödeme yine de devam eder (draft sonradan manuel açılabilir).
  */
+let _lastDraftError = '';
 async function createDraftOrder(body: InitBody): Promise<number | null> {
   try {
     const phone = body.phone.replace(/\s/g, '');
@@ -51,7 +52,8 @@ async function createDraftOrder(body: InitBody): Promise<number | null> {
       body: JSON.stringify(payload),
     });
     return res.draft_order?.id ?? null;
-  } catch {
+  } catch (e) {
+    _lastDraftError = e instanceof Error ? e.message : String(e);
     return null;
   }
 }
@@ -203,6 +205,8 @@ export async function POST(req: NextRequest) {
         checkoutFormContent: result.checkoutFormContent,
         paymentPageUrl: result.paymentPageUrl,
         conversationId,
+        draft_order_id: draftOrderId,
+        draft_error: _lastDraftError || undefined,
       },
       { status: 200, headers },
     );
