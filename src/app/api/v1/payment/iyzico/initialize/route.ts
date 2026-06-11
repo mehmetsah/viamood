@@ -9,7 +9,52 @@
  */
 import { NextResponse, type NextRequest } from 'next/server';
 import { initializeCheckoutForm } from '@/lib/iyzico/client';
+import { shopifyRest } from '@/lib/shopify/client';
 import { env } from '@/lib/env';
+
+interface DraftOrderResp {
+  draft_order?: { id: number; invoice_url?: string };
+}
+
+/**
+ * İyzico ödemesi öncesi Shopify'da "open" draft order yaratır.
+ * Ödeme başarılı olunca callback bu draft'ı complete eder (sipariş = ödendi).
+ * Hata olursa null döner — ödeme yine de devam eder (draft sonradan manuel açılabilir).
+ */
+async function createDraftOrder(body: InitBody): Promise<number | null> {
+  try {
+    const phone = body.phone.replace(/\s/g, '');
+    const addr = {
+      first_name: body.first_name,
+      last_name: body.last_name,
+      phone,
+      address1: body.address1,
+      address2: body.address2 || '',
+      city: body.city, // İlçe
+      province: body.province, // İl
+      zip: body.zip || '',
+      country: 'Turkey',
+    };
+    const payload = {
+      draft_order: {
+        line_items: body.line_items.map((li) => ({ variant_id: li.variant_id, quantity: li.quantity })),
+        shipping_address: addr,
+        billing_address: addr,
+        email: body.email,
+        tags: 'via-mood-storefront,iyzico-pending',
+        note: `Pre-checkout adres — ${body.first_name} ${body.last_name} · ${body.province}/${body.city}`,
+        use_customer_default_address: false,
+      },
+    };
+    const res = await shopifyRest<DraftOrderResp>('/admin/api/2025-01/draft_orders.json', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+    return res.draft_order?.id ?? null;
+  } catch {
+    return null;
+  }
+}
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -111,10 +156,14 @@ export async function POST(req: NextRequest) {
   const fullAddr = `${body.address1}${body.address2 ? ', ' + body.address2 : ''}, ${body.city}/${body.province}`;
   const conversationId = `vm-${Date.now()}-${Math.floor(itemsTotal)}`;
 
+  // Shopify draft order yarat (ödeme öncesi). Ödeme başarılı → callback complete eder → sipariş.
+  // body.draft_order_id varsa onu kullan (idempotent), yoksa yeni yarat.
+  const draftOrderId = body.draft_order_id ?? (await createDraftOrder(body));
+
   // Callback URL — draft_order_id'yi query'de taşı
   const callbackUrl =
     `${env.IYZICO_CALLBACK_BASE}/api/v1/payment/iyzico/callback` +
-    (body.draft_order_id ? `?draft=${body.draft_order_id}` : '');
+    (draftOrderId ? `?draft=${draftOrderId}` : '');
 
   const addr = {
     contactName: `${body.first_name} ${body.last_name}`,
