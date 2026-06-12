@@ -9,6 +9,7 @@
  */
 import { NextResponse, type NextRequest } from 'next/server';
 import { initializeCheckoutForm } from '@/lib/iyzico/client';
+import { provinceCode } from '@/lib/shopify/tr-provinces';
 import { env } from '@/lib/env';
 
 interface DraftOrderResp {
@@ -24,18 +25,25 @@ let _lastDraftError = '';
 async function createDraftOrder(body: InitBody): Promise<number | null> {
   try {
     const phone = body.phone.replace(/\s/g, '');
-    const addr = {
+    const pcode = provinceCode(body.province); // İl adı → TR-XX kodu
+    const addr: Record<string, unknown> = {
       first_name: body.first_name,
       last_name: body.last_name,
       phone,
       address1: body.address1,
       address2: body.address2 || '',
       city: body.city, // İlçe
-      province: body.province, // İl
+      province: body.province, // İl (ad)
       zip: body.zip || '',
       country: 'Turkey',
+      country_code: 'TR',
     };
-    const payload = {
+    if (pcode) addr.province_code = pcode; // Shopify il alanına oturması için
+
+    // Kargo ücretini ayrı line item olarak ekle (sipariş toplamına dahil)
+    const shippingTl = body.shipping_cost || 0;
+
+    const payload: Record<string, unknown> = {
       draft_order: {
         line_items: body.line_items.map((li) => ({ variant_id: li.variant_id, quantity: li.quantity })),
         shipping_address: addr,
@@ -44,6 +52,15 @@ async function createDraftOrder(body: InitBody): Promise<number | null> {
         tags: 'via-mood-storefront,iyzico-pending',
         note: `📍 ${body.first_name} ${body.last_name} · ${body.province}/${body.city}\n${buildInvoiceNote(body)}`,
         use_customer_default_address: false,
+        // Kargo — Shopify draft order shipping_line
+        ...(shippingTl > 0
+          ? {
+              shipping_line: {
+                title: 'Standart Kargo (KargoLab)',
+                price: shippingTl.toFixed(2),
+              },
+            }
+          : {}),
       },
     };
     // Direct fetch + env token (shopifyRest retry body-reuse bug'ını bypass eder)
