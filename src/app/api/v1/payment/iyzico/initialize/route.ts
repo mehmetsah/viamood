@@ -48,7 +48,12 @@ async function createDraftOrder(body: InitBody): Promise<number | null> {
         line_items: body.line_items.map((li) => ({ variant_id: li.variant_id, quantity: li.quantity })),
         shipping_address: addr,
         billing_address: addr,
-        email: body.email,
+        // Giriş yapmış müşteri varsa siparişi onun hesabına bağla (login email'iyle).
+        // Yoksa form email'iyle misafir sipariş.
+        ...(body.customer_id
+          ? { customer: { id: body.customer_id } }
+          : { email: body.email }),
+        email: body.customer_email || body.email,
         tags: 'via-mood-storefront,iyzico-pending',
         note: `📍 ${body.first_name} ${body.last_name} · ${body.province}/${body.city}\n${buildInvoiceNote(body)}`,
         use_customer_default_address: false,
@@ -128,6 +133,8 @@ interface InitBody {
   zip?: string;
   identity_number?: string;
   draft_order_id?: number; // Shopify draft order id (callback'te complete için)
+  customer_id?: number; // Giriş yapmış müşterinin Shopify id'si (sipariş bu hesaba bağlanır)
+  customer_email?: string;
   // Fatura bilgileri
   invoice_type?: string; // bireysel | kurumsal
   tc_no?: string;
