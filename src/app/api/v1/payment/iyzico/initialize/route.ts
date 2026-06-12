@@ -145,6 +145,8 @@ interface InitBody {
   billing_address1?: string;
   billing_il?: string;
   billing_ilce?: string;
+  billing_mahalle?: string;
+  billing_postal_code?: string;
 }
 
 function buildInvoiceNote(b: InitBody): string {
@@ -159,7 +161,9 @@ function buildInvoiceNote(b: InitBody): string {
   }
   if (b.billing_diff === '1' && b.billing_address1) {
     lines.push('📋 FARKLI FATURA ADRESİ:');
-    lines.push(`   ${b.billing_address1} · ${b.billing_il || ''}/${b.billing_ilce || ''}`);
+    const billLoc = [b.billing_il, b.billing_ilce, b.billing_mahalle].filter(Boolean).join(' / ');
+    lines.push(`   ${b.billing_address1}${b.billing_postal_code ? ' (PK: ' + b.billing_postal_code + ')' : ''}`);
+    if (billLoc) lines.push(`   ${billLoc}`);
   }
   return lines.join('\n');
 }
