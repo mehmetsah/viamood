@@ -175,7 +175,10 @@ export async function pushProductToShopify(productId: string): Promise<PushProdu
   };
 
   if (!isNew) {
-    input.id = row.shopifyProductId;
+    // productSet input.id GID bekler; biz numerik sakladığımız için gerekirse GID'e çevir.
+    input.id = row.shopifyProductId.startsWith('gid://')
+      ? row.shopifyProductId
+      : `gid://shopify/Product/${row.shopifyProductId}`;
   }
   if (row.featuredImageUrl) {
     input.files = [
@@ -210,9 +213,14 @@ export async function pushProductToShopify(productId: string): Promise<PushProdu
   const variantNode = product.variants.edges[0]?.node;
   if (!variantNode) return { ok: false, error: 'Variant dönmedi' };
 
-  const shopifyProductId = product.id;
-  const shopifyVariantId = variantNode.id;
-  const shopifyInventoryItemId = variantNode.inventoryItem?.id ?? null;
+  // GID → numerik normalize: webhook (products/*) ve backfill REST numerik id gönderir.
+  // Aynı formatta saklamazsak her push sonrası products/create webhook'u ÇİFT kayıt yaratır.
+  const gidToNum = (gid: string): string => gid.split('/').pop() ?? gid;
+  const shopifyProductId = gidToNum(product.id);
+  const shopifyVariantId = gidToNum(variantNode.id);
+  const shopifyInventoryItemId = variantNode.inventoryItem?.id
+    ? gidToNum(variantNode.inventoryItem.id)
+    : null;
   const shopifyHandle = product.handle;
 
   await db.transaction(async (tx) => {
