@@ -204,6 +204,8 @@ export async function createFulfillmentForOrderVendor(
       customerEmail: orders.customerEmail,
       customerPhone: orders.customerPhone,
       customerName: orders.customerName,
+      tags: orders.tags,
+      totalCents: orders.totalCents,
     })
     .from(orders)
     .where(eq(orders.id, orderId))
@@ -266,6 +268,13 @@ export async function createFulfillmentForOrderVendor(
     total_price: (Number(li.unitPriceCents) * li.quantity) / 100,
   }));
 
+  // Kapıda ödeme (COD) siparişi mi? → tahsilatlı kargo: kurye sipariş tutarını kapıda tahsil eder.
+  const isCod = (order.tags ?? []).some((t) =>
+    ['kapida-odeme', 'tahsilatli-kargo', 'cod'].includes(String(t).toLowerCase()),
+  );
+  const codAmount = isCod ? Math.round(Number(order.totalCents)) / 100 : 0;
+  const COD_PAYMENT_TYPE: 1 | 2 | 3 = 3; // KargoLab: 3 = kapıda ödeme (tahsilatlı). İlk COD kargoda doğrula.
+
   const shipRes = await createKargoLabShipment({
     courrier,
     addresses: {
@@ -276,7 +285,8 @@ export async function createFulfillmentForOrderVendor(
     commoduties,
     dimensions,
     packaging_type: packagingType,
-    payment_type: 1,
+    payment_type: isCod ? COD_PAYMENT_TYPE : 1,
+    ...(isCod ? { payment_at_door: codAmount } : {}),
     waybill: order.orderName,
     tracking_number: order.orderName,
     order_number: order.orderName,
