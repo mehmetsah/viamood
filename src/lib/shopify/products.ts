@@ -126,7 +126,13 @@ export async function pushProductToShopify(productId: string): Promise<PushProdu
 
   if (!row) return { ok: false, error: 'Ürün bulunamadı' };
 
-  const isNew = row.shopifyProductId.startsWith('local_');
+  // Gerçek Shopify ID'si (gid://shopify/Product/... veya saf numerik) DIŞINDAKİ her şey
+  // (local_, pending://, vb. placeholder) "yeni" sayılır → input.id GÖNDERİLMEZ, productSet CREATE eder.
+  // Aksi halde pending:// gibi geçersiz bir ID input.id olarak gidip "GraphQL errors" hatasına yol açar.
+  const isRealShopifyId =
+    row.shopifyProductId.startsWith('gid://shopify/Product/') ||
+    /^\d+$/.test(row.shopifyProductId);
+  const isNew = !isRealShopifyId;
 
   const input: Record<string, unknown> = {
     title: row.title,
