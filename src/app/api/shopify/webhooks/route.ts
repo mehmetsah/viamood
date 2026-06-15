@@ -1,14 +1,13 @@
 import { eq } from 'drizzle-orm';
 import { NextResponse, type NextRequest } from 'next/server';
 import { db } from '@/db/client';
-import { orderLineItems, orders, products, shopifyConnections } from '@/db/schema';
+import { orderLineItems, orders, shopifyConnections } from '@/db/schema';
 import { logAudit } from '@/lib/audit/logger';
 import { env } from '@/lib/env';
 import { routeOrder } from '@/lib/routing/engine';
 import { accrueCommissionForOrder } from '@/lib/server/commission-service';
 import { syncOrderToMikro } from '@/lib/server/mikro-sync';
 import { ingestShopifyOrder, type ShopifyOrderPayload } from '@/lib/shopify/order-ingest';
-import { ingestShopifyProduct, type ShopifyProductPayload } from '@/lib/shopify/product-ingest';
 import { verifyShopifyWebhook } from '@/lib/shopify/webhook';
 
 export const runtime = 'nodejs';
@@ -164,33 +163,6 @@ export async function POST(req: NextRequest) {
           entityId: shop,
         });
         return NextResponse.json({ ok: true });
-      }
-
-      case 'products/create':
-      case 'products/update': {
-        const result = await ingestShopifyProduct(payload as ShopifyProductPayload);
-        if (!result.ok) {
-          console.error('[webhook products] ingest fail:', result.error);
-          return NextResponse.json({ error: result.error }, { status: 200 });
-        }
-        await logAudit({
-          actorType: 'system',
-          actorId: 'shopify-webhook',
-          action: 'shopify.product.synced',
-          entityType: 'product',
-          entityId: result.productId ?? '',
-          after: { isNew: result.isNew, variantCount: result.variantCount, vendorSlug: result.vendorSlug },
-        });
-        return NextResponse.json({ ok: true, productId: result.productId, isNew: result.isNew });
-      }
-
-      case 'products/delete': {
-        const pid = String((payload as { id: number | string }).id);
-        await db
-          .update(products)
-          .set({ status: 'archived', updatedAt: new Date() })
-          .where(eq(products.shopifyProductId, pid));
-        return NextResponse.json({ ok: true, archived: pid });
       }
 
       default:
