@@ -27,9 +27,12 @@ interface ProductFormProps {
   action: (prev: ActionResult | null, formData: FormData) => Promise<ActionResult>;
   submitLabel: string;
   showInitialStock?: boolean;
+  /** Admin modu: verilirse Genel bölümünün başında tedarikçi seçici çıkar. */
+  vendors?: { id: string; name: string }[];
+  defaultVendorId?: string;
 }
 
-export function ProductForm({ defaults = {}, action, submitLabel, showInitialStock = true }: ProductFormProps) {
+export function ProductForm({ defaults = {}, action, submitLabel, showInitialStock = true, vendors, defaultVendorId }: ProductFormProps) {
   const [state, formAction, pending] = useActionState<ActionResult | null, FormData>(action, null);
   const fieldErrors = state && !state.success ? state.fieldErrors ?? {} : {};
 
@@ -37,6 +40,26 @@ export function ProductForm({ defaults = {}, action, submitLabel, showInitialSto
     <form action={formAction} className="flex flex-col gap-6 max-w-3xl">
       <section className="bg-white rounded-xl border p-6 flex flex-col gap-4">
         <h2 className="font-bold border-b pb-2">Genel</h2>
+        {vendors && (
+          <div>
+            <label htmlFor="vendorId" className="text-sm font-medium text-neutral-800 block mb-1.5">
+              Tedarikçi <span className="text-red-500">*</span>
+            </label>
+            <select
+              id="vendorId"
+              name="vendorId"
+              required
+              defaultValue={defaultVendorId ?? ''}
+              className="h-11 w-full px-4 rounded-lg border border-neutral-300 bg-white text-[15px] outline-none focus:border-[var(--color-brand-orange)] focus:ring-2 focus:ring-[var(--color-brand-orange)]/20"
+            >
+              <option value="" disabled>— Tedarikçi seç —</option>
+              {vendors.map((v) => (
+                <option key={v.id} value={v.id}>{v.name}</option>
+              ))}
+            </select>
+            <p className="text-xs text-neutral-500 mt-1">Ürün bu tedarikçinin adına oluşturulur.</p>
+          </div>
+        )}
         <Input
           name="title"
           label="Başlık"

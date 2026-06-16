@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { db } from '@/db/client';
 import { productVariants, products, vendors } from '@/db/schema';
 import { Pagination, parsePage } from '@/components/ui/Pagination';
+import { AdminProductRowActions } from './AdminProductRowActions';
 
 const PAGE_SIZE = 20;
 
@@ -101,13 +102,21 @@ export default async function AdminProductsPage({ searchParams }: PageProps) {
 
   return (
     <div className="p-8 max-w-7xl mx-auto">
-      <div className="flex items-center justify-between mb-2">
+      <div className="flex items-center justify-between mb-2 gap-4 flex-wrap">
         <h1 className="text-3xl font-bold">Tüm Ürünler</h1>
-        <div className="text-sm text-neutral-600 flex gap-4">
-          <span><strong className="text-neutral-900">{totalAll}</strong> toplam</span>
-          <span className="text-green-700"><strong>{totalPushed}</strong> Shopify'da</span>
-          <span className="text-yellow-700"><strong>{totalUnpushed}</strong> bekliyor</span>
-          <span className="text-orange-700"><strong>{totalDraft}</strong> taslak</span>
+        <div className="flex items-center gap-4 flex-wrap">
+          <div className="text-sm text-neutral-600 flex gap-4">
+            <span><strong className="text-neutral-900">{totalAll}</strong> toplam</span>
+            <span className="text-green-700"><strong>{totalPushed}</strong> Shopify'da</span>
+            <span className="text-yellow-700"><strong>{totalUnpushed}</strong> bekliyor</span>
+            <span className="text-orange-700"><strong>{totalDraft}</strong> taslak</span>
+          </div>
+          <Link
+            href={vendor && vendor !== 'all' ? `/admin/products/new?vendor=${vendor}` : '/admin/products/new'}
+            className="px-4 py-2 bg-[var(--color-brand-orange)] text-white rounded-lg font-semibold text-sm hover:opacity-90 whitespace-nowrap"
+          >
+            + Yeni Ürün
+          </Link>
         </div>
       </div>
       <p className="text-neutral-600 text-sm mb-6">
@@ -157,12 +166,13 @@ export default async function AdminProductsPage({ searchParams }: PageProps) {
               <th className="text-right px-4 py-3 font-semibold w-28">Fiyat</th>
               <th className="text-right px-4 py-3 font-semibold w-20">Stok</th>
               <th className="text-left px-4 py-3 font-semibold w-32">Shopify</th>
+              <th className="text-right px-4 py-3 font-semibold w-56">İşlemler</th>
             </tr>
           </thead>
           <tbody className="divide-y">
             {rows.length === 0 && (
               <tr>
-                <td colSpan={6} className="text-center py-12 text-neutral-500">
+                <td colSpan={7} className="text-center py-12 text-neutral-500">
                   Sonuç yok
                 </td>
               </tr>
@@ -184,7 +194,12 @@ export default async function AdminProductsPage({ searchParams }: PageProps) {
                         <div className="w-10 h-10 rounded bg-neutral-100" />
                       )}
                       <div className="min-w-0">
-                        <div className="font-semibold truncate max-w-md">{p.title}</div>
+                        <Link
+                          href={`/admin/products/${p.id}`}
+                          className="font-semibold truncate max-w-md block hover:text-[var(--color-brand-orange)] hover:underline"
+                        >
+                          {p.title}
+                        </Link>
                         {p.sku && (
                           <div className="text-xs text-neutral-500 font-mono">SKU: {p.sku}</div>
                         )}
@@ -210,6 +225,9 @@ export default async function AdminProductsPage({ searchParams }: PageProps) {
                       </span>
                     )}
                   </td>
+                  <td className="px-4 py-3">
+                    <AdminProductRowActions productId={p.id} status={p.status} />
+                  </td>
                 </tr>
               );
             })}
@@ -224,11 +242,8 @@ export default async function AdminProductsPage({ searchParams }: PageProps) {
       </div>
 
       <p className="text-xs text-neutral-500 mt-4">
-        Admin görünümü — sadece okuma. Düzenleme için ilgili vendor hesabıyla giriş yapın veya{' '}
-        <Link href="/admin/vendors" className="underline">
-          tedarikçi sayfasına
-        </Link>{' '}
-        gidin.
+        Tedarikçi seç → <Link href="/admin/products/new" className="underline">Yeni Ürün</Link> ile ürün gir; satırdan
+        Düzenle / Yayınla / Taslak / Sil yap. “Yayınla” ürünü aktif yapıp Shopify’a gönderir.
       </p>
     </div>
   );
