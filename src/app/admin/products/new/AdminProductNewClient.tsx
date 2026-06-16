@@ -20,6 +20,7 @@ export function AdminProductNewClient({ vendors, defaultVendorId }: Props) {
       showInitialStock
       vendors={vendors}
       defaultVendorId={defaultVendorId}
+      imageMode="gallery"
     />
   );
 }

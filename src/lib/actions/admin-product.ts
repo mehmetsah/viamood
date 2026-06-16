@@ -65,6 +65,20 @@ function slugify(title: string): string {
     .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 80);
 }
 
+/** Galeri hidden input'undaki JSON görsel dizisini güvenli parse et (http(s) URL'ler). */
+function parseImages(raw: FormDataEntryValue | null): string[] {
+  if (typeof raw !== 'string' || !raw) return [];
+  try {
+    const arr = JSON.parse(raw);
+    if (!Array.isArray(arr)) return [];
+    return arr
+      .filter((u): u is string => typeof u === 'string' && /^https?:\/\//.test(u))
+      .slice(0, 30);
+  } catch {
+    return [];
+  }
+}
+
 function readProductForm(formData: FormData) {
   return {
     title: String(formData.get('title') ?? '').trim(),
@@ -111,6 +125,7 @@ export async function adminCreateProductAction(formData: FormData): Promise<Acti
     return { success: false, error: 'Lütfen formu kontrol et', fieldErrors: fieldErrorsFrom(parsed.error) };
   }
   const data = parsed.data;
+  const imagesArr = parseImages(formData.get('images'));
 
   const tempShopifyProductId = `local_${crypto.randomUUID()}`;
   const tempShopifyVariantId = `local_${crypto.randomUUID()}`;
@@ -134,7 +149,8 @@ export async function adminCreateProductAction(formData: FormData): Promise<Acti
         minPriceCents: BigInt(data.priceCents),
         maxPriceCents: BigInt(data.priceCents),
         totalInventory: data.initialStock,
-        featuredImageUrl: data.featuredImageUrl || null,
+        featuredImageUrl: (imagesArr[0] || data.featuredImageUrl) || null,
+        metadata: imagesArr.length ? { images: imagesArr } : {},
       })
       .returning({ id: products.id });
     if (!created) throw new Error('Ürün oluşturulamadı');
@@ -200,6 +216,7 @@ export async function adminUpdateProductAction(
     return { success: false, error: 'Lütfen formu kontrol et', fieldErrors: fieldErrorsFrom(parsed.error) };
   }
   const data = parsed.data;
+  const imagesArr = parseImages(formData.get('images'));
 
   await db.transaction(async (tx) => {
     await tx
@@ -212,7 +229,8 @@ export async function adminUpdateProductAction(
         status: data.status,
         minPriceCents: BigInt(data.priceCents),
         maxPriceCents: BigInt(data.priceCents),
-        featuredImageUrl: data.featuredImageUrl || null,
+        featuredImageUrl: (imagesArr[0] || data.featuredImageUrl) || null,
+        metadata: sql`COALESCE(${products.metadata}, '{}'::jsonb) || ${JSON.stringify({ images: imagesArr })}::jsonb`,
         updatedAt: new Date(),
       })
       .where(eq(products.id, productId));

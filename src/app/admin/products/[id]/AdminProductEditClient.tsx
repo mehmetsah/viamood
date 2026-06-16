@@ -13,6 +13,7 @@ import type { ActionResult } from '@/lib/actions/auth';
 interface Props {
   productId: string;
   defaults: Parameters<typeof ProductForm>[0]['defaults'];
+  defaultImages: string[];
   status: 'draft' | 'active' | 'archived';
   shopifyProductId: string;
   shopifyHandle: string;
@@ -25,7 +26,7 @@ const STATUS_BADGE: Record<string, string> = {
   archived: 'bg-neutral-200 text-neutral-700',
 };
 
-export function AdminProductEditClient({ productId, defaults, status, shopifyProductId, shopifyHandle }: Props) {
+export function AdminProductEditClient({ productId, defaults, defaultImages, status, shopifyProductId, shopifyHandle }: Props) {
   const action = async (_prev: ActionResult | null, formData: FormData) =>
     adminUpdateProductAction(productId, formData);
 
@@ -122,6 +123,8 @@ export function AdminProductEditClient({ productId, defaults, status, shopifyPro
         defaults={defaults}
         submitLabel="Değişiklikleri kaydet"
         showInitialStock={false}
+        imageMode="gallery"
+        defaultImages={defaultImages}
       />
 
       {/* ── Tehlikeli alan ── */}

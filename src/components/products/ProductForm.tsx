@@ -4,6 +4,7 @@ import { useActionState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
+import { ProductImageGallery } from '@/components/products/ProductImageGallery';
 import type { ActionResult } from '@/lib/actions/auth';
 
 interface ProductFormDefaults {
@@ -30,9 +31,12 @@ interface ProductFormProps {
   /** Admin modu: verilirse Genel bölümünün başında tedarikçi seçici çıkar. */
   vendors?: { id: string; name: string }[];
   defaultVendorId?: string;
+  /** 'gallery' → sürükle-bırak çoklu görsel galerisi; 'single' → tek URL input (varsayılan). */
+  imageMode?: 'single' | 'gallery';
+  defaultImages?: string[];
 }
 
-export function ProductForm({ defaults = {}, action, submitLabel, showInitialStock = true, vendors, defaultVendorId }: ProductFormProps) {
+export function ProductForm({ defaults = {}, action, submitLabel, showInitialStock = true, vendors, defaultVendorId, imageMode = 'single', defaultImages = [] }: ProductFormProps) {
   const [state, formAction, pending] = useActionState<ActionResult | null, FormData>(action, null);
   const fieldErrors = state && !state.success ? state.fieldErrors ?? {} : {};
 
@@ -108,14 +112,21 @@ export function ProductForm({ defaults = {}, action, submitLabel, showInitialSto
           defaultValue={defaults.tags}
           error={fieldErrors.tags}
         />
-        <Input
-          name="featuredImageUrl"
-          label="Öne çıkan görsel URL"
-          placeholder="https://..."
-          hint="Phase 2.2'de dosya yükleme gelecek. Şimdilik dış URL."
-          defaultValue={defaults.featuredImageUrl}
-          error={fieldErrors.featuredImageUrl}
-        />
+        {imageMode === 'gallery' ? (
+          <div>
+            <label className="text-sm font-medium text-neutral-800 block mb-1.5">Görseller</label>
+            <ProductImageGallery defaultImages={defaultImages} />
+          </div>
+        ) : (
+          <Input
+            name="featuredImageUrl"
+            label="Öne çıkan görsel URL"
+            placeholder="https://..."
+            hint="Phase 2.2'de dosya yükleme gelecek. Şimdilik dış URL."
+            defaultValue={defaults.featuredImageUrl}
+            error={fieldErrors.featuredImageUrl}
+          />
+        )}
       </section>
 
       <section className="bg-white rounded-xl border p-6 flex flex-col gap-4">

@@ -41,6 +41,9 @@ export default async function AdminEditProductPage({
     featuredImageUrl: product.featuredImageUrl ?? '',
   };
 
+  const metaImages = (product.metadata as { images?: string[] } | null)?.images;
+  const defaultImages = Array.isArray(metaImages) ? metaImages : [];
+
   return (
     <div className="p-8 max-w-6xl mx-auto">
       <Link href="/admin/products" className="text-sm text-neutral-600 hover:underline">
@@ -53,6 +56,7 @@ export default async function AdminEditProductPage({
       <AdminProductEditClient
         productId={product.id}
         defaults={defaults}
+        defaultImages={defaultImages}
         status={product.status}
         shopifyProductId={product.shopifyProductId}
         shopifyHandle={product.shopifyHandle}

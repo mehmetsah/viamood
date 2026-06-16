@@ -107,6 +107,7 @@ export async function pushProductToShopify(productId: string): Promise<PushProdu
       status: products.status,
       handle: products.shopifyHandle,
       featuredImageUrl: products.featuredImageUrl,
+      metadata: products.metadata,
       vendorName: vendors.name,
       variantId: productVariants.id,
       variantShopifyId: productVariants.shopifyVariantId,
@@ -180,13 +181,14 @@ export async function pushProductToShopify(productId: string): Promise<PushProdu
       ? row.shopifyProductId
       : `gid://shopify/Product/${row.shopifyProductId}`;
   }
-  if (row.featuredImageUrl) {
-    input.files = [
-      {
-        contentType: 'IMAGE',
-        originalSource: row.featuredImageUrl,
-      },
-    ];
+  // Çoklu görsel: metadata.images (galeri sırası, ilk = kapak) → files[]; yoksa featuredImageUrl fallback.
+  const metaImages = (row.metadata as { images?: unknown } | null)?.images;
+  const imageUrls: string[] = Array.isArray(metaImages)
+    ? metaImages.filter((u): u is string => typeof u === 'string')
+    : [];
+  if (imageUrls.length === 0 && row.featuredImageUrl) imageUrls.push(row.featuredImageUrl);
+  if (imageUrls.length > 0) {
+    input.files = imageUrls.map((url) => ({ contentType: 'IMAGE', originalSource: url }));
   }
 
   let response: ProductSetResponse;
