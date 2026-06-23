@@ -18,6 +18,8 @@ const ALLOWED = [
   'https://d3z34m-iw.myshopify.com',
   'https://viamood.com',
   'https://www.viamood.com',
+  'https://viamood.com.tr',
+  'https://www.viamood.com.tr',
 ];
 
 function cors(origin: string | null): Record<string, string> {
