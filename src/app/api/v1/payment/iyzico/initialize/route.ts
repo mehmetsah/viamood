@@ -66,6 +66,16 @@ async function createDraftOrder(body: InitBody): Promise<number | null> {
               },
             }
           : {}),
+        ...((body.discount_amount ?? 0) > 0
+          ? {
+              applied_discount: {
+                description: body.discount_code || 'İndirim',
+                value_type: 'fixed_amount',
+                value: (body.discount_amount as number).toFixed(2),
+                amount: (body.discount_amount as number).toFixed(2),
+              },
+            }
+          : {}),
       },
     };
     // Direct fetch + env token (shopifyRest retry body-reuse bug'ını bypass eder)
@@ -133,6 +143,8 @@ interface InitBody {
   zip?: string;
   identity_number?: string;
   draft_order_id?: number; // Shopify draft order id (callback'te complete için)
+  discount_code?: string; // indirim kuponu
+  discount_amount?: number; // TL — frontend'in hesapladığı indirim tutarı
   customer_id?: number; // Giriş yapmış müşterinin Shopify id'si (sipariş bu hesaba bağlanır)
   customer_email?: string;
   // Fatura bilgileri
@@ -210,7 +222,8 @@ export async function POST(req: NextRequest) {
   });
 
   const shipping = body.shipping_cost ?? 0;
-  const paidTotal = itemsTotal + shipping;
+  const discount = Math.max(0, body.discount_amount ?? 0); // TL — indirim kuponu
+  const paidTotal = Math.max(0, itemsTotal + shipping - discount); // İyzico'nun tahsil edeceği tutar (indirim düşülmüş)
 
   // Kargo'yu basket'e ayrı item olarak ekle ki price === sum(basketItems)
   if (shipping > 0) {

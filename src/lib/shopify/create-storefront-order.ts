@@ -40,6 +40,8 @@ export interface StorefrontOrderBody {
   billing_ilce?: string;
   cod_method?: 'nakit' | 'kart' | ''; // kapıda ödeme alt-tipi (kargo firmasına göre)
   cod_surcharge?: number; // TL — kapıda KART komisyonu (toplamın %4'ü)
+  discount_code?: string; // uygulanan indirim kuponu
+  discount_amount?: number; // TL — frontend'in hesapladığı indirim tutarı
 }
 
 export interface CreatedOrder {
@@ -147,6 +149,13 @@ export async function createStorefrontOrder(
     ...(b.customer_id ? { customer: { id: b.customer_id } } : {}),
     ...(shippingTl > 0
       ? { shipping_lines: [{ title: b.shipping_courier || 'Kargo (KargoLab)', price: shippingTl.toFixed(2), code: 'kargolab' }] }
+      : {}),
+    ...(b.discount_code && (b.discount_amount || 0) > 0
+      ? {
+          discount_codes: [
+            { code: b.discount_code, amount: (b.discount_amount as number).toFixed(2), type: 'fixed_amount' },
+          ],
+        }
       : {}),
   };
 
