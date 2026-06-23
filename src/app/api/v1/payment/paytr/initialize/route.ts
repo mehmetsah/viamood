@@ -18,9 +18,9 @@ import { getPaytrToken, buildMerchantOid, paytrConfigured, type PaytrBasketItem 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
-const STOREFRONT = 'https://viamood.com.tr';
+const STOREFRONT = env.STOREFRONT_URL;
 
-const DEFAULT_ORIGIN = 'https://via-mood.myshopify.com';
+const DEFAULT_ORIGIN = env.STOREFRONT_URL;
 const ALLOWED = [
   DEFAULT_ORIGIN,
   'https://d3z34m-iw.myshopify.com',

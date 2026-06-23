@@ -25,6 +25,9 @@ const envSchema = z.object({
   RESEND_API_KEY: z.string().optional(),
   EMAIL_FROM: z.string().default('Via Mood <noreply@viamood.com>'),
 
+  // Storefront — primary domain (custom checkout ödeme redirect'i + CORS default origin). Domain değişince TEK yer.
+  STOREFRONT_URL: z.string().url().default('https://viamood.com.tr'),
+
   // Shopify
   SHOPIFY_STORE_DOMAIN: z.string(),
   SHOPIFY_ADMIN_ACCESS_TOKEN: z.string().optional(), // legacy, custom app fallback

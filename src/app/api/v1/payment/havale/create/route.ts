@@ -9,6 +9,7 @@
  * (Via Mood ürünü ise admin) ödemeyi görünce AWS panelinden onaylar → sipariş ilerler.
  */
 import { NextResponse, type NextRequest } from 'next/server';
+import { env } from '@/lib/env';
 import {
   createStorefrontOrder,
   type StorefrontOrderBody,
@@ -18,7 +19,7 @@ import { resolveVendorIbans } from '@/lib/shopify/vendor-ibans';
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
-const DEFAULT_ORIGIN = 'https://via-mood.myshopify.com';
+const DEFAULT_ORIGIN = env.STOREFRONT_URL;
 const ALLOWED_ORIGINS = [
   DEFAULT_ORIGIN,
   'https://d3z34m-iw.myshopify.com',

@@ -15,7 +15,7 @@ import { env } from '@/lib/env';
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
-const STOREFRONT = 'https://viamood.com.tr';
+const STOREFRONT = env.STOREFRONT_URL;
 
 async function completeDraftOrder(draftId: string): Promise<boolean> {
   const token = env.SHOPIFY_ADMIN_ACCESS_TOKEN;

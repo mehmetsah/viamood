@@ -19,7 +19,7 @@ import { env } from '@/lib/env';
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
-const DEFAULT_ORIGIN = 'https://via-mood.myshopify.com';
+const DEFAULT_ORIGIN = env.STOREFRONT_URL;
 const ALLOWED_ORIGINS = [
   DEFAULT_ORIGIN,
   'https://d3z34m-iw.myshopify.com',

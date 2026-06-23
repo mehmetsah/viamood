@@ -7,12 +7,13 @@
  * Margin: KargoLab maliyetinin üzerine sabit kar payı eklenir (admin ayarı).
  */
 import { NextResponse, type NextRequest } from 'next/server';
+import { env } from '@/lib/env';
 import { quoteShipmentRate } from '@/lib/kargolab/rates';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
-const DEFAULT_ORIGIN = 'https://via-mood.myshopify.com';
+const DEFAULT_ORIGIN = env.STOREFRONT_URL;
 const ALLOWED = [
   DEFAULT_ORIGIN,
   'https://d3z34m-iw.myshopify.com',
