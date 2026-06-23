@@ -11,6 +11,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { initializeCheckoutForm } from '@/lib/iyzico/client';
 import { provinceCode } from '@/lib/shopify/tr-provinces';
 import { env } from '@/lib/env';
+import { upsertCustomerAddress } from '@/lib/shopify/customer-address';
 
 interface DraftOrderResp {
   draft_order?: { id: number; invoice_url?: string };
@@ -97,7 +98,21 @@ async function createDraftOrder(body: InitBody): Promise<number | null> {
       return null;
     }
     const res = (await resp.json()) as DraftOrderResp;
-    return res.draft_order?.id ?? null;
+    const _did = res.draft_order?.id ?? null;
+    if (_did && body.customer_id) {
+      await upsertCustomerAddress({
+        customerId: body.customer_id,
+        first_name: body.first_name,
+        last_name: body.last_name,
+        phone: body.phone,
+        address1: body.address1,
+        address2: body.address2,
+        city: body.city,
+        province: body.province,
+        zip: body.zip,
+      });
+    }
+    return _did;
   } catch (e) {
     _lastDraftError = e instanceof Error ? e.message : String(e);
     return null;

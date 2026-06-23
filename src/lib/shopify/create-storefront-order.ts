@@ -11,6 +11,7 @@
  */
 import { provinceCode } from './tr-provinces';
 import { env } from '../env';
+import { upsertCustomerAddress } from './customer-address';
 
 export type StorefrontPaymentMethod = 'havale' | 'cod';
 
@@ -173,6 +174,18 @@ export async function createStorefrontOrder(
     }
     const j = (await resp.json()) as { order?: { id: number; name: string; total_price?: string } };
     if (!j.order?.id) return { ok: false, error: 'order response boş' };
+    // Adresi müşterinin defterine YAPILANDIRILMIŞ (il/ilçe/mahalle) kaydet — best-effort, dedup'lu
+    await upsertCustomerAddress({
+      customerId: b.customer_id,
+      first_name: b.first_name,
+      last_name: b.last_name,
+      phone: b.phone,
+      address1: b.address1,
+      address2: b.address2,
+      city: b.city,
+      province: b.province,
+      zip: b.zip,
+    });
     return {
       ok: true,
       orderId: j.order.id,

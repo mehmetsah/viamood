@@ -12,6 +12,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { env } from '@/lib/env';
 import { provinceCode } from '@/lib/shopify/tr-provinces';
+import { upsertCustomerAddress } from '@/lib/shopify/customer-address';
 import { getPaytrToken, buildMerchantOid, paytrConfigured, type PaytrBasketItem } from '@/lib/paytr/client';
 
 export const dynamic = 'force-dynamic';
@@ -133,7 +134,21 @@ async function createDraftOrder(b: PaytrInitBody): Promise<number | null> {
     );
     if (!resp.ok) return null;
     const j = (await resp.json()) as { draft_order?: { id: number } };
-    return j.draft_order?.id ?? null;
+    const _did = j.draft_order?.id ?? null;
+    if (_did && b.customer_id) {
+      await upsertCustomerAddress({
+        customerId: b.customer_id,
+        first_name: b.first_name,
+        last_name: b.last_name,
+        phone: b.phone,
+        address1: b.address1,
+        address2: b.address2,
+        city: b.city,
+        province: b.province,
+        zip: b.zip,
+      });
+    }
+    return _did;
   } catch {
     return null;
   }
