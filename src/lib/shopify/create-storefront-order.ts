@@ -38,6 +38,8 @@ export interface StorefrontOrderBody {
   billing_address1?: string;
   billing_il?: string;
   billing_ilce?: string;
+  cod_method?: 'nakit' | 'kart' | ''; // kapıda ödeme alt-tipi (kargo firmasına göre)
+  cod_surcharge?: number; // TL — kapıda KART komisyonu (toplamın %4'ü)
 }
 
 export interface CreatedOrder {
@@ -103,19 +105,41 @@ export async function createStorefrontOrder(
 
   const shippingTl = b.shipping_cost || 0;
 
+  // Kapıda KART ödemesi → %4 komisyon ayrı özel satır olarak eklenir (Shopify toplam + KargoLab tahsilat tutarına yansır)
+  const codCard = method === 'cod' && b.cod_method === 'kart' && (b.cod_surcharge || 0) > 0;
+  const lineItems: Array<Record<string, unknown>> = b.line_items.map((li) => ({
+    variant_id: li.variant_id,
+    quantity: li.quantity,
+  }));
+  if (codCard) {
+    lineItems.push({
+      title: 'Kapıda Kart Komisyonu (%4)',
+      price: (b.cod_surcharge as number).toFixed(2),
+      quantity: 1,
+      requires_shipping: false,
+      taxable: false,
+    });
+  }
+  const codTipi = method === 'cod' ? (b.cod_method === 'kart' ? 'Kart' : 'Nakit') : '';
+
   const order: Record<string, unknown> = {
-    line_items: b.line_items.map((li) => ({ variant_id: li.variant_id, quantity: li.quantity })),
+    line_items: lineItems,
     email: b.customer_email || b.email,
     phone,
     shipping_address: addr,
     billing_address: addr,
     financial_status: 'pending', // ödenmemiş — havale onayı / kapıda tahsilat bekliyor
     gateway: GATEWAY[method],
-    tags: TAGS[method],
-    note: `📍 ${b.first_name} ${b.last_name} · ${b.province}/${b.city}\n💳 ${GATEWAY[method]}\n${invoiceNote(b)}`,
+    tags: TAGS[method] + (codCard ? ',kapida-kart' : ''),
+    note: `📍 ${b.first_name} ${b.last_name} · ${b.province}/${b.city}\n💳 ${GATEWAY[method]}${codTipi ? ' (' + codTipi + ')' : ''}\n${invoiceNote(b)}`,
     note_attributes: [
       { name: '_odeme_yontemi', value: method },
-      ...(method === 'cod' ? [{ name: '_kapida_odeme', value: '1' }] : []),
+      ...(method === 'cod'
+        ? [
+            { name: '_kapida_odeme', value: '1' },
+            { name: '_kapida_odeme_tipi', value: b.cod_method || 'nakit' },
+          ]
+        : []),
     ],
     send_receipt: true,
     send_fulfillment_receipt: false,

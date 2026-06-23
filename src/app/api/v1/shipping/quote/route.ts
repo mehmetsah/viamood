@@ -101,6 +101,8 @@ export async function POST(req: NextRequest) {
         all_rates: result.rates.map((r) => ({
           courier: r.courrierName,
           price_tl: Math.ceil(r.priceCents / 100 + SHIPPING_MARGIN_TL),
+          accepts_cod: r.acceptsCOD,
+          accepts_cod_card: r.acceptsCODCard,
         })),
         source: result.cached ? 'cache' : 'kargolab',
       },
