@@ -41,6 +41,12 @@ const envSchema = z.object({
   IYZICO_CALLBACK_BASE: z.string().url().default('http://localhost:3000'),
   IYZICO_DEFAULT_SUBMERCHANT_KEY: z.string().optional(),
 
+  // PayTR (iFrame API) — İyzico'ya paralel kart gateway
+  PAYTR_MERCHANT_ID: z.string().optional(),
+  PAYTR_MERCHANT_KEY: z.string().optional(),
+  PAYTR_MERCHANT_SALT: z.string().optional(),
+  PAYTR_TEST_MODE: z.coerce.number().default(1), // 1=test, 0=canlı
+
   // KargoLab
   KARGOLAB_API_URL: z.string().url().default('https://kargolab.com/api/v1'),
   KARGOLAB_HOST_HEADER: z.string().default('kargolab.com'),
