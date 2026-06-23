@@ -47,6 +47,7 @@ export default auth((req) => {
     pathname.startsWith('/api/v1/shopify') ||
     pathname.startsWith('/api/v1/payment') ||
     pathname.startsWith('/api/v1/shipping') ||
+    pathname.startsWith('/api/v1/discount') ||
     pathname.startsWith('/api/dev') ||
     pathname.startsWith('/_next') ||
     pathname.startsWith('/favicon')
