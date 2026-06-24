@@ -58,9 +58,13 @@ export const orders = pgTable(
   {
     id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
 
-    // Shopify mapping
-    shopifyOrderId: text('shopify_order_id').notNull().unique(),
-    shopifyOrderName: text('shopify_order_name').notNull(), // #1001 vs.
+    // Shopify mapping (FAZ 2: native siparişte NULL — Shopify yok)
+    shopifyOrderId: text('shopify_order_id').unique(),
+    shopifyOrderName: text('shopify_order_name'), // #1001 (Shopify); native'de null
+
+    // FAZ 2 native order spine
+    orderNumber: text('order_number'), // insan-okur ref (her iki backend); native: VM-100001
+    backend: text('backend').notNull().default('shopify'), // 'shopify' | 'native'
 
     // Customer
     customerId: text('customer_id'), // Shopify customer ID
@@ -135,6 +139,16 @@ export const orders = pgTable(
  */
 export const mikroSequences = pgTable('mikro_sequences', {
   key: text('key').primaryKey(),                       // 'cari_kodu_next'
+  value: integer('value').notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+/**
+ * Native sipariş numarası sayacı (FAZ 2). `mikro_sequences` ile aynı atomic increment deseni.
+ * key='native_order_no' → VM-{value}. Shopify '#1xxx' ile çakışmaz.
+ */
+export const orderSequences = pgTable('order_sequences', {
+  key: text('key').primaryKey(),                       // 'native_order_no'
   value: integer('value').notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });

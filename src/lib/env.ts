@@ -28,6 +28,9 @@ const envSchema = z.object({
   // Storefront — primary domain (custom checkout ödeme redirect'i + CORS default origin). Domain değişince TEK yer.
   STOREFRONT_URL: z.string().url().default('https://viamood.com.tr'),
 
+  // FAZ 2 strangler flag — sipariş oluşturma backend'i. Production 'shopify' kalır; 'native' RDS'e yazar.
+  STORE_BACKEND: z.enum(['shopify', 'native']).default('shopify'),
+
   // Shopify
   SHOPIFY_STORE_DOMAIN: z.string(),
   SHOPIFY_ADMIN_ACCESS_TOKEN: z.string().optional(), // legacy, custom app fallback

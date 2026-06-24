@@ -225,7 +225,7 @@ export async function syncOrderToMikro(orderId: string): Promise<SyncResult> {
 
   // 4. Sipariş ekle
   const ship = (order.shippingAddress ?? {}) as ShippingAddr;
-  const evrakSeri = order.mikroEvrakSeri ?? order.shopifyOrderName;
+  const evrakSeri = order.mikroEvrakSeri ?? order.shopifyOrderName ?? order.orderNumber ?? '';
   const evrakSira = order.mikroEvrakSira ?? 1;
 
   // SKU normalize + Mikro stok kodu üret (Yunus kuralı: VIA prefix)
@@ -281,7 +281,7 @@ export async function syncOrderToMikro(orderId: string): Promise<SyncResult> {
     CariHesapKodu: cariKodu!,
     DovizCinsi: 'TL',
     EvrakAciklama: {
-      Aciklama1: `Shopify sipariş: ${order.shopifyOrderName}`,
+      Aciklama1: `Sipariş: ${order.shopifyOrderName ?? order.orderNumber ?? order.id}`,
       Aciklama2: order.customerEmail ?? '',
       Aciklama3: ship.address1 ?? '',
     },

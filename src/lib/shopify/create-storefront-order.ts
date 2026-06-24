@@ -47,8 +47,8 @@ export interface StorefrontOrderBody {
 
 export interface CreatedOrder {
   ok: true;
-  orderId: number;
-  orderName: string; // #1006
+  orderId: number | string; // Shopify: numeric id · native: RDS order UUID
+  orderName: string; // #1006 (Shopify) · VM-100001 (native)
   total: number; // TL
 }
 export interface OrderErr {

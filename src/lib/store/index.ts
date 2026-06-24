@@ -9,6 +9,7 @@
  * Strateji: bkz. memory `viamood-strateji` — "adaptör SINIRINI çiz, native impl'i tetikleyiciye bağla".
  * Bugün native impl YAZMIYORUZ (YAGNI); sadece çıkış kapısını ucuza açık tutuyoruz.
  */
+import { env } from '../env';
 import {
   createStorefrontOrder,
   type StorefrontOrderBody,
@@ -17,6 +18,7 @@ import {
   type OrderErr,
 } from '../shopify/create-storefront-order';
 import { upsertCustomerAddress, type CustomerAddressInput } from '../shopify/customer-address';
+import { createNativeStorefrontOrder } from './native-create-order';
 
 export type { StorefrontOrderBody, StorefrontPaymentMethod, CreatedOrder, OrderErr, CustomerAddressInput };
 
@@ -40,9 +42,19 @@ const shopifyStoreAdapter: StoreAdapter = {
 };
 
 /**
- * Aktif store backend'ini döndürür. Şimdilik tek backend (shopify).
- * İleride: process.env.STORE_BACKEND === 'native' → nativeStoreAdapter.
+ * Native backend (FAZ 2 Dilim 1) — sipariş RDS'e yazılır (havale+COD).
+ * Adres yazımı FAZ 1 fonksiyonuna delege (RDS + best-effort Shopify) — değişmez.
+ */
+const nativeStoreAdapter: StoreAdapter = {
+  backend: 'native',
+  createStorefrontOrder: createNativeStorefrontOrder,
+  upsertCustomerAddress,
+};
+
+/**
+ * Aktif store backend'ini döndürür. `STORE_BACKEND` flag'i (env, default 'shopify').
+ * Production 'shopify' kalır; 'native' canlıya alındığında strangler cutover olur.
  */
 export function getStore(): StoreAdapter {
-  return shopifyStoreAdapter;
+  return env.STORE_BACKEND === 'native' ? nativeStoreAdapter : shopifyStoreAdapter;
 }

@@ -72,6 +72,62 @@ export function vendorRejectedEmail(vendorName: string, reason: string): { subje
   };
 }
 
+/**
+ * Native sipariş onay e-postası (FAZ 2). Shopify `send_receipt` yerine geçer.
+ * Havale → her tedarikçinin IBAN'ı + tutarı. COD → kapıda ödeme bilgisi.
+ */
+export function orderConfirmationEmail(p: {
+  orderNumber: string;
+  customerName: string;
+  total: number; // TL
+  method: 'havale' | 'cod';
+  codMethod?: 'nakit' | 'kart' | '';
+  vendors: Array<{ name: string; iban?: string; account_holder?: string; bank?: string; amount: number }>;
+}): { subject: string; html: string; text: string } {
+  const tl = (n: number) =>
+    n.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ₺';
+
+  if (p.method === 'havale') {
+    const banks = p.vendors.filter((v) => v.iban);
+    const rows = banks
+      .map(
+        (v) => `
+        <div style="border:1px solid #e6e0d4;border-radius:12px;padding:16px;margin:12px 0;">
+          <div style="font-weight:600;">${v.name} — <span style="color:#e1691f;">${tl(v.amount)}</span></div>
+          <div style="font-family:monospace;font-size:14px;margin-top:6px;">${v.iban}</div>
+          ${v.account_holder ? `<div style="font-size:13px;color:#6b7280;">Alıcı: ${v.account_holder}${v.bank ? ' · ' + v.bank : ''}</div>` : ''}
+        </div>`,
+      )
+      .join('');
+    return {
+      subject: `Via Mood siparişin alındı — ${p.orderNumber} (havale bekleniyor)`,
+      html: wrap(`
+        <p>Merhaba <strong>${p.customerName || 'değerli müşterimiz'}</strong>,</p>
+        <p>Siparişin <strong>${p.orderNumber}</strong> alındı. Toplam tutar: <strong>${tl(p.total)}</strong>.</p>
+        <p>Aşağıdaki hesap(lar)a havale/EFT yaptığında siparişin işleme alınır. Açıklamaya <strong>${p.orderNumber}</strong> yazmayı unutma.</p>
+        ${rows || '<p style="color:#6b7280;">Hesap bilgileri ayrıca iletilecektir.</p>'}
+        <a href="${env.APP_URL}/hesabim" style="${BUTTON_STYLE}">Siparişlerim</a>
+      `),
+      text:
+        `Via Mood siparişin ${p.orderNumber} alındı. Toplam ${tl(p.total)}. Havale: ` +
+        banks.map((v) => `${v.name} ${v.iban} (${tl(v.amount)})`).join(' | ') +
+        `. Açıklamaya ${p.orderNumber} yaz.`,
+    };
+  }
+
+  const odeme = p.codMethod === 'kart' ? 'kapıda kart' : 'kapıda nakit';
+  return {
+    subject: `Via Mood siparişin alındı — ${p.orderNumber} (kapıda ödeme)`,
+    html: wrap(`
+      <p>Merhaba <strong>${p.customerName || 'değerli müşterimiz'}</strong>,</p>
+      <p>Siparişin <strong>${p.orderNumber}</strong> alındı. Ödeme yöntemin: <strong>${odeme}</strong>.</p>
+      <p>Teslimat sırasında kuryeye <strong>${tl(p.total)}</strong> ödeyeceksin.</p>
+      <a href="${env.APP_URL}/hesabim" style="${BUTTON_STYLE}">Siparişlerim</a>
+    `),
+    text: `Via Mood siparişin ${p.orderNumber} alındı. ${odeme}, teslimatta ${tl(p.total)} ödenecek.`,
+  };
+}
+
 export function payoutPaidEmail(
   vendorName: string,
   netAmount: string,

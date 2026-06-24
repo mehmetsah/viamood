@@ -154,6 +154,10 @@ export async function pushFulfillmentToShopify(
     .where(eq(fulfillmentLineItems.fulfillmentId, fulfillmentId));
   if (myLineItems.length === 0) return { ok: false, error: 'Line items eksik' };
 
+  // Native sipariş (Shopify ID yok) → Shopify fulfillment push atlanır (FAZ 2)
+  if (!order.shopifyOrderId) {
+    return { ok: false, error: 'Native sipariş — Shopify fulfillment push yok' };
+  }
   const shopifyOrderGid = order.shopifyOrderId.startsWith('gid://')
     ? order.shopifyOrderId
     : `gid://shopify/Order/${order.shopifyOrderId}`;

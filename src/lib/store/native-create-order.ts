@@ -1,0 +1,187 @@
+/**
+ * FAZ 2 Dilim 1 — Native storefront sipariş oluşturma (havale + COD).
+ *
+ * Shopify yerine RDS'e yazar (STORE_BACKEND='native'). Mevcut downstream (routing/mikro)
+ * webhook'la AYNI fonksiyonlarla tetiklenir. PCI etkisi YOK (havale=banka, COD=kurye).
+ * `create-storefront-order.ts` (Shopify) tutar/COD mantığı + `order-ingest.ts` il/ilçe
+ * konvansiyonu (shippingAddress.district=il, .city=ilçe) aynalanır.
+ */
+import { eq, inArray } from 'drizzle-orm';
+import { db } from '@/db/client';
+import { orderLineItems, orders, productVariants } from '@/db/schema';
+import { env } from '@/lib/env';
+import { decrementForOrder } from '@/lib/inventory/decrement';
+import { nextOrderNumber } from '@/lib/orders/sequence';
+import { routeOrder } from '@/lib/routing/engine';
+import { syncOrderToMikro } from '@/lib/server/mikro-sync';
+import { orderConfirmationEmail } from '@/lib/email/templates';
+import { sendEmail } from '@/lib/email/sender';
+import { upsertCustomerAddress } from '@/lib/shopify/customer-address';
+import { resolveVendorIbans } from '@/lib/shopify/vendor-ibans';
+import type {
+  CreatedOrder,
+  OrderErr,
+  StorefrontOrderBody,
+  StorefrontPaymentMethod,
+} from '@/lib/shopify/create-storefront-order';
+
+const toCents = (tl: number): bigint => BigInt(Math.round((tl || 0) * 100));
+
+export async function createNativeStorefrontOrder(
+  b: StorefrontOrderBody,
+  method: StorefrontPaymentMethod,
+): Promise<CreatedOrder | OrderErr> {
+  try {
+    // 1) variant_id (Shopify) → RDS variant/product/vendor/price
+    const variantIds = b.line_items.map((li) => String(li.variant_id)).filter(Boolean);
+    const vRows = variantIds.length
+      ? await db
+          .select({
+            shopifyVariantId: productVariants.shopifyVariantId,
+            id: productVariants.id,
+            productId: productVariants.productId,
+            vendorId: productVariants.vendorId,
+            priceCents: productVariants.priceCents,
+            title: productVariants.title,
+            sku: productVariants.sku,
+          })
+          .from(productVariants)
+          .where(inArray(productVariants.shopifyVariantId, variantIds))
+      : [];
+    const byVariant = new Map(vRows.map((r) => [r.shopifyVariantId, r]));
+
+    // 2) Tutarlar + line item insert'leri (sadece eşleşen/vendor'lu satırlar yazılır — order-ingest deseni)
+    let subtotalCents = 0n;
+    const matched: Array<{ vendorId: string; variantId: string; quantity: number }> = [];
+    const vendorIdSet = new Set<string>();
+    const liInserts: Array<typeof orderLineItems.$inferInsert> = [];
+
+    b.line_items.forEach((li, i) => {
+      const r = byVariant.get(String(li.variant_id));
+      const unitCents = r?.priceCents != null ? BigInt(r.priceCents) : toCents(li.price ?? 0);
+      const lineCents = unitCents * BigInt(li.quantity);
+      subtotalCents += lineCents;
+      if (r?.vendorId) {
+        vendorIdSet.add(r.vendorId);
+        matched.push({ vendorId: r.vendorId, variantId: r.id, quantity: li.quantity });
+        liInserts.push({
+          orderId: '', // tx içinde set edilir
+          vendorId: r.vendorId,
+          productId: r.productId,
+          variantId: r.id,
+          shopifyLineItemId: `native-${li.variant_id}-${i}`,
+          title: li.title || r.title || 'Ürün',
+          variantTitle: null,
+          sku: li.sku ?? r.sku ?? null,
+          quantity: li.quantity,
+          unitPriceCents: unitCents,
+          totalPriceCents: lineCents,
+          discountCents: 0n,
+          status: 'pending',
+        });
+      }
+    });
+
+    const shippingCents = toCents(b.shipping_cost ?? 0);
+    const discountCents = toCents(b.discount_amount ?? 0);
+    const codCard = method === 'cod' && b.cod_method === 'kart' && (b.cod_surcharge ?? 0) > 0;
+    const codCents = codCard ? toCents(b.cod_surcharge as number) : 0n;
+    const totalCents = subtotalCents + shippingCents + codCents - discountCents;
+
+    const orderNumber = await nextOrderNumber();
+    const codTipi = method === 'cod' ? (b.cod_method === 'kart' ? 'Kart' : 'Nakit') : '';
+    const vendorIds = [...vendorIdSet];
+
+    // 3) Transaction: order + line items + stok düşümü
+    let orderId = '';
+    await db.transaction(async (tx) => {
+      const insertValues: typeof orders.$inferInsert = {
+        shopifyOrderId: null,
+        shopifyOrderName: null,
+        orderNumber,
+        backend: 'native',
+        customerId: b.customer_id ? String(b.customer_id) : null,
+        customerEmail: (b.customer_email || b.email) || null,
+        customerName: `${b.first_name} ${b.last_name}`.trim() || null,
+        customerPhone: b.phone || null,
+        shippingAddress: {
+          name: `${b.first_name} ${b.last_name}`.trim(),
+          phone: b.phone,
+          address1: b.address1,
+          address2: b.address2 || undefined, // mahalle
+          city: b.city, // ilçe
+          district: b.province, // il (order-ingest konvansiyonu)
+          postalCode: b.zip || undefined,
+          country: 'Turkey',
+          countryCode: 'TR',
+        },
+        subtotalCents,
+        shippingCents,
+        taxCents: 0n,
+        discountCents,
+        totalCents,
+        currency: 'TRY',
+        financialStatus: 'pending',
+        fulfillmentStatus: 'unfulfilled',
+        vendorCount: vendorIds.length,
+        vendorIds,
+        sourceName: 'storefront_native',
+        note: `📍 ${b.first_name} ${b.last_name} · ${b.province}/${b.city}\n💳 ${method === 'havale' ? 'Havale / EFT' : 'Kapıda Ödeme'}${codTipi ? ' (' + codTipi + ')' : ''}`,
+        tags: [
+          'via-mood-storefront',
+          method === 'havale' ? 'havale-pending' : 'kapida-odeme',
+          ...(codCard ? ['kapida-kart'] : []),
+        ],
+        placedAt: new Date(),
+      };
+      const [created] = await tx.insert(orders).values(insertValues).returning({ id: orders.id });
+      if (!created) throw new Error('native order insert başarısız');
+      orderId = created.id;
+
+      if (liInserts.length) {
+        await tx.insert(orderLineItems).values(liInserts.map((li) => ({ ...li, orderId: created.id })));
+      }
+      await decrementForOrder(matched, tx);
+    });
+
+    // 4) Downstream (transaction DIŞI, fire-and-forget — webhook ile aynı)
+    routeOrder(orderId).catch((e) => console.error('[native-order] routing error:', e));
+    if (env.MIKRO_AUTO_PUSH && env.MIKRO_API_URL) {
+      syncOrderToMikro(orderId).catch((e) => console.error('[native-order] mikro error:', e));
+    }
+
+    // Adres defterine yapılandırılmış kayıt (FAZ 1 fonksiyonu — RDS + best-effort Shopify)
+    upsertCustomerAddress({
+      customerId: b.customer_id,
+      first_name: b.first_name,
+      last_name: b.last_name,
+      phone: b.phone,
+      address1: b.address1,
+      address2: b.address2,
+      city: b.city,
+      province: b.province,
+      zip: b.zip,
+    }).catch(() => {});
+
+    // Onay e-postası (Shopify send_receipt yerine) — best-effort
+    try {
+      const vendors = await resolveVendorIbans(b.line_items, b.shipping_cost ?? 0);
+      const tpl = orderConfirmationEmail({
+        orderNumber,
+        customerName: `${b.first_name} ${b.last_name}`.trim(),
+        total: Number(totalCents) / 100,
+        method,
+        codMethod: b.cod_method,
+        vendors,
+      });
+      const to = b.customer_email || b.email;
+      if (to) await sendEmail({ to, subject: tpl.subject, html: tpl.html, text: tpl.text });
+    } catch (e) {
+      console.error('[native-order] email error:', e);
+    }
+
+    return { ok: true, orderId, orderName: orderNumber, total: Number(totalCents) / 100 };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : String(e) };
+  }
+}
