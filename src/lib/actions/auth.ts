@@ -6,6 +6,7 @@ import { z } from 'zod';
 import { db } from '@/db/client';
 import { users } from '@/db/schema';
 import { signIn } from '@/lib/auth';
+import { upsertCustomerByEmail } from '@/lib/customers/service';
 import { hashPassword, validatePassword } from '@/lib/password';
 
 const signUpSchema = z.object({
@@ -89,6 +90,74 @@ export async function signUpAction(formData: FormData): Promise<ActionResult> {
   });
 
   redirect('/onboarding');
+}
+
+/**
+ * Müşteri kaydı (FAZ 1). signUpAction'dan AYRI: role='customer', onboarding YOK,
+ * RDS customers'a bağlanır (userId), /hesabim'a yönlendirir.
+ */
+export async function customerSignUpAction(formData: FormData): Promise<ActionResult> {
+  const raw = {
+    name: String(formData.get('name') ?? ''),
+    email: String(formData.get('email') ?? '').toLowerCase().trim(),
+    password: String(formData.get('password') ?? ''),
+    passwordConfirm: String(formData.get('passwordConfirm') ?? ''),
+  };
+
+  const parsed = signUpSchema.safeParse(raw);
+  if (!parsed.success) {
+    const fieldErrors: Record<string, string> = {};
+    for (const issue of parsed.error.issues) {
+      fieldErrors[issue.path.join('.')] = issue.message;
+    }
+    return { success: false, error: 'Lütfen formu kontrol et', fieldErrors };
+  }
+
+  const data = parsed.data;
+
+  if (data.password !== data.passwordConfirm) {
+    return {
+      success: false,
+      error: 'Şifreler eşleşmiyor',
+      fieldErrors: { passwordConfirm: 'Şifreler eşleşmiyor' },
+    };
+  }
+
+  const policy = validatePassword(data.password);
+  if (!policy.ok) {
+    return { success: false, error: policy.reason, fieldErrors: { password: policy.reason } };
+  }
+
+  const existing = await db.select({ id: users.id }).from(users).where(eq(users.email, data.email)).limit(1);
+  if (existing.length > 0) {
+    return {
+      success: false,
+      error: 'Bu e-posta ile zaten kayıt var',
+      fieldErrors: { email: 'Bu e-posta ile zaten kayıt var' },
+    };
+  }
+
+  const passwordHash = await hashPassword(data.password);
+  const [created] = await db
+    .insert(users)
+    .values({ name: data.name, email: data.email, passwordHash, role: 'customer' })
+    .returning({ id: users.id, email: users.email });
+
+  if (!created) {
+    return { success: false, error: 'Kayıt oluşturulamadı, lütfen tekrar dene' };
+  }
+
+  // RDS customers'a bağla (email köprüsü) — backfill'den gelen satır varsa userId'yi ona yazar,
+  // böylece geçmiş siparişler portal'da hemen görünür. Best-effort.
+  await upsertCustomerByEmail({
+    email: data.email,
+    name: data.name,
+    userId: created.id,
+  });
+
+  await signIn('credentials', { email: data.email, password: data.password, redirect: false });
+
+  redirect('/hesabim');
 }
 
 export async function signOutAction() {

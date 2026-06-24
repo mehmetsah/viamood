@@ -11,6 +11,7 @@
  */
 import { provinceCode } from './tr-provinces';
 import { env } from '../env';
+import { findCustomerId, upsertCustomerAddressRds } from '@/lib/customers/service';
 
 export interface CustomerAddressInput {
   customerId?: number;
@@ -65,11 +66,38 @@ export async function upsertCustomerAddress(p: CustomerAddressInput): Promise<vo
     };
     if (pcode) address.province_code = pcode;
 
-    await fetch(`${base}/customers/${p.customerId}/addresses.json`, {
+    const createResp = await fetch(`${base}/customers/${p.customerId}/addresses.json`, {
       method: 'POST',
       headers: h,
       body: JSON.stringify({ address }),
     });
+
+    // FAZ 1 dual-write → RDS customer_addresses (best-effort; checkout akışını bozmaz).
+    // ⚠️ RDS düzgün isimle: province=il(p.province), district=ilçe(p.city), neighborhood=mahalle(p.address2).
+    let shopifyAddressId: string | null = null;
+    if (createResp.ok) {
+      try {
+        const created = (await createResp.json()) as { customer_address?: { id?: number } };
+        shopifyAddressId = created.customer_address?.id ? String(created.customer_address.id) : null;
+      } catch {
+        /* response parse hatası — yine de RDS'e yazmayı dene */
+      }
+    }
+    const rdsCustomerId = await findCustomerId({ shopifyCustomerId: String(p.customerId) });
+    if (rdsCustomerId) {
+      await upsertCustomerAddressRds({
+        customerId: rdsCustomerId,
+        firstName: p.first_name ?? null,
+        lastName: p.last_name ?? null,
+        phone: p.phone ?? null,
+        province: p.province ?? null,
+        district: p.city ?? null,
+        neighborhood: p.address2 ?? null,
+        address1: p.address1 ?? null,
+        postalCode: p.zip ?? null,
+        shopifyAddressId,
+      });
+    }
   } catch {
     /* best-effort — sipariş akışını bozma */
   }

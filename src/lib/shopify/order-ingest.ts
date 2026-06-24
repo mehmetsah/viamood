@@ -7,6 +7,7 @@ import {
   productVariants,
   vendors,
 } from '@/db/schema';
+import { upsertCustomerByEmail } from '@/lib/customers/service';
 
 /**
  * Shopify webhook payload'ından gelen order'ı local DB'ye yansıt.
@@ -298,6 +299,19 @@ export async function ingestShopifyOrder(payload: ShopifyOrderPayload): Promise<
       },
     });
   });
+
+  // FAZ 1 dual-write: müşteriyi RDS customers'a yansıt (email köprüsü).
+  // Transaction DIŞINDA + best-effort (upsertCustomerByEmail kendi içinde try/catch) →
+  // bir hata webhook/order yazımını ASLA bozmaz.
+  const custEmail = payload.customer?.email ?? payload.email ?? null;
+  if (custEmail) {
+    await upsertCustomerByEmail({
+      email: custEmail,
+      shopifyCustomerId: payload.customer?.id ? String(payload.customer.id) : null,
+      name: customerName,
+      phone: payload.customer?.phone ?? payload.phone ?? null,
+    });
+  }
 
   return { ok: true, orderId, isNew: true, matchedLineItems: matched, unmatchedLineItems: unmatched };
 }

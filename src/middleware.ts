@@ -8,12 +8,14 @@ const PUBLIC_PATHS = new Set([
   '/',
   '/auth/sign-in',
   '/auth/sign-up',
+  '/auth/customer-sign-up',
   '/auth/verify',
   '/auth/error',
 ]);
 
 const ADMIN_PREFIX = '/admin';
 const VENDOR_PREFIXES = ['/dashboard', '/products', '/bundles', '/orders', '/inventory', '/payouts', '/onboarding', '/profile'];
+const CUSTOMER_PREFIXES = ['/hesabim'];
 
 /**
  * Next.js standalone server HOSTNAME env'i (örn. 127.0.0.1) ile dinler ve
@@ -67,6 +69,17 @@ export default auth((req) => {
 
   if (pathname.startsWith(ADMIN_PREFIX)) {
     if (role !== 'admin' && role !== 'super_admin') {
+      return NextResponse.redirect(buildRedirectUrl(req, role === 'customer' ? '/hesabim' : '/dashboard'));
+    }
+    return NextResponse.next();
+  }
+
+  if (CUSTOMER_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`))) {
+    // Müşteri portalı: vendor/admin kendi paneline; customer (veya rolsüz authenticated) izinli.
+    if (role === 'admin' || role === 'super_admin') {
+      return NextResponse.redirect(buildRedirectUrl(req, '/admin'));
+    }
+    if (role === 'vendor' || role === 'vendor_admin') {
       return NextResponse.redirect(buildRedirectUrl(req, '/dashboard'));
     }
     return NextResponse.next();
@@ -87,7 +100,8 @@ export default auth((req) => {
       role !== 'admin' &&
       role !== 'super_admin'
     ) {
-      return NextResponse.redirect(buildRedirectUrl(req, '/auth/sign-in'));
+      // Müşteri → kendi portalına; tanımsız rol → giriş
+      return NextResponse.redirect(buildRedirectUrl(req, role === 'customer' ? '/hesabim' : '/auth/sign-in'));
     }
     return NextResponse.next();
   }

@@ -11,7 +11,8 @@ import { Logo } from '@/components/ui/Logo';
 function SignInForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get('callbackUrl') ?? '/dashboard';
+  // Özel hedef yoksa /post-login → role'e göre (customer→/hesabim, vendor→/dashboard, admin→/admin)
+  const callbackUrl = searchParams.get('callbackUrl') ?? '/post-login';
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 

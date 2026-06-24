@@ -5,6 +5,7 @@ export * from './vendors';
 export * from './products';
 export * from './inventory';
 export * from './orders';
+export * from './customers';
 export * from './events';
 export * from './routing';
 export * from './fulfillments';
