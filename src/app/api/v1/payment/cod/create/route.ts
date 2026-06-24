@@ -11,10 +11,7 @@
  */
 import { NextResponse, type NextRequest } from 'next/server';
 import { env } from '@/lib/env';
-import {
-  createStorefrontOrder,
-  type StorefrontOrderBody,
-} from '@/lib/shopify/create-storefront-order';
+import { getStore, type StorefrontOrderBody } from '@/lib/store';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -66,7 +63,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, error: 'missing_fields', missing }, { status: 422, headers });
   }
 
-  const created = await createStorefrontOrder(body, 'cod');
+  const created = await getStore().createStorefrontOrder(body, 'cod');
   if (!created.ok) {
     return NextResponse.json(
       { ok: false, error: 'order_create_failed', detail: created.error },

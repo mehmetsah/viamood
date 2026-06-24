@@ -10,10 +10,7 @@
  */
 import { NextResponse, type NextRequest } from 'next/server';
 import { env } from '@/lib/env';
-import {
-  createStorefrontOrder,
-  type StorefrontOrderBody,
-} from '@/lib/shopify/create-storefront-order';
+import { getStore, type StorefrontOrderBody } from '@/lib/store';
 import { resolveVendorIbans } from '@/lib/shopify/vendor-ibans';
 
 export const dynamic = 'force-dynamic';
@@ -75,7 +72,7 @@ export async function POST(req: NextRequest) {
   }
 
   // Shopify pending sipariş oluştur
-  const created = await createStorefrontOrder(body, 'havale');
+  const created = await getStore().createStorefrontOrder(body, 'havale');
   if (!created.ok) {
     return NextResponse.json(
       { ok: false, error: 'order_create_failed', detail: created.error },
