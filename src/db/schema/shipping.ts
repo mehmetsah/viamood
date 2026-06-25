@@ -63,7 +63,7 @@ export const shippingRateBrackets = pgTable(
     marginPct: integer('margin_pct').notNull().default(15),
 
     /** Sabit ek margin (TL cent) — opsiyonel */
-    marginFlatCents: bigint('margin_flat_cents', { mode: 'bigint' }).default(0n),
+    marginFlatCents: bigint('margin_flat_cents', { mode: 'bigint' }).default(sql`0`),
 
     /** Hesaplanan satış fiyatı (TL cent) — kargolab_base × (1 + margin_pct/100) + margin_flat */
     priceCents: bigint('price_cents', { mode: 'bigint' }).notNull(),
