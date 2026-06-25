@@ -44,6 +44,49 @@ function parseTags(raw: string): string[] {
     .slice(0, 50);
 }
 
+interface ParsedVariant {
+  id?: string;
+  options: string[];
+  priceCents: number;
+  sku: string;
+  stock: number;
+}
+interface ParsedVariants {
+  variants: ParsedVariant[];
+  options: { name: string; values: string[] }[];
+}
+
+/** Form'dan çoklu varyant verisini ayrıştırır. useVariants=1 değilse null (tekli yol). */
+function parseVariants(formData: FormData): ParsedVariants | null {
+  if (String(formData.get('useVariants') ?? '') !== '1') return null;
+  let rawVariants: unknown;
+  let rawOptions: unknown;
+  try {
+    rawVariants = JSON.parse(String(formData.get('variantsJson') ?? '[]'));
+    rawOptions = JSON.parse(String(formData.get('optionsJson') ?? '[]'));
+  } catch {
+    return null;
+  }
+  if (!Array.isArray(rawVariants)) return null;
+  const variants: ParsedVariant[] = rawVariants
+    .filter((v): v is Record<string, unknown> => !!v && Array.isArray((v as Record<string, unknown>).options))
+    .map((v) => ({
+      id: typeof v.id === 'string' ? v.id : undefined,
+      options: (v.options as unknown[]).map((o) => String(o)).slice(0, 3),
+      priceCents: moneyToCents(String(v.price ?? '0')),
+      sku: String(v.sku ?? '').trim(),
+      stock: Math.max(0, Math.floor(Number(v.stock ?? 0)) || 0),
+    }))
+    .filter((v) => v.options.length > 0);
+  if (!variants.length) return null;
+  const options = Array.isArray(rawOptions)
+    ? (rawOptions as { name: string; values: string[] }[]).filter((o) => o?.name && Array.isArray(o.values))
+    : [];
+  return { variants, options };
+}
+
+const localId = () => `local_${crypto.randomUUID()}`;
+
 export async function createProductAction(formData: FormData): Promise<ActionResult> {
   const ctx = await requireActiveVendor();
   if (!canEdit(ctx.role)) return { success: false, error: 'Yetkin yok' };
@@ -76,9 +119,14 @@ export async function createProductAction(formData: FormData): Promise<ActionRes
   }
   const data = parsed.data;
 
-  // Shopify ürün kimliği henüz yok — geçici unique ID. Phase 2.2 sync'inde gerçek ID alınır.
-  const tempShopifyProductId = `local_${crypto.randomUUID()}`;
-  const tempShopifyVariantId = `local_${crypto.randomUUID()}`;
+  // Çoklu varyant mı? (yoksa tekli "Default" varyant)
+  const variantData = parseVariants(formData);
+  const prices = variantData ? variantData.variants.map((v) => v.priceCents) : [data.priceCents];
+  const minP = Math.min(...prices);
+  const maxP = Math.max(...prices);
+  const totalStock = variantData
+    ? variantData.variants.reduce((s, v) => s + v.stock, 0)
+    : data.initialStock;
 
   // Slug için handle (basitçe title'dan)
   const handle = data.title
@@ -94,7 +142,7 @@ export async function createProductAction(formData: FormData): Promise<ActionRes
       .insert(products)
       .values({
         vendorId: ctx.vendorId,
-        shopifyProductId: tempShopifyProductId,
+        shopifyProductId: localId(), // geçici; push sırasında gerçek Shopify ID alınır
         shopifyHandle: handle || `product-${Date.now()}`,
         title: data.title,
         description: data.description || null,
@@ -103,42 +151,54 @@ export async function createProductAction(formData: FormData): Promise<ActionRes
         status: data.status,
         vendorSlug: ctx.vendorSlug,
         vendorName: ctx.vendorName,
-        minPriceCents: BigInt(data.priceCents),
-        maxPriceCents: BigInt(data.priceCents),
-        totalInventory: data.initialStock,
+        minPriceCents: BigInt(minP),
+        maxPriceCents: BigInt(maxP),
+        totalInventory: totalStock,
         featuredImageUrl: data.featuredImageUrl || null,
+        ...(variantData ? { metadata: { options: variantData.options } } : {}),
       })
       .returning({ id: products.id });
 
     if (!created) throw new Error('Ürün oluşturulamadı');
     productId = created.id;
 
-    const [variant] = await tx
-      .insert(productVariants)
-      .values({
-        productId: created.id,
-        vendorId: ctx.vendorId,
-        shopifyVariantId: tempShopifyVariantId,
-        title: 'Default',
-        sku: data.sku || null,
-        barcode: data.barcode || null,
-        priceCents: BigInt(data.priceCents),
-        compareAtPriceCents: data.compareAtPriceCents ? BigInt(data.compareAtPriceCents) : null,
-        costCents: data.costCents ? BigInt(data.costCents) : null,
-        weightGrams: data.weightGrams,
-      })
-      .returning({ id: productVariants.id });
+    // Tekli ürünü de aynı döngüden geçir (tek "Default" varyant)
+    const rows: ParsedVariant[] = variantData
+      ? variantData.variants
+      : [{ options: [], priceCents: data.priceCents, sku: data.sku ?? '', stock: data.initialStock }];
 
-    if (!variant) throw new Error('Varyant oluşturulamadı');
+    for (const v of rows) {
+      const [variant] = await tx
+        .insert(productVariants)
+        .values({
+          productId: created.id,
+          vendorId: ctx.vendorId,
+          shopifyVariantId: localId(),
+          title: v.options.length ? v.options.join(' / ') : 'Default',
+          option1: v.options[0] ?? null,
+          option2: v.options[1] ?? null,
+          option3: v.options[2] ?? null,
+          sku: v.sku || null,
+          barcode: variantData ? null : data.barcode || null,
+          priceCents: BigInt(v.priceCents),
+          compareAtPriceCents:
+            variantData ? null : data.compareAtPriceCents ? BigInt(data.compareAtPriceCents) : null,
+          costCents: variantData ? null : data.costCents ? BigInt(data.costCents) : null,
+          weightGrams: data.weightGrams,
+        })
+        .returning({ id: productVariants.id });
 
-    if (data.initialStock > 0) {
-      await tx.insert(inventoryLevels).values({
-        vendorId: ctx.vendorId,
-        variantId: variant.id,
-        quantity: data.initialStock,
-        available: data.initialStock,
-        reserved: 0,
-      });
+      if (!variant) throw new Error('Varyant oluşturulamadı');
+
+      if (v.stock > 0) {
+        await tx.insert(inventoryLevels).values({
+          vendorId: ctx.vendorId,
+          variantId: variant.id,
+          quantity: v.stock,
+          available: v.stock,
+          reserved: 0,
+        });
+      }
     }
 
     // Vendor counter — atomic increment
@@ -195,6 +255,11 @@ export async function updateProductAction(
   }
   const data = parsed.data;
 
+  const variantData = parseVariants(formData);
+  const prices = variantData ? variantData.variants.map((v) => v.priceCents) : [data.priceCents];
+  const minP = Math.min(...prices);
+  const maxP = Math.max(...prices);
+
   await db.transaction(async (tx) => {
     await tx
       .update(products)
@@ -204,26 +269,78 @@ export async function updateProductAction(
         productType: data.productType || null,
         tags: parseTags(data.tags || ''),
         status: data.status,
-        minPriceCents: BigInt(data.priceCents),
-        maxPriceCents: BigInt(data.priceCents),
+        minPriceCents: BigInt(minP),
+        maxPriceCents: BigInt(maxP),
         featuredImageUrl: data.featuredImageUrl || null,
+        ...(variantData
+          ? {
+              metadata: { options: variantData.options },
+              totalInventory: variantData.variants.reduce((s, v) => s + v.stock, 0),
+            }
+          : {}),
         updatedAt: new Date(),
       })
       .where(eq(products.id, productId));
 
-    // Default variant'ı güncelle
-    await tx
-      .update(productVariants)
-      .set({
-        sku: data.sku || null,
-        barcode: data.barcode || null,
-        priceCents: BigInt(data.priceCents),
-        compareAtPriceCents: data.compareAtPriceCents ? BigInt(data.compareAtPriceCents) : null,
-        costCents: data.costCents ? BigInt(data.costCents) : null,
-        weightGrams: data.weightGrams,
-        updatedAt: new Date(),
-      })
-      .where(eq(productVariants.productId, productId));
+    if (variantData) {
+      // Çoklu varyant: id'li → güncelle, id'siz → yeni ekle (+stok). Eksik olanlar silinmez (sipariş güvenliği).
+      for (const v of variantData.variants) {
+        if (v.id) {
+          await tx
+            .update(productVariants)
+            .set({
+              title: v.options.length ? v.options.join(' / ') : 'Default',
+              option1: v.options[0] ?? null,
+              option2: v.options[1] ?? null,
+              option3: v.options[2] ?? null,
+              sku: v.sku || null,
+              priceCents: BigInt(v.priceCents),
+              weightGrams: data.weightGrams,
+              updatedAt: new Date(),
+            })
+            .where(and(eq(productVariants.id, v.id), eq(productVariants.productId, productId)));
+        } else {
+          const [nv] = await tx
+            .insert(productVariants)
+            .values({
+              productId,
+              vendorId: ctx.vendorId,
+              shopifyVariantId: localId(),
+              title: v.options.length ? v.options.join(' / ') : 'Default',
+              option1: v.options[0] ?? null,
+              option2: v.options[1] ?? null,
+              option3: v.options[2] ?? null,
+              sku: v.sku || null,
+              priceCents: BigInt(v.priceCents),
+              weightGrams: data.weightGrams,
+            })
+            .returning({ id: productVariants.id });
+          if (nv && v.stock > 0) {
+            await tx.insert(inventoryLevels).values({
+              vendorId: ctx.vendorId,
+              variantId: nv.id,
+              quantity: v.stock,
+              available: v.stock,
+              reserved: 0,
+            });
+          }
+        }
+      }
+    } else {
+      // Tekli yol — mevcut "Default" varyantı güncelle
+      await tx
+        .update(productVariants)
+        .set({
+          sku: data.sku || null,
+          barcode: data.barcode || null,
+          priceCents: BigInt(data.priceCents),
+          compareAtPriceCents: data.compareAtPriceCents ? BigInt(data.compareAtPriceCents) : null,
+          costCents: data.costCents ? BigInt(data.costCents) : null,
+          weightGrams: data.weightGrams,
+          updatedAt: new Date(),
+        })
+        .where(eq(productVariants.productId, productId));
+    }
   });
 
   revalidatePath('/products');

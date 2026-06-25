@@ -1,10 +1,11 @@
 'use client';
 
-import { useActionState } from 'react';
+import { useActionState, useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
 import { ProductImageGallery } from '@/components/products/ProductImageGallery';
+import { VariantEditor, type OptionDef, type VariantRow } from '@/components/products/VariantEditor';
 import type { ActionResult } from '@/lib/actions/auth';
 
 interface ProductFormDefaults {
@@ -34,11 +35,16 @@ interface ProductFormProps {
   /** 'gallery' → sürükle-bırak çoklu görsel galerisi; 'single' → tek URL input (varsayılan). */
   imageMode?: 'single' | 'gallery';
   defaultImages?: string[];
+  /** Çoklu varyant başlangıç durumu (edit modunda mevcut varyantlar). */
+  defaultHasVariants?: boolean;
+  defaultOptions?: OptionDef[];
+  defaultVariants?: VariantRow[];
 }
 
-export function ProductForm({ defaults = {}, action, submitLabel, showInitialStock = true, vendors, defaultVendorId, imageMode = 'single', defaultImages = [] }: ProductFormProps) {
+export function ProductForm({ defaults = {}, action, submitLabel, showInitialStock = true, vendors, defaultVendorId, imageMode = 'single', defaultImages = [], defaultHasVariants = false, defaultOptions, defaultVariants }: ProductFormProps) {
   const [state, formAction, pending] = useActionState<ActionResult | null, FormData>(action, null);
   const fieldErrors = state && !state.success ? state.fieldErrors ?? {} : {};
+  const [hasVariants, setHasVariants] = useState(defaultHasVariants);
 
   return (
     <form action={formAction} className="flex flex-col gap-6 max-w-3xl">
@@ -130,79 +136,49 @@ export function ProductForm({ defaults = {}, action, submitLabel, showInitialSto
       </section>
 
       <section className="bg-white rounded-xl border p-6 flex flex-col gap-4">
-        <h2 className="font-bold border-b pb-2">Fiyat</h2>
-        <div className="grid grid-cols-3 gap-4">
-          <Input
-            name="price"
-            label="Satış fiyatı (TL)"
-            type="number"
-            step="0.01"
-            min="0"
-            required
-            defaultValue={defaults.price}
-            error={fieldErrors.priceCents}
-          />
-          <Input
-            name="compareAtPrice"
-            label="Eski fiyat (TL)"
-            type="number"
-            step="0.01"
-            min="0"
-            hint="İndirim göstermek için"
-            defaultValue={defaults.compareAtPrice}
-            error={fieldErrors.compareAtPriceCents}
-          />
-          <Input
-            name="cost"
-            label="Maliyet (TL)"
-            type="number"
-            step="0.01"
-            min="0"
-            hint="Sadece sen görürsün"
-            defaultValue={defaults.cost}
-            error={fieldErrors.costCents}
-          />
+        <div className="flex items-center justify-between border-b pb-2">
+          <h2 className="font-bold">Fiyat & Stok</h2>
+          <label className="flex items-center gap-2 text-sm font-medium cursor-pointer">
+            <input
+              type="checkbox"
+              checked={hasVariants}
+              onChange={(e) => setHasVariants(e.target.checked)}
+              className="w-4 h-4 accent-[var(--color-brand-orange)]"
+            />
+            Bu üründe seçenekler var (beden, renk…)
+          </label>
         </div>
-      </section>
+        <input type="hidden" name="useVariants" value={hasVariants ? '1' : '0'} />
 
-      <section className="bg-white rounded-xl border p-6 flex flex-col gap-4">
-        <h2 className="font-bold border-b pb-2">Envanter & Kargo</h2>
-        <div className="grid grid-cols-3 gap-4">
-          <Input
-            name="sku"
-            label="SKU"
-            placeholder="VM-001"
-            defaultValue={defaults.sku}
-            error={fieldErrors.sku}
-          />
-          <Input
-            name="barcode"
-            label="Barkod"
-            placeholder="8690000000000"
-            defaultValue={defaults.barcode}
-            error={fieldErrors.barcode}
-          />
-          <Input
-            name="weightGrams"
-            label="Ağırlık (gram)"
-            type="number"
-            min="0"
-            placeholder="500"
-            defaultValue={defaults.weightGrams}
-            error={fieldErrors.weightGrams}
-          />
-        </div>
-        {showInitialStock && (
-          <Input
-            name="initialStock"
-            label="Başlangıç stoğu"
-            type="number"
-            min="0"
-            placeholder="0"
-            hint="Sonradan stok ekranından güncelleyebilirsin"
-            defaultValue={defaults.initialStock ?? '0'}
-            error={fieldErrors.initialStock}
-          />
+        {hasVariants ? (
+          <>
+            <VariantEditor basePrice={defaults.price} defaultOptions={defaultOptions} defaultVariants={defaultVariants} />
+            <Input
+              name="weightGrams"
+              label="Ağırlık (gram) — tüm varyantlar için"
+              type="number"
+              min="0"
+              placeholder="500"
+              defaultValue={defaults.weightGrams}
+              error={fieldErrors.weightGrams}
+            />
+          </>
+        ) : (
+          <>
+            <div className="grid grid-cols-3 gap-4">
+              <Input name="price" label="Satış fiyatı (TL)" type="number" step="0.01" min="0" required defaultValue={defaults.price} error={fieldErrors.priceCents} />
+              <Input name="compareAtPrice" label="Eski fiyat (TL)" type="number" step="0.01" min="0" hint="İndirim göstermek için" defaultValue={defaults.compareAtPrice} error={fieldErrors.compareAtPriceCents} />
+              <Input name="cost" label="Maliyet (TL)" type="number" step="0.01" min="0" hint="Sadece sen görürsün" defaultValue={defaults.cost} error={fieldErrors.costCents} />
+            </div>
+            <div className="grid grid-cols-3 gap-4">
+              <Input name="sku" label="SKU" placeholder="VM-001" defaultValue={defaults.sku} error={fieldErrors.sku} />
+              <Input name="barcode" label="Barkod" placeholder="8690000000000" defaultValue={defaults.barcode} error={fieldErrors.barcode} />
+              <Input name="weightGrams" label="Ağırlık (gram)" type="number" min="0" placeholder="500" defaultValue={defaults.weightGrams} error={fieldErrors.weightGrams} />
+            </div>
+            {showInitialStock && (
+              <Input name="initialStock" label="Başlangıç stoğu" type="number" min="0" placeholder="0" hint="Sonradan stok ekranından güncelleyebilirsin" defaultValue={defaults.initialStock ?? '0'} error={fieldErrors.initialStock} />
+            )}
+          </>
         )}
       </section>
 

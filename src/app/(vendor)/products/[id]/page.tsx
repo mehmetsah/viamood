@@ -1,8 +1,8 @@
-import { and, eq } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 import { db } from '@/db/client';
-import { products, productVariants, vendorMemberships, vendors } from '@/db/schema';
+import { inventoryLevels, products, productVariants, vendorMemberships, vendors } from '@/db/schema';
 import type { PricingConfig } from '@/db/schema/products';
 import { auth } from '@/lib/auth';
 import { ProductEditClient } from './ProductEditClient';
@@ -34,11 +34,31 @@ export default async function EditProductPage({ params }: PageProps) {
 
   if (!row) notFound();
 
-  const [variant] = await db
+  const allVariants = await db
     .select()
     .from(productVariants)
-    .where(eq(productVariants.productId, row.id))
-    .limit(1);
+    .where(eq(productVariants.productId, row.id));
+  const variant = allVariants[0];
+
+  // Varyant başına stok (available)
+  const invRows = allVariants.length
+    ? await db
+        .select({ variantId: inventoryLevels.variantId, available: inventoryLevels.available })
+        .from(inventoryLevels)
+        .where(inArray(inventoryLevels.variantId, allVariants.map((v) => v.id)))
+    : [];
+  const stockByVariant = new Map(invRows.map((r) => [r.variantId, r.available]));
+
+  const hasVariants = allVariants.length > 1 || variant?.option1 != null;
+  const metaOptions =
+    (row.metadata as { options?: { name: string; values: string[] }[] } | null)?.options ?? [];
+  const defaultVariants = allVariants.map((v) => ({
+    id: v.id,
+    options: [v.option1, v.option2, v.option3].filter((o): o is string => o != null),
+    price: (Number(v.priceCents) / 100).toFixed(2),
+    sku: v.sku ?? '',
+    stock: String(stockByVariant.get(v.id) ?? 0),
+  }));
 
   const defaults = {
     title: row.title,
@@ -69,6 +89,9 @@ export default async function EditProductPage({ params }: PageProps) {
         defaults={defaults}
         shopifyProductId={row.shopifyProductId}
         shopifyHandle={row.shopifyHandle}
+        defaultHasVariants={hasVariants}
+        defaultOptions={metaOptions}
+        defaultVariants={hasVariants ? defaultVariants : undefined}
       />
 
       {variant && (

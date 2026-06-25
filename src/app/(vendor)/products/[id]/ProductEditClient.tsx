@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react';
 import { ProductForm } from '@/components/products/ProductForm';
+import type { OptionDef, VariantRow } from '@/components/products/VariantEditor';
 import {
   deleteProductAction,
   pushProductToShopifyAction,
@@ -14,6 +15,9 @@ interface Props {
   defaults: Parameters<typeof ProductForm>[0]['defaults'];
   shopifyProductId: string;
   shopifyHandle: string;
+  defaultHasVariants?: boolean;
+  defaultOptions?: OptionDef[];
+  defaultVariants?: VariantRow[];
 }
 
 function shopifyAdminProductLink(shopifyProductId: string, shopDomain: string): string | null {
@@ -22,7 +26,7 @@ function shopifyAdminProductLink(shopifyProductId: string, shopDomain: string): 
   return `https://${shopDomain}/admin/products/${m[1]}`;
 }
 
-export function ProductEditClient({ productId, defaults, shopifyProductId, shopifyHandle }: Props) {
+export function ProductEditClient({ productId, defaults, shopifyProductId, shopifyHandle, defaultHasVariants, defaultOptions, defaultVariants }: Props) {
   const action = async (_prev: ActionResult | null, formData: FormData) =>
     updateProductAction(productId, formData);
 
@@ -58,7 +62,15 @@ export function ProductEditClient({ productId, defaults, shopifyProductId, shopi
 
   return (
     <div className="space-y-8">
-      <ProductForm action={action} defaults={defaults} submitLabel="Değişiklikleri kaydet" showInitialStock={false} />
+      <ProductForm
+        action={action}
+        defaults={defaults}
+        submitLabel="Değişiklikleri kaydet"
+        showInitialStock={false}
+        defaultHasVariants={defaultHasVariants}
+        defaultOptions={defaultOptions}
+        defaultVariants={defaultVariants}
+      />
 
       <section className="bg-white rounded-xl border p-6">
         <h2 className="font-bold mb-2 flex items-center gap-2">
