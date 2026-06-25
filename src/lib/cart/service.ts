@@ -11,7 +11,11 @@ import { eq, inArray } from 'drizzle-orm';
 import { db } from '@/db/client';
 import { carts, productVariants, vendors, type CartItem } from '@/db/schema';
 import { env } from '@/lib/env';
-import type { StorefrontOrderBody } from '@/lib/shopify/create-storefront-order';
+import { getStore } from '@/lib/store';
+import type {
+  StorefrontOrderBody,
+  StorefrontPaymentMethod,
+} from '@/lib/shopify/create-storefront-order';
 
 type CartRow = typeof carts.$inferSelect;
 
@@ -204,4 +208,38 @@ export function cartToStorefrontBody(cart: CartRow): StorefrontOrderBody {
     cod_method: (a.cod_method as 'nakit' | 'kart' | '') || undefined,
     cod_surcharge: num(a.cod_surcharge),
   };
+}
+
+export type CheckoutResult =
+  | { ok: true; order_code: string; order_id: string | number; total: number }
+  | { ok: false; error: string };
+
+/**
+ * Sepeti native siparişe dönüştürür (havale / COD — anında oluşan siparişler).
+ * Kart için bu KULLANILMAZ: kart önce ödeme init (iyzico/paytr) → callback'te pending→paid
+ * akışını izler; orada native pending order zaten `createNativeCardPendingOrder` ile açılır.
+ * STORE_BACKEND flag'i `getStore()` üzerinden belirler (native ya da Shopify).
+ */
+export async function checkoutCart(
+  token: string,
+  paymentMethod: StorefrontPaymentMethod,
+): Promise<CheckoutResult> {
+  const cart = await getOrCreateCart(token);
+  if (!(cart.items ?? []).length) return { ok: false, error: 'sepet boş' };
+  if (cart.status === 'converted') return { ok: false, error: 'sepet zaten siparişe dönüştürüldü' };
+
+  const body = cartToStorefrontBody(cart);
+  const created = await getStore().createStorefrontOrder(body, paymentMethod);
+  if (!created.ok) return { ok: false, error: created.error };
+
+  await db
+    .update(carts)
+    .set({
+      status: 'converted',
+      convertedOrderId: typeof created.orderId === 'string' ? created.orderId : null,
+      updatedAt: new Date(),
+    })
+    .where(eq(carts.id, cart.id));
+
+  return { ok: true, order_code: created.orderName, order_id: created.orderId, total: created.total };
 }
