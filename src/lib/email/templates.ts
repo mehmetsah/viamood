@@ -128,6 +128,52 @@ export function orderConfirmationEmail(p: {
   };
 }
 
+/** Native sipariş kargoya verildi e-postası (FAZ 2 Dilim 3). Shopify shipment maili yerine. */
+export function orderShippedEmail(p: {
+  orderNumber: string;
+  customerName: string;
+  carrier?: string;
+  trackingNumber?: string | null;
+  trackingUrl?: string | null;
+}): { subject: string; html: string; text: string } {
+  const takip = p.trackingNumber
+    ? `<p>Takip no: <strong>${p.trackingNumber}</strong>${p.carrier ? ` · ${p.carrier}` : ''}</p>`
+    : '';
+  const btn = p.trackingUrl
+    ? `<a href="${p.trackingUrl}" style="${BUTTON_STYLE}">Kargonu Takip Et</a>`
+    : `<a href="${env.APP_URL}/hesabim" style="${BUTTON_STYLE}">Siparişlerim</a>`;
+  return {
+    subject: `📦 Siparişin kargoya verildi — ${p.orderNumber}`,
+    html: wrap(`
+      <p>Merhaba <strong>${p.customerName || 'değerli müşterimiz'}</strong>,</p>
+      <p><strong>${p.orderNumber}</strong> numaralı siparişin kargoya verildi.</p>
+      ${takip}
+      ${btn}
+    `),
+    text:
+      `Via Mood siparişin ${p.orderNumber} kargoya verildi.` +
+      (p.trackingNumber ? ` Takip: ${p.trackingNumber}${p.carrier ? ' (' + p.carrier + ')' : ''}.` : '') +
+      (p.trackingUrl ? ` ${p.trackingUrl}` : ''),
+  };
+}
+
+/** Native sipariş teslim edildi e-postası (FAZ 2 Dilim 3). */
+export function orderDeliveredEmail(p: {
+  orderNumber: string;
+  customerName: string;
+}): { subject: string; html: string; text: string } {
+  return {
+    subject: `✅ Siparişin teslim edildi — ${p.orderNumber}`,
+    html: wrap(`
+      <p>Merhaba <strong>${p.customerName || 'değerli müşterimiz'}</strong>,</p>
+      <p><strong>${p.orderNumber}</strong> numaralı siparişin teslim edildi. Afiyet olsun!</p>
+      <p>Ürünlerimizi beğendiysen değerlendirmen bizim için çok kıymetli.</p>
+      <a href="${env.APP_URL}/hesabim" style="${BUTTON_STYLE}">Siparişlerim</a>
+    `),
+    text: `Via Mood siparişin ${p.orderNumber} teslim edildi. Afiyet olsun!`,
+  };
+}
+
 export function payoutPaidEmail(
   vendorName: string,
   netAmount: string,

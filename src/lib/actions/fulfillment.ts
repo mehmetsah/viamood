@@ -15,6 +15,7 @@ import {
   getShipmentLabel,
   trackByBarcode,
 } from '@/lib/kargolab/shipments';
+import { notifyNativeOrderDelivered } from '@/lib/orders/lifecycle';
 import { createFulfillmentForOrderVendor } from '@/lib/server/fulfillment-service';
 import { canEdit, requireActiveVendor } from '@/lib/server/vendor-context';
 import type { ActionResult } from './auth';
@@ -210,6 +211,8 @@ export async function refreshTrackingAction(
             eq(orderLineItems.vendorId, f.vendorId),
           ),
         );
+      // Native sipariş ise "teslim edildi" e-postası — best-effort
+      notifyNativeOrderDelivered(f.orderId).catch(() => {});
     }
   }
 

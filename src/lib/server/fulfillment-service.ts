@@ -29,6 +29,7 @@ import {
   type ShipmentDimension,
 } from '@/lib/kargolab/shipments';
 import { pushFulfillmentToShopify } from '@/lib/shopify/fulfillment-push';
+import { notifyNativeOrderShipped } from '@/lib/orders/lifecycle';
 
 interface CreateOk {
   ok: true;
@@ -360,6 +361,13 @@ export async function createFulfillmentForOrderVendor(
   pushFulfillmentToShopify(fulfillmentId).catch((err) => {
     console.error('[shopify.fulfillmentCreate] failed:', err);
   });
+
+  // Native sipariş ise "kargoya verildi" e-postası (Shopify shipment maili yerine) — best-effort
+  notifyNativeOrderShipped(orderId, {
+    carrier: courrier,
+    trackingNumber: shipRes.barcode ?? shipRes.trackingNumber ?? null,
+    trackingUrl: shipRes.barcode ? `https://kargolab.com/track/${shipRes.barcode}` : null,
+  }).catch(() => {});
 
   return {
     ok: true,
