@@ -64,7 +64,7 @@ async function syncAddressToShopify(
       }
     }
     if (!shopifyId) return;
-    await getStore().upsertCustomerAddress({
+    await (await getStore()).upsertCustomerAddress({
       customerId: Number(shopifyId),
       first_name: a.firstName,
       last_name: a.lastName,

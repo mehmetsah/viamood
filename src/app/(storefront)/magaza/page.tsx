@@ -2,6 +2,7 @@ import { and, desc, eq, isNull } from 'drizzle-orm';
 import Link from 'next/link';
 import { db } from '@/db/client';
 import { products } from '@/db/schema';
+import { getStoreSettings } from '@/lib/settings/store';
 
 export const dynamic = 'force-dynamic';
 
@@ -26,7 +27,30 @@ export default async function CatalogPage() {
     .orderBy(desc(products.createdAt))
     .limit(60);
 
+  const { theme } = await getStoreSettings();
+  const hasHero = !!(theme.hero_title || theme.hero_image);
+
   return (
+    <div>
+      {hasHero && (
+        <section
+          className="relative bg-[var(--color-brand-ink)] text-white"
+          style={theme.hero_image ? { backgroundImage: `url(${theme.hero_image})`, backgroundSize: 'cover', backgroundPosition: 'center' } : undefined}
+        >
+          <div className="bg-black/40">
+            <div className="max-w-6xl mx-auto px-4 py-20 text-center">
+              {theme.hero_title && <h2 className="text-4xl font-bold">{theme.hero_title}</h2>}
+              {theme.hero_subtitle && <p className="mt-3 text-lg opacity-90">{theme.hero_subtitle}</p>}
+              {theme.hero_cta_text && (
+                <Link href={theme.hero_cta_link || '/magaza'} className="inline-block mt-6 px-7 py-3 rounded-full bg-[var(--color-brand-orange)] font-semibold">
+                  {theme.hero_cta_text}
+                </Link>
+              )}
+            </div>
+          </div>
+        </section>
+      )}
+
     <div className="max-w-6xl mx-auto px-4 py-10">
       <h1 className="text-3xl font-bold mb-1">Ürünler</h1>
       <p className="text-sm text-neutral-500 mb-8">{rows.length} ürün</p>
@@ -59,6 +83,7 @@ export default async function CatalogPage() {
           ))}
         </div>
       )}
+    </div>
     </div>
   );
 }

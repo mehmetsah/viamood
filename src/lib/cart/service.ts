@@ -229,7 +229,7 @@ export async function checkoutCart(
   if (cart.status === 'converted') return { ok: false, error: 'sepet zaten siparişe dönüştürüldü' };
 
   const body = cartToStorefrontBody(cart);
-  const created = await getStore().createStorefrontOrder(body, paymentMethod);
+  const created = await (await getStore()).createStorefrontOrder(body, paymentMethod);
   if (!created.ok) return { ok: false, error: created.error };
 
   await db

@@ -62,7 +62,7 @@ export async function POST(req: NextRequest) {
     const draftId = parseDraftIdFromOid(merchantOid);
     if (draftId) {
       // native → RDS paid+komisyon; aksi → Shopify draft complete (ikisi de idempotent)
-      if (getStore().backend === 'native') await completeNativeCardOrder(draftId);
+      if ((await getStore()).backend === 'native') await completeNativeCardOrder(draftId);
       else await completeDraftOrder(draftId);
     }
   }

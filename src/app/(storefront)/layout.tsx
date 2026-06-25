@@ -1,13 +1,26 @@
 import Link from 'next/link';
 import { Logo } from '@/components/ui/Logo';
+import { getStoreSettings } from '@/lib/settings/store';
 
 /**
  * Müşteri vitrini (storefront) shell — admin/vendor panelinden bağımsız.
- * FAZ 2 Dilim 5: Shopify temasının native karşılığı (katalog → PDP → sepet → checkout).
+ * Tema ayarları (renk/duyuru/footer) /admin/theme'den yönetilir, burada yansır.
  */
-export default function StorefrontLayout({ children }: { children: React.ReactNode }) {
+export default async function StorefrontLayout({ children }: { children: React.ReactNode }) {
+  const { theme } = await getStoreSettings();
+  const styleVars = {
+    ...(theme.brand_primary ? { ['--color-brand-orange']: theme.brand_primary } : {}),
+    ...(theme.brand_ink ? { ['--color-brand-ink']: theme.brand_ink } : {}),
+  } as React.CSSProperties;
+
   return (
-    <div className="min-h-screen bg-[var(--color-brand-cream,#faf6ec)] flex flex-col">
+    <div style={styleVars} className="min-h-screen bg-[var(--color-brand-cream,#faf6ec)] flex flex-col">
+      {theme.announcement_enabled && theme.announcement && (
+        <div className="bg-[var(--color-brand-ink)] text-white text-center text-sm py-2 px-4">
+          {theme.announcement}
+        </div>
+      )}
+
       <header className="bg-white border-b sticky top-0 z-10">
         <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
           <Link href="/magaza" className="flex items-center gap-2">
@@ -27,7 +40,7 @@ export default function StorefrontLayout({ children }: { children: React.ReactNo
 
       <footer className="border-t bg-white mt-16">
         <div className="max-w-6xl mx-auto px-4 py-8 text-sm text-neutral-500 flex flex-wrap gap-x-8 gap-y-2 justify-between">
-          <span>© {new Date().getFullYear()} Via Mood</span>
+          <span>{theme.footer_text || `© ${new Date().getFullYear()} Via Mood`}</span>
           <div className="flex gap-5">
             <Link href="/magaza" className="hover:underline">Ürünler</Link>
             <Link href="/hesabim" className="hover:underline">Siparişlerim</Link>

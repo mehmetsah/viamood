@@ -203,7 +203,7 @@ export async function POST(req: NextRequest) {
 
   // STORE_BACKEND='native' → RDS pending native order (numerik ref); aksi → Shopify draft (değişmez)
   const draftId =
-    getStore().backend === 'native'
+    (await getStore()).backend === 'native'
       ? await createNativeCardPendingOrder(body as unknown as StorefrontOrderBody)
       : await createDraftOrder(body);
   const merchantOid = buildMerchantOid(draftId, Date.now().toString(36));

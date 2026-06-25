@@ -9,7 +9,7 @@
  * Strateji: bkz. memory `viamood-strateji` — "adaptör SINIRINI çiz, native impl'i tetikleyiciye bağla".
  * Bugün native impl YAZMIYORUZ (YAGNI); sadece çıkış kapısını ucuza açık tutuyoruz.
  */
-import { env } from '../env';
+import { getActiveStoreBackend } from '../settings/store';
 import {
   createStorefrontOrder,
   type StorefrontOrderBody,
@@ -52,9 +52,10 @@ const nativeStoreAdapter: StoreAdapter = {
 };
 
 /**
- * Aktif store backend'ini döndürür. `STORE_BACKEND` flag'i (env, default 'shopify').
- * Production 'shopify' kalır; 'native' canlıya alındığında strangler cutover olur.
+ * Aktif store backend'ini döndürür. Admin switch'i (`store_settings.backend`, DB) öncelikli;
+ * yoksa `env.STORE_BACKEND` (default 'shopify'). Admin'den anında değişir (redeploy gerekmez).
  */
-export function getStore(): StoreAdapter {
-  return env.STORE_BACKEND === 'native' ? nativeStoreAdapter : shopifyStoreAdapter;
+export async function getStore(): Promise<StoreAdapter> {
+  const backend = await getActiveStoreBackend();
+  return backend === 'native' ? nativeStoreAdapter : shopifyStoreAdapter;
 }

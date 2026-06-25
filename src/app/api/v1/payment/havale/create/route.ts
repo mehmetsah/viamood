@@ -72,7 +72,7 @@ export async function POST(req: NextRequest) {
   }
 
   // Shopify pending sipariş oluştur
-  const created = await getStore().createStorefrontOrder(body, 'havale');
+  const created = await (await getStore()).createStorefrontOrder(body, 'havale');
   if (!created.ok) {
     return NextResponse.json(
       { ok: false, error: 'order_create_failed', detail: created.error },

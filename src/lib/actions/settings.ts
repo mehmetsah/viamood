@@ -3,7 +3,12 @@
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { db } from '@/db/client';
-import { storeSettings, type PaymentSettings, type ShippingSettings } from '@/db/schema';
+import {
+  storeSettings,
+  type PaymentSettings,
+  type ShippingSettings,
+  type ThemeSettings,
+} from '@/db/schema';
 import { auth } from '@/lib/auth';
 
 async function requireAdmin() {
@@ -40,14 +45,46 @@ export async function updateStoreSettingsAction(formData: FormData): Promise<voi
     shipping_margin_tl: num('shipping_margin_tl') ?? 20,
   };
 
+  // Altyapı switch'i (yüksek etki): native → siparişler RDS'e (Shopify'a değil)
+  const backend = formData.get('backend') === 'native' ? 'native' : 'shopify';
+
   await db
     .insert(storeSettings)
-    .values({ id: 'default', payment, shipping })
+    .values({ id: 'default', backend, payment, shipping })
     .onConflictDoUpdate({
       target: storeSettings.id,
-      set: { payment, shipping, updatedAt: new Date() },
+      set: { backend, payment, shipping, updatedAt: new Date() },
     });
 
   revalidatePath('/admin/settings');
   redirect('/admin/settings?saved=1');
+}
+
+export async function saveThemeAction(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const str = (n: string) => {
+    const v = String(formData.get(n) ?? '').trim();
+    return v || undefined;
+  };
+  const theme: ThemeSettings = {
+    brand_primary: str('brand_primary'),
+    brand_ink: str('brand_ink'),
+    announcement: str('announcement'),
+    announcement_enabled: formData.get('announcement_enabled') === 'on',
+    hero_title: str('hero_title'),
+    hero_subtitle: str('hero_subtitle'),
+    hero_image: str('hero_image'),
+    hero_cta_text: str('hero_cta_text'),
+    hero_cta_link: str('hero_cta_link'),
+    footer_text: str('footer_text'),
+  };
+
+  await db
+    .insert(storeSettings)
+    .values({ id: 'default', theme })
+    .onConflictDoUpdate({ target: storeSettings.id, set: { theme, updatedAt: new Date() } });
+
+  revalidatePath('/admin/theme');
+  revalidatePath('/magaza', 'layout');
+  redirect('/admin/theme?saved=1');
 }

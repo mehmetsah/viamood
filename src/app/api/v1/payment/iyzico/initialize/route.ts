@@ -264,7 +264,7 @@ export async function POST(req: NextRequest) {
   // body.draft_order_id varsa onu kullan (idempotent), yoksa yeni yarat.
   const draftOrderId =
     body.draft_order_id ??
-    (getStore().backend === 'native'
+    ((await getStore()).backend === 'native'
       ? await createNativeCardPendingOrder(body as unknown as StorefrontOrderBody)
       : await createDraftOrder(body));
 

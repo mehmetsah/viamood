@@ -63,7 +63,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, error: 'missing_fields', missing }, { status: 422, headers });
   }
 
-  const created = await getStore().createStorefrontOrder(body, 'cod');
+  const created = await (await getStore()).createStorefrontOrder(body, 'cod');
   if (!created.ok) {
     return NextResponse.json(
       { ok: false, error: 'order_create_failed', detail: created.error },

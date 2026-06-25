@@ -35,6 +35,27 @@ export default async function AdminSettingsPage({ searchParams }: PageProps) {
       )}
 
       <form action={updateStoreSettingsAction} className="flex flex-col gap-6">
+        <section className={`rounded-xl border p-6 ${s.backend === 'native' ? 'bg-amber-50 border-amber-300' : 'bg-white'}`}>
+          <h2 className="font-bold border-b pb-2 mb-3">Altyapı (sipariş motoru)</h2>
+          <div className="grid grid-cols-2 gap-3">
+            <label className={`flex flex-col gap-1 border rounded-xl p-4 cursor-pointer ${s.backend !== 'native' ? 'border-[var(--color-brand-orange)] bg-white' : 'border-neutral-300 bg-white'}`}>
+              <span className="flex items-center gap-2 font-semibold">
+                <input type="radio" name="backend" value="shopify" defaultChecked={s.backend !== 'native'} /> 🛒 Shopify
+              </span>
+              <span className="text-xs text-neutral-500">Siparişler Shopify’a yazılır (mevcut canlı düzen).</span>
+            </label>
+            <label className={`flex flex-col gap-1 border rounded-xl p-4 cursor-pointer ${s.backend === 'native' ? 'border-amber-500 bg-white' : 'border-neutral-300 bg-white'}`}>
+              <span className="flex items-center gap-2 font-semibold">
+                <input type="radio" name="backend" value="native" defaultChecked={s.backend === 'native'} /> 🏗️ Kendi altyapımız
+              </span>
+              <span className="text-xs text-neutral-500">Siparişler RDS’e (native). Storefront + kendi panel.</span>
+            </label>
+          </div>
+          <div className="mt-3 text-xs bg-amber-100 text-amber-900 rounded-lg px-3 py-2 leading-relaxed">
+            ⚠️ <strong>Dikkat:</strong> “Kendi altyapımız”a geçince <strong>tüm yeni siparişler RDS’e</strong> gider (Shopify admin’de görünmez, stok Shopify’da düşmez). Kart ödemesi için sandbox doğrulaması gerekir. Önce staging’de test et. Şu an: <strong>{s.backend === 'native' ? 'Kendi altyapımız (native)' : 'Shopify'}</strong>.
+          </div>
+        </section>
+
         <section className="bg-white rounded-xl border p-6">
           <h2 className="font-bold border-b pb-2 mb-3">Ödeme yöntemleri</h2>
           <Toggle name="iyzico_enabled" label="İyzico (kredi/banka kartı)" checked={s.payment.iyzico_enabled} />

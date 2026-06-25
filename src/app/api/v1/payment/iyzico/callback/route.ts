@@ -76,7 +76,7 @@ export async function POST(req: NextRequest) {
     if (result.paymentStatus === 'SUCCESS') {
       // Pending order'ı complete et (native → RDS paid+komisyon; aksi → Shopify draft complete)
       if (draftId) {
-        if (getStore().backend === 'native') await completeNativeCardOrder(draftId);
+        if ((await getStore()).backend === 'native') await completeNativeCardOrder(draftId);
         else await completeDraftOrder(draftId);
       }
       const okUrl =
