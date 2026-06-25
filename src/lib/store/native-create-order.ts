@@ -11,6 +11,7 @@ import { db } from '@/db/client';
 import { orderLineItems, orders, productVariants } from '@/db/schema';
 import { env } from '@/lib/env';
 import { decrementForOrder } from '@/lib/inventory/decrement';
+import { markOrderPaid } from '@/lib/orders/lifecycle';
 import { nextOrderNumber } from '@/lib/orders/sequence';
 import { routeOrder } from '@/lib/routing/engine';
 import { syncOrderToMikro } from '@/lib/server/mikro-sync';
@@ -183,5 +184,194 @@ export async function createNativeStorefrontOrder(
     return { ok: true, orderId, orderName: orderNumber, total: Number(totalCents) / 100 };
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : String(e) };
+  }
+}
+
+/**
+ * FAZ 2 Dilim 2 — Native KART siparişi (İyzico/PayTR) için ödeme-ÖNCESİ pending order.
+ * Shopify draft order yerine RDS'e `pending` native order yazar. Stok düşümü YOK
+ * (ödeme onaylanmadı — abandoned kart denemesi stok sızdırmasın). routing/mikro/email
+ * de ÖDEME ONAYINDA (`completeNativeCardOrder`) tetiklenir.
+ *
+ * Dönen NUMERİK ref (orderNumber'ın rakamları, örn VM-100002 → 100002) gateway'e taşınır:
+ * İyzico callback `?draft=<ref>`, PayTR merchant_oid `vm<ref>t<uniq>` (regex /^vm(\d+)t/).
+ * Callback'te `VM-<ref>` ile bulunup paid'e çevrilir.
+ */
+export async function createNativeCardPendingOrder(b: StorefrontOrderBody): Promise<number | null> {
+  try {
+    const variantIds = b.line_items.map((li) => String(li.variant_id)).filter(Boolean);
+    const vRows = variantIds.length
+      ? await db
+          .select({
+            shopifyVariantId: productVariants.shopifyVariantId,
+            id: productVariants.id,
+            productId: productVariants.productId,
+            vendorId: productVariants.vendorId,
+            priceCents: productVariants.priceCents,
+            title: productVariants.title,
+            sku: productVariants.sku,
+          })
+          .from(productVariants)
+          .where(inArray(productVariants.shopifyVariantId, variantIds))
+      : [];
+    const byVariant = new Map(vRows.map((r) => [r.shopifyVariantId, r]));
+
+    let subtotalCents = 0n;
+    const vendorIdSet = new Set<string>();
+    const liInserts: Array<typeof orderLineItems.$inferInsert> = [];
+    b.line_items.forEach((li, i) => {
+      const r = byVariant.get(String(li.variant_id));
+      const unitCents = r?.priceCents != null ? BigInt(r.priceCents) : toCents(li.price ?? 0);
+      const lineCents = unitCents * BigInt(li.quantity);
+      subtotalCents += lineCents;
+      if (r?.vendorId) {
+        vendorIdSet.add(r.vendorId);
+        liInserts.push({
+          orderId: '',
+          vendorId: r.vendorId,
+          productId: r.productId,
+          variantId: r.id,
+          shopifyLineItemId: `native-${li.variant_id}-${i}`,
+          title: li.title || r.title || 'Ürün',
+          variantTitle: null,
+          sku: li.sku ?? r.sku ?? null,
+          quantity: li.quantity,
+          unitPriceCents: unitCents,
+          totalPriceCents: lineCents,
+          discountCents: 0n,
+          status: 'pending',
+        });
+      }
+    });
+
+    const shippingCents = toCents(b.shipping_cost ?? 0);
+    const discountCents = toCents(b.discount_amount ?? 0);
+    const totalCents = subtotalCents + shippingCents - discountCents;
+    const orderNumber = await nextOrderNumber();
+    const vendorIds = [...vendorIdSet];
+
+    await db.transaction(async (tx) => {
+      const [created] = await tx
+        .insert(orders)
+        .values({
+          shopifyOrderId: null,
+          shopifyOrderName: null,
+          orderNumber,
+          backend: 'native',
+          customerId: b.customer_id ? String(b.customer_id) : null,
+          customerEmail: (b.customer_email || b.email) || null,
+          customerName: `${b.first_name} ${b.last_name}`.trim() || null,
+          customerPhone: b.phone || null,
+          shippingAddress: {
+            name: `${b.first_name} ${b.last_name}`.trim(),
+            phone: b.phone,
+            address1: b.address1,
+            address2: b.address2 || undefined,
+            city: b.city,
+            district: b.province,
+            postalCode: b.zip || undefined,
+            country: 'Turkey',
+            countryCode: 'TR',
+          },
+          subtotalCents,
+          shippingCents,
+          taxCents: 0n,
+          discountCents,
+          totalCents,
+          currency: 'TRY',
+          financialStatus: 'pending',
+          fulfillmentStatus: 'unfulfilled',
+          vendorCount: vendorIds.length,
+          vendorIds,
+          sourceName: 'storefront_native_card',
+          note: `📍 ${b.first_name} ${b.last_name} · ${b.province}/${b.city}\n💳 Kart (İyzico/PayTR) — ödeme bekleniyor`,
+          tags: ['via-mood-storefront', 'card-pending'],
+          placedAt: new Date(),
+        })
+        .returning({ id: orders.id });
+      if (!created) throw new Error('native card order insert başarısız');
+      if (liInserts.length) {
+        await tx.insert(orderLineItems).values(liInserts.map((li) => ({ ...li, orderId: created.id })));
+      }
+      // Stok düşümü YOK — ödeme onayında (completeNativeCardOrder)
+    });
+
+    return Number(orderNumber.replace(/\D/g, '')) || null; // VM-100002 → 100002
+  } catch (e) {
+    console.error('[native-card] pending error:', e);
+    return null;
+  }
+}
+
+/**
+ * Native KART siparişini ödeme onayında tamamlar (İyzico/PayTR callback). Idempotent
+ * (PayTR retry / İyzico tekrar). numericRef = orderNumber rakamları → `VM-<ref>` lookup.
+ * Stok düşümü + paid + komisyon + routing/mikro + onay e-postası ÖDEME ONAYINDA olur.
+ */
+export async function completeNativeCardOrder(numericRef: string): Promise<boolean> {
+  try {
+    const orderNumber = `VM-${numericRef}`;
+    const [o] = await db
+      .select({
+        id: orders.id,
+        email: orders.customerEmail,
+        name: orders.customerName,
+        total: orders.totalCents,
+        fin: orders.financialStatus,
+      })
+      .from(orders)
+      .where(eq(orders.orderNumber, orderNumber))
+      .limit(1);
+    if (!o) {
+      console.error('[native-card] complete: order yok', orderNumber);
+      return false;
+    }
+    if (o.fin === 'paid') return true; // idempotent
+
+    // Stok düşümü (ödeme onaylandı)
+    const lis = await db
+      .select({
+        vendorId: orderLineItems.vendorId,
+        variantId: orderLineItems.variantId,
+        quantity: orderLineItems.quantity,
+      })
+      .from(orderLineItems)
+      .where(eq(orderLineItems.orderId, o.id));
+    const matched = lis
+      .filter((l) => l.vendorId && l.variantId)
+      .map((l) => ({ vendorId: l.vendorId as string, variantId: l.variantId as string, quantity: l.quantity }));
+    if (matched.length) {
+      await db.transaction(async (tx) => {
+        await decrementForOrder(matched, tx);
+      });
+    }
+
+    // paid + komisyon (idempotent)
+    await markOrderPaid(o.id);
+
+    // Downstream (fire-and-forget)
+    routeOrder(o.id).catch((e) => console.error('[native-card] routing:', e));
+    if (env.MIKRO_AUTO_PUSH && env.MIKRO_API_URL) {
+      syncOrderToMikro(o.id).catch((e) => console.error('[native-card] mikro:', e));
+    }
+
+    // Onay e-postası (kart — ödeme alındı)
+    try {
+      const tpl = orderConfirmationEmail({
+        orderNumber,
+        customerName: o.name ?? '',
+        total: Number(o.total) / 100,
+        method: 'card',
+        vendors: [],
+      });
+      if (o.email) await sendEmail({ to: o.email, subject: tpl.subject, html: tpl.html, text: tpl.text });
+    } catch (e) {
+      console.error('[native-card] email:', e);
+    }
+
+    return true;
+  } catch (e) {
+    console.error('[native-card] complete error:', e);
+    return false;
   }
 }

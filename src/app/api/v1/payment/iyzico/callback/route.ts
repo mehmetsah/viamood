@@ -11,6 +11,8 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { retrieveCheckoutForm } from '@/lib/iyzico/client';
 import { env } from '@/lib/env';
+import { getStore } from '@/lib/store';
+import { completeNativeCardOrder } from '@/lib/store/native-create-order';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -72,9 +74,10 @@ export async function POST(req: NextRequest) {
     const result = await retrieveCheckoutForm(token);
 
     if (result.paymentStatus === 'SUCCESS') {
-      // Shopify draft order'ı complete et
+      // Pending order'ı complete et (native → RDS paid+komisyon; aksi → Shopify draft complete)
       if (draftId) {
-        await completeDraftOrder(draftId);
+        if (getStore().backend === 'native') await completeNativeCardOrder(draftId);
+        else await completeDraftOrder(draftId);
       }
       const okUrl =
         `${STOREFRONT}/pages/siparis-alindi` +

@@ -80,12 +80,25 @@ export function orderConfirmationEmail(p: {
   orderNumber: string;
   customerName: string;
   total: number; // TL
-  method: 'havale' | 'cod';
+  method: 'havale' | 'cod' | 'card';
   codMethod?: 'nakit' | 'kart' | '';
   vendors: Array<{ name: string; iban?: string; account_holder?: string; bank?: string; amount: number }>;
 }): { subject: string; html: string; text: string } {
   const tl = (n: number) =>
     n.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ₺';
+
+  if (p.method === 'card') {
+    return {
+      subject: `Via Mood siparişin onaylandı — ${p.orderNumber}`,
+      html: wrap(`
+        <p>Merhaba <strong>${p.customerName || 'değerli müşterimiz'}</strong>,</p>
+        <p>Ödemen alındı ✅ — <strong>${p.orderNumber}</strong> numaralı siparişin onaylandı. Toplam: <strong>${tl(p.total)}</strong>.</p>
+        <p>Siparişin hazırlanıyor; kargoya verilince seni bilgilendireceğiz.</p>
+        <a href="${env.APP_URL}/hesabim" style="${BUTTON_STYLE}">Siparişlerim</a>
+      `),
+      text: `Via Mood siparişin ${p.orderNumber} onaylandı (ödeme alındı). Toplam ${tl(p.total)}.`,
+    };
+  }
 
   if (p.method === 'havale') {
     const banks = p.vendors.filter((v) => v.iban);

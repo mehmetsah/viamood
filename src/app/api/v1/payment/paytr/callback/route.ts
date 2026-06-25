@@ -12,6 +12,8 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { env } from '@/lib/env';
 import { verifyPaytrCallback, parseDraftIdFromOid } from '@/lib/paytr/client';
+import { getStore } from '@/lib/store';
+import { completeNativeCardOrder } from '@/lib/store/native-create-order';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -58,7 +60,11 @@ export async function POST(req: NextRequest) {
   // Hash geçerli → her durumda OK dön (PayTR retry döngüsü dursun).
   if (status === 'success') {
     const draftId = parseDraftIdFromOid(merchantOid);
-    if (draftId) await completeDraftOrder(draftId); // idempotent: 2. kez gelirse Shopify no-op, yine OK
+    if (draftId) {
+      // native → RDS paid+komisyon; aksi → Shopify draft complete (ikisi de idempotent)
+      if (getStore().backend === 'native') await completeNativeCardOrder(draftId);
+      else await completeDraftOrder(draftId);
+    }
   }
   return okText();
 }

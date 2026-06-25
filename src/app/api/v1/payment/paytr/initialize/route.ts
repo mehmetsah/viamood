@@ -14,6 +14,8 @@ import { env } from '@/lib/env';
 import { provinceCode } from '@/lib/shopify/tr-provinces';
 import { upsertCustomerAddress } from '@/lib/shopify/customer-address';
 import { getPaytrToken, buildMerchantOid, paytrConfigured, type PaytrBasketItem } from '@/lib/paytr/client';
+import { getStore, type StorefrontOrderBody } from '@/lib/store';
+import { createNativeCardPendingOrder } from '@/lib/store/native-create-order';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -199,7 +201,11 @@ export async function POST(req: NextRequest) {
   if (shipKurus > 0) basket.push({ name: 'Kargo', priceTl: shipKurus / 100, quantity: 1 });
   if (discKurus > 0) basket.push({ name: 'İndirim', priceTl: -discKurus / 100, quantity: 1 });
 
-  const draftId = await createDraftOrder(body);
+  // STORE_BACKEND='native' → RDS pending native order (numerik ref); aksi → Shopify draft (değişmez)
+  const draftId =
+    getStore().backend === 'native'
+      ? await createNativeCardPendingOrder(body as unknown as StorefrontOrderBody)
+      : await createDraftOrder(body);
   const merchantOid = buildMerchantOid(draftId, Date.now().toString(36));
 
   const result = await getPaytrToken({

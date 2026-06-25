@@ -12,6 +12,8 @@ import { initializeCheckoutForm } from '@/lib/iyzico/client';
 import { provinceCode } from '@/lib/shopify/tr-provinces';
 import { env } from '@/lib/env';
 import { upsertCustomerAddress } from '@/lib/shopify/customer-address';
+import { getStore, type StorefrontOrderBody } from '@/lib/store';
+import { createNativeCardPendingOrder } from '@/lib/store/native-create-order';
 
 interface DraftOrderResp {
   draft_order?: { id: number; invoice_url?: string };
@@ -257,9 +259,14 @@ export async function POST(req: NextRequest) {
   const fullAddr = `${body.address1}${body.address2 ? ', ' + body.address2 : ''}, ${body.city}/${body.province}`;
   const conversationId = `vm-${Date.now()}-${Math.floor(itemsTotal)}`;
 
-  // Shopify draft order yarat (ödeme öncesi). Ödeme başarılı → callback complete eder → sipariş.
+  // Ödeme öncesi pending order yarat. Ödeme başarılı → callback complete eder → sipariş.
+  // STORE_BACKEND='native' → RDS pending native order; aksi halde Shopify draft (değişmez).
   // body.draft_order_id varsa onu kullan (idempotent), yoksa yeni yarat.
-  const draftOrderId = body.draft_order_id ?? (await createDraftOrder(body));
+  const draftOrderId =
+    body.draft_order_id ??
+    (getStore().backend === 'native'
+      ? await createNativeCardPendingOrder(body as unknown as StorefrontOrderBody)
+      : await createDraftOrder(body));
 
   // Callback URL — draft_order_id'yi query'de taşı
   const callbackUrl =
