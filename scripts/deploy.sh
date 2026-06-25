@@ -6,20 +6,28 @@ set -e
 
 cd /var/www/viamood
 
+# ──────────────────────────────────────────────────────────────────────────
+# Self-update guard: deploy.sh kendini güncelliyor (git reset diskteki betiği değiştirir).
+# Bash betiği byte-offset ile okuduğundan, pull sonrası ESKİ sürüm çalışmaya devam eder →
+# yeni adımlar (migration vs.) atlanır. Çözüm: İLK çağrıda SADECE pull + YENİ deploy.sh re-exec.
+# ──────────────────────────────────────────────────────────────────────────
+if [ -z "$DEPLOY_REEXEC" ]; then
+  OLD_COMMIT=$(git rev-parse --short HEAD)
+  echo "▸ Git pull..."
+  git fetch --quiet origin main
+  git reset --hard origin/main --quiet
+  exec env DEPLOY_REEXEC=1 DEPLOY_OLD_COMMIT="$OLD_COMMIT" bash scripts/deploy.sh
+fi
+
+# ── Buradan itibaren YENİ deploy.sh çalışıyor (re-exec sonrası) ──
+OLD_COMMIT="${DEPLOY_OLD_COMMIT:-$(git rev-parse --short HEAD)}"
+NEW_COMMIT=$(git rev-parse --short HEAD)
+
 echo "════════════════════════════════════════════"
 echo "  Via Mood — Production Deploy"
 echo "  $(date +'%Y-%m-%d %H:%M:%S')"
 echo "════════════════════════════════════════════"
-
-OLD_COMMIT=$(git rev-parse --short HEAD)
-echo "  Eski: $OLD_COMMIT"
-
-echo ""
-echo "▸ Git pull..."
-git fetch --quiet origin main
-git reset --hard origin/main --quiet
-NEW_COMMIT=$(git rev-parse --short HEAD)
-echo "  Yeni: $NEW_COMMIT"
+echo "  $OLD_COMMIT → $NEW_COMMIT"
 
 # package.json değiştiyse npm ci
 if [ "$OLD_COMMIT" != "$NEW_COMMIT" ] && git diff --name-only "$OLD_COMMIT" "$NEW_COMMIT" 2>/dev/null | grep -q "^package\(-lock\)\?\.json$"; then
@@ -28,20 +36,19 @@ if [ "$OLD_COMMIT" != "$NEW_COMMIT" ] && git diff --name-only "$OLD_COMMIT" "$NE
   npm ci --legacy-peer-deps --no-audit --no-fund
 fi
 
-# Yeni migration var mı
-if [ "$OLD_COMMIT" != "$NEW_COMMIT" ] && git diff --name-only "$OLD_COMMIT" "$NEW_COMMIT" 2>/dev/null | grep -q "^drizzle/"; then
-  echo ""
-  echo "▸ Yeni migration — uygulanıyor..."
-  set -a && source .env.production && set +a
-  npx drizzle-kit migrate
-fi
+# Env (migration + build için)
+set -a && source .env.production && set +a
 
-# Elle yazılan migration'lar (drizzle-kit journal'ında YOK — db:generate kırıktı, ekip elle yazıyor).
-# Hepsi idempotent (IF NOT EXISTS / ADD COLUMN IF NOT EXISTS) → her deploy'da güvenle tekrar uygulanır.
-# Build'den ÖNCE çalışır ki yeni kod eksik kolona düşmesin (FAZ 2 order_number/backend/carts).
+# Journaled migration'lar (drizzle-kit migrate — meta/_journal.json'daki 0000-0005)
+echo ""
+echo "▸ Drizzle migrate (journaled)..."
+npx drizzle-kit migrate || echo "  (drizzle-kit migrate uyarı/no-op)"
+
+# Elle yazılan idempotent migration'lar (journal'da YOK — db:generate kırıktı, ekip elle yazıyor).
+# HER deploy'da güvenle tekrar uygulanır (IF NOT EXISTS / DO-EXCEPTION guard). Build'den ÖNCE →
+# yeni kod eksik kolona/tabloya düşmez. Yeni elle migration eklenince listeye ekle.
 echo ""
 echo "▸ Elle migration'lar (idempotent)..."
-set -a && source .env.production && set +a
 for m in 0008_customers 0009_native_orders 0010_carts; do
   if [ -f "drizzle/$m.sql" ]; then
     psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -q -f "drizzle/$m.sql" && echo "  ✓ $m" || { echo "  ✗ $m FAİL"; exit 1; }
@@ -51,9 +58,7 @@ done
 # Build
 echo ""
 echo "▸ Next.js build..."
-set -a && source .env.production && set +a
-NEXT_TELEMETRY_DISABLED=1 npm run build > /tmp/viamood-build.log 2>&1
-if [ $? -ne 0 ]; then
+if ! NEXT_TELEMETRY_DISABLED=1 npm run build > /tmp/viamood-build.log 2>&1; then
   echo "  ✗ BUILD FAİL"
   tail -20 /tmp/viamood-build.log
   exit 1
