@@ -36,6 +36,18 @@ if [ "$OLD_COMMIT" != "$NEW_COMMIT" ] && git diff --name-only "$OLD_COMMIT" "$NE
   npx drizzle-kit migrate
 fi
 
+# Elle yazılan migration'lar (drizzle-kit journal'ında YOK — db:generate kırıktı, ekip elle yazıyor).
+# Hepsi idempotent (IF NOT EXISTS / ADD COLUMN IF NOT EXISTS) → her deploy'da güvenle tekrar uygulanır.
+# Build'den ÖNCE çalışır ki yeni kod eksik kolona düşmesin (FAZ 2 order_number/backend/carts).
+echo ""
+echo "▸ Elle migration'lar (idempotent)..."
+set -a && source .env.production && set +a
+for m in 0008_customers 0009_native_orders 0010_carts; do
+  if [ -f "drizzle/$m.sql" ]; then
+    psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -q -f "drizzle/$m.sql" && echo "  ✓ $m" || { echo "  ✗ $m FAİL"; exit 1; }
+  fi
+done
+
 # Build
 echo ""
 echo "▸ Next.js build..."
