@@ -5,6 +5,7 @@ import {
   createPayoutBatch,
   markPayoutPaid,
 } from '@/lib/server/commission-service';
+import { markOrderPaid } from '@/lib/orders/lifecycle';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -14,7 +15,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'dev only' }, { status: 403 });
   }
   const body = (await req.json()) as {
-    op: 'accrue' | 'create_payout' | 'approve' | 'mark_paid';
+    op: 'accrue' | 'create_payout' | 'approve' | 'mark_paid' | 'pay_order';
     orderId?: string;
     vendorId?: string;
     payoutId?: string;
@@ -34,6 +35,9 @@ export async function POST(req: NextRequest) {
     case 'accrue':
       if (!body.orderId) return NextResponse.json({ error: 'orderId yok' }, { status: 400 });
       return NextResponse.json(safeJson(await accrueCommissionForOrder(body.orderId)));
+    case 'pay_order':
+      if (!body.orderId) return NextResponse.json({ error: 'orderId yok' }, { status: 400 });
+      return NextResponse.json(safeJson(await markOrderPaid(body.orderId)));
     case 'create_payout':
       if (!body.vendorId || !body.periodStart || !body.periodEnd) {
         return NextResponse.json({ error: 'vendorId/periodStart/periodEnd' }, { status: 400 });
