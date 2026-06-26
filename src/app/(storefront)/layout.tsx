@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { Logo } from '@/components/ui/Logo';
 import { getStoreSettings } from '@/lib/settings/store';
+import { STOREFRONT_CSS } from './_theme';
 
 /**
  * Müşteri vitrini (storefront) shell — admin/vendor panelinden bağımsız.
@@ -15,6 +16,8 @@ export default async function StorefrontLayout({ children }: { children: React.R
 
   return (
     <div style={styleVars} className="min-h-screen bg-[var(--color-brand-cream,#faf6ec)] flex flex-col">
+      {/* eslint-disable-next-line react/no-danger */}
+      <style dangerouslySetInnerHTML={{ __html: STOREFRONT_CSS }} />
       {theme.announcement_enabled && theme.announcement && (
         <div className="bg-[var(--color-brand-ink)] text-white text-center text-sm py-2 px-4">
           {theme.announcement}

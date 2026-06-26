@@ -18,7 +18,7 @@ interface CartView {
   items_subtotal_cents: number;
 }
 
-const tl = (c: number) => (c / 100).toLocaleString('tr-TR', { minimumFractionDigits: 2 }) + ' ₺';
+const tl = (c: number) => (c / 100).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ₺';
 
 export default function CartPage() {
   const [cart, setCart] = useState<CartView | null>(null);
@@ -51,62 +51,64 @@ export default function CartPage() {
       body: JSON.stringify({ token: cart.token, variant_id: variantId, quantity }),
     });
     const data = await res.json();
-    if (data.ok) setCart(data.cart);
+    if (data.ok) {
+      setCart(data.cart);
+      window.dispatchEvent(new Event('vm-cart-updated'));
+    }
     setBusy(false);
   }
 
   if (loading) {
-    return <div className="max-w-3xl mx-auto px-4 py-20 text-center text-neutral-400">Sepet yükleniyor…</div>;
+    return <div className="emp"><div className="emp-wrap" style={{ padding: '80px 0', textAlign: 'center', color: '#bbb' }}>Sepet yükleniyor…</div></div>;
   }
 
   if (!cart || cart.items.length === 0) {
     return (
-      <div className="max-w-3xl mx-auto px-4 py-20 text-center">
-        <div className="text-5xl mb-4">🛒</div>
-        <h1 className="text-2xl font-bold mb-2">Sepetin boş</h1>
-        <p className="text-neutral-500 mb-6">Ürünlere göz at, beğendiklerini sepete ekle.</p>
-        <Link href="/magaza" className="px-6 py-3 rounded-full bg-[var(--color-brand-ink)] text-white font-semibold">
-          Ürünlere git
-        </Link>
+      <div className="emp">
+        <div className="emp-wrap emp-empty">
+          <div className="emp-empty__i">🛒</div>
+          <h1 style={{ fontSize: 24, fontWeight: 700, margin: '0 0 8px' }}>Sepetin boş</h1>
+          <p style={{ color: 'var(--muted)', marginBottom: 24 }}>Ürünlere göz at, beğendiklerini sepete ekle.</p>
+          <Link href="/magaza" className="emp-btn emp-btn--dark">Ürünlere git</Link>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="max-w-3xl mx-auto px-4 py-10">
-      <h1 className="text-3xl font-bold mb-6">Sepetim ({cart.item_count})</h1>
+    <div className="emp">
+      <section className="emp-cart">
+        <div className="emp-wrap">
+          <h1>Sepetim ({cart.item_count})</h1>
+          <div className="emp-cart__grid">
+            <div className="emp-cart__items">
+              {cart.items.map((it) => (
+                <div key={it.variant_id} className="emp-cart__row">
+                  <div className="emp-cart__info">
+                    {it.vendor && <p className="emp-cart__vendor">{it.vendor}</p>}
+                    <p className="emp-cart__title">{it.title}</p>
+                    <span className="emp-cart__unit">{tl(it.unit_price_cents)}</span>
+                  </div>
+                  <div className="emp-qty">
+                    <button disabled={busy} onClick={() => change(it.variant_id, it.quantity - 1)}>−</button>
+                    <span>{it.quantity}</span>
+                    <button disabled={busy} onClick={() => change(it.variant_id, it.quantity + 1)}>+</button>
+                  </div>
+                  <div className="emp-cart__line">{tl(it.line_price_cents)}</div>
+                  <button disabled={busy} onClick={() => change(it.variant_id, 0)} className="emp-cart__rm" aria-label="Kaldır">✕</button>
+                </div>
+              ))}
+            </div>
 
-      <div className="bg-white rounded-2xl border divide-y">
-        {cart.items.map((it) => (
-          <div key={it.variant_id} className="flex items-center gap-4 p-4">
-            <div className="flex-1">
-              <div className="font-medium">{it.title}</div>
-              {it.vendor && <div className="text-xs text-neutral-500">{it.vendor}</div>}
-              <div className="text-sm text-neutral-500 mt-0.5">{tl(it.unit_price_cents)}</div>
+            <div className="emp-cart__summary">
+              <div className="emp-cart__sumrow"><span>Ara toplam</span><span>{tl(cart.items_subtotal_cents)}</span></div>
+              <div className="emp-cart__sumtotal"><span>Toplam</span><span>{tl(cart.items_subtotal_cents)}</span></div>
+              <p className="emp-cart__note">Kargo ödeme adımında hesaplanır.</p>
+              <Link href="/odeme" className="emp-btn emp-btn--orange emp-btn--block">Ödemeye Geç →</Link>
             </div>
-            <div className="flex items-center border rounded-lg">
-              <button disabled={busy} onClick={() => change(it.variant_id, it.quantity - 1)} className="px-3 py-1.5 text-lg disabled:opacity-40">−</button>
-              <span className="w-9 text-center">{it.quantity}</span>
-              <button disabled={busy} onClick={() => change(it.variant_id, it.quantity + 1)} className="px-3 py-1.5 text-lg disabled:opacity-40">+</button>
-            </div>
-            <div className="w-24 text-right font-semibold">{tl(it.line_price_cents)}</div>
-            <button disabled={busy} onClick={() => change(it.variant_id, 0)} className="text-neutral-400 hover:text-red-600 text-sm">✕</button>
           </div>
-        ))}
-      </div>
-
-      <div className="mt-6 flex items-center justify-between">
-        <div className="text-sm text-neutral-500">Ara toplam</div>
-        <div className="text-2xl font-bold">{tl(cart.items_subtotal_cents)}</div>
-      </div>
-      <p className="text-xs text-neutral-400 text-right mt-1">Kargo ödeme adımında hesaplanır.</p>
-
-      <Link
-        href="/odeme"
-        className="mt-6 block text-center px-6 py-4 rounded-full bg-[var(--color-brand-orange)] text-white font-semibold hover:opacity-90"
-      >
-        Ödemeye Geç →
-      </Link>
+        </div>
+      </section>
     </div>
   );
 }
