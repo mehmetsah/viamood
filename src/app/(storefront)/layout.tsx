@@ -23,7 +23,7 @@ export default async function StorefrontLayout({ children }: { children: React.R
 
       <header className="bg-white border-b sticky top-0 z-10">
         <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
-          <Link href="/magaza" className="flex items-center gap-2">
+          <Link href="/" className="flex items-center gap-2">
             <Logo width={120} />
           </Link>
           <nav className="flex items-center gap-5 text-sm">
@@ -41,9 +41,11 @@ export default async function StorefrontLayout({ children }: { children: React.R
       <footer className="border-t bg-white mt-16">
         <div className="max-w-6xl mx-auto px-4 py-8 text-sm text-neutral-500 flex flex-wrap gap-x-8 gap-y-2 justify-between">
           <span>{theme.footer_text || `© ${new Date().getFullYear()} Via Mood`}</span>
-          <div className="flex gap-5">
+          <div className="flex flex-wrap gap-5">
             <Link href="/magaza" className="hover:underline">Ürünler</Link>
             <Link href="/hesabim" className="hover:underline">Siparişlerim</Link>
+            <Link href="/auth/sign-in" className="hover:underline text-neutral-400">Operatör Girişi</Link>
+            <Link href="/auth/sign-up" className="hover:underline text-neutral-400">Tedarikçi Başvurusu</Link>
           </div>
         </div>
       </footer>
