@@ -2,53 +2,68 @@ import Link from 'next/link';
 import { Logo } from '@/components/ui/Logo';
 import { getStoreSettings } from '@/lib/settings/store';
 import { STOREFRONT_CSS } from './_theme';
+import { CartCount } from './_home/CartCount';
 
 /**
- * Müşteri vitrini (storefront) shell — admin/vendor panelinden bağımsız.
- * Tema ayarları (renk/duyuru/footer) /admin/theme'den yönetilir, burada yansır.
+ * Müşteri vitrini (storefront) shell — viamood.com.tr teması (.emp). Header/footer + tema CSS.
+ * Tema ayarları (renk/duyuru) /admin/theme'den yönetilir.
  */
+const NAV = [
+  { label: 'Yeni Gelenler', url: '/magaza' },
+  { label: 'Çok Satanlar', url: '/magaza' },
+  { label: 'Ev & Yaşam', url: '/magaza?cat=Ev' },
+  { label: 'Mutfak', url: '/magaza?cat=Mutfak' },
+  { label: 'Hobi', url: '/magaza?cat=Hobi' },
+  { label: 'Kampanya Setleri', url: '/magaza' },
+];
+
 export default async function StorefrontLayout({ children }: { children: React.ReactNode }) {
   const { theme } = await getStoreSettings();
   const styleVars = {
     ...(theme.brand_primary ? { ['--color-brand-orange']: theme.brand_primary } : {}),
     ...(theme.brand_ink ? { ['--color-brand-ink']: theme.brand_ink } : {}),
   } as React.CSSProperties;
+  const announcement =
+    theme.announcement_enabled && theme.announcement
+      ? theme.announcement
+      : 'Türkiye genelinde kargo • Güvenli ödeme • Kapıda ödeme seçeneği';
 
   return (
-    <div style={styleVars} className="min-h-screen bg-[var(--color-brand-cream,#faf6ec)] flex flex-col">
+    <div style={styleVars} className="emp min-h-screen flex flex-col">
       {/* eslint-disable-next-line react/no-danger */}
       <style dangerouslySetInnerHTML={{ __html: STOREFRONT_CSS }} />
-      {theme.announcement_enabled && theme.announcement && (
-        <div className="bg-[var(--color-brand-ink)] text-white text-center text-sm py-2 px-4">
-          {theme.announcement}
-        </div>
-      )}
 
-      <header className="bg-white border-b sticky top-0 z-10">
-        <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2">
-            <Logo width={120} />
-          </Link>
-          <nav className="flex items-center gap-5 text-sm">
-            <Link href="/magaza" className="hover:text-[var(--color-brand-orange)]">Ürünler</Link>
-            <Link href="/hesabim" className="hover:text-[var(--color-brand-orange)]">Hesabım</Link>
-            <Link href="/sepet" className="font-medium px-4 py-2 rounded-full bg-[var(--color-brand-ink)] text-white hover:opacity-90">
-              🛒 Sepet
-            </Link>
+      <div className="emp-ann">{announcement}</div>
+
+      <header className="emp-hd">
+        <div className="emp-hd__row">
+          <Link href="/" aria-label="Via Mood"><Logo width={116} /></Link>
+          <nav className="emp-hd__nav">
+            {NAV.map((n) => <Link key={n.label} href={n.url}>{n.label}</Link>)}
           </nav>
+          <div className="emp-hd__actions">
+            <Link href="/magaza" className="emp-hd__icon" aria-label="Ara">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><circle cx="11" cy="11" r="7" /><path d="M21 21l-4.3-4.3" /></svg>
+            </Link>
+            <Link href="/hesabim" className="emp-hd__icon" aria-label="Hesabım">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><circle cx="12" cy="8" r="4" /><path d="M4 21c0-4 4-6 8-6s8 2 8 6" /></svg>
+              <span className="emp-hd__hide-sm">Hesabım</span>
+            </Link>
+            <CartCount />
+          </div>
         </div>
       </header>
 
       <main className="flex-1">{children}</main>
 
-      <footer className="border-t bg-white mt-16">
-        <div className="max-w-6xl mx-auto px-4 py-8 text-sm text-neutral-500 flex flex-wrap gap-x-8 gap-y-2 justify-between">
-          <span>{theme.footer_text || `© ${new Date().getFullYear()} Via Mood`}</span>
-          <div className="flex flex-wrap gap-5">
-            <Link href="/magaza" className="hover:underline">Ürünler</Link>
-            <Link href="/hesabim" className="hover:underline">Siparişlerim</Link>
-            <Link href="/auth/sign-in" className="hover:underline text-neutral-400">Operatör Girişi</Link>
-            <Link href="/auth/sign-up" className="hover:underline text-neutral-400">Tedarikçi Başvurusu</Link>
+      <footer className="emp-ft">
+        <div className="emp-ft__row">
+          <span>{theme.footer_text || `© ${new Date().getFullYear()} Via Mood — Tüm hakları saklıdır.`}</span>
+          <div className="emp-ft__links">
+            <Link href="/magaza">Ürünler</Link>
+            <Link href="/hesabim">Siparişlerim</Link>
+            <Link href="/auth/sign-in">Operatör Girişi</Link>
+            <Link href="/auth/sign-up">Tedarikçi Başvurusu</Link>
           </div>
         </div>
       </footer>
