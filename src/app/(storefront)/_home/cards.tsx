@@ -1,0 +1,51 @@
+import Link from 'next/link';
+
+export function money(cents: number): string {
+  return (cents / 100).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ₺';
+}
+
+export interface HomeProduct {
+  handle: string;
+  title: string;
+  image: string | null;
+  priceCents: number;
+  vendor?: string | null;
+}
+
+/** Kenarlıklı kart (slider + featgrid) — turuncu 18px fiyat. via-mood-home .emp-sli */
+export function BorderedCard({ p }: { p: HomeProduct }) {
+  return (
+    <Link href={`/magaza/${p.handle}`} className="emp-sli">
+      <div className="emp-sli__media">
+        {p.image ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={p.image} alt={p.title} loading="lazy" />
+        ) : (
+          <div className="emp-ph">📦</div>
+        )}
+      </div>
+      {p.vendor ? <p className="emp-sli__vendor">{p.vendor}</p> : null}
+      <h3 className="emp-sli__title">{p.title}</h3>
+      <p className="emp-sli__price">{money(p.priceCents)}</p>
+    </Link>
+  );
+}
+
+/** Izgara kartı (urun_grid) — siyah 14px fiyat, kenarlıksız. via-mood-home .emp-product */
+export function GridCard({ p }: { p: HomeProduct }) {
+  return (
+    <Link href={`/magaza/${p.handle}`} className="emp-product">
+      <div className="emp-product__media">
+        {p.image ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={p.image} alt={p.title} className="emp-product__img" loading="lazy" />
+        ) : (
+          <div className="emp-ph">📦</div>
+        )}
+      </div>
+      {p.vendor ? <p className="emp-product__vendor">{p.vendor}</p> : null}
+      <h3 className="emp-product__title">{p.title}</h3>
+      <p className="emp-product__price">{money(p.priceCents)}</p>
+    </Link>
+  );
+}
