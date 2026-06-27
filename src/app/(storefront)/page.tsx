@@ -2,9 +2,10 @@ import Link from 'next/link';
 import { getStoreSettings } from '@/lib/settings/store';
 import { getStorefrontProducts } from '@/lib/storefront/products';
 import { GridCard, BorderedCard } from './_home/cards';
-import { CategoryStrip, type Cat } from './_home/CategoryStrip';
+import { CategoryStrip } from './_home/CategoryStrip';
 import { ProductSlider } from './_home/ProductSlider';
 import { Newsletter } from './_home/Newsletter';
+import { HERO_IMAGE, HOME_BANNERS, HOME_CATEGORIES } from './_home/assets';
 
 export const dynamic = 'force-dynamic';
 
@@ -13,28 +14,13 @@ export default async function HomePage() {
   const all = await getStorefrontProducts({ limit: 24 });
   const { theme } = await getStoreSettings();
 
-  const heroImg = theme.hero_image || all.find((p) => p.image)?.image || null;
+  const heroImg = theme.hero_image || HERO_IMAGE || all.find((p) => p.image)?.image || null;
   const heroTitle = theme.hero_title || 'Eviniz için, özenle seçilmiş ürünler';
   const heroLead = theme.hero_subtitle || 'Mutfaktan banyoya, dolap içinden tezgah üstüne — günlük rutini sade, düzenli ve estetik kılan ürünler.';
 
   const slider = all.slice(0, 10);
   const featureProds = all.slice(0, 4);
   const grid = all.slice(0, 8);
-
-  const categories: Cat[] = [
-    { label: 'Çok Satanlar', url: '/magaza' },
-    { label: 'Mutfak', url: '/magaza?cat=Mutfak' },
-    { label: 'Hobi Ürünleri', url: '/magaza?cat=Hobi' },
-    { label: '500 TL Altı', url: '/magaza' },
-    { label: 'İndirim', url: '/magaza' },
-    { label: 'Tümünü Keşfet', url: '/magaza' },
-  ];
-
-  const banners = [
-    { cls: 'emp-bnr--xl emp-bnr--grad-dark', title: 'Mutfağınız Daha Düzenli', lead: 'Günlük rutini kolaylaştıran pratik ürünler.', btn: 'Mağazaya git', url: '/magaza' },
-    { cls: 'emp-bnr--grad-teal', title: 'Düzenli Bir Ev', lead: 'Her köşeye uygun şık ve işlevsel organizer çözümleri.', btn: 'Hepsini gör', url: '/magaza' },
-    { cls: 'emp-bnr--wide emp-bnr--grad-orange', title: 'Çok Al, Az Öde!', lead: 'Kampanya setlerinde büyük tasarruf.', btn: 'İndirimleri gör', url: '/magaza' },
-  ];
 
   const trust = [
     { label: 'Ücretsiz Kargo', svg: '<rect x="1" y="6" width="13" height="11" rx="1"/><path d="M14 9h4l3 3v5h-7z"/><circle cx="6" cy="18" r="2"/><circle cx="17" cy="18" r="2"/>' },
@@ -46,7 +32,7 @@ export default async function HomePage() {
 
   return (
     <div className="emp">
-      <CategoryStrip items={categories} />
+      <CategoryStrip items={HOME_CATEGORIES} />
 
       {/* HERO */}
       <section className="emp-hero">
@@ -72,8 +58,10 @@ export default async function HomePage() {
       <section className="emp-banners">
         <div className="emp-wrap">
           <div className="emp-banners__grid">
-            {banners.map((b) => (
+            {HOME_BANNERS.map((b) => (
               <Link key={b.title} href={b.url} className={`emp-bnr ${b.cls}`}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={b.image} alt={b.title} className="emp-bnr__img" />
                 <div className="emp-bnr__copy">
                   <h3 className="emp-bnr__title">{b.title}</h3>
                   <p className="emp-bnr__lead">{b.lead}</p>

@@ -3,20 +3,12 @@ import { Logo } from '@/components/ui/Logo';
 import { getStoreSettings } from '@/lib/settings/store';
 import { STOREFRONT_CSS } from './_theme';
 import { CartCount } from './_home/CartCount';
+import { NAV_ITEMS } from './_home/assets';
 
 /**
  * Müşteri vitrini (storefront) shell — viamood.com.tr teması (.emp). Header/footer + tema CSS.
  * Tema ayarları (renk/duyuru) /admin/theme'den yönetilir.
  */
-const NAV = [
-  { label: 'Yeni Gelenler', url: '/magaza' },
-  { label: 'Çok Satanlar', url: '/magaza' },
-  { label: 'Ev & Yaşam', url: '/magaza?cat=Ev' },
-  { label: 'Mutfak', url: '/magaza?cat=Mutfak' },
-  { label: 'Hobi', url: '/magaza?cat=Hobi' },
-  { label: 'Kampanya Setleri', url: '/magaza' },
-];
-
 export default async function StorefrontLayout({ children }: { children: React.ReactNode }) {
   const { theme } = await getStoreSettings();
   const styleVars = {
@@ -39,7 +31,13 @@ export default async function StorefrontLayout({ children }: { children: React.R
         <div className="emp-hd__row">
           <Link href="/" aria-label="Via Mood" style={{ display: 'flex', alignItems: 'center' }}><Logo width={78} /></Link>
           <nav className="emp-hd__nav">
-            {NAV.map((n) => <Link key={n.label} href={n.url}>{n.label}</Link>)}
+            {NAV_ITEMS.map((n) => (
+              <Link key={n.label} href={n.url} className="emp-hd__navitem">
+                {/* eslint-disable-next-line react/no-danger */}
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" dangerouslySetInnerHTML={{ __html: n.icon }} />
+                <span>{n.label}</span>
+              </Link>
+            ))}
           </nav>
           <div className="emp-hd__actions">
             <Link href="/magaza" className="emp-hd__icon" aria-label="Ara">
