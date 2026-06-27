@@ -33,6 +33,14 @@ export interface ThemeSettings {
   homeSections?: unknown[]; // HomeSection[] (lib/storefront/sections)
   // İçerik sayfaları override'ı (slug → {title, html})
   pages?: Record<string, { title?: string; html?: string }>;
+  // Footer link sütunları (heading + links) — /admin/theme footer editöründen
+  footerCols?: { heading: string; links: { label: string; url: string }[] }[];
+  // Footer marka/iletişim bilgileri
+  footer_desc?: string;
+  footer_phone?: string;
+  footer_email?: string;
+  footer_address?: string;
+  footer_instagram?: string;
 }
 
 /**

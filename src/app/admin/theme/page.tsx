@@ -2,7 +2,9 @@ import Link from 'next/link';
 import { getStoreSettings } from '@/lib/settings/store';
 import { saveThemeAction } from '@/lib/actions/settings';
 import { resolveHomeSections } from '@/lib/storefront/sections';
+import { DEFAULT_FOOTER_COLS } from '@/app/(storefront)/_home/SiteFooter';
 import { SectionEditor } from './SectionEditor';
+import { FooterEditor } from './FooterEditor';
 
 interface PageProps {
   searchParams: Promise<{ saved?: string }>;
@@ -58,6 +60,18 @@ export default async function AdminThemePage({ searchParams }: PageProps) {
           <input type="hidden" name="hero_cta_link" defaultValue={theme.hero_cta_link ?? ''} />
           <button type="submit" className="sm:col-span-2 justify-self-end px-5 py-2 rounded-lg bg-[var(--color-brand-ink,#14201d)] text-white font-medium text-sm">Genel ayarları kaydet</button>
         </form>
+      </details>
+
+      <details className="mb-4 bg-white rounded-xl border">
+        <summary className="px-4 py-3 cursor-pointer font-semibold text-sm select-none">🦶 Footer (link sütunları · iletişim bilgileri)</summary>
+        <FooterEditor init={{
+          footerCols: theme.footerCols?.length ? theme.footerCols : DEFAULT_FOOTER_COLS,
+          footer_desc: theme.footer_desc ?? '',
+          footer_phone: theme.footer_phone ?? '0553 170 71 32',
+          footer_email: theme.footer_email ?? 'viahomedecor25@gmail.com',
+          footer_address: theme.footer_address ?? 'Bostan Mh. Kaşkaval Sk. No:23 Beyoğlu / İstanbul',
+          footer_instagram: theme.footer_instagram ?? 'https://instagram.com/viamood.store',
+        }} />
       </details>
 
       <SectionEditor initial={sections} />

@@ -124,6 +124,26 @@ export async function saveHomeSectionsAction(configJson: string): Promise<{ ok: 
   return { ok: true };
 }
 
+/** Footer (link sütunları + marka/iletişim) kaydeder. */
+export async function saveFooterAction(payload: {
+  footerCols?: { heading: string; links: { label: string; url: string }[] }[];
+  footer_desc?: string;
+  footer_phone?: string;
+  footer_email?: string;
+  footer_address?: string;
+  footer_instagram?: string;
+}): Promise<{ ok: boolean }> {
+  await requireAdmin();
+  const existing = await currentTheme();
+  const theme: ThemeSettings = { ...existing, ...payload };
+  await db
+    .insert(storeSettings)
+    .values({ id: 'default', theme })
+    .onConflictDoUpdate({ target: storeSettings.id, set: { theme, updatedAt: new Date() } });
+  revalidateStorefront();
+  return { ok: true };
+}
+
 /** İçerik sayfası (slug) içeriğini kaydeder. */
 export async function savePageAction(slug: string, title: string, html: string): Promise<{ ok: boolean }> {
   await requireAdmin();

@@ -1,8 +1,19 @@
 import Link from 'next/link';
 import { Logo } from '@/components/ui/Logo';
 
+export interface FooterCol { heading: string; links: { label: string; url: string }[] }
+export interface FooterConfig {
+  footer_text?: string | null;
+  footerCols?: FooterCol[];
+  footer_desc?: string;
+  footer_phone?: string;
+  footer_email?: string;
+  footer_address?: string;
+  footer_instagram?: string;
+}
+
 /** viamood.com.tr footer'ı birebir: marka + 4 link sütunu + ödeme ikonları + telif. */
-const COLS = [
+export const DEFAULT_FOOTER_COLS: FooterCol[] = [
   {
     heading: 'Kategoriler',
     links: [
@@ -35,26 +46,40 @@ const COLS = [
 
 const PAYMENTS = ['VISA', 'MasterCard', 'Troy', 'PayTR', 'Kapıda Ödeme', 'Havale/EFT'];
 
-export function SiteFooter({ footerText }: { footerText?: string | null }) {
+const DEF_DESC = 'Mutfak, banyo, dolap içi ve günlük yaşam alanlarınız için pratik düzenleyici ve saklama çözümleri. İstanbul / Beyoğlu’ndan tüm Türkiye’ye.';
+const DEF_PHONE = '0553 170 71 32';
+const DEF_EMAIL = 'viahomedecor25@gmail.com';
+const DEF_ADDRESS = 'Bostan Mh. Kaşkaval Sk. No:23 Beyoğlu / İstanbul';
+const DEF_IG = 'https://instagram.com/viamood.store';
+
+export function SiteFooter({ config = {} }: { config?: FooterConfig }) {
+  const cols = config.footerCols?.length ? config.footerCols : DEFAULT_FOOTER_COLS;
+  const desc = config.footer_desc || DEF_DESC;
+  const phone = config.footer_phone || DEF_PHONE;
+  const email = config.footer_email || DEF_EMAIL;
+  const address = config.footer_address || DEF_ADDRESS;
+  const ig = config.footer_instagram || DEF_IG;
+  const tel = '+' + phone.replace(/\D/g, '');
+
   return (
     <footer className="emp-ft2">
       <div className="emp-wrap emp-ft2__top">
         <div className="emp-ft2__brand">
           <Logo width={96} />
-          <p className="emp-ft2__desc">Mutfak, banyo, dolap içi ve günlük yaşam alanlarınız için pratik düzenleyici ve saklama çözümleri. İstanbul / Beyoğlu&apos;ndan tüm Türkiye&apos;ye.</p>
+          <p className="emp-ft2__desc">{desc}</p>
           <ul className="emp-ft2__contact">
-            <li>📞 <a href="tel:+905531707132">0553 170 71 32</a></li>
-            <li>✉️ <a href="mailto:viahomedecor25@gmail.com">viahomedecor25@gmail.com</a></li>
-            <li>📍 Bostan Mh. Kaşkaval Sk. No:23 Beyoğlu / İstanbul</li>
+            <li>📞 <a href={`tel:${tel}`}>{phone}</a></li>
+            <li>✉️ <a href={`mailto:${email}`}>{email}</a></li>
+            <li>📍 {address}</li>
           </ul>
           <div className="emp-ft2__social">
-            <a href="https://wa.me/905531707132" target="_blank" rel="noopener" aria-label="WhatsApp">WA</a>
-            <a href="https://instagram.com/viamood.store" target="_blank" rel="noopener" aria-label="Instagram">IG</a>
-            <a href="mailto:viahomedecor25@gmail.com" aria-label="E-posta">@</a>
+            <a href={`https://wa.me/${tel.replace('+', '')}`} target="_blank" rel="noopener" aria-label="WhatsApp">WA</a>
+            <a href={ig} target="_blank" rel="noopener" aria-label="Instagram">IG</a>
+            <a href={`mailto:${email}`} aria-label="E-posta">@</a>
           </div>
         </div>
 
-        {COLS.map((col) => (
+        {cols.map((col) => (
           <div key={col.heading} className="emp-ft2__col">
             <p className="emp-ft2__h">{col.heading}</p>
             <ul>
@@ -74,7 +99,7 @@ export function SiteFooter({ footerText }: { footerText?: string | null }) {
             {PAYMENTS.map((p) => <span key={p}>{p}</span>)}
           </div>
           <p className="emp-ft2__copy">
-            {footerText || '© 2026 Via Mood · Via Glocal Dış Tic. Ltd. Şti. · Vergi No 9250770472 · Tüm hakları saklıdır.'}
+            {config.footer_text || '© 2026 Via Mood · Via Glocal Dış Tic. Ltd. Şti. · Vergi No 9250770472 · Tüm hakları saklıdır.'}
             <span className="emp-ft2__ops">
               <Link href="/auth/sign-in">Operatör Girişi</Link> · <Link href="/auth/sign-up">Tedarikçi Başvurusu</Link>
             </span>

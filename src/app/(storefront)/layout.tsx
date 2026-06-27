@@ -47,7 +47,7 @@ export default async function StorefrontLayout({ children }: { children: React.R
 
       <main className="flex-1">{children}</main>
 
-      <SiteFooter footerText={theme.footer_text} />
+      <SiteFooter config={theme} />
     </div>
   );
 }
