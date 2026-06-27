@@ -3,7 +3,7 @@ import { Logo } from '@/components/ui/Logo';
 import { getStoreSettings } from '@/lib/settings/store';
 import { STOREFRONT_CSS } from './_theme';
 import { CartCount } from './_home/CartCount';
-import { NAV_ITEMS } from './_home/assets';
+import { MegaNav } from './_home/MegaNav';
 
 /**
  * Müşteri vitrini (storefront) shell — viamood.com.tr teması (.emp). Header/footer + tema CSS.
@@ -30,15 +30,7 @@ export default async function StorefrontLayout({ children }: { children: React.R
       <header className="emp-hd">
         <div className="emp-hd__row">
           <Link href="/" aria-label="Via Mood" style={{ display: 'flex', alignItems: 'center' }}><Logo width={78} /></Link>
-          <nav className="emp-hd__nav">
-            {NAV_ITEMS.map((n) => (
-              <Link key={n.label} href={n.url} className="emp-hd__navitem">
-                {/* eslint-disable-next-line react/no-danger */}
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" dangerouslySetInnerHTML={{ __html: n.icon }} />
-                <span>{n.label}</span>
-              </Link>
-            ))}
-          </nav>
+          <MegaNav />
           <div className="emp-hd__actions">
             <Link href="/magaza" className="emp-hd__icon" aria-label="Ara">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><circle cx="11" cy="11" r="7" /><path d="M21 21l-4.3-4.3" /></svg>
