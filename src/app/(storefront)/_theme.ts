@@ -140,11 +140,36 @@ export const STOREFRONT_CSS = `
 .emp-news__btn:hover{background:var(--o2);}
 @media(max-width:480px){.emp-news__form{flex-direction:column;}}
 
-/* Catalog filter bar */
+/* Catalog filter bar (eski — korunur) */
 .emp-catbar{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:clamp(20px,3vw,32px);}
 .emp-catbar__form{display:flex;flex-wrap:wrap;gap:8px;}
 .emp-input{height:42px;padding:0 14px;border:1px solid var(--line);border-radius:4px;font-size:14px;background:#fff;outline:none;}
 .emp-input:focus{border-color:var(--o);}
+
+/* Collection page (tema koleksiyon: sidebar filtre + grid) */
+.emp-col{padding-block:clamp(20px,3vw,40px);}
+.emp-col__head{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:clamp(18px,2.5vw,28px);padding-bottom:16px;border-bottom:1px solid var(--line);}
+.emp-col__h1{font-size:clamp(1.5rem,2.6vw,2rem);font-weight:700;letter-spacing:-.015em;margin:0;}
+.emp-col__count{font-size:13px;color:var(--muted);margin-top:4px;}
+.emp-col__layout{display:grid;grid-template-columns:220px 1fr;gap:clamp(20px,3vw,40px);align-items:start;}
+.emp-col__side{position:sticky;top:88px;}
+.emp-col__search{display:flex;gap:6px;margin-bottom:22px;}
+.emp-col__search .emp-input{flex:1;min-width:0;height:40px;}
+.emp-facet__title{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin:0 0 10px;color:var(--muted);}
+.emp-facet__list{display:flex;flex-direction:column;gap:1px;}
+.emp-facet__list a{font-size:14px;color:#333;text-decoration:none;padding:8px 12px;border-radius:4px;transition:.12s;}
+.emp-facet__list a:hover{background:var(--alt);color:#000;}
+.emp-facet__list a.on{background:#000;color:#fff;font-weight:600;}
+.emp-col__layout .emp-pgrid{grid-template-columns:repeat(3,1fr);}
+@media(max-width:1180px){.emp-col__layout .emp-pgrid{grid-template-columns:repeat(2,1fr);}}
+@media(max-width:880px){
+  .emp-col__layout{grid-template-columns:1fr;}
+  .emp-col__side{position:static;}
+  .emp-facet__list{flex-direction:row;flex-wrap:wrap;gap:8px;overflow-x:auto;}
+  .emp-facet__list a{border:1px solid var(--line);white-space:nowrap;}
+  .emp-col__layout .emp-pgrid{grid-template-columns:repeat(2,1fr);}
+}
+@media(max-width:560px){.emp-col__layout .emp-pgrid{grid-template-columns:repeat(2,1fr);gap:12px;}}
 
 /* PDP */
 .emp-pdp{padding-block:clamp(28px,4vw,48px);}
@@ -205,7 +230,8 @@ export const STOREFRONT_CSS = `
 /* Header / footer (tema) */
 .emp-ann{background:#14201d;color:#fff;text-align:center;font-size:12.5px;padding:8px 16px;letter-spacing:.01em;}
 .emp-hd{background:#fff;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:30;}
-.emp-hd__row{max-width:1440px;margin:0 auto;padding:0 clamp(20px,3.5vw,56px);height:64px;display:flex;align-items:center;justify-content:space-between;gap:24px;}
+.emp-hd__row{max-width:1440px;margin:0 auto;padding:0 clamp(20px,3.5vw,56px);height:72px;display:flex;align-items:center;justify-content:space-between;gap:24px;}
+.emp-hd__row img{display:block;}
 .emp-hd__nav{display:flex;gap:clamp(12px,1.5vw,24px);font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:.02em;}
 .emp-hd__nav a{color:#1a1a1a;text-decoration:none;white-space:nowrap;}
 .emp-hd__nav a:hover{color:var(--o);}

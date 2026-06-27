@@ -37,7 +37,7 @@ export default async function StorefrontLayout({ children }: { children: React.R
 
       <header className="emp-hd">
         <div className="emp-hd__row">
-          <Link href="/" aria-label="Via Mood"><Logo width={116} /></Link>
+          <Link href="/" aria-label="Via Mood" style={{ display: 'flex', alignItems: 'center' }}><Logo width={78} /></Link>
           <nav className="emp-hd__nav">
             {NAV.map((n) => <Link key={n.label} href={n.url}>{n.label}</Link>)}
           </nav>
