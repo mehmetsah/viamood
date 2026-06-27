@@ -293,4 +293,40 @@ export const STOREFRONT_CSS = `
 .emp-ft__links{display:flex;flex-wrap:wrap;gap:20px;}
 .emp-ft__links a{color:var(--muted);text-decoration:none;}
 .emp-ft__links a:hover{color:var(--o);}
+
+/* Footer 2 (tam birebir) */
+.emp-ft2{background:#14201d;color:#cfcfcf;margin-top:auto;}
+.emp-ft2__top{display:grid;grid-template-columns:1.7fr 1fr 1fr 1.1fr;gap:clamp(24px,3vw,48px);padding-block:clamp(36px,4vw,56px);}
+@media(max-width:880px){.emp-ft2__top{grid-template-columns:1fr 1fr;}}
+@media(max-width:560px){.emp-ft2__top{grid-template-columns:1fr;}}
+.emp-ft2__desc{font-size:13px;line-height:1.6;margin:14px 0;max-width:300px;color:#a8b3af;}
+.emp-ft2__contact{list-style:none;padding:0;margin:0 0 14px;font-size:13px;line-height:2;}
+.emp-ft2__contact a{color:#cfcfcf;text-decoration:none;}
+.emp-ft2__contact a:hover{color:#fff;}
+.emp-ft2__social{display:flex;gap:8px;}
+.emp-ft2__social a{width:34px;height:34px;border-radius:50%;border:1px solid #3a4a45;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#cfcfcf;text-decoration:none;}
+.emp-ft2__social a:hover{background:var(--o);border-color:var(--o);color:#fff;}
+.emp-ft2__h{font-size:13px;font-weight:700;color:#fff;text-transform:uppercase;letter-spacing:.04em;margin:0 0 14px;}
+.emp-ft2__col ul{list-style:none;padding:0;margin:0;}
+.emp-ft2__col li{margin-bottom:9px;}
+.emp-ft2__col a{color:#a8b3af;text-decoration:none;font-size:13.5px;}
+.emp-ft2__col a:hover{color:var(--o);}
+.emp-ft2__bottom{border-top:1px solid #2a3a35;}
+.emp-ft2__bottomrow{display:flex;flex-wrap:wrap;gap:12px 24px;justify-content:space-between;align-items:center;padding-block:18px;}
+.emp-ft2__pay{display:flex;flex-wrap:wrap;gap:8px;}
+.emp-ft2__pay span{font-size:11px;font-weight:600;color:#cfcfcf;border:1px solid #3a4a45;border-radius:4px;padding:4px 10px;}
+.emp-ft2__copy{font-size:12px;color:#8a958f;margin:0;text-align:right;}
+.emp-ft2__ops{display:block;margin-top:4px;}
+.emp-ft2__ops a{color:#6b7570;text-decoration:none;}
+.emp-ft2__ops a:hover{color:var(--o);}
+
+/* İçerik sayfaları */
+.emp-page{padding-block:clamp(32px,5vw,64px);}
+.emp-page__title{font-size:clamp(1.6rem,3vw,2.4rem);font-weight:700;letter-spacing:-.015em;margin:0 0 24px;padding-bottom:16px;border-bottom:1px solid var(--line);}
+.emp-page__body{max-width:760px;font-size:15.5px;line-height:1.75;color:#333;}
+.emp-page__body h2{font-size:19px;font-weight:700;color:#111;margin:28px 0 10px;}
+.emp-page__body p{margin:0 0 14px;}
+.emp-page__body ul{margin:0 0 14px;padding-left:22px;}
+.emp-page__body li{margin-bottom:7px;}
+.emp-page__body a{color:var(--o);}
 `;

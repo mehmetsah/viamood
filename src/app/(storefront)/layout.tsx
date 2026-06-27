@@ -4,6 +4,7 @@ import { getStoreSettings } from '@/lib/settings/store';
 import { STOREFRONT_CSS } from './_theme';
 import { CartCount } from './_home/CartCount';
 import { MegaNav } from './_home/MegaNav';
+import { SiteFooter } from './_home/SiteFooter';
 
 /**
  * Müşteri vitrini (storefront) shell — viamood.com.tr teması (.emp). Header/footer + tema CSS.
@@ -46,17 +47,7 @@ export default async function StorefrontLayout({ children }: { children: React.R
 
       <main className="flex-1">{children}</main>
 
-      <footer className="emp-ft">
-        <div className="emp-ft__row">
-          <span>{theme.footer_text || `© ${new Date().getFullYear()} Via Mood — Tüm hakları saklıdır.`}</span>
-          <div className="emp-ft__links">
-            <Link href="/magaza">Ürünler</Link>
-            <Link href="/hesabim">Siparişlerim</Link>
-            <Link href="/auth/sign-in">Operatör Girişi</Link>
-            <Link href="/auth/sign-up">Tedarikçi Başvurusu</Link>
-          </div>
-        </div>
-      </footer>
+      <SiteFooter footerText={theme.footer_text} />
     </div>
   );
 }
