@@ -1,15 +1,17 @@
 'use client';
 import Link from 'next/link';
 import { useState } from 'react';
-import { NAV_ITEMS } from './assets';
+import { NAV_ITEMS, type NavItem } from './assets';
 
 function Icon({ d }: { d: string }) {
   // eslint-disable-next-line react/no-danger
   return <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" dangerouslySetInnerHTML={{ __html: d }} />;
 }
 
-/** viamood.com.tr mega-menü birebir: desktop hover dropdown (full-width, sütunlar) + mobil drawer (accordion). */
-export function MegaNav() {
+/** viamood.com.tr mega-menü birebir: desktop hover dropdown (full-width, sütunlar) + mobil drawer (accordion).
+ *  items verilmezse NAV_ITEMS (varsayılan birebir) kullanılır — /admin/theme menü editöründen düzenlenebilir. */
+export function MegaNav({ items }: { items?: NavItem[] }) {
+  const NAV = items?.length ? items : NAV_ITEMS;
   const [drawer, setDrawer] = useState(false);
   const [openIdx, setOpenIdx] = useState<number | null>(null);
 
@@ -20,7 +22,7 @@ export function MegaNav() {
       </button>
 
       <nav className="emp-mm">
-        {NAV_ITEMS.map((item) => (
+        {NAV.map((item) => (
           <div key={item.label} className={`emp-mm__item${item.mega?.length ? ' has-mega' : ''}`}>
             <Link href={item.url} className="emp-mm__link">
               <Icon d={item.icon} />

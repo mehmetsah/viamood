@@ -74,3 +74,19 @@ export const NAV_ITEMS: NavItem[] = [
   { label: 'Kurumsal', url: '/magaza', icon: '<rect x="4" y="3" width="16" height="18" rx="1"/><path d="M9 21v-5h6v5 M8 7h0M12 7h0M16 7h0M8 11h0M12 11h0M16 11h0"/>' },
   { label: 'Blog', url: '/magaza', icon: '<path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9l-6-6z M14 3v6h6 M8 14h8 M8 18h6"/>' },
 ];
+
+/** Yeni menü öğeleri için varsayılan ikon (editörde ikon SVG düzenlenmez). */
+export const DEFAULT_NAV_ICON = '<circle cx="12" cy="12" r="9"/>';
+
+/** store_settings.theme.menu geçerliyse onu, değilse NAV_ITEMS (birebir varsayılan) döner. */
+export function resolveMenu(raw: unknown): NavItem[] {
+  if (Array.isArray(raw) && raw.length) {
+    return (raw as NavItem[]).map((it) => ({
+      label: String(it?.label ?? ''),
+      url: String(it?.url ?? '/magaza'),
+      icon: typeof it?.icon === 'string' && it.icon ? it.icon : DEFAULT_NAV_ICON,
+      mega: Array.isArray(it?.mega) ? it.mega : undefined,
+    }));
+  }
+  return NAV_ITEMS;
+}

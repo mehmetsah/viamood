@@ -124,6 +124,26 @@ export async function saveHomeSectionsAction(configJson: string): Promise<{ ok: 
   return { ok: true };
 }
 
+/** Mega-menü (üst nav) config'ini kaydeder (JSON: NavItem[]). */
+export async function saveMenuAction(configJson: string): Promise<{ ok: boolean; error?: string }> {
+  await requireAdmin();
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(configJson);
+  } catch {
+    return { ok: false, error: 'geçersiz JSON' };
+  }
+  if (!Array.isArray(parsed)) return { ok: false, error: 'menu dizi olmalı' };
+  const existing = await currentTheme();
+  const theme: ThemeSettings = { ...existing, menu: parsed };
+  await db
+    .insert(storeSettings)
+    .values({ id: 'default', theme })
+    .onConflictDoUpdate({ target: storeSettings.id, set: { theme, updatedAt: new Date() } });
+  revalidateStorefront();
+  return { ok: true };
+}
+
 /** Footer (link sütunları + marka/iletişim) kaydeder. */
 export async function saveFooterAction(payload: {
   footerCols?: { heading: string; links: { label: string; url: string }[] }[];

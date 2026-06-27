@@ -3,8 +3,10 @@ import { getStoreSettings } from '@/lib/settings/store';
 import { saveThemeAction } from '@/lib/actions/settings';
 import { resolveHomeSections } from '@/lib/storefront/sections';
 import { DEFAULT_FOOTER_COLS } from '@/app/(storefront)/_home/SiteFooter';
+import { resolveMenu } from '@/app/(storefront)/_home/assets';
 import { SectionEditor } from './SectionEditor';
 import { FooterEditor } from './FooterEditor';
+import { MenuEditor } from './MenuEditor';
 
 interface PageProps {
   searchParams: Promise<{ saved?: string }>;
@@ -60,6 +62,11 @@ export default async function AdminThemePage({ searchParams }: PageProps) {
           <input type="hidden" name="hero_cta_link" defaultValue={theme.hero_cta_link ?? ''} />
           <button type="submit" className="sm:col-span-2 justify-self-end px-5 py-2 rounded-lg bg-[var(--color-brand-ink,#14201d)] text-white font-medium text-sm">Genel ayarları kaydet</button>
         </form>
+      </details>
+
+      <details className="mb-4 bg-white rounded-xl border">
+        <summary className="px-4 py-3 cursor-pointer font-semibold text-sm select-none">🧭 Üst menü (mega-menü: öğeler · sütunlar · linkler)</summary>
+        <MenuEditor initial={resolveMenu((theme as { menu?: unknown }).menu)} />
       </details>
 
       <details className="mb-4 bg-white rounded-xl border">

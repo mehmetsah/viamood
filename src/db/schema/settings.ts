@@ -33,6 +33,8 @@ export interface ThemeSettings {
   homeSections?: unknown[]; // HomeSection[] (lib/storefront/sections)
   // İçerik sayfaları override'ı (slug → {title, html})
   pages?: Record<string, { title?: string; html?: string }>;
+  // Mega-menü (üst nav) — /admin/theme menü editöründen (NavItem[])
+  menu?: unknown[];
   // Footer link sütunları (heading + links) — /admin/theme footer editöründen
   footerCols?: { heading: string; links: { label: string; url: string }[] }[];
   // Footer marka/iletişim bilgileri

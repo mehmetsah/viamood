@@ -4,6 +4,7 @@ import { getStoreSettings } from '@/lib/settings/store';
 import { STOREFRONT_CSS } from './_theme';
 import { CartCount } from './_home/CartCount';
 import { MegaNav } from './_home/MegaNav';
+import { resolveMenu } from './_home/assets';
 import { SiteFooter } from './_home/SiteFooter';
 
 /**
@@ -31,7 +32,7 @@ export default async function StorefrontLayout({ children }: { children: React.R
       <header className="emp-hd">
         <div className="emp-hd__row">
           <Link href="/" aria-label="Via Mood" style={{ display: 'flex', alignItems: 'center' }}><Logo width={78} /></Link>
-          <MegaNav />
+          <MegaNav items={resolveMenu((theme as { menu?: unknown }).menu)} />
           <div className="emp-hd__actions">
             <Link href="/magaza" className="emp-hd__icon" aria-label="Ara">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><circle cx="11" cy="11" r="7" /><path d="M21 21l-4.3-4.3" /></svg>
