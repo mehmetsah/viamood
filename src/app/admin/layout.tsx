@@ -37,6 +37,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           <Link href="/admin/audit-log" className="px-3 py-2 rounded-lg hover:bg-white/10">📜 Audit Log</Link>
           <Link href="/admin/settings" className="px-3 py-2 rounded-lg hover:bg-white/10">⚙️ Ayarlar</Link>
           <Link href="/admin/theme" className="px-3 py-2 rounded-lg hover:bg-white/10">🎨 Tema Editörü</Link>
+          <Link href="/admin/pages" className="px-3 py-2 rounded-lg hover:bg-white/10">📄 İçerik Sayfaları</Link>
         </nav>
         <div className="p-3 border-t border-white/10 text-xs">
           <div className="opacity-60">{session?.user?.email}</div>
