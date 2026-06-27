@@ -1,5 +1,6 @@
 'use server';
 
+import { eq } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { db } from '@/db/client';
@@ -15,6 +16,16 @@ async function requireAdmin() {
   const session = await auth();
   const role = session?.user?.role;
   if (role !== 'admin' && role !== 'super_admin') throw new Error('Yetkin yok');
+}
+
+async function currentTheme(): Promise<ThemeSettings> {
+  const [row] = await db.select({ theme: storeSettings.theme }).from(storeSettings).where(eq(storeSettings.id, 'default')).limit(1);
+  return (row?.theme as ThemeSettings) ?? {};
+}
+
+function revalidateStorefront() {
+  revalidatePath('/magaza', 'layout');
+  revalidatePath('/', 'layout');
 }
 
 export async function updateStoreSettingsAction(formData: FormData): Promise<void> {
@@ -66,7 +77,9 @@ export async function saveThemeAction(formData: FormData): Promise<void> {
     const v = String(formData.get(n) ?? '').trim();
     return v || undefined;
   };
+  const existing = await currentTheme();
   const theme: ThemeSettings = {
+    ...existing, // homeSections + pages korunur
     brand_primary: str('brand_primary'),
     brand_ink: str('brand_ink'),
     announcement: str('announcement'),
@@ -85,6 +98,42 @@ export async function saveThemeAction(formData: FormData): Promise<void> {
     .onConflictDoUpdate({ target: storeSettings.id, set: { theme, updatedAt: new Date() } });
 
   revalidatePath('/admin/theme');
-  revalidatePath('/magaza', 'layout');
+  revalidateStorefront();
   redirect('/admin/theme?saved=1');
+}
+
+/** Section editöründen anasayfa bölümlerini kaydeder (JSON config). */
+export async function saveHomeSectionsAction(configJson: string): Promise<{ ok: boolean; error?: string }> {
+  await requireAdmin();
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(configJson);
+  } catch {
+    return { ok: false, error: 'geçersiz JSON' };
+  }
+  if (!Array.isArray(parsed)) return { ok: false, error: 'config dizi olmalı' };
+
+  const existing = await currentTheme();
+  const theme: ThemeSettings = { ...existing, homeSections: parsed };
+  await db
+    .insert(storeSettings)
+    .values({ id: 'default', theme })
+    .onConflictDoUpdate({ target: storeSettings.id, set: { theme, updatedAt: new Date() } });
+
+  revalidateStorefront();
+  return { ok: true };
+}
+
+/** İçerik sayfası (slug) içeriğini kaydeder. */
+export async function savePageAction(slug: string, title: string, html: string): Promise<{ ok: boolean }> {
+  await requireAdmin();
+  const existing = await currentTheme();
+  const pages = { ...(existing.pages ?? {}), [slug]: { title, html } };
+  const theme: ThemeSettings = { ...existing, pages };
+  await db
+    .insert(storeSettings)
+    .values({ id: 'default', theme })
+    .onConflictDoUpdate({ target: storeSettings.id, set: { theme, updatedAt: new Date() } });
+  revalidatePath(`/sayfa/${slug}`);
+  return { ok: true };
 }

@@ -29,6 +29,10 @@ export interface ThemeSettings {
   hero_cta_text?: string;
   hero_cta_link?: string;
   footer_text?: string;
+  // /admin/theme section editöründen düzenlenir (sıralı anasayfa bölümleri)
+  homeSections?: unknown[]; // HomeSection[] (lib/storefront/sections)
+  // İçerik sayfaları override'ı (slug → {title, html})
+  pages?: Record<string, { title?: string; html?: string }>;
 }
 
 /**

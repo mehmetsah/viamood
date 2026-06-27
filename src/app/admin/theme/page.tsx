@@ -1,6 +1,8 @@
 import Link from 'next/link';
 import { getStoreSettings } from '@/lib/settings/store';
 import { saveThemeAction } from '@/lib/actions/settings';
+import { resolveHomeSections } from '@/lib/storefront/sections';
+import { SectionEditor } from './SectionEditor';
 
 interface PageProps {
   searchParams: Promise<{ saved?: string }>;
@@ -9,87 +11,56 @@ interface PageProps {
 export default async function AdminThemePage({ searchParams }: PageProps) {
   const sp = await searchParams;
   const { theme } = await getStoreSettings();
-  const inputCls =
-    'h-11 w-full px-3 rounded-lg border border-neutral-300 text-sm outline-none focus:border-[var(--color-brand-orange)]';
-  const label = 'text-sm font-medium block mb-1.5';
+  const sections = resolveHomeSections((theme as { homeSections?: unknown }).homeSections);
+  const inputCls = 'h-10 w-full px-3 rounded-lg border border-neutral-300 text-sm outline-none focus:border-orange-500';
+  const label = 'text-xs font-medium block mb-1 text-neutral-600';
 
   return (
-    <div className="p-8 max-w-3xl mx-auto">
-      <div className="flex items-center justify-between mb-1">
-        <h1 className="text-3xl font-bold">Tema Editörü</h1>
-        <Link href="/magaza" target="_blank" className="text-sm px-4 py-2 rounded-lg border hover:bg-neutral-50">
-          Vitrini önizle ↗
-        </Link>
+    <div className="p-6">
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <h1 className="text-2xl font-bold">Tema Editörü</h1>
+          <p className="text-sm text-neutral-500">Anasayfa bölümlerini sırala, göster/gizle, düzenle — kaydedince vitrine yansır.</p>
+        </div>
+        <Link href="/" target="_blank" className="text-sm px-4 py-2 rounded-lg border hover:bg-neutral-50">Vitrini aç ↗</Link>
       </div>
-      <p className="text-sm text-neutral-500 mb-6">Storefront görünümünü buradan ayarla — kaydedince vitrine yansır.</p>
 
       {sp?.saved && (
-        <div className="mb-5 bg-green-50 border border-green-200 rounded-lg px-4 py-3 text-sm text-green-700">
-          ✓ Tema kaydedildi — <Link href="/magaza" target="_blank" className="underline">vitrini aç</Link>
-        </div>
+        <div className="mb-4 bg-green-50 border border-green-200 rounded-lg px-4 py-2.5 text-sm text-green-700">✓ Genel ayarlar kaydedildi</div>
       )}
 
-      <form action={saveThemeAction} className="flex flex-col gap-6">
-        <section className="bg-white rounded-xl border p-6">
-          <h2 className="font-bold border-b pb-2 mb-4">Marka renkleri</h2>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className={label}>Vurgu rengi (buton/fiyat)</label>
-              <input type="color" name="brand_primary" defaultValue={theme.brand_primary || '#e1691f'} className="h-11 w-full rounded-lg border border-neutral-300" />
-            </div>
-            <div>
-              <label className={label}>Koyu renk (header/footer)</label>
-              <input type="color" name="brand_ink" defaultValue={theme.brand_ink || '#14201d'} className="h-11 w-full rounded-lg border border-neutral-300" />
-            </div>
+      <details className="mb-4 bg-white rounded-xl border">
+        <summary className="px-4 py-3 cursor-pointer font-semibold text-sm select-none">⚙️ Genel ayarlar (marka renkleri · duyuru çubuğu · footer)</summary>
+        <form action={saveThemeAction} className="p-4 pt-0 grid sm:grid-cols-2 gap-4 border-t">
+          <div>
+            <label className={label}>Vurgu rengi</label>
+            <input type="color" name="brand_primary" defaultValue={theme.brand_primary || '#f25334'} className="h-10 w-full rounded-lg border border-neutral-300" />
           </div>
-        </section>
-
-        <section className="bg-white rounded-xl border p-6">
-          <h2 className="font-bold border-b pb-2 mb-4">Duyuru çubuğu</h2>
-          <label className="flex items-center gap-2 text-sm font-medium mb-3 cursor-pointer">
-            <input type="checkbox" name="announcement_enabled" defaultChecked={theme.announcement_enabled} className="w-4 h-4 accent-[var(--color-brand-orange)]" />
-            Üst duyuru çubuğunu göster
-          </label>
-          <input name="announcement" defaultValue={theme.announcement ?? ''} placeholder="Örn: 1500₺ üzeri kargo bedava 🚚" className={inputCls} />
-        </section>
-
-        <section className="bg-white rounded-xl border p-6">
-          <h2 className="font-bold border-b pb-2 mb-4">Hero banner (katalog üstü)</h2>
-          <div className="flex flex-col gap-3">
-            <div>
-              <label className={label}>Başlık</label>
-              <input name="hero_title" defaultValue={theme.hero_title ?? ''} placeholder="Mutfağına değer kat" className={inputCls} />
-            </div>
-            <div>
-              <label className={label}>Alt başlık</label>
-              <input name="hero_subtitle" defaultValue={theme.hero_subtitle ?? ''} placeholder="Seçkin mutfak ürünleri, hızlı kargo" className={inputCls} />
-            </div>
-            <div>
-              <label className={label}>Görsel URL</label>
-              <input name="hero_image" defaultValue={theme.hero_image ?? ''} placeholder="https://…" className={inputCls} />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className={label}>Buton metni</label>
-                <input name="hero_cta_text" defaultValue={theme.hero_cta_text ?? ''} placeholder="Alışverişe başla" className={inputCls} />
-              </div>
-              <div>
-                <label className={label}>Buton linki</label>
-                <input name="hero_cta_link" defaultValue={theme.hero_cta_link ?? '/magaza'} placeholder="/magaza" className={inputCls} />
-              </div>
-            </div>
+          <div>
+            <label className={label}>Koyu renk (header/footer)</label>
+            <input type="color" name="brand_ink" defaultValue={theme.brand_ink || '#14201d'} className="h-10 w-full rounded-lg border border-neutral-300" />
           </div>
-        </section>
+          <div className="sm:col-span-2">
+            <label className="flex items-center gap-2 text-sm font-medium mb-1.5 cursor-pointer">
+              <input type="checkbox" name="announcement_enabled" defaultChecked={theme.announcement_enabled} className="w-4 h-4 accent-orange-500" /> Duyuru çubuğunu göster
+            </label>
+            <input name="announcement" defaultValue={theme.announcement ?? ''} placeholder="Türkiye genelinde kargo • Güvenli ödeme • Kapıda ödeme" className={inputCls} />
+          </div>
+          <div className="sm:col-span-2">
+            <label className={label}>Footer telif metni</label>
+            <input name="footer_text" defaultValue={theme.footer_text ?? ''} placeholder="© 2026 Via Mood — tüm hakları saklıdır" className={inputCls} />
+          </div>
+          {/* hero alanları SectionEditor'da; eski alanları korumak için gizli geçir */}
+          <input type="hidden" name="hero_title" defaultValue={theme.hero_title ?? ''} />
+          <input type="hidden" name="hero_subtitle" defaultValue={theme.hero_subtitle ?? ''} />
+          <input type="hidden" name="hero_image" defaultValue={theme.hero_image ?? ''} />
+          <input type="hidden" name="hero_cta_text" defaultValue={theme.hero_cta_text ?? ''} />
+          <input type="hidden" name="hero_cta_link" defaultValue={theme.hero_cta_link ?? ''} />
+          <button type="submit" className="sm:col-span-2 justify-self-end px-5 py-2 rounded-lg bg-[var(--color-brand-ink,#14201d)] text-white font-medium text-sm">Genel ayarları kaydet</button>
+        </form>
+      </details>
 
-        <section className="bg-white rounded-xl border p-6">
-          <h2 className="font-bold border-b pb-2 mb-4">Footer</h2>
-          <input name="footer_text" defaultValue={theme.footer_text ?? ''} placeholder="© Via Mood — tüm hakları saklıdır" className={inputCls} />
-        </section>
-
-        <button type="submit" className="self-end px-6 py-2.5 rounded-lg bg-[var(--color-brand-ink)] text-white font-semibold text-sm">
-          Temayı Kaydet
-        </button>
-      </form>
+      <SectionEditor initial={sections} />
     </div>
   );
 }
