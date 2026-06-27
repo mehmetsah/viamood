@@ -7,6 +7,18 @@ set -e
 cd /var/www/viamood
 
 # ──────────────────────────────────────────────────────────────────────────
+# Ortak deploy kilidi — cron auto-deploy.sh ile ÇAKIŞMAYI önler.
+# 1.9GB instance'ta iki eşzamanlı Next.js build OOM yapar → sshd boğulur, build yarıda kalır.
+# auto-deploy.sh kilidi ZATEN tutuyorsa (DEPLOY_LOCK_HELD=1 geçirir) tekrar alma → deadlock yok.
+# Manuel `bash scripts/deploy.sh`'ta ise kilidi al → cron build'iyle çakışmayı engelle.
+# FD 9 re-exec'e miras kalır (lock korunur); flock yalnız ilk (re-exec öncesi) çağrıda alınır.
+# ──────────────────────────────────────────────────────────────────────────
+if [ -z "$DEPLOY_LOCK_HELD" ] && [ -z "$DEPLOY_REEXEC" ]; then
+  exec 9>/tmp/viamood-autodeploy.lock
+  if ! flock -w 600 9; then echo "⚠ Başka bir deploy (cron) sürüyor — atlandı."; exit 1; fi
+fi
+
+# ──────────────────────────────────────────────────────────────────────────
 # Self-update guard: deploy.sh kendini güncelliyor (git reset diskteki betiği değiştirir).
 # Bash betiği byte-offset ile okuduğundan, pull sonrası ESKİ sürüm çalışmaya devam eder →
 # yeni adımlar (migration vs.) atlanır. Çözüm: İLK çağrıda SADECE pull + YENİ deploy.sh re-exec.

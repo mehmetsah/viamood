@@ -16,6 +16,7 @@ REMOTE=$(git rev-parse origin/main 2>/dev/null)
 
 if [ -n "$REMOTE" ] && [ "$LOCAL" != "$REMOTE" ]; then
   echo "[$(date '+%Y-%m-%d %H:%M:%S')] yeni sürüm $REMOTE — deploy başlıyor" >> "$LOG"
-  bash scripts/deploy.sh >> "$LOG" 2>&1
+  # Kilit zaten bizde (FD 9) — deploy.sh tekrar almasın (deadlock önleme).
+  DEPLOY_LOCK_HELD=1 bash scripts/deploy.sh >> "$LOG" 2>&1
   echo "[$(date '+%Y-%m-%d %H:%M:%S')] deploy bitti" >> "$LOG"
 fi
