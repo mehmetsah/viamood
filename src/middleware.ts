@@ -17,6 +17,9 @@ const ADMIN_PREFIX = '/admin';
 const VENDOR_PREFIXES = ['/dashboard', '/products', '/bundles', '/orders', '/inventory', '/payouts', '/onboarding', '/profile'];
 const CUSTOMER_PREFIXES = ['/hesabim'];
 
+// Müşteri vitrini (storefront) — herkese açık, giriş gerekmez (anonim alışveriş).
+const STOREFRONT_PUBLIC_PREFIXES = ['/magaza', '/sayfa', '/sepet', '/odeme'];
+
 /**
  * Next.js standalone server HOSTNAME env'i (örn. 127.0.0.1) ile dinler ve
  * `req.nextUrl.host`'i o şekilde populate eder — nginx Host header'ını
@@ -58,6 +61,11 @@ export default auth((req) => {
   }
 
   if (PUBLIC_PATHS.has(pathname)) return NextResponse.next();
+
+  // Storefront (vitrin) — anonim erişime açık
+  if (STOREFRONT_PUBLIC_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`))) {
+    return NextResponse.next();
+  }
 
   if (!session?.user) {
     return NextResponse.redirect(
