@@ -22,7 +22,8 @@ async function getClient(): Promise<Iyzipay> {
   const apiKey = p.iyzico_api_key || env.IYZICO_API_KEY;
   const secretKey = p.iyzico_secret_key || env.IYZICO_SECRET_KEY;
   let uri = env.IYZICO_BASE_URL;
-  if (p.iyzico_test_mode != null) uri = p.iyzico_test_mode === 1 ? 'https://sandbox-api.iyzipay.com' : 'https://api.iyzipay.com';
+  // URL override SADECE admin'e İyzico kimlik girildiyse (yoksa env.IYZICO_BASE_URL korunur — canlı İyzico kazara sandbox'a düşmesin)
+  if (p.iyzico_api_key && p.iyzico_test_mode != null) uri = p.iyzico_test_mode === 1 ? 'https://sandbox-api.iyzipay.com' : 'https://api.iyzipay.com';
   if (!apiKey || !secretKey) {
     throw new Error('Iyzico credentials set edilmemis (admin panel veya env)');
   }
