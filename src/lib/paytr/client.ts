@@ -12,6 +12,7 @@
  */
 import crypto from 'node:crypto';
 import { env } from '../env';
+import { getStoreSettings } from '../settings/store';
 
 export interface PaytrBasketItem {
   name: string;
@@ -49,17 +50,19 @@ export function buildUserBasket(items: PaytrBasketItem[]): string {
   return Buffer.from(JSON.stringify(arr), 'utf8').toString('base64');
 }
 
-export function paytrConfigured(): boolean {
-  return !!(env.PAYTR_MERCHANT_ID && env.PAYTR_MERCHANT_KEY && env.PAYTR_MERCHANT_SALT);
+export async function paytrConfigured(): Promise<boolean> {
+  const p = (await getStoreSettings()).payment;
+  return !!((p.paytr_merchant_id || env.PAYTR_MERCHANT_ID) && (p.paytr_merchant_key || env.PAYTR_MERCHANT_KEY) && (p.paytr_merchant_salt || env.PAYTR_MERCHANT_SALT));
 }
 
 export async function getPaytrToken(p: PaytrTokenParams): Promise<PaytrTokenResult> {
-  const mid = env.PAYTR_MERCHANT_ID;
-  const mkey = env.PAYTR_MERCHANT_KEY;
-  const msalt = env.PAYTR_MERCHANT_SALT;
-  if (!mid || !mkey || !msalt) return { ok: false, error: 'PAYTR kimlik bilgileri eksik (env)' };
+  const ps = (await getStoreSettings()).payment;
+  const mid = ps.paytr_merchant_id || env.PAYTR_MERCHANT_ID;
+  const mkey = ps.paytr_merchant_key || env.PAYTR_MERCHANT_KEY;
+  const msalt = ps.paytr_merchant_salt || env.PAYTR_MERCHANT_SALT;
+  if (!mid || !mkey || !msalt) return { ok: false, error: 'PAYTR kimlik bilgileri eksik' };
 
-  const testMode = env.PAYTR_TEST_MODE ?? 1;
+  const testMode = ps.paytr_test_mode ?? env.PAYTR_TEST_MODE ?? 1;
   const noInst = p.noInstallment ?? 0;
   const maxInst = p.maxInstallment ?? 0;
   const currency = p.currency ?? 'TL';

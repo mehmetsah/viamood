@@ -77,6 +77,17 @@ export default async function AdminSettingsPage({ searchParams }: PageProps) {
               <input type="number" step="0.1" min="0" name="cod_card_surcharge_pct" defaultValue={s.payment.cod_card_surcharge_pct ?? 4} className={inputCls} />
             </div>
           </div>
+
+          <div className="mt-4 pt-4 border-t">
+            <p className="text-sm font-semibold mb-1">PayTR API bilgileri</p>
+            <p className="text-xs text-neutral-500 mb-3">PayTR mağaza panelinden alınır. Kayıtlıysa kutu boş görünür — değiştirmek için yeni değer gir.</p>
+            <div className="grid grid-cols-3 gap-3">
+              <div><label className="text-xs font-medium block mb-1">Mağaza No</label><input name="paytr_merchant_id" autoComplete="off" placeholder={s.payment.paytr_merchant_id ? '•••• kayıtlı' : 'Mağaza No'} className={inputCls} /></div>
+              <div><label className="text-xs font-medium block mb-1">Mağaza Parola</label><input name="paytr_merchant_key" type="password" autoComplete="off" placeholder={s.payment.paytr_merchant_key ? '•••• kayıtlı' : 'Parola'} className={inputCls} /></div>
+              <div><label className="text-xs font-medium block mb-1">Gizli Anahtar</label><input name="paytr_merchant_salt" type="password" autoComplete="off" placeholder={s.payment.paytr_merchant_salt ? '•••• kayıtlı' : 'Gizli Anahtar'} className={inputCls} /></div>
+            </div>
+            <label className="flex items-center gap-2 text-sm cursor-pointer mt-3"><input type="checkbox" name="paytr_test_mode" defaultChecked={(s.payment.paytr_test_mode ?? 1) === 1} className="w-4 h-4 accent-[var(--color-brand-orange)]" />Test modu (sandbox) — gerçek para çekilmez</label>
+          </div>
         </section>
 
         <section className="bg-white rounded-xl border p-6">

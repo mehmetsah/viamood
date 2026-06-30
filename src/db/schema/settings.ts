@@ -8,6 +8,10 @@ export interface PaymentSettings {
   cod_enabled?: boolean;
   card_gateway?: 'iyzico' | 'paytr'; // kart için aktif gateway
   cod_card_surcharge_pct?: number; // kapıda kart komisyonu (%)
+  paytr_merchant_id?: string;
+  paytr_merchant_key?: string;
+  paytr_merchant_salt?: string;
+  paytr_test_mode?: number;
 }
 
 /** Mağaza kargo ayarları. */

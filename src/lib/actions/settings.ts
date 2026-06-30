@@ -42,6 +42,9 @@ export async function updateStoreSettingsAction(formData: FormData): Promise<voi
     return Number.isFinite(v) ? v : undefined;
   };
 
+  const str = (n: string) => { const v = String(formData.get(n) ?? '').trim(); return v || undefined; };
+  const [exRow] = await db.select({ payment: storeSettings.payment }).from(storeSettings).where(eq(storeSettings.id, 'default')).limit(1);
+  const exPay = (exRow?.payment as PaymentSettings) ?? {};
   const payment: PaymentSettings = {
     iyzico_enabled: bool('iyzico_enabled'),
     paytr_enabled: bool('paytr_enabled'),
@@ -49,6 +52,10 @@ export async function updateStoreSettingsAction(formData: FormData): Promise<voi
     cod_enabled: bool('cod_enabled'),
     card_gateway: formData.get('card_gateway') === 'paytr' ? 'paytr' : 'iyzico',
     cod_card_surcharge_pct: num('cod_card_surcharge_pct') ?? 4,
+    paytr_merchant_id: str('paytr_merchant_id') ?? exPay.paytr_merchant_id,
+    paytr_merchant_key: str('paytr_merchant_key') ?? exPay.paytr_merchant_key,
+    paytr_merchant_salt: str('paytr_merchant_salt') ?? exPay.paytr_merchant_salt,
+    paytr_test_mode: bool('paytr_test_mode') ? 1 : 0,
   };
   const shipping: ShippingSettings = {
     free_shipping_threshold: num('free_shipping_threshold'),

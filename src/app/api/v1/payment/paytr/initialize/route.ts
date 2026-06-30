@@ -165,7 +165,7 @@ function clientIp(req: NextRequest): string {
 export async function POST(req: NextRequest) {
   const headers = { 'Content-Type': 'application/json', ...cors(req.headers.get('origin')) };
 
-  if (!paytrConfigured()) {
+  if (!(await paytrConfigured())) {
     return NextResponse.json({ ok: false, error: 'PayTR henüz yapılandırılmadı (env eksik).' }, { status: 503, headers });
   }
 
