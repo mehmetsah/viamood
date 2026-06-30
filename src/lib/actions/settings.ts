@@ -56,6 +56,9 @@ export async function updateStoreSettingsAction(formData: FormData): Promise<voi
     paytr_merchant_key: str('paytr_merchant_key') ?? exPay.paytr_merchant_key,
     paytr_merchant_salt: str('paytr_merchant_salt') ?? exPay.paytr_merchant_salt,
     paytr_test_mode: bool('paytr_test_mode') ? 1 : 0,
+    iyzico_api_key: str('iyzico_api_key') ?? exPay.iyzico_api_key,
+    iyzico_secret_key: str('iyzico_secret_key') ?? exPay.iyzico_secret_key,
+    iyzico_test_mode: bool('iyzico_test_mode') ? 1 : 0,
   };
   const shipping: ShippingSettings = {
     free_shipping_threshold: num('free_shipping_threshold'),

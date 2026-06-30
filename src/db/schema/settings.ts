@@ -12,6 +12,9 @@ export interface PaymentSettings {
   paytr_merchant_key?: string;
   paytr_merchant_salt?: string;
   paytr_test_mode?: number;
+  iyzico_api_key?: string;
+  iyzico_secret_key?: string;
+  iyzico_test_mode?: number;
 }
 
 /** Mağaza kargo ayarları. */

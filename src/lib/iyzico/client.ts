@@ -6,6 +6,7 @@
  */
 import Iyzipay from 'iyzipay';
 import { env } from '../env';
+import { getStoreSettings } from '../settings/store';
 
 interface IyzicoConfig {
   apiKey: string;
@@ -14,18 +15,22 @@ interface IyzicoConfig {
 }
 
 let cachedClient: Iyzipay | null = null;
+let cachedKey = '';
 
-function getClient(): Iyzipay {
-  if (cachedClient) return cachedClient;
-  if (!env.IYZICO_API_KEY || !env.IYZICO_SECRET_KEY) {
-    throw new Error('Iyzico credentials env\'de set edilmemiş');
+async function getClient(): Promise<Iyzipay> {
+  const p = (await getStoreSettings()).payment;
+  const apiKey = p.iyzico_api_key || env.IYZICO_API_KEY;
+  const secretKey = p.iyzico_secret_key || env.IYZICO_SECRET_KEY;
+  let uri = env.IYZICO_BASE_URL;
+  if (p.iyzico_test_mode != null) uri = p.iyzico_test_mode === 1 ? 'https://sandbox-api.iyzipay.com' : 'https://api.iyzipay.com';
+  if (!apiKey || !secretKey) {
+    throw new Error('Iyzico credentials set edilmemis (admin panel veya env)');
   }
-  const config: IyzicoConfig = {
-    apiKey: env.IYZICO_API_KEY,
-    secretKey: env.IYZICO_SECRET_KEY,
-    uri: env.IYZICO_BASE_URL,
-  };
+  const key = apiKey + '|' + uri;
+  if (cachedClient && cachedKey === key) return cachedClient;
+  const config: IyzicoConfig = { apiKey, secretKey, uri };
   cachedClient = new Iyzipay(config);
+  cachedKey = key;
   return cachedClient;
 }
 
@@ -107,7 +112,7 @@ interface SubmerchantCreateResp extends IyzicoResp {
 export async function createSubmerchant(
   input: CreateSubmerchantInput,
 ): Promise<{ subMerchantKey: string }> {
-  const client = getClient();
+  const client = await getClient();
 
   const request: Record<string, unknown> = {
     locale: 'tr',
@@ -155,7 +160,7 @@ export async function updateSubmerchant(
   subMerchantKey: string,
   input: Partial<CreateSubmerchantInput>,
 ): Promise<void> {
-  const client = getClient();
+  const client = await getClient();
   const request: Record<string, unknown> = {
     locale: 'tr',
     conversationId: `submerchant-update-${subMerchantKey}`,
@@ -187,7 +192,7 @@ export async function updateSubmerchant(
 export async function approveMarketplaceTransaction(
   paymentTransactionId: string,
 ): Promise<void> {
-  const client = getClient();
+  const client = await getClient();
   const request = {
     locale: 'tr',
     conversationId: `approve-${paymentTransactionId}`,
@@ -201,7 +206,7 @@ export async function approveMarketplaceTransaction(
 export async function disapproveMarketplaceTransaction(
   paymentTransactionId: string,
 ): Promise<void> {
-  const client = getClient();
+  const client = await getClient();
   const request = {
     locale: 'tr',
     conversationId: `disapprove-${paymentTransactionId}`,
@@ -275,7 +280,7 @@ interface CheckoutRetrieveResp extends IyzicoResp {
 export async function initializeCheckoutForm(
   input: InitializeCheckoutInput,
 ): Promise<{ token: string; checkoutFormContent: string; paymentPageUrl?: string }> {
-  const client = getClient();
+  const client = await getClient();
   const request = {
     locale: 'tr',
     conversationId: input.conversationId,
@@ -349,7 +354,7 @@ export async function retrieveCheckoutForm(token: string): Promise<{
   paidPrice?: string;
   raw: CheckoutRetrieveResp;
 }> {
-  const client = getClient();
+  const client = await getClient();
   const checkoutForm = client.checkoutForm;
   const retrieveFn = checkoutForm?.retrieve?.bind(checkoutForm) as
     | ((req: Record<string, unknown>, cb: (err: unknown, result: CheckoutRetrieveResp) => void) => void)
