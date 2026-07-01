@@ -1,37 +1,83 @@
 /**
- * Email şablonları. Sade HTML (inline style) — ileride MJML/React-email migrasyonu mümkün.
+ * Email şablonları. Responsive (mobil uyumlu) HTML — tablo tabanlı akışkan layout,
+ * viewport meta + @media sorguları. Taban stiller inline; media query desteklemeyen
+ * istemcilerde de okunur kalır. İleride MJML/React-email migrasyonu mümkün.
  */
 import { env } from '../env';
 
-const BASE_STYLE = `
-font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-color: #14201d;
-max-width: 560px;
-margin: 0 auto;
-padding: 32px 24px;
-`;
+const FONT = `-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif`;
 
 const BUTTON_STYLE = `
 display: inline-block;
-padding: 14px 28px;
+padding: 14px 32px;
 background: #14201d;
-color: #fff !important;
+color: #ffffff !important;
 text-decoration: none;
 border-radius: 100px;
 font-weight: 600;
+font-size: 16px;
+line-height: 1.2;
 margin-top: 24px;
 `;
 
+/** Responsive buton — mobilde tam genişlik olur (bkz. .em-btn media query). */
+function button(href: string, label: string): string {
+  return `<a href="${href}" class="em-btn" style="${BUTTON_STYLE}">${label}</a>`;
+}
+
+/**
+ * Bulletproof responsive email wrapper.
+ * - viewport meta + tablo tabanlı akışkan layout → telefonda düzgün ölçeklenir
+ * - <style> içindeki @media ile mobilde padding/başlık/buton ayarlanır
+ * - inline stiller taban: media query desteklemeyen istemcilerde de okunur kalır
+ */
 function wrap(content: string): string {
-  return `<!DOCTYPE html>
-<html lang="tr"><head><meta charset="utf-8"><title>Via Mood</title></head>
-<body style="margin:0;background:#faf6ec;">
-<div style="${BASE_STYLE}">
-<h1 style="font-size:24px;color:#e1691f;margin:0 0 24px;">Via Mood</h1>
-${content}
-<hr style="border:none;border-top:1px solid #e6e0d4;margin:32px 0;">
-<p style="font-size:12px;color:#6b7280;">Bu mail Via Mood Vendor Platform'dan otomatik gönderildi.</p>
-</div></body></html>`;
+  return `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="tr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="x-apple-disable-message-reformatting" />
+<meta name="color-scheme" content="light" />
+<meta name="supported-color-schemes" content="light" />
+<title>Via Mood</title>
+<!--[if mso]><style type="text/css">body,table,td,h1,p,a{font-family:Arial,Helvetica,sans-serif !important;}</style><![endif]-->
+<style type="text/css">
+  html,body{margin:0 !important;padding:0 !important;width:100% !important;background:#faf6ec;}
+  *{-ms-text-size-adjust:100%;-webkit-text-size-adjust:100%;}
+  table{border-collapse:collapse !important;}
+  img{border:0;line-height:100%;outline:none;text-decoration:none;-ms-interpolation-mode:bicubic;}
+  a{color:#e1691f;}
+  .em-mono{word-break:break-all;}
+  @media only screen and (max-width:600px){
+    .em-container{width:100% !important;}
+    .em-pad{padding:26px 20px !important;}
+    .em-h1{font-size:22px !important;}
+    .em-btn{display:block !important;text-align:center !important;padding-left:16px !important;padding-right:16px !important;}
+    .em-mono{font-size:13px !important;}
+    .em-card{padding:14px !important;}
+  }
+</style>
+</head>
+<body style="margin:0;padding:0;background:#faf6ec;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#faf6ec;width:100%;">
+  <tr>
+    <td align="center" style="padding:24px 12px;">
+      <table role="presentation" class="em-container" width="600" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:600px;">
+        <tr>
+          <td class="em-pad" style="padding:36px 32px;font-family:${FONT};color:#14201d;font-size:16px;line-height:1.6;">
+            <h1 class="em-h1" style="font-size:24px;color:#e1691f;margin:0 0 24px;font-weight:700;">Via Mood</h1>
+            ${content}
+            <hr style="border:none;border-top:1px solid #e6e0d4;margin:32px 0 0;" />
+            <p style="font-size:12px;color:#6b7280;margin:20px 0 0;">Bu mail Via Mood Vendor Platform'dan otomatik gönderildi.</p>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>
+</body></html>`;
 }
 
 export function vendorWelcomeEmail(vendorName: string): { subject: string; html: string; text: string } {
@@ -41,7 +87,7 @@ export function vendorWelcomeEmail(vendorName: string): { subject: string; html:
       <p>Merhaba <strong>${vendorName}</strong>,</p>
       <p>Via Mood pazaryerine tedarikçi başvurun alındı. Ekibimiz inceledikten sonra (genelde 1 iş günü) sana bilgi vereceğiz.</p>
       <p>Bu süre zarfında panele giriş yapabilir, profil bilgilerini güncelleyebilirsin.</p>
-      <a href="${env.APP_URL}/dashboard" style="${BUTTON_STYLE}">Panele Git</a>
+      ${button(`${env.APP_URL}/dashboard`, 'Panele Git')}
     `),
     text: `Via Mood başvurun alındı, ${vendorName}. Admin onayı sonrası ürün ekleyebilirsin. Panel: ${env.APP_URL}/dashboard`,
   };
@@ -53,7 +99,7 @@ export function vendorApprovedEmail(vendorName: string): { subject: string; html
     html: wrap(`
       <p>Merhaba <strong>${vendorName}</strong>,</p>
       <p>Tebrikler — başvurun onaylandı! Artık ürün ekleyebilir, stok yönetebilir, sipariş alabilirsin.</p>
-      <a href="${env.APP_URL}/products/new" style="${BUTTON_STYLE}">İlk Ürünü Ekle</a>
+      ${button(`${env.APP_URL}/products/new`, 'İlk Ürünü Ekle')}
     `),
     text: `Tebrikler ${vendorName}, başvurun onaylandı. İlk ürünü ekle: ${env.APP_URL}/products/new`,
   };
@@ -94,7 +140,7 @@ export function orderConfirmationEmail(p: {
         <p>Merhaba <strong>${p.customerName || 'değerli müşterimiz'}</strong>,</p>
         <p>Ödemen alındı ✅ — <strong>${p.orderNumber}</strong> numaralı siparişin onaylandı. Toplam: <strong>${tl(p.total)}</strong>.</p>
         <p>Siparişin hazırlanıyor; kargoya verilince seni bilgilendireceğiz.</p>
-        <a href="${env.APP_URL}/hesabim" style="${BUTTON_STYLE}">Siparişlerim</a>
+        ${button(`${env.APP_URL}/hesabim`, 'Siparişlerim')}
       `),
       text: `Via Mood siparişin ${p.orderNumber} onaylandı (ödeme alındı). Toplam ${tl(p.total)}.`,
     };
@@ -105,9 +151,9 @@ export function orderConfirmationEmail(p: {
     const rows = banks
       .map(
         (v) => `
-        <div style="border:1px solid #e6e0d4;border-radius:12px;padding:16px;margin:12px 0;">
+        <div class="em-card" style="border:1px solid #e6e0d4;border-radius:12px;padding:16px;margin:12px 0;">
           <div style="font-weight:600;">${v.name} — <span style="color:#e1691f;">${tl(v.amount)}</span></div>
-          <div style="font-family:monospace;font-size:14px;margin-top:6px;">${v.iban}</div>
+          <div class="em-mono" style="font-family:monospace;font-size:14px;margin-top:6px;word-break:break-all;">${v.iban}</div>
           ${v.account_holder ? `<div style="font-size:13px;color:#6b7280;">Alıcı: ${v.account_holder}${v.bank ? ' · ' + v.bank : ''}</div>` : ''}
         </div>`,
       )
@@ -119,7 +165,7 @@ export function orderConfirmationEmail(p: {
         <p>Siparişin <strong>${p.orderNumber}</strong> alındı. Toplam tutar: <strong>${tl(p.total)}</strong>.</p>
         <p>Aşağıdaki hesap(lar)a havale/EFT yaptığında siparişin işleme alınır. Açıklamaya <strong>${p.orderNumber}</strong> yazmayı unutma.</p>
         ${rows || '<p style="color:#6b7280;">Hesap bilgileri ayrıca iletilecektir.</p>'}
-        <a href="${env.APP_URL}/hesabim" style="${BUTTON_STYLE}">Siparişlerim</a>
+        ${button(`${env.APP_URL}/hesabim`, 'Siparişlerim')}
       `),
       text:
         `Via Mood siparişin ${p.orderNumber} alındı. Toplam ${tl(p.total)}. Havale: ` +
@@ -135,7 +181,7 @@ export function orderConfirmationEmail(p: {
       <p>Merhaba <strong>${p.customerName || 'değerli müşterimiz'}</strong>,</p>
       <p>Siparişin <strong>${p.orderNumber}</strong> alındı. Ödeme yöntemin: <strong>${odeme}</strong>.</p>
       <p>Teslimat sırasında kuryeye <strong>${tl(p.total)}</strong> ödeyeceksin.</p>
-      <a href="${env.APP_URL}/hesabim" style="${BUTTON_STYLE}">Siparişlerim</a>
+      ${button(`${env.APP_URL}/hesabim`, 'Siparişlerim')}
     `),
     text: `Via Mood siparişin ${p.orderNumber} alındı. ${odeme}, teslimatta ${tl(p.total)} ödenecek.`,
   };
@@ -153,8 +199,8 @@ export function orderShippedEmail(p: {
     ? `<p>Takip no: <strong>${p.trackingNumber}</strong>${p.carrier ? ` · ${p.carrier}` : ''}</p>`
     : '';
   const btn = p.trackingUrl
-    ? `<a href="${p.trackingUrl}" style="${BUTTON_STYLE}">Kargonu Takip Et</a>`
-    : `<a href="${env.APP_URL}/hesabim" style="${BUTTON_STYLE}">Siparişlerim</a>`;
+    ? button(p.trackingUrl, 'Kargonu Takip Et')
+    : button(`${env.APP_URL}/hesabim`, 'Siparişlerim');
   return {
     subject: `📦 Siparişin kargoya verildi — ${p.orderNumber}`,
     html: wrap(`
@@ -181,7 +227,7 @@ export function orderDeliveredEmail(p: {
       <p>Merhaba <strong>${p.customerName || 'değerli müşterimiz'}</strong>,</p>
       <p><strong>${p.orderNumber}</strong> numaralı siparişin teslim edildi. Afiyet olsun!</p>
       <p>Ürünlerimizi beğendiysen değerlendirmen bizim için çok kıymetli.</p>
-      <a href="${env.APP_URL}/hesabim" style="${BUTTON_STYLE}">Siparişlerim</a>
+      ${button(`${env.APP_URL}/hesabim`, 'Siparişlerim')}
     `),
     text: `Via Mood siparişin ${p.orderNumber} teslim edildi. Afiyet olsun!`,
   };
@@ -199,7 +245,7 @@ export function payoutPaidEmail(
       <p>Hak edişlerin için <strong>${netAmount}</strong> tutarındaki ödeme banka hesabına gönderildi.</p>
       ${externalRef ? `<p><strong>Banka referansı:</strong> ${externalRef}</p>` : ''}
       <p>Ödemenin hesabına geçişi 1-3 iş günü sürebilir.</p>
-      <a href="${env.APP_URL}/payouts" style="${BUTTON_STYLE}">Ödeme Geçmişini Aç</a>
+      ${button(`${env.APP_URL}/payouts`, 'Ödeme Geçmişini Aç')}
     `),
     text: `${vendorName}, ${netAmount} ödendi. ${externalRef ? `Ref: ${externalRef}. ` : ''}Detay: ${env.APP_URL}/payouts`,
   };
