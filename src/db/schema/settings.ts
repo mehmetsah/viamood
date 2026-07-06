@@ -19,6 +19,7 @@ export interface PaymentSettings {
 
 /** Mağaza kargo ayarları. */
 export interface ShippingSettings {
+  free_shipping_all?: boolean; // true → TÜM siparişlerde kargo ÜCRETSİZ (eşik/marj yok sayılır)
   free_shipping_threshold?: number; // TL — üstünde kargo ücretsiz (0/boş = yok)
   default_courier?: string;
   shipping_margin_tl?: number; // KargoLab fiyatına eklenen sabit marj (TL)

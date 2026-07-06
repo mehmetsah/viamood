@@ -61,6 +61,7 @@ export async function updateStoreSettingsAction(formData: FormData): Promise<voi
     iyzico_test_mode: bool('iyzico_test_mode') ? 1 : 0,
   };
   const shipping: ShippingSettings = {
+    free_shipping_all: bool('free_shipping_all'),
     free_shipping_threshold: num('free_shipping_threshold'),
     default_courier: String(formData.get('default_courier') ?? '').trim() || undefined,
     shipping_margin_tl: num('shipping_margin_tl') ?? 20,

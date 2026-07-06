@@ -102,6 +102,9 @@ export default async function AdminSettingsPage({ searchParams }: PageProps) {
 
         <section className="bg-white rounded-xl border p-6">
           <h2 className="font-bold border-b pb-2 mb-3">Kargo</h2>
+          <div className="mb-4">
+            <Toggle name="free_shipping_all" label="Tüm siparişlerde ücretsiz kargo" hint="Açık → checkout'ta kargo ücreti 0 (eşik/marj yok sayılır)" checked={s.shipping.free_shipping_all ?? false} />
+          </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="text-sm font-medium block mb-1.5">Ücretsiz kargo eşiği (TL)</label>

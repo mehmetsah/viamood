@@ -9,6 +9,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { env } from '@/lib/env';
 import { quoteShipmentRate } from '@/lib/kargolab/rates';
+import { getStoreSettings } from '@/lib/settings/store';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -61,6 +62,19 @@ export async function POST(req: NextRequest) {
 
   if (!body.province?.trim()) {
     return NextResponse.json({ ok: false, error: 'province_required' }, { status: 422, headers });
+  }
+
+  // Admin ayarı: "Tüm siparişlerde ücretsiz kargo" AÇIK ise → kargo 0 (KargoLab sorgusu atlanır)
+  try {
+    const settings = await getStoreSettings();
+    if (settings.shipping?.free_shipping_all) {
+      return NextResponse.json(
+        { ok: true, shipping_tl: 0, courier: 'Ücretsiz Kargo', source: 'free_all' },
+        { status: 200, headers },
+      );
+    }
+  } catch {
+    /* ayar okunamazsa normal akışa devam */
   }
 
   // Ağırlık: gönderilen veya min 1kg (ürün başına ~500g varsay)
