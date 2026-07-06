@@ -13,14 +13,14 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
   return (
     <div className="min-h-screen bg-neutral-50 flex">
-      <aside className="w-60 bg-[var(--color-brand-ink)] text-white flex flex-col">
-        <Link href="/admin" className="p-6 border-b border-white/10 block hover:bg-white/5">
+      <aside className="w-60 bg-[var(--color-brand-ink)] text-white flex flex-col sticky top-0 h-screen">
+        <Link href="/admin" className="p-6 border-b border-white/10 block hover:bg-white/5 shrink-0">
           <div className="bg-white rounded-lg p-2 inline-block">
             <Logo width={130} />
           </div>
           <div className="text-xs uppercase tracking-widest opacity-60 mt-3">Yönetim Paneli</div>
         </Link>
-        <nav className="flex-1 p-3 flex flex-col gap-1 text-sm">
+        <nav className="flex-1 min-h-0 overflow-y-auto p-3 flex flex-col gap-1 text-sm">
           <Link href="/admin" className="px-3 py-2 rounded-lg hover:bg-white/10">📊 Dashboard</Link>
           <Link href="/admin/vendors" className="px-3 py-2 rounded-lg hover:bg-white/10">🏢 Tedarikçiler</Link>
           <Link href="/admin/products" className="px-3 py-2 rounded-lg hover:bg-white/10">📦 Tüm Ürünler</Link>
@@ -39,7 +39,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           <Link href="/admin/theme" className="px-3 py-2 rounded-lg hover:bg-white/10">🎨 Tema Editörü</Link>
           <Link href="/admin/pages" className="px-3 py-2 rounded-lg hover:bg-white/10">📄 İçerik Sayfaları</Link>
         </nav>
-        <div className="p-3 border-t border-white/10 text-xs">
+        <div className="p-3 border-t border-white/10 text-xs shrink-0">
           <div className="opacity-60">{session?.user?.email}</div>
           <form action={signOutAction} className="mt-2">
             <button type="submit" className="text-white/70 hover:text-white text-xs">Çıkış</button>
