@@ -43,6 +43,7 @@ interface QuoteBody {
   district?: string; // İlçe
   weight_grams?: number; // sepet toplam ağırlık
   item_count?: number;
+  subtotal_tl?: number; // sepet ara toplamı (TL) — ücretsiz kargo eşiği kontrolü için
 }
 
 // Via Mood kargo kar payı (TL) — KargoLab maliyeti üzerine eklenir
@@ -64,15 +65,27 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, error: 'province_required' }, { status: 422, headers });
   }
 
-  // Admin ayarı: "Tüm siparişlerde ücretsiz kargo" AÇIK ise → kargo 0 (KargoLab sorgusu atlanır)
+  // Admin kargo ayarları: (1) tüm siparişlerde ücretsiz, (2) eşik üstü ücretsiz, (3) marj
+  let shippingMargin = SHIPPING_MARGIN_TL;
   try {
-    const settings = await getStoreSettings();
-    if (settings.shipping?.free_shipping_all) {
+    const sh = (await getStoreSettings()).shipping ?? {};
+    // (1) "Tüm siparişlerde ücretsiz kargo" AÇIK → kargo 0 (KargoLab sorgusu atlanır)
+    if (sh.free_shipping_all) {
       return NextResponse.json(
         { ok: true, shipping_tl: 0, courier: 'Ücretsiz Kargo', source: 'free_all' },
         { status: 200, headers },
       );
     }
+    // (2) Ücretsiz kargo eşiği: sepet ara toplamı >= eşik → kargo 0 (örn. 1550₺ üzeri bedava)
+    const threshold = sh.free_shipping_threshold;
+    if (threshold && threshold > 0 && (body.subtotal_tl ?? 0) >= threshold) {
+      return NextResponse.json(
+        { ok: true, shipping_tl: 0, courier: 'Ücretsiz Kargo', source: 'free_threshold', free_shipping_threshold: threshold },
+        { status: 200, headers },
+      );
+    }
+    // (3) Admin marjı (varsa) KargoLab fiyatına eklenecek
+    if (typeof sh.shipping_margin_tl === 'number') shippingMargin = sh.shipping_margin_tl;
   } catch {
     /* ayar okunamazsa normal akışa devam */
   }
@@ -105,7 +118,7 @@ export async function POST(req: NextRequest) {
     }
 
     const cheapestTl = result.cheapest.priceCents / 100;
-    const finalTl = Math.ceil(cheapestTl + SHIPPING_MARGIN_TL);
+    const finalTl = Math.ceil(cheapestTl + shippingMargin);
 
     return NextResponse.json(
       {
@@ -113,11 +126,11 @@ export async function POST(req: NextRequest) {
         shipping_tl: finalTl,
         courier: result.cheapest.courrierName,
         cost_tl: cheapestTl,
-        margin_tl: SHIPPING_MARGIN_TL,
+        margin_tl: shippingMargin,
         accepts_cod: result.cheapest.acceptsCOD,
         all_rates: result.rates.map((r) => ({
           courier: r.courrierName,
-          price_tl: Math.ceil(r.priceCents / 100 + SHIPPING_MARGIN_TL),
+          price_tl: Math.ceil(r.priceCents / 100 + shippingMargin),
           accepts_cod: r.acceptsCOD,
           accepts_cod_card: r.acceptsCODCard,
         })),
