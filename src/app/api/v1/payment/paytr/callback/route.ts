@@ -52,8 +52,9 @@ export async function POST(req: NextRequest) {
   const totalAmount = p.total_amount || '';
   const hash = p.hash || '';
 
-  if (!verifyPaytrCallback(merchantOid, status, totalAmount, hash)) {
+  if (!(await verifyPaytrCallback(merchantOid, status, totalAmount, hash))) {
     // Hash tutmuyor → işleme alma (sahtecilik koruması). PayTR yeniden deneyebilir.
+    console.error('[paytr/callback] bad hash — işlenmedi', { merchantOid, status });
     return new NextResponse('PAYTR notification failed: bad hash', { status: 400 });
   }
 
@@ -61,10 +62,24 @@ export async function POST(req: NextRequest) {
   if (status === 'success') {
     const draftId = parseDraftIdFromOid(merchantOid);
     if (draftId) {
-      // native → RDS paid+komisyon; aksi → Shopify draft complete (ikisi de idempotent)
-      if ((await getStore()).backend === 'native') await completeNativeCardOrder(draftId);
-      else await completeDraftOrder(draftId);
+      try {
+        // native → RDS paid+komisyon; aksi → Shopify draft complete (ikisi de idempotent)
+        if ((await getStore()).backend === 'native') {
+          await completeNativeCardOrder(draftId);
+          console.log('[paytr/callback] native sipariş tamamlandı', { merchantOid, draftId });
+        } else {
+          const done = await completeDraftOrder(draftId);
+          if (done) console.log('[paytr/callback] Shopify draft complete', { merchantOid, draftId });
+          else console.error('[paytr/callback] draft complete BAŞARISIZ', { merchantOid, draftId });
+        }
+      } catch (e) {
+        console.error('[paytr/callback] tamamlama hatası', { merchantOid, draftId, e: String(e) });
+      }
+    } else {
+      console.error('[paytr/callback] success ama draftId yok', { merchantOid });
     }
+  } else {
+    console.log('[paytr/callback] status!=success', { merchantOid, status });
   }
   return okText();
 }

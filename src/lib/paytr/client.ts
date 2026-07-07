@@ -113,15 +113,20 @@ export async function getPaytrToken(p: PaytrTokenParams): Promise<PaytrTokenResu
 /**
  * Callback hash doğrula (timing-safe).
  * hash = base64( HMAC-SHA256( merchant_oid + merchant_salt + status + total_amount , merchant_key ) )
+ *
+ * ⚠️ Credential kaynağı get-token ile AYNI olmalı: ÖNCE DB (admin ayarı), sonra env.
+ * (Aksi halde init DB-creds ile geçerli token alır ama callback env-creds ile hash doğrular
+ *  → hash HİÇBİR ZAMAN tutmaz → 400 → draft asla complete edilmez = takılı sipariş.)
  */
-export function verifyPaytrCallback(
+export async function verifyPaytrCallback(
   merchantOid: string,
   status: string,
   totalAmount: string,
   receivedHash: string,
-): boolean {
-  const mkey = env.PAYTR_MERCHANT_KEY;
-  const msalt = env.PAYTR_MERCHANT_SALT;
+): Promise<boolean> {
+  const ps = (await getStoreSettings()).payment;
+  const mkey = ps.paytr_merchant_key || env.PAYTR_MERCHANT_KEY;
+  const msalt = ps.paytr_merchant_salt || env.PAYTR_MERCHANT_SALT;
   if (!mkey || !msalt || !receivedHash) return false;
   const expected = hmacB64(merchantOid + msalt + status + totalAmount, mkey);
   try {
