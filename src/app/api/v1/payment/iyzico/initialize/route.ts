@@ -64,7 +64,7 @@ async function createDraftOrder(body: InitBody): Promise<number | null> {
         ...(shippingTl > 0
           ? {
               shipping_line: {
-                title: 'Standart Kargo (KargoLab)',
+                title: body.shipping_courier || 'Standart Kargo (KargoLab)',
                 price: shippingTl.toFixed(2),
               },
             }
@@ -151,6 +151,7 @@ export async function OPTIONS(req: NextRequest) {
 interface InitBody {
   line_items: Array<{ variant_id: number; quantity: number; title?: string; price?: number; product_type?: string }>;
   shipping_cost?: number; // kuruş veya TL? — TL kabul ediyoruz (number)
+  shipping_courier?: string; // müşterinin checkout'ta seçtiği kurye (otomatik etiket bunu kullanır)
   first_name: string;
   last_name: string;
   phone: string;

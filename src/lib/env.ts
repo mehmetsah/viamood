@@ -82,6 +82,10 @@ const envSchema = z.object({
    *  false (default) → push KARGO ETİKETİ SONRASI, takip no ile
    *  (Yunus akışı: el terminali sipariş kağıdını kargo etiketiyle birlikte bassın). */
   MIKRO_PUSH_ON_ORDER: z.coerce.boolean().default(false),
+  /** Sipariş düşünce KargoLab etiketi OTOMATİK oluşsun mu? (müşterinin checkout'ta
+   *  seçtiği kurye + kapıda ödeme ile; havale-pending paid olana dek bekler).
+   *  false → sadece tedarikçi panelindeki manuel buton. */
+  KARGOLAB_AUTO_LABEL: z.coerce.boolean().default(true),
   /** Default depo no */
   MIKRO_DEPO_NO: z.coerce.number().default(1),
   /** SRM merkez kodu */

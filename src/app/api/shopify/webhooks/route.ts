@@ -7,6 +7,7 @@ import { env } from '@/lib/env';
 import { routeOrder } from '@/lib/routing/engine';
 import { accrueCommissionForOrder } from '@/lib/server/commission-service';
 import { syncOrderToMikro } from '@/lib/server/mikro-sync';
+import { autoFulfillOrder } from '@/lib/server/auto-fulfill';
 import { ingestShopifyOrder, type ShopifyOrderPayload } from '@/lib/shopify/order-ingest';
 import { ingestShopifyProduct, type ShopifyProductPayload } from '@/lib/shopify/product-ingest';
 import { verifyShopifyWebhook } from '@/lib/shopify/webhook';
@@ -59,10 +60,12 @@ export async function POST(req: NextRequest) {
           return NextResponse.json({ error: result.error }, { status: 200 }); // 200 ki retry olmasın
         }
         if (result.isNew && result.matchedLineItems > 0) {
-          // Routing fire-and-forget (errored olsa da webhook 200 dönsün)
-          routeOrder(result.orderId).catch((err) => {
-            console.error('[webhook orders/create] routing error:', err);
-          });
+          // Routing → ardından OTOMATİK kargo etiketi (müşterinin seçtiği kurye; havale-pending bekler)
+          routeOrder(result.orderId)
+            .then(() => autoFulfillOrder(result.orderId))
+            .catch((err) => {
+              console.error('[webhook orders/create] routing/auto-fulfill error:', err);
+            });
           // Eğer order paid ise commission accrual da fire-and-forget tetiklensin
           accrueCommissionForOrder(result.orderId).catch((err) => {
             console.error('[webhook orders/create] commission error:', err);
@@ -110,7 +113,9 @@ export async function POST(req: NextRequest) {
           // Order bizde yok — orders/create kaçırılmış olabilir, ingest et
           const result = await ingestShopifyOrder(order);
           if (result.ok && result.isNew && result.matchedLineItems > 0) {
-            routeOrder(result.orderId).catch(console.error);
+            routeOrder(result.orderId)
+              .then(() => autoFulfillOrder(result.orderId))
+              .catch(console.error);
           }
           return NextResponse.json({ ok: true, ingestedLate: true });
         }
@@ -142,10 +147,14 @@ export async function POST(req: NextRequest) {
           })
           .where(eq(orders.id, existing.id));
 
-        // paid'e geçtiyse commission accrual tetikle (idempotent)
+        // paid'e geçtiyse commission accrual + otomatik kargo etiketi tetikle (ikisi de idempotent)
+        // (havale siparişi admin "paid" işaretleyince / kart geç tamamlanınca etiket burada oluşur)
         if (fin === 'paid' || fin === 'partially_paid') {
           accrueCommissionForOrder(existing.id).catch((err) => {
             console.error('[webhook orders/updated] commission error:', err);
+          });
+          autoFulfillOrder(existing.id).catch((err) => {
+            console.error('[webhook orders/updated] auto-fulfill error:', err);
           });
         }
 

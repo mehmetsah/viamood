@@ -47,6 +47,7 @@ export async function OPTIONS(req: NextRequest) {
 interface PaytrInitBody {
   line_items: Array<{ variant_id: number; quantity: number; title?: string; price?: number }>;
   shipping_cost?: number; // TL
+  shipping_courier?: string; // müşterinin checkout'ta seçtiği kurye (otomatik etiket bunu kullanır)
   first_name: string;
   last_name: string;
   phone: string;
@@ -111,7 +112,7 @@ async function createDraftOrder(b: PaytrInitBody): Promise<number | null> {
       note: `📍 ${b.first_name} ${b.last_name} · ${b.province}/${b.city}\n💳 PayTR\n${invoiceNote(b)}`,
       use_customer_default_address: false,
       ...(shippingTl > 0
-        ? { shipping_line: { title: 'Standart Kargo (KargoLab)', price: shippingTl.toFixed(2) } }
+        ? { shipping_line: { title: b.shipping_courier || 'Standart Kargo (KargoLab)', price: shippingTl.toFixed(2) } }
         : {}),
       ...((b.discount_amount ?? 0) > 0
         ? {
