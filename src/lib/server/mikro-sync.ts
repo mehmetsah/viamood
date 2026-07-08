@@ -99,8 +99,17 @@ function splitName(full: string | null | undefined): { soyad: string; ad: string
   return { soyad: parts.join(' '), ad: ad || '.' };
 }
 
-/** Idempotent sync — orderId için Mikro pipeline'ını çalıştırır */
-export async function syncOrderToMikro(orderId: string): Promise<SyncResult> {
+/** Kargo bilgisi — fulfillment sonrası push'ta evraka işlenir
+ *  (el terminali sipariş kağıdını kargo etiketiyle birlikte bassın diye). */
+export interface MikroKargoBilgi {
+  courier?: string | null;
+  trackingNumber?: string | null;
+  barcode?: string | null;
+}
+
+/** Idempotent sync — orderId için Mikro pipeline'ını çalıştırır.
+ *  kargo verilirse takip no evraka yazılır (BelgeNo + Aciklama4) ve TeslimTuruKodu gerçek kurye olur. */
+export async function syncOrderToMikro(orderId: string, kargo?: MikroKargoBilgi): Promise<SyncResult> {
   // 1. Order çek
   const [order] = await db
     .select()
@@ -268,22 +277,29 @@ export async function syncOrderToMikro(orderId: string): Promise<SyncResult> {
 
   const placedAtIso = order.placedAt.toISOString().slice(0, 19);
 
+  // Kargo takip bilgisi (fulfillment sonrası push'ta dolu gelir)
+  const takipNo = kargo?.trackingNumber ?? kargo?.barcode ?? null;
+  const kargoBarkod = kargo?.barcode && kargo.barcode !== takipNo ? kargo.barcode : null;
+
   const evrak: MikroEvrak = {
     Tarih: placedAtIso,
     TeslimTarihi: placedAtIso,
-    TeslimTuruKodu: shippingTeslimTuruKodu(null), // PTT default — gerçek carrier fulfillment'tan
+    TeslimTuruKodu: shippingTeslimTuruKodu(kargo?.courier ?? null), // gerçek kurye (yoksa PTT default)
     SrmMerkezKodu: env.MIKRO_SRM_MERKEZ,
     DepoNo: env.MIKRO_DEPO_NO,
     OdemePlaniNo: env.MIKRO_ODEME_PLANI_NO,
     ProjeKodu: env.MIKRO_PROJE_KODU,
     EvrakSeri: evrakSeri,
     EvrakSira: evrakSira,
+    ...(takipNo ? { BelgeNo: takipNo.slice(0, 50) } : {}),
     CariHesapKodu: cariKodu!,
     DovizCinsi: 'TL',
     EvrakAciklama: {
       Aciklama1: `Sipariş: ${order.shopifyOrderName ?? order.orderNumber ?? order.id}`,
       Aciklama2: order.customerEmail ?? '',
       Aciklama3: ship.address1 ?? '',
+      ...(takipNo ? { Aciklama4: `Kargo Takip: ${takipNo}` } : {}),
+      ...(kargoBarkod ? { Aciklama5: `Kargo Barkod: ${kargoBarkod}` } : {}),
     },
     SiparisDurumu: false,
     Satirlar: satirlar,

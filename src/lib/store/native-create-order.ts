@@ -147,7 +147,8 @@ export async function createNativeStorefrontOrder(
 
     // 4) Downstream (transaction DIŞI, fire-and-forget — webhook ile aynı)
     routeOrder(orderId).catch((e) => console.error('[native-order] routing error:', e));
-    if (env.MIKRO_AUTO_PUSH && env.MIKRO_API_URL) {
+    // Mikro push kargo etiketi SONRASI (takip no ile, fulfillment-service) — MIKRO_PUSH_ON_ORDER=true eski davranış
+    if (env.MIKRO_PUSH_ON_ORDER && env.MIKRO_AUTO_PUSH && env.MIKRO_API_URL) {
       syncOrderToMikro(orderId).catch((e) => console.error('[native-order] mikro error:', e));
     }
 
@@ -351,7 +352,8 @@ export async function completeNativeCardOrder(numericRef: string): Promise<boole
 
     // Downstream (fire-and-forget)
     routeOrder(o.id).catch((e) => console.error('[native-card] routing:', e));
-    if (env.MIKRO_AUTO_PUSH && env.MIKRO_API_URL) {
+    // Mikro push kargo etiketi SONRASI (takip no ile, fulfillment-service) — MIKRO_PUSH_ON_ORDER=true eski davranış
+    if (env.MIKRO_PUSH_ON_ORDER && env.MIKRO_AUTO_PUSH && env.MIKRO_API_URL) {
       syncOrderToMikro(o.id).catch((e) => console.error('[native-card] mikro:', e));
     }
 

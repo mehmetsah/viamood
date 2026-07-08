@@ -30,6 +30,8 @@ import {
 } from '@/lib/kargolab/shipments';
 import { pushFulfillmentToShopify } from '@/lib/shopify/fulfillment-push';
 import { notifyNativeOrderShipped } from '@/lib/orders/lifecycle';
+import { syncOrderToMikro } from '@/lib/server/mikro-sync';
+import { env } from '@/lib/env';
 
 interface CreateOk {
   ok: true;
@@ -368,6 +370,20 @@ export async function createFulfillmentForOrderVendor(
     trackingNumber: shipRes.barcode ?? shipRes.trackingNumber ?? null,
     trackingUrl: shipRes.barcode ? `https://kargolab.com/track/${shipRes.barcode}` : null,
   }).catch(() => {});
+
+  // Mikro push — KARGO ETİKETİ SONRASI, takip no ile (Yunus akışı: el terminali sipariş
+  // kağıdını kargo etiketiyle birlikte bassın). Idempotent: sipariş zaten approved ise skip.
+  // Not (multi-vendor split): Mikro evrakı sipariş-bazlı olduğundan İLK fulfillment push eder;
+  // sonraki vendor'ların takip no'su Mikro'ya yazılmaz (nadir durum, bilinçli kabul).
+  if (env.MIKRO_AUTO_PUSH && env.MIKRO_API_URL) {
+    syncOrderToMikro(orderId, {
+      courier: courrier,
+      trackingNumber: shipRes.barcode ?? shipRes.trackingNumber ?? null,
+      barcode: shipRes.barcode ?? null,
+    }).catch((err) => {
+      console.error('[fulfillment] mikro push error:', err);
+    });
+  }
 
   return {
     ok: true,

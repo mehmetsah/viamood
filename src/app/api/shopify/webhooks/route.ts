@@ -67,8 +67,10 @@ export async function POST(req: NextRequest) {
           accrueCommissionForOrder(result.orderId).catch((err) => {
             console.error('[webhook orders/create] commission error:', err);
           });
-          // Mikro V17'ye push (auto-push aktifse) — muhasebe için CariKayit + SiparisEkle + SiparisOnayla
-          if (env.MIKRO_AUTO_PUSH && env.MIKRO_API_URL) {
+          // Mikro push artık KARGO ETİKETİ SONRASI, takip no ile (fulfillment-service.ts) —
+          // el terminali sipariş kağıdını etiketle birlikte bassın. Eski sipariş-anı davranışı
+          // MIKRO_PUSH_ON_ORDER=true ile geri gelir.
+          if (env.MIKRO_PUSH_ON_ORDER && env.MIKRO_AUTO_PUSH && env.MIKRO_API_URL) {
             syncOrderToMikro(result.orderId).catch((err) => {
               console.error('[webhook orders/create] mikro sync error:', err);
             });

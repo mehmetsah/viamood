@@ -78,6 +78,10 @@ const envSchema = z.object({
   MIKRO_STOK_PREFIX: z.string().default('VIA'),
   /** Otomatik Mikro push aktif mi? (false → sadece DB'ye yazılır, manuel push gerek) */
   MIKRO_AUTO_PUSH: z.coerce.boolean().default(true),
+  /** true → Mikro push SİPARİŞ ANINDA (eski davranış, takip no'suz).
+   *  false (default) → push KARGO ETİKETİ SONRASI, takip no ile
+   *  (Yunus akışı: el terminali sipariş kağıdını kargo etiketiyle birlikte bassın). */
+  MIKRO_PUSH_ON_ORDER: z.coerce.boolean().default(false),
   /** Default depo no */
   MIKRO_DEPO_NO: z.coerce.number().default(1),
   /** SRM merkez kodu */
