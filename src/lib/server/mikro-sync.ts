@@ -114,7 +114,8 @@ function evrakAciklamaFields(
   ship: ShippingAddr,
   telefon: string,
 ): MikroEvrakAciklama {
-  const adres = [ship.address1, ship.address2, ship.district, ship.city].filter(Boolean).join(' ');
+  // DİKKAT ters isimlendirme (order-ingest): ship.city = İLÇE, ship.district = İL
+  const adres = [ship.address1, ship.address2, ship.city, ship.district].filter(Boolean).join(' ');
   const combined = `${customerName ?? ''} / ${adres}`;
   return {
     Aciklama6: telefon,
@@ -179,7 +180,7 @@ async function pushToFirmaDb(params: {
         Kodu: cariKodu,
         EpostaAdresi: order.customerEmail ?? '',
         CepTelefonu: telefon.slice(0, 20),
-        Telefon1: '',
+        Telefon1: telefon.slice(0, 20), // cari_CepTel boş kalabiliyor — Telefon1'e de yaz
         Telefon2: '0',
         VergiDaire: '',
         VergiNo: '11111111111',
@@ -188,11 +189,12 @@ async function pushToFirmaDb(params: {
         DovizTip2: '',
         EFatura: false,
         VergiMukellefi: false,
+        // DİKKAT ters isimlendirme (order-ingest): ship.district = İL, ship.city = İLÇE
         Adres1: {
           Adres: [ship.address1, ship.address2].filter(Boolean).join(' '),
           Ulke: ship.country ?? 'TURKEY',
-          Sehir: ship.city ?? '',
-          Kasaba: ship.district ?? '',
+          Sehir: ship.district ?? ship.city ?? '',
+          Kasaba: ship.city ?? '',
           PostaKodu: ship.postalCode ?? '',
         },
         // Yunus: cari adres boş kalıyordu — fatura + sevk adresi de doldurulur
@@ -200,15 +202,15 @@ async function pushToFirmaDb(params: {
         FaturaAdresi: {
           Cadde: [ship.address1, ship.address2].filter(Boolean).join(' '),
           Ulke: ship.country ?? 'TURKEY',
-          Sehir: ship.city ?? '',
-          Kasaba: ship.district ?? '',
+          Sehir: ship.district ?? ship.city ?? '',
+          Kasaba: ship.city ?? '',
           PostaKodu: ship.postalCode ?? '',
         },
         SevkAdresi: {
           Cadde: [ship.address1, ship.address2].filter(Boolean).join(' '),
           Ulke: ship.country ?? 'TURKEY',
-          Sehir: ship.city ?? '',
-          Kasaba: ship.district ?? '',
+          Sehir: ship.district ?? ship.city ?? '',
+          Kasaba: ship.city ?? '',
           PostaKodu: ship.postalCode ?? '',
         },
       }, base);
