@@ -215,6 +215,22 @@ export interface ShipmentErr {
   raw?: unknown;
 }
 
+/** KargoLab backend'i tırnak karakterlerini escape etmiyor (SQL 1064 — ürün adı
+ *  "18'li ..." gönderi oluşturmayı patlattı): API'ye giden TÜM string alanlardan
+ *  kırıcı karakterleri temizle. */
+function sanitizeForKargoLab<T>(value: T): T {
+  if (typeof value === 'string') {
+    return value.replace(/['"`\\]/g, ' ').replace(/\s+/g, ' ').trim() as T;
+  }
+  if (Array.isArray(value)) return value.map((v) => sanitizeForKargoLab(v)) as T;
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>).map(([k, v]) => [k, sanitizeForKargoLab(v)]),
+    ) as T;
+  }
+  return value;
+}
+
 export async function createKargoLabShipment(
   input: ShipmentCreateInput,
 ): Promise<ShipmentCreatedOk | ShipmentErr> {
@@ -227,7 +243,7 @@ export async function createKargoLabShipment(
         platform: 2,
         shipment_type: 1,
         courrier_api_type: 1,
-        ...input,
+        ...sanitizeForKargoLab(input),
       }),
     });
     // Duplicate / idempotent: KargoLab "kayıt zaten var" döndüğünde mevcut id ile success ver
