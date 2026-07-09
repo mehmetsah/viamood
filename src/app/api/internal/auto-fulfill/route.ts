@@ -10,7 +10,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import crypto from 'node:crypto';
 import { eq, or } from 'drizzle-orm';
 import { db } from '@/db/client';
-import { fulfillments, orderLineItems, orders, vendors } from '@/db/schema';
+import { fulfillments, orderLineItems, orders, products, productVariants, vendors } from '@/db/schema';
 import { env } from '@/lib/env';
 import { autoFulfillOrder } from '@/lib/server/auto-fulfill';
 
@@ -30,6 +30,27 @@ export async function GET(req: NextRequest) {
   if (!keyOk(sp.get('key'))) {
     return NextResponse.json({ ok: false, error: 'unauthorized' }, { status: 401 });
   }
+  // ?sku=132 → variant eşleşme teşhisi (order-ingest neden satır yazamadı sorusu için)
+  const sku = (sp.get('sku') ?? '').trim();
+  if (sku) {
+    const rows = await db
+      .select({
+        sku: productVariants.sku,
+        shopifyVariantId: productVariants.shopifyVariantId,
+        productTitle: products.title,
+        productStatus: products.status,
+        shopifyProductId: products.shopifyProductId,
+        vendorId: products.vendorId,
+        vendorName: vendors.name,
+      })
+      .from(productVariants)
+      .leftJoin(products, eq(products.id, productVariants.productId))
+      .leftJoin(vendors, eq(vendors.id, products.vendorId))
+      .where(eq(productVariants.sku, sku))
+      .limit(10);
+    return NextResponse.json({ ok: true, sku, variants: rows });
+  }
+
   const ref = (sp.get('order') ?? '').trim();
   if (!ref) return NextResponse.json({ ok: false, error: 'order param gerekli' }, { status: 422 });
 
