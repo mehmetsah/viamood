@@ -33,8 +33,15 @@ function courierCode(name: string | null | undefined): string | null {
   return null;
 }
 
-export async function autoFulfillOrder(orderId: string): Promise<void> {
-  if (!env.KARGOLAB_AUTO_LABEL) return;
+export interface AutoFulfillReport {
+  orderId: string;
+  outcome: 'disabled' | 'not_found' | 'cancelled' | 'awaiting_payment' | 'no_vendor_lines' | 'done';
+  courrier?: string;
+  results?: Array<{ vendorId: string; ok: boolean; error?: string; trackingNumber?: string | null }>;
+}
+
+export async function autoFulfillOrder(orderId: string): Promise<AutoFulfillReport> {
+  if (!env.KARGOLAB_AUTO_LABEL) return { orderId, outcome: 'disabled' };
 
   const [order] = await db
     .select({
@@ -47,13 +54,14 @@ export async function autoFulfillOrder(orderId: string): Promise<void> {
     .from(orders)
     .where(eq(orders.id, orderId))
     .limit(1);
-  if (!order || order.cancelledAt) return;
+  if (!order) return { orderId, outcome: 'not_found' };
+  if (order.cancelledAt) return { orderId, outcome: 'cancelled' };
 
   const tags = (order.tags ?? []).map((t) => String(t).toLowerCase());
   const isCod = tags.some((t) => ['kapida-odeme', 'tahsilatli-kargo', 'cod'].includes(t));
   const isPaid = order.financialStatus === 'paid' || order.financialStatus === 'partially_paid';
   // Ödenmemiş (havale bekleyen vb.) sipariş etiketlenmez — paid olunca orders/paid tetikler
-  if (!isPaid && !isCod) return;
+  if (!isPaid && !isCod) return { orderId, outcome: 'awaiting_payment' };
 
   // Kurye: müşterinin checkout seçimi → admin default → PTT
   const raw = order.raw as { shipping_lines?: Array<{ title?: string }> } | null;
@@ -73,6 +81,13 @@ export async function autoFulfillOrder(orderId: string): Promise<void> {
     .from(orderLineItems)
     .where(and(eq(orderLineItems.orderId, orderId), isNotNull(orderLineItems.vendorId)));
 
+  if (rows.length === 0) {
+    // Routing hiçbir satıra vendor atamadı (ürün-tedarikçi eşlemesi eksik) — sessiz kalma, logla
+    console.error('[auto-fulfill] vendor atanmış satır YOK — etiket kesilemedi', { orderId });
+    return { orderId, outcome: 'no_vendor_lines', courrier };
+  }
+
+  const results: NonNullable<AutoFulfillReport['results']> = [];
   for (const r of rows) {
     if (!r.vendorId) continue;
     const res = await createFulfillmentForOrderVendor(orderId, r.vendorId, { courrier });
@@ -83,8 +98,11 @@ export async function autoFulfillOrder(orderId: string): Promise<void> {
         courrier,
         fulfillmentId: res.fulfillmentId,
       });
+      results.push({ vendorId: r.vendorId, ok: true, trackingNumber: res.trackingNumber ?? res.barcode ?? null });
     } else {
       console.error('[auto-fulfill] etiket HATA', { orderId, vendorId: r.vendorId, error: res.error });
+      results.push({ vendorId: r.vendorId, ok: false, error: res.error });
     }
   }
+  return { orderId, outcome: 'done', courrier, results };
 }
