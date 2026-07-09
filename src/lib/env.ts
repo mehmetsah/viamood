@@ -96,6 +96,10 @@ const envSchema = z.object({
   MIKRO_FIRMA_PUSH: z.coerce.boolean().default(true),
   /** Ana firma DB depo no (Yunus örneği: 1) */
   MIKRO_FIRMA_DEPO: z.coerce.number().default(1),
+  /** Via müşteri numarası — aradepo evrak seri öneki (Yunus kuralı: '001S25976') */
+  MIKRO_MUSTERI_NO: z.string().default('001'),
+  /** Pazaryeri belirteci — S=Shopify, T=Trendyol... (seri: aradepo '001S…', firma 'S…') */
+  MIKRO_PAZARYERI: z.string().default('S'),
   /** ARADEPO depo no (ViaDolapdere) */
   MIKRO_ARADEPO_DEPO: z.coerce.number().default(60),
   /** Evrak sıra — Yunus'un Woo akışındaki sabit (kanal kodu gibi) */

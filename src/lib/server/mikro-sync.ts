@@ -26,7 +26,7 @@ import { logAudit } from '@/lib/audit/logger';
 import { env } from '@/lib/env';
 import { cariKayit, siparisEkle } from '@/lib/mikro/operations';
 import { mikroFetch } from '@/lib/mikro/client';
-import type { MikroEvrak, MikroHareket } from '@/lib/mikro/types';
+import type { MikroEvrak, MikroEvrakAciklama, MikroHareket } from '@/lib/mikro/types';
 
 interface SyncOk {
   ok: true;
@@ -106,6 +106,24 @@ export interface MikroKargoBilgi {
   barcode?: string | null;
 }
 
+/** Yunus kuralı — ürün toplanınca çıkan İRSALİYEDE adres yazsın:
+ *  Aciklama9+Aciklama10 = "Ad Soyad / Adres" (127'şer karaktere bölünür),
+ *  Aciklama7 = telefon, Aciklama6 = platform kimliği (Shopify telefonu). */
+function evrakAciklamaFields(
+  customerName: string | null,
+  ship: ShippingAddr,
+  telefon: string,
+): MikroEvrakAciklama {
+  const adres = [ship.address1, ship.address2, ship.district, ship.city].filter(Boolean).join(' ');
+  const combined = `${customerName ?? ''} / ${adres}`;
+  return {
+    Aciklama6: telefon,
+    Aciklama7: telefon,
+    Aciklama9: combined.slice(0, 127),
+    Aciklama10: combined.slice(127, 254),
+  };
+}
+
 /** ANA FİRMA (fatura) DB'sine push — Yunus'un Woo akışının ikinci bacağı (port 7782).
  *  Farkları: MÜŞTERİ carisi (telefonla dedupe, yoksa aç), stok kodu PREFIX'SİZ,
  *  BelgeNo/tkp = 'VIA'+seri (takip no değil), DepoNo=1. Best-effort. */
@@ -126,16 +144,18 @@ async function pushToFirmaDb(params: {
     discountCents: number | bigint;
     variantIsTaxable: boolean | null;
   }>;
-  evrakSeri: string;
+  orderDigits: string;
   courier?: string | null;
 }): Promise<{ ok: boolean; cariKodu?: string; error?: string }> {
   const base = env.MIKRO_FIRMA_API_URL;
-  const { order, ship, lineItems, evrakSeri } = params;
+  const { order, ship, lineItems, orderDigits } = params;
+  // Yunus seri kuralı: firma DB'de pazaryeri belirteci + sipariş no → 'S25976'
+  const firmaSeri = `${env.MIKRO_PAZARYERI}${orderDigits}`;
   try {
     // Idempotensi: seri firma DB'sinde zaten varsa ekleme
     const dupe = await mikroFetch<{ Result?: Array<{ adet: number }> }>('/MikroV17/sqlverioku', {
       method: 'POST',
-      body: { Query: `SELECT COUNT(*) as adet FROM SIPARISLER WITH (NOLOCK) WHERE sip_evrakno_seri='${evrakSeri.replace(/'/g, '')}'` },
+      body: { Query: `SELECT COUNT(*) as adet FROM SIPARISLER WITH (NOLOCK) WHERE sip_evrakno_seri='${firmaSeri.replace(/'/g, '')}'` },
     }, base);
     if ((dupe?.Result?.[0]?.adet ?? 0) > 0) return { ok: true };
 
@@ -175,12 +195,28 @@ async function pushToFirmaDb(params: {
           Kasaba: ship.district ?? '',
           PostaKodu: ship.postalCode ?? '',
         },
+        // Yunus: cari adres boş kalıyordu — fatura + sevk adresi de doldurulur
+        // (MikroAddressFatura'da serbest 'Adres' alanı yok → satır adresi Cadde'ye yazılır)
+        FaturaAdresi: {
+          Cadde: [ship.address1, ship.address2].filter(Boolean).join(' '),
+          Ulke: ship.country ?? 'TURKEY',
+          Sehir: ship.city ?? '',
+          Kasaba: ship.district ?? '',
+          PostaKodu: ship.postalCode ?? '',
+        },
+        SevkAdresi: {
+          Cadde: [ship.address1, ship.address2].filter(Boolean).join(' '),
+          Ulke: ship.country ?? 'TURKEY',
+          Sehir: ship.city ?? '',
+          Kasaba: ship.district ?? '',
+          PostaKodu: ship.postalCode ?? '',
+        },
       }, base);
       if (!cariRes.ok) return { ok: false, error: `cariKayit(firma): ${cariRes.error}` };
     }
 
     const placedAtIso = order.placedAt.toISOString().slice(0, 19);
-    const viaRef = `VIA${evrakSeri}`;
+    const viaRef = `VIA${orderDigits}`;
     const satirlar: MikroHareket[] = lineItems.map((li) => {
       const unitPriceTl = Number(li.unitPriceCents) / 100;
       const discountTl = Number(li.discountCents) / 100;
@@ -213,7 +249,7 @@ async function pushToFirmaDb(params: {
       DepoNo: env.MIKRO_FIRMA_DEPO,
       OdemePlaniNo: env.MIKRO_ODEME_PLANI_NO,
       ProjeKodu: env.MIKRO_PROJE_KODU,
-      EvrakSeri: evrakSeri,
+      EvrakSeri: firmaSeri,
       EvrakSira: env.MIKRO_EVRAK_SIRA,
       Tip: 0,
       BelgeNo: viaRef,
@@ -232,6 +268,8 @@ async function pushToFirmaDb(params: {
       Vade: 0,
       MikroUserNo: env.MIKRO_APPROVER_USER_NO,
       AdresNo: 1,
+      // İrsaliyede adres çıksın (Yunus kuralı): 9+10=Ad Soyad/Adres, 7=tel, 6=platform kimliği
+      EvrakAciklama: evrakAciklamaFields(order.customerName, ship, telefon),
       SiparisDurumu: true,
       Satirlar: satirlar,
     };
@@ -303,10 +341,11 @@ export async function syncOrderToMikro(orderId: string, kargo?: MikroKargoBilgi)
 
   // 4. Sipariş ekle (Yunus'un ÇALIŞAN Woo formatı — 2026-07-09'da #1015 ile canlı kanıtlandı)
   const ship = (order.shippingAddress ?? {}) as ShippingAddr;
-  // Evrak seri = sipariş numarasının SADECE rakamları ('#1015' → '1015')
+  // Yunus seri kuralı (çakışma önleme): aradepo = müşteriNo+pazaryeri+siparişNo → '001S25976'
+  const orderDigits = String(order.shopifyOrderName ?? order.orderNumber ?? '').replace(/\D/g, '');
   const evrakSeri =
     (order.mikroEvrakSeri ?? '').trim() ||
-    String(order.shopifyOrderName ?? order.orderNumber ?? '').replace(/\D/g, '');
+    (orderDigits ? `${env.MIKRO_MUSTERI_NO}${env.MIKRO_PAZARYERI}${orderDigits}` : '');
   const evrakSira = order.mikroEvrakSira ?? env.MIKRO_EVRAK_SIRA;
   if (!evrakSeri) {
     return { ok: false, orderId, step: 'siparis', error: 'Evrak seri üretilemedi (sipariş numarası yok)' };
@@ -343,7 +382,7 @@ export async function syncOrderToMikro(orderId: string, kargo?: MikroKargoBilgi)
           },
           ship,
           lineItems,
-          evrakSeri,
+          orderDigits,
           courier: kargo?.courier ?? null,
         });
         if (!firmaDup.ok) console.error('[mikro-sync] FİRMA DB push hatası (dup-dal):', { orderId, error: firmaDup.error });
@@ -438,6 +477,8 @@ export async function syncOrderToMikro(orderId: string, kargo?: MikroKargoBilgi)
     Vade: 0,
     MikroUserNo: env.MIKRO_APPROVER_USER_NO,
     AdresNo: 1,
+    // İrsaliyede adres çıksın (Yunus kuralı): 9+10=Ad Soyad/Adres, 7=tel, 6=platform kimliği
+    EvrakAciklama: evrakAciklamaFields(order.customerName, ship, telefon),
     SiparisDurumu: true, // onaylı girer — ayrı SiparisOnayla no-op (Result:false) döndüğü için kaldırıldı
     Satirlar: satirlar,
   };
@@ -489,7 +530,7 @@ export async function syncOrderToMikro(orderId: string, kargo?: MikroKargoBilgi)
       },
       ship,
       lineItems,
-      evrakSeri,
+      orderDigits,
       courier: kargo?.courier ?? null,
     });
     if (!firma.ok) console.error('[mikro-sync] FİRMA DB push hatası:', { orderId, error: firma.error });
