@@ -34,6 +34,10 @@ export async function GET(req: NextRequest) {
   if (!ref) return NextResponse.json({ ok: false, error: 'order param gerekli' }, { status: 422 });
 
   const name = ref.startsWith('#') ? ref : `#${ref}`;
+  // orders.id UUID — geçersiz uuid string'i Postgres'te hata fırlatır, sadece uuid görünümlüyse dahil et
+  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(ref);
+  const conds = [eq(orders.shopifyOrderName, name), eq(orders.orderNumber, ref)];
+  if (isUuid) conds.push(eq(orders.id, ref));
   const [order] = await db
     .select({
       id: orders.id,
@@ -45,7 +49,7 @@ export async function GET(req: NextRequest) {
       shippingAddress: orders.shippingAddress,
     })
     .from(orders)
-    .where(or(eq(orders.shopifyOrderName, name), eq(orders.orderNumber, ref), eq(orders.id, ref)))
+    .where(or(...conds))
     .limit(1);
   if (!order) return NextResponse.json({ ok: false, error: 'order bulunamadı', ref }, { status: 404 });
 
