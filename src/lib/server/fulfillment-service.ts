@@ -267,10 +267,11 @@ export async function createFulfillmentForOrderVendor(
     address2: ship.address2 ?? '-',
     address_description: 'Müşteri teslimat',
     zipcode: ship.postalCode ?? '00000',
-    town: ship.district ?? ship.city ?? '',
-    city: ship.district ?? ship.city ?? '',
-    state: ship.city ?? '',
-    state_code: stateCodeFromName(ship.city),
+    // ters isimlendirme: town/city = İLÇE (ship.city), state = İL (ship.district)
+    town: ship.city ?? '',
+    city: ship.city ?? '',
+    state: ship.district ?? ship.city ?? '',
+    state_code: stateCodeFromName(ship.district ?? ship.city),
     country: ship.countryCode ?? 'TR',
     email: order.customerEmail ?? undefined,
     phone: ship.phone ?? order.customerPhone ?? '',
@@ -308,10 +309,11 @@ export async function createFulfillmentForOrderVendor(
   // kuryelerden ID çözülür: istenen kurye → (COD ise COD kabul eden) → en ucuz.
   let courrierId: number | null = null;
   try {
+    // DİKKAT ters isimlendirme (order-ingest): ship.district = İL, ship.city = İLÇE
     const rateRes = await quoteShipmentRate({
       weightGrams: totalWeightGrams,
-      toProvince: ship.city ?? '',
-      toDistrict: ship.district,
+      toProvince: ship.district ?? ship.city ?? '',
+      toDistrict: ship.district ? ship.city : undefined,
       fromProvince: 'İstanbul',
       fromDistrict: 'Beyoğlu',
     });
