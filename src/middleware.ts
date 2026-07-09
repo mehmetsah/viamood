@@ -54,6 +54,8 @@ export default auth((req) => {
     pathname.startsWith('/api/v1/shipping') ||
     pathname.startsWith('/api/v1/discount') ||
     pathname.startsWith('/api/dev') ||
+    pathname.startsWith('/api/internal') || // kendi secret'ıyla korunur (webhook secret)
+    pathname.startsWith('/api/cron') || // kendi secret'ıyla korunur
     pathname.startsWith('/_next') ||
     pathname.startsWith('/favicon')
   ) {
