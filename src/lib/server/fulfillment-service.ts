@@ -113,9 +113,24 @@ async function ensureSenderAddress(vendorId: string): Promise<
   }
 
   if (!vendor.addressLine1 || !vendor.city || !vendor.district) {
+    // Vendor'a özel gönderici adresi tanımlı değil → kargolar fiilen Via Mood
+    // merkezden (Dolapdere) çıkıyor: KargoLab hesabının kayıtlı default gönderici
+    // adresine düş. (Admin > Tedarikçiler'den vendor adresi girilirse o kullanılır.)
+    const existing = await listSenderAddresses();
+    const fallback = existing.find((a) => a.isDefault) ?? existing[0];
+    if (fallback) {
+      await db
+        .update(vendors)
+        .set({
+          metadata: { ...meta, kargolabSenderAddressId: fallback.id, kargolabSenderFallback: true },
+          updatedAt: new Date(),
+        })
+        .where(eq(vendors.id, vendorId));
+      return { ok: true, addressId: fallback.id };
+    }
     return {
       ok: false,
-      error: 'Vendor adres bilgileri eksik (adres / il / ilçe)',
+      error: 'Vendor adresi eksik (adres/il/ilçe) ve KargoLab hesabında kayıtlı gönderici adresi de yok',
     };
   }
 
