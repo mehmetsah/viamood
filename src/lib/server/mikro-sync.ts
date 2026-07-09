@@ -265,7 +265,9 @@ export async function syncOrderToMikro(orderId: string, kargo?: MikroKargoBilgi)
     return {
       Cinsi: 0, // Stok
       StokKodu: stokKodu,
-      Barkodu: li.variantBarcode ?? '',
+      // Barkodu BİLEREK BOŞ: Mikro SiparisEkle, Barkodu doluysa stok aramasını BARKODLA yapıyor;
+      // Shopify barkodu Mikro'da kayıtlı olmadığından "Stok bilgisi bulunamadı" veriyor (kanıtlandı).
+      Barkodu: '',
       KDV: li.variantIsTaxable === false ? 0 : 20,
       Miktar: li.quantity,
       Fiyat: unitPriceTl,

@@ -414,9 +414,14 @@ export async function createFulfillmentForOrderVendor(
   });
 
   // Shopify'a fulfillment'ı push et — best-effort. Hata olsa local fulfillment kalsın.
-  pushFulfillmentToShopify(fulfillmentId).catch((err) => {
-    console.error('[shopify.fulfillmentCreate] failed:', err);
-  });
+  // NOT: {ok:false} dönüşü throw ETMEZ — sonucu da logla (scope eksikliği sessiz kalmıştı).
+  pushFulfillmentToShopify(fulfillmentId)
+    .then((res) => {
+      if (!res.ok) console.error('[shopify.fulfillmentCreate] başarısız:', { fulfillmentId, error: res.error });
+    })
+    .catch((err) => {
+      console.error('[shopify.fulfillmentCreate] failed:', err);
+    });
 
   // Native sipariş ise "kargoya verildi" e-postası (Shopify shipment maili yerine) — best-effort
   notifyNativeOrderShipped(orderId, {

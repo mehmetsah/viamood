@@ -15,6 +15,8 @@ import { env } from '@/lib/env';
 import { autoFulfillOrder } from '@/lib/server/auto-fulfill';
 import { repairOrderLines } from '@/lib/shopify/order-ingest';
 import { routeOrder } from '@/lib/routing/engine';
+import { pushFulfillmentToShopify } from '@/lib/shopify/fulfillment-push';
+import { syncOrderToMikro } from '@/lib/server/mikro-sync';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -119,6 +121,27 @@ export async function GET(req: NextRequest) {
   const run = sp.get('run') === '1';
   const report = run ? await autoFulfillOrder(order.id) : undefined;
 
+  // &push=1 → bu siparişin Shopify'a işlenmemiş fulfillment'larını Shopify'a push et
+  // (scope eksikliği giderildikten sonra #1017-#1026 backfill'i için)
+  let shopifyPush;
+  if (sp.get('push') === '1') {
+    shopifyPush = [];
+    for (const f of fuls) {
+      const res = await pushFulfillmentToShopify(f.id);
+      shopifyPush.push({ fulfillmentId: f.id, ...res });
+    }
+  }
+
+  // &mikro=1 → Mikro push'u (takip no ile) yeniden dene
+  // (SIPARISLER_USER tablosu Mikro tarafında oluşturulunca backfill için)
+  let mikro;
+  if (sp.get('mikro') === '1') {
+    const f = fuls[0];
+    mikro = await syncOrderToMikro(order.id, f
+      ? { courier: f.carrier, trackingNumber: f.trackingNumber, barcode: null }
+      : undefined);
+  }
+
   return NextResponse.json({
     ok: true,
     order,
@@ -126,5 +149,7 @@ export async function GET(req: NextRequest) {
     fulfillments: fuls,
     ...(repair ? { repair } : {}),
     ...(report ? { autoFulfill: report } : {}),
+    ...(shopifyPush ? { shopifyPush } : {}),
+    ...(mikro ? { mikro } : {}),
   });
 }
