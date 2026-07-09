@@ -70,6 +70,9 @@ export async function GET(req: NextRequest) {
       tags: orders.tags,
       cancelledAt: orders.cancelledAt,
       shippingAddress: orders.shippingAddress,
+      mikroSyncStatus: orders.mikroSyncStatus,
+      mikroError: orders.mikroError,
+      mikroEvrakSeri: orders.mikroEvrakSeri,
     })
     .from(orders)
     .where(or(...conds))
