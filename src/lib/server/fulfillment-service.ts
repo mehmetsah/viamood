@@ -31,6 +31,7 @@ import {
 import { pushFulfillmentToShopify } from '@/lib/shopify/fulfillment-push';
 import { notifyNativeOrderShipped } from '@/lib/orders/lifecycle';
 import { syncOrderToMikro } from '@/lib/server/mikro-sync';
+import { quoteShipmentRate } from '@/lib/kargolab/rates';
 import { env } from '@/lib/env';
 
 interface CreateOk {
@@ -302,8 +303,38 @@ export async function createFulfillmentForOrderVendor(
   const codAmount = isCod ? Math.round(Number(order.totalCents)) / 100 : 0;
   const COD_PAYMENT_TYPE: 1 | 2 | 3 = 3; // KargoLab: 3 = kapıda ödeme (tahsilatlı). İlk COD kargoda doğrula.
 
+  // KargoLab shipment-create 'courrier' NUMERİK kurye ID ister ('PTT' gibi kod DEĞİL —
+  // SQL 1366 "Incorrect integer value" vakası). member-price-check ile alıcı iline giden
+  // kuryelerden ID çözülür: istenen kurye → (COD ise COD kabul eden) → en ucuz.
+  let courrierId: number | null = null;
+  try {
+    const rateRes = await quoteShipmentRate({
+      weightGrams: totalWeightGrams,
+      toProvince: ship.city ?? '',
+      toDistrict: ship.district,
+      fromProvince: 'İstanbul',
+      fromDistrict: 'Beyoğlu',
+    });
+    if (rateRes.ok) {
+      const want = courrier.toUpperCase();
+      const pool = isCod ? rateRes.rates.filter((r) => r.acceptsCOD) : rateRes.rates;
+      const match =
+        pool.find((r) => r.courrierName.toUpperCase().includes(want)) ??
+        pool.reduce<typeof pool[number] | null>(
+          (a, b) => (a && a.priceCents <= b.priceCents ? a : b),
+          null,
+        );
+      courrierId = match?.courrierId ?? null;
+    }
+  } catch {
+    /* aşağıda net hata dönülür */
+  }
+  if (!courrierId) {
+    return { ok: false, error: `KargoLab kurye ID çözülemedi (kurye: ${courrier}, il: ${ship.city ?? '-'})` };
+  }
+
   const shipRes = await createKargoLabShipment({
-    courrier,
+    courrier: courrierId,
     addresses: {
       sender_id: senderRes.addressId,
       receiver,

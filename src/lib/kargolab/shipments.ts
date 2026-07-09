@@ -139,8 +139,8 @@ export interface ShipmentDimension {
 }
 
 export interface ShipmentCreateInput {
-  /** "PTT" | "ARAS" | "MNG" | "YURTICI" ... */
-  courrier: string;
+  /** KargoLab NUMERİK kurye ID (member-price-check'ten çözülür — 'PTT' gibi string kod SQL 1366 verir) */
+  courrier: number | string;
   origin?: string;       // "TR"
   destination?: string;  // "TR"
   addresses: {
