@@ -87,9 +87,57 @@ function parseMoney(raw: string | undefined | null): bigint {
   return BigInt(Math.round(num * 100));
 }
 
-function asGid(prefix: string, id: number | string | null | undefined): string | null {
+/** "gid://shopify/ProductVariant/123" | 123 | "123" → "123" — format-bağımsız eşleştirme anahtarı */
+function numericId(id: number | string | null | undefined): string | null {
   if (id == null) return null;
-  return `gid://shopify/${prefix}/${id}`;
+  const s = String(id);
+  const m = /(\d+)\s*$/.exec(s);
+  return m?.[1] ?? s;
+}
+
+type VariantMatch = {
+  variantId: string;
+  productId: string;
+  vendorId: string;
+  shopifyVariantId: string;
+};
+
+/**
+ * Payload satırlarındaki variant'ları local DB ile eşleştirir.
+ * DB'de shopifyVariantId HEM gid HEM numerik formatta bulunabiliyor (webhook gid yazar,
+ * backfill/reconcile numerik yazdı — #1015 satırsız kaldı) → İKİ formatla ara,
+ * map anahtarı her zaman numerik kısım.
+ */
+async function buildVariantMatches(
+  lineItems: Array<{ variant_id?: number | string | null }>,
+): Promise<Map<string, VariantMatch>> {
+  const matches = new Map<string, VariantMatch>();
+  const nums = lineItems
+    .map((li) => numericId(li.variant_id))
+    .filter((v): v is string => v !== null);
+  if (nums.length === 0) return matches;
+
+  const bothFormats = [...nums, ...nums.map((n) => `gid://shopify/ProductVariant/${n}`)];
+  const rows = await db
+    .select({
+      id: productVariants.id,
+      productId: productVariants.productId,
+      vendorId: productVariants.vendorId,
+      shopifyVariantId: productVariants.shopifyVariantId,
+    })
+    .from(productVariants)
+    .where(inArray(productVariants.shopifyVariantId, bothFormats));
+  for (const r of rows) {
+    const key = numericId(r.shopifyVariantId);
+    if (!key) continue;
+    matches.set(key, {
+      variantId: r.id,
+      productId: r.productId,
+      vendorId: r.vendorId,
+      shopifyVariantId: r.shopifyVariantId,
+    });
+  }
+  return matches;
 }
 
 function parseTags(raw: string | undefined): string[] {
@@ -136,38 +184,8 @@ export async function ingestShopifyOrder(payload: ShopifyOrderPayload): Promise<
     };
   }
 
-  // Variant ID'leri topla, local DB'de eşleşeni bul
-  const variantGids = payload.line_items
-    .map((li) => asGid('ProductVariant', li.variant_id))
-    .filter((v): v is string => v !== null);
-
-  type VariantMatch = {
-    variantId: string;
-    productId: string;
-    vendorId: string;
-    shopifyVariantId: string;
-  };
-  const variantMatches = new Map<string, VariantMatch>();
-
-  if (variantGids.length > 0) {
-    const rows = await db
-      .select({
-        id: productVariants.id,
-        productId: productVariants.productId,
-        vendorId: productVariants.vendorId,
-        shopifyVariantId: productVariants.shopifyVariantId,
-      })
-      .from(productVariants)
-      .where(inArray(productVariants.shopifyVariantId, variantGids));
-    for (const r of rows) {
-      variantMatches.set(r.shopifyVariantId, {
-        variantId: r.id,
-        productId: r.productId,
-        vendorId: r.vendorId,
-        shopifyVariantId: r.shopifyVariantId,
-      });
-    }
-  }
+  // Variant ID'leri topla, local DB'de eşleşeni bul (gid + numerik format toleranslı)
+  const variantMatches = await buildVariantMatches(payload.line_items);
 
   const customerName = [payload.customer?.first_name, payload.customer?.last_name]
     .filter(Boolean)
@@ -240,8 +258,8 @@ export async function ingestShopifyOrder(payload: ShopifyOrderPayload): Promise<
     const vendorIdSet = new Set<string>();
 
     for (const li of payload.line_items) {
-      const variantGid = asGid('ProductVariant', li.variant_id);
-      const match = variantGid ? variantMatches.get(variantGid) : undefined;
+      const variantKey = numericId(li.variant_id);
+      const match = variantKey ? variantMatches.get(variantKey) : undefined;
 
       if (!match) {
         unmatched += 1;
@@ -314,4 +332,61 @@ export async function ingestShopifyOrder(payload: ShopifyOrderPayload): Promise<
   }
 
   return { ok: true, orderId, isNew: true, matchedLineItems: matched, unmatchedLineItems: unmatched };
+}
+
+/**
+ * Satırsız kalmış siparişi onarır: raw Shopify payload'ındaki line_items'ı
+ * (gid+numerik toleranslı eşleştirmeyle) orderLineItems'a yazar.
+ * Eski format-uyuşmazlığı mağdurları için (örn. #1015) — satırı OLAN siparişe dokunmaz.
+ */
+export async function repairOrderLines(
+  orderId: string,
+): Promise<{ ok: boolean; added: number; unmatched: number; error?: string }> {
+  const [ord] = await db
+    .select({ id: orders.id, raw: orders.rawShopifyPayload })
+    .from(orders)
+    .where(eq(orders.id, orderId))
+    .limit(1);
+  if (!ord) return { ok: false, added: 0, unmatched: 0, error: 'order bulunamadı' };
+
+  const [hasLine] = await db
+    .select({ id: orderLineItems.id })
+    .from(orderLineItems)
+    .where(eq(orderLineItems.orderId, orderId))
+    .limit(1);
+  if (hasLine) return { ok: true, added: 0, unmatched: 0, error: 'zaten satırlı — dokunulmadı' };
+
+  const payload = ord.raw as ShopifyOrderPayload | null;
+  if (!payload?.line_items?.length) {
+    return { ok: false, added: 0, unmatched: 0, error: 'raw payload satırı yok' };
+  }
+
+  const matches = await buildVariantMatches(payload.line_items);
+  let added = 0;
+  let unmatched = 0;
+  for (const li of payload.line_items) {
+    const key = numericId(li.variant_id);
+    const match = key ? matches.get(key) : undefined;
+    if (!match) {
+      unmatched += 1;
+      continue;
+    }
+    await db.insert(orderLineItems).values({
+      orderId,
+      vendorId: match.vendorId,
+      productId: match.productId,
+      variantId: match.variantId,
+      shopifyLineItemId: String(li.id),
+      title: li.title,
+      variantTitle: li.variant_title ?? null,
+      sku: li.sku ?? null,
+      quantity: li.quantity,
+      unitPriceCents: parseMoney(li.price),
+      totalPriceCents: parseMoney(li.price) * BigInt(li.quantity),
+      discountCents: parseMoney(li.total_discount),
+      status: 'pending',
+    });
+    added += 1;
+  }
+  return { ok: true, added, unmatched };
 }

@@ -13,6 +13,8 @@ import { db } from '@/db/client';
 import { fulfillments, orderLineItems, orders, products, productVariants, vendors } from '@/db/schema';
 import { env } from '@/lib/env';
 import { autoFulfillOrder } from '@/lib/server/auto-fulfill';
+import { repairOrderLines } from '@/lib/shopify/order-ingest';
+import { routeOrder } from '@/lib/routing/engine';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -98,6 +100,19 @@ export async function GET(req: NextRequest) {
     .from(fulfillments)
     .where(eq(fulfillments.orderId, order.id));
 
+  // &repair=1 → satırsız siparişin satırlarını raw payload'dan onar + routing çalıştır
+  let repair;
+  if (sp.get('repair') === '1') {
+    repair = await repairOrderLines(order.id);
+    if (repair.added > 0) {
+      try {
+        await routeOrder(order.id);
+      } catch (e) {
+        console.error('[internal/auto-fulfill] routing hatası:', e);
+      }
+    }
+  }
+
   const run = sp.get('run') === '1';
   const report = run ? await autoFulfillOrder(order.id) : undefined;
 
@@ -106,6 +121,7 @@ export async function GET(req: NextRequest) {
     order,
     lines,
     fulfillments: fuls,
+    ...(repair ? { repair } : {}),
     ...(report ? { autoFulfill: report } : {}),
   });
 }
