@@ -237,6 +237,14 @@ export async function createFulfillmentForOrderVendor(
   if (!senderRes.ok) return senderRes;
 
   const ship = order.shippingAddress as Record<string, string | undefined>;
+  // İl (ve ilçe/il'den en az biri) olmadan KargoLab gönderi kabul etmez — net hata dön
+  // (örn. Shopify admin'den il seçilmeden girilen sipariş: #1015 vakası)
+  if (!ship.city?.trim()) {
+    return {
+      ok: false,
+      error: 'Teslimat adresinde İL eksik — Shopify siparişinde il/ilçe alanlarını doldurun, etiket ondan sonra kesilir',
+    };
+  }
   const receiver: KargoLabAddress = {
     contact_name: ship.name ?? order.customerName ?? 'Müşteri',
     address1: ship.address1 ?? '-',

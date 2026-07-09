@@ -183,6 +183,8 @@ export async function POST(req: NextRequest) {
   if (!body.phone?.trim()) missing.push('phone');
   if (!body.email?.includes('@')) missing.push('email');
   if (!body.address1?.trim()) missing.push('address1');
+  if (!body.city?.trim()) missing.push('city');
+  if (!body.province?.trim()) missing.push('province');
   if (!body.line_items?.length) missing.push('line_items');
   if (missing.length) {
     return NextResponse.json({ ok: false, error: 'missing_fields', missing }, { status: 422, headers });
