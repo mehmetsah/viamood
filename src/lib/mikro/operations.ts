@@ -41,12 +41,12 @@ function extractMikroError(err: unknown): { msg: string; raw: unknown } {
  * Yeni cari (müşteri) kaydı.
  * Yunus'a göre: aynı email/telefon ile boş cari de açabiliriz — dedupe yapmıyoruz.
  */
-export async function cariKayit(dto: MikroCariDto): Promise<MikroOpResult> {
+export async function cariKayit(dto: MikroCariDto, baseUrl?: string): Promise<MikroOpResult> {
   try {
     const data = await mikroFetch('/MikroV17/CariKayit', {
       method: 'POST',
       body: dto,
-    });
+    }, baseUrl);
     return { ok: true, data };
   } catch (err) {
     const { msg, raw } = extractMikroError(err);
@@ -54,13 +54,13 @@ export async function cariKayit(dto: MikroCariDto): Promise<MikroOpResult> {
   }
 }
 
-/** Sipariş ve satırlarını ekle. */
-export async function siparisEkle(evrak: MikroEvrak): Promise<MikroOpResult> {
+/** Sipariş ve satırlarını ekle. baseUrl ile ARADEPO (default) / ANA FİRMA DB seçilir. */
+export async function siparisEkle(evrak: MikroEvrak, baseUrl?: string): Promise<MikroOpResult> {
   try {
     const data = await mikroFetch('/MikroV17/SiparisEkle', {
       method: 'POST',
       body: evrak,
-    });
+    }, baseUrl);
     return { ok: true, data };
   } catch (err) {
     const { msg, raw } = extractMikroError(err);

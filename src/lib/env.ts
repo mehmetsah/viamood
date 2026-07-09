@@ -90,6 +90,12 @@ const envSchema = z.object({
   MIKRO_DEPO_NO: z.coerce.number().default(1),
   /** ARADEPO sabit carisi — Yunus'un günlük Woo→Mikro akışındaki cari (müşteri carisi AÇILMAZ) */
   MIKRO_ARADEPO_CARI: z.string().default('120.02.01.V004'),
+  /** ANA FİRMA (fatura) DB API'si — port 7782; boş bırakılırsa firma push atlanır */
+  MIKRO_FIRMA_API_URL: z.string().default('http://85.111.96.204:7782/api'),
+  /** Ana firma DB'ye de sipariş push edilsin mi (fatura kesimi için, müşteri carili) */
+  MIKRO_FIRMA_PUSH: z.coerce.boolean().default(true),
+  /** Ana firma DB depo no (Yunus örneği: 1) */
+  MIKRO_FIRMA_DEPO: z.coerce.number().default(1),
   /** ARADEPO depo no (ViaDolapdere) */
   MIKRO_ARADEPO_DEPO: z.coerce.number().default(60),
   /** Evrak sıra — Yunus'un Woo akışındaki sabit (kanal kodu gibi) */

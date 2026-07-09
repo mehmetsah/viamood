@@ -14,7 +14,8 @@ interface CachedToken {
 }
 
 const TOKEN_TTL_MS = 23 * 60 * 60 * 1000; // 23 saat — 24h limitinden önce yenile
-let cached: CachedToken | null = null;
+// Base URL başına token cache — ARADEPO (7781) + ANA FİRMA (7782) aynı creds, ayrı DB/token
+const cachedByBase = new Map<string, CachedToken>();
 
 export class MikroError extends Error {
   constructor(
@@ -27,11 +28,11 @@ export class MikroError extends Error {
   }
 }
 
-async function login(): Promise<CachedToken> {
-  if (!env.MIKRO_API_URL || !env.MIKRO_USERNAME || !env.MIKRO_PASSWORD) {
+async function login(baseUrl: string): Promise<CachedToken> {
+  if (!baseUrl || !env.MIKRO_USERNAME || !env.MIKRO_PASSWORD) {
     throw new Error('MIKRO_API_URL / MIKRO_USERNAME / MIKRO_PASSWORD env\'de set edilmemiş');
   }
-  const res = await fetch(`${env.MIKRO_API_URL}/Login/Authenticate`, {
+  const res = await fetch(`${baseUrl}/Login/Authenticate`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -52,13 +53,15 @@ async function login(): Promise<CachedToken> {
   if (!token.startsWith('ey')) {
     throw new MikroError(200, raw, 'Mikro: beklenmedik token formatı');
   }
-  cached = { token, expiresAt: Date.now() + TOKEN_TTL_MS };
-  return cached;
+  const entry = { token, expiresAt: Date.now() + TOKEN_TTL_MS };
+  cachedByBase.set(baseUrl, entry);
+  return entry;
 }
 
-async function getToken(): Promise<string> {
+async function getToken(baseUrl: string): Promise<string> {
+  const cached = cachedByBase.get(baseUrl);
   if (cached && cached.expiresAt > Date.now()) return cached.token;
-  const fresh = await login();
+  const fresh = await login(baseUrl);
   return fresh.token;
 }
 
@@ -70,9 +73,10 @@ interface FetchOpts extends Omit<RequestInit, 'headers' | 'body'> {
 export async function mikroFetch<T = unknown>(
   path: string,
   options: FetchOpts = {},
+  baseUrl: string = env.MIKRO_API_URL ?? '',
 ): Promise<T> {
-  let token = await getToken();
-  const url = path.startsWith('http') ? path : `${env.MIKRO_API_URL}${path}`;
+  let token = await getToken(baseUrl);
+  const url = path.startsWith('http') ? path : `${baseUrl}${path}`;
 
   const doRequest = (bearer: string) =>
     fetch(url, {
@@ -90,8 +94,8 @@ export async function mikroFetch<T = unknown>(
 
   // 401 → token expire olmuş, yenile + retry
   if (res.status === 401) {
-    cached = null;
-    token = await getToken();
+    cachedByBase.delete(baseUrl);
+    token = await getToken(baseUrl);
     res = await doRequest(token);
   }
 
@@ -118,7 +122,7 @@ export async function mikroFetch<T = unknown>(
 /** Bağlantı sağlık kontrolü — login eder, token döner. */
 export async function mikroHealthCheck(): Promise<{ ok: boolean; tokenPrefix?: string; error?: string }> {
   try {
-    const t = await getToken();
+    const t = await getToken(env.MIKRO_API_URL ?? '');
     return { ok: true, tokenPrefix: t.slice(0, 24) + '…' };
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : 'unknown' };
@@ -127,5 +131,5 @@ export async function mikroHealthCheck(): Promise<{ ok: boolean; tokenPrefix?: s
 
 /** Cache'i sıfırla — test/dev için */
 export function invalidateMikroCache(): void {
-  cached = null;
+  cachedByBase.clear();
 }

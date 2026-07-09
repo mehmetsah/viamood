@@ -24,7 +24,7 @@ import {
 } from '@/db/schema';
 import { logAudit } from '@/lib/audit/logger';
 import { env } from '@/lib/env';
-import { siparisEkle } from '@/lib/mikro/operations';
+import { cariKayit, siparisEkle } from '@/lib/mikro/operations';
 import { mikroFetch } from '@/lib/mikro/client';
 import type { MikroEvrak, MikroHareket } from '@/lib/mikro/types';
 
@@ -34,6 +34,8 @@ interface SyncOk {
   cariKodu: string;
   evrakSeri: string;
   evrakSira: number;
+  /** ANA FİRMA (fatura, 7782) DB push sonucu — best-effort */
+  firma?: { ok: boolean; cariKodu?: string; error?: string };
   status: 'approved' | 'order_added' | 'customer_created';
 }
 interface SyncErr {
@@ -102,6 +104,143 @@ export interface MikroKargoBilgi {
   courier?: string | null;
   trackingNumber?: string | null;
   barcode?: string | null;
+}
+
+/** ANA FİRMA (fatura) DB'sine push — Yunus'un Woo akışının ikinci bacağı (port 7782).
+ *  Farkları: MÜŞTERİ carisi (telefonla dedupe, yoksa aç), stok kodu PREFIX'SİZ,
+ *  BelgeNo/tkp = 'VIA'+seri (takip no değil), DepoNo=1. Best-effort. */
+async function pushToFirmaDb(params: {
+  order: {
+    customerName: string | null;
+    customerPhone: string | null;
+    customerEmail: string | null;
+    placedAt: Date;
+  };
+  ship: ShippingAddr;
+  lineItems: Array<{
+    title: string;
+    sku: string | null;
+    variantSku: string | null;
+    quantity: number;
+    unitPriceCents: number | bigint;
+    discountCents: number | bigint;
+    variantIsTaxable: boolean | null;
+  }>;
+  evrakSeri: string;
+  courier?: string | null;
+}): Promise<{ ok: boolean; cariKodu?: string; error?: string }> {
+  const base = env.MIKRO_FIRMA_API_URL;
+  const { order, ship, lineItems, evrakSeri } = params;
+  try {
+    // Idempotensi: seri firma DB'sinde zaten varsa ekleme
+    const dupe = await mikroFetch<{ Result?: Array<{ adet: number }> }>('/MikroV17/sqlverioku', {
+      method: 'POST',
+      body: { Query: `SELECT COUNT(*) as adet FROM SIPARISLER WITH (NOLOCK) WHERE sip_evrakno_seri='${evrakSeri.replace(/'/g, '')}'` },
+    }, base);
+    if ((dupe?.Result?.[0]?.adet ?? 0) > 0) return { ok: true };
+
+    // Cari: telefonla dedupe (Woo akışında email boş geliyor) → yoksa yeni müşteri carisi aç
+    const telefon = (order.customerPhone ?? '').replace(/[^\d]/g, '').replace(/^90/, '');
+    let cariKodu: string | null = null;
+    if (telefon.length >= 10) {
+      const found = await mikroFetch<{ Result?: Array<{ cari_kod: string }> }>('/MikroV17/sqlverioku', {
+        method: 'POST',
+        body: { Query: `SELECT TOP 1 cari_kod FROM CARI_HESAPLAR WITH (NOLOCK) WHERE cari_CepTel LIKE '%${telefon.slice(-10)}'` },
+      }, base);
+      cariKodu = found?.Result?.[0]?.cari_kod ?? null;
+    }
+    if (!cariKodu) {
+      const seq = await nextCariSequence();
+      cariKodu = `${env.MIKRO_CARI_PREFIX}${seq}`;
+      const { soyad, ad } = splitName(order.customerName);
+      const cariRes = await cariKayit({
+        UnvaniSoyadi: soyad || '-',
+        UnvaniAdi: ad || '.',
+        Kodu: cariKodu,
+        EpostaAdresi: order.customerEmail ?? '',
+        CepTelefonu: telefon.slice(0, 20),
+        Telefon1: '',
+        Telefon2: '0',
+        VergiDaire: '',
+        VergiNo: '11111111111',
+        WebAdresi: '',
+        DovizTip1: 'TL',
+        DovizTip2: '',
+        EFatura: false,
+        VergiMukellefi: false,
+        Adres1: {
+          Adres: [ship.address1, ship.address2].filter(Boolean).join(' '),
+          Ulke: ship.country ?? 'TURKEY',
+          Sehir: ship.city ?? '',
+          Kasaba: ship.district ?? '',
+          PostaKodu: ship.postalCode ?? '',
+        },
+      }, base);
+      if (!cariRes.ok) return { ok: false, error: `cariKayit(firma): ${cariRes.error}` };
+    }
+
+    const placedAtIso = order.placedAt.toISOString().slice(0, 19);
+    const viaRef = `VIA${evrakSeri}`;
+    const satirlar: MikroHareket[] = lineItems.map((li) => {
+      const unitPriceTl = Number(li.unitPriceCents) / 100;
+      const discountTl = Number(li.discountCents) / 100;
+      const kdvOran = li.variantIsTaxable === false ? 0 : 20;
+      const fiyatHaric = unitPriceTl / (1 + kdvOran / 100);
+      return {
+        Id: '{00000000-0000-0000-0000-000000000000}',
+        Cinsi: 0,
+        StokKodu: String(li.variantSku ?? li.sku ?? '').trim(), // firma DB'de PREFIX'SİZ
+        Barkodu: '',
+        KDV: fiyatHaric * (kdvOran / 100),
+        IstisnaKodu: 0,
+        Miktar: li.quantity,
+        Fiyat: fiyatHaric,
+        Iskonto1: discountTl > 0 ? discountTl / (1 + kdvOran / 100) : 0,
+        Iskonto2: 0,
+        Iskonto3: 0,
+        Iskonto4: 0,
+        Iskonto5: 0,
+        Aciklama: '',
+      };
+    });
+
+    const evrak: MikroEvrak = {
+      Tarih: placedAtIso,
+      TeslimTarihi: placedAtIso,
+      TeslimTuruKodu: shippingTeslimTuruKodu(params.courier ?? null),
+      SaticiKodu: '',
+      SrmMerkezKodu: env.MIKRO_SRM_MERKEZ,
+      DepoNo: env.MIKRO_FIRMA_DEPO,
+      OdemePlaniNo: env.MIKRO_ODEME_PLANI_NO,
+      ProjeKodu: env.MIKRO_PROJE_KODU,
+      EvrakSeri: evrakSeri,
+      EvrakSira: env.MIKRO_EVRAK_SIRA,
+      Tip: 0,
+      BelgeNo: viaRef,
+      CariHesapKodu: cariKodu,
+      DovizCinsi: 'TL',
+      DovizKuru: 1.0,
+      EvrakDokumAciklamasi: JSON.stringify({
+        tkp: viaRef,
+        pzr: 'Shopify',
+        cid: '0',
+        cusr: `telefon: ${telefon}`,
+        cns: order.customerName ?? '',
+        tel: telefon,
+        svka: [ship.address1, ship.address2, ship.district, ship.city].filter(Boolean).join(' '),
+      }),
+      Vade: 0,
+      MikroUserNo: env.MIKRO_APPROVER_USER_NO,
+      AdresNo: 1,
+      SiparisDurumu: true,
+      Satirlar: satirlar,
+    };
+    const res = await siparisEkle(evrak, base);
+    if (!res.ok) return { ok: false, error: `siparisEkle(firma): ${res.error}` };
+    return { ok: true, cariKodu };
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : String(err) };
+  }
 }
 
 /** Idempotent sync — orderId için Mikro pipeline'ını çalıştırır.
@@ -192,7 +331,24 @@ export async function syncOrderToMikro(orderId: string, kargo?: MikroKargoBilgi)
           updatedAt: new Date(),
         })
         .where(eq(orders.id, orderId));
-      return { ok: true, orderId, cariKodu, evrakSeri, evrakSira, status: 'approved' };
+      // Aradepo'da zaten var — ama FİRMA DB'de eksik olabilir (backfill senaryosu): firma push yine dene
+      let firmaDup: SyncOk['firma'];
+      if (env.MIKRO_FIRMA_PUSH && env.MIKRO_FIRMA_API_URL) {
+        firmaDup = await pushToFirmaDb({
+          order: {
+            customerName: order.customerName,
+            customerPhone: order.customerPhone,
+            customerEmail: order.customerEmail,
+            placedAt: order.placedAt,
+          },
+          ship,
+          lineItems,
+          evrakSeri,
+          courier: kargo?.courier ?? null,
+        });
+        if (!firmaDup.ok) console.error('[mikro-sync] FİRMA DB push hatası (dup-dal):', { orderId, error: firmaDup.error });
+      }
+      return { ok: true, orderId, cariKodu, evrakSeri, evrakSira, firma: firmaDup, status: 'approved' };
     }
   } catch {
     /* kontrol başarısızsa normal akışla devam */
@@ -321,13 +477,31 @@ export async function syncOrderToMikro(orderId: string, kargo?: MikroKargoBilgi)
     })
     .where(eq(orders.id, orderId));
 
+  // ANA FİRMA (fatura) DB'sine de push — best-effort (aradepo asıl; firma hatası pipeline'ı düşürmez)
+  let firma: SyncOk['firma'];
+  if (env.MIKRO_FIRMA_PUSH && env.MIKRO_FIRMA_API_URL) {
+    firma = await pushToFirmaDb({
+      order: {
+        customerName: order.customerName,
+        customerPhone: order.customerPhone,
+        customerEmail: order.customerEmail,
+        placedAt: order.placedAt,
+      },
+      ship,
+      lineItems,
+      evrakSeri,
+      courier: kargo?.courier ?? null,
+    });
+    if (!firma.ok) console.error('[mikro-sync] FİRMA DB push hatası:', { orderId, error: firma.error });
+  }
+
   await logAudit({
     actorType: 'system',
     actorId: 'mikro-sync',
     action: 'mikro.order.approved',
     entityType: 'order',
     entityId: orderId,
-    after: { cariKodu, evrakSeri, evrakSira, lineItems: lineItems.length },
+    after: { cariKodu, evrakSeri, evrakSira, lineItems: lineItems.length, firma },
   });
 
   return {
@@ -336,6 +510,7 @@ export async function syncOrderToMikro(orderId: string, kargo?: MikroKargoBilgi)
     cariKodu,
     evrakSeri,
     evrakSira,
+    firma,
     status: 'approved',
   };
 }
