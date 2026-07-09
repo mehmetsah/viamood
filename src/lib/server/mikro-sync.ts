@@ -24,12 +24,9 @@ import {
 } from '@/db/schema';
 import { logAudit } from '@/lib/audit/logger';
 import { env } from '@/lib/env';
-import { cariKayit, siparisEkle, siparisOnayla } from '@/lib/mikro/operations';
-import type {
-  MikroCariDto,
-  MikroEvrak,
-  MikroHareket,
-} from '@/lib/mikro/types';
+import { siparisEkle } from '@/lib/mikro/operations';
+import { mikroFetch } from '@/lib/mikro/client';
+import type { MikroEvrak, MikroHareket } from '@/lib/mikro/types';
 
 interface SyncOk {
   ok: true;
@@ -161,81 +158,45 @@ export async function syncOrderToMikro(orderId: string, kargo?: MikroKargoBilgi)
     return { ok: false, orderId, step: 'lookup', error: 'Sipariş satırı yok' };
   }
 
-  // 3. Cari oluştur (zaten varsa skip)
-  let cariKodu = order.mikroCariKodu;
-  if (!cariKodu) {
-    const seq = await nextCariSequence();
-    cariKodu = `${env.MIKRO_CARI_PREFIX}${seq}`;
+  // 3. Cari: ARADEPO modunda SABİT cari — Yunus'un günlük Woo→Mikro akışıyla birebir.
+  // Müşteri bilgisi evrakın EvrakDokumAciklamasi JSON'unda taşınır; cariKayit GEREKMEZ.
+  const cariKodu = env.MIKRO_ARADEPO_CARI;
 
-    const ship = (order.shippingAddress ?? {}) as ShippingAddr;
-    const { soyad, ad } = splitName(order.customerName);
+  // 4. Sipariş ekle (Yunus'un ÇALIŞAN Woo formatı — 2026-07-09'da #1015 ile canlı kanıtlandı)
+  const ship = (order.shippingAddress ?? {}) as ShippingAddr;
+  // Evrak seri = sipariş numarasının SADECE rakamları ('#1015' → '1015')
+  const evrakSeri =
+    (order.mikroEvrakSeri ?? '').trim() ||
+    String(order.shopifyOrderName ?? order.orderNumber ?? '').replace(/\D/g, '');
+  const evrakSira = order.mikroEvrakSira ?? env.MIKRO_EVRAK_SIRA;
+  if (!evrakSeri) {
+    return { ok: false, orderId, step: 'siparis', error: 'Evrak seri üretilemedi (sipariş numarası yok)' };
+  }
 
-    const cariDto: MikroCariDto = {
-      UnvaniSoyadi: soyad || '-',
-      UnvaniAdi: ad || '.',
-      Kodu: cariKodu,
-      EpostaAdresi: order.customerEmail ?? '',
-      CepTelefonu: (order.customerPhone ?? '').replace(/[^\d+]/g, '').slice(0, 20),
-      Telefon1: '',
-      Telefon2: '0',
-      VergiDaire: '',
-      VergiNo: '11111111111',
-      WebAdresi: '',
-      DovizTip1: 'TL',
-      DovizTip2: '',
-      EFatura: false,
-      VergiMukellefi: false,
-      Adres1: {
-        Adres: [ship.address1, ship.address2].filter(Boolean).join(' '),
-        Ulke: ship.country ?? 'TURKEY',
-        Sehir: ship.city ?? '',
-        Kasaba: ship.district ?? '',
-        PostaKodu: ship.postalCode ?? '',
-      },
-      FaturaAdresi: {
-        Ulke: ship.country ?? 'TURKEY',
-        Sehir: ship.city ?? '',
-        Kasaba: ship.district ?? '',
-        PostaKodu: ship.postalCode ?? '',
-      },
-      SevkAdresi: {
-        Ulke: ship.country ?? 'TURKEY',
-        Sehir: ship.city ?? '',
-        Kasaba: ship.district ?? '',
-        PostaKodu: ship.postalCode ?? '',
-      },
-    };
-
-    const cariRes = await cariKayit(cariDto);
-    if (!cariRes.ok) {
+  // Idempotensi: seri Mikro'da ZATEN varsa (elle/backfill girilmiş) tekrar EKLEME — çift evrak önlenir
+  try {
+    const dupe = await mikroFetch<{ Result?: Array<{ adet: number }> }>('/MikroV17/sqlverioku', {
+      method: 'POST',
+      body: { Query: `SELECT COUNT(*) as adet FROM SIPARISLER WITH (NOLOCK) WHERE sip_evrakno_seri='${evrakSeri.replace(/'/g, '')}'` },
+    });
+    if ((dupe?.Result?.[0]?.adet ?? 0) > 0) {
       await db
         .update(orders)
         .set({
-          mikroSyncStatus: 'failed',
-          mikroError: `cariKayit: ${cariRes.error}`,
-          mikroCariKodu: cariKodu, // boş cari açma — Yunus'un kuralı: sipariş hata verse bile devam et
+          mikroSyncStatus: 'approved',
+          mikroCariKodu: cariKodu,
+          mikroEvrakSeri: evrakSeri,
+          mikroEvrakSira: evrakSira,
+          mikroError: null,
+          mikroSyncedAt: new Date(),
           updatedAt: new Date(),
         })
         .where(eq(orders.id, orderId));
-      // Yunus'un kuralı: cari hata verirse de devam, sipariş ekle dene
-      // ama dönüş için status update et — alttaki step yine de çalışsın
+      return { ok: true, orderId, cariKodu, evrakSeri, evrakSira, status: 'approved' };
     }
-
-    await db
-      .update(orders)
-      .set({
-        mikroCariKodu: cariKodu,
-        mikroSyncStatus: cariRes.ok ? 'customer_created' : 'failed',
-        mikroError: cariRes.ok ? null : `cariKayit: ${cariRes.error}`,
-        updatedAt: new Date(),
-      })
-      .where(eq(orders.id, orderId));
+  } catch {
+    /* kontrol başarısızsa normal akışla devam */
   }
-
-  // 4. Sipariş ekle
-  const ship = (order.shippingAddress ?? {}) as ShippingAddr;
-  const evrakSeri = order.mikroEvrakSeri ?? order.shopifyOrderName ?? order.orderNumber ?? '';
-  const evrakSira = order.mikroEvrakSira ?? 1;
 
   // SKU normalize + Mikro stok kodu üret (Yunus kuralı: VIA prefix)
   // Eğer satırlardan birinde SKU yoksa Mikro reddedeceğinden erken fail edelim
@@ -262,18 +223,27 @@ export async function syncOrderToMikro(orderId: string, kargo?: MikroKargoBilgi)
     const stokKodu = rawSku.toUpperCase().startsWith(env.MIKRO_STOK_PREFIX.toUpperCase())
       ? rawSku
       : `${env.MIKRO_STOK_PREFIX}${rawSku}`;
+    // Yunus'un çalışan formatı: Fiyat = KDV HARİÇ birim fiyat, KDV alanı = KDV TUTARI (oran DEĞİL!)
+    const kdvOran = li.variantIsTaxable === false ? 0 : 20;
+    const fiyatHaric = unitPriceTl / (1 + kdvOran / 100);
+    const kdvTutar = fiyatHaric * (kdvOran / 100);
     return {
+      Id: '{00000000-0000-0000-0000-000000000000}',
       Cinsi: 0, // Stok
       StokKodu: stokKodu,
       // Barkodu BİLEREK BOŞ: Mikro SiparisEkle, Barkodu doluysa stok aramasını BARKODLA yapıyor;
       // Shopify barkodu Mikro'da kayıtlı olmadığından "Stok bilgisi bulunamadı" veriyor (kanıtlandı).
       Barkodu: '',
-      KDV: li.variantIsTaxable === false ? 0 : 20,
+      KDV: kdvTutar,
+      IstisnaKodu: 0,
       Miktar: li.quantity,
-      Fiyat: unitPriceTl,
-      Iskonto1: discountTl > 0 ? discountTl : 0,
-      Aciklama: li.title.slice(0, 200),
-      EntegrasyonID: li.id,
+      Fiyat: fiyatHaric,
+      Iskonto1: discountTl > 0 ? discountTl / (1 + kdvOran / 100) : 0,
+      Iskonto2: 0,
+      Iskonto3: 0,
+      Iskonto4: 0,
+      Iskonto5: 0,
+      Aciklama: '',
     };
   });
 
@@ -281,29 +251,38 @@ export async function syncOrderToMikro(orderId: string, kargo?: MikroKargoBilgi)
 
   // Kargo takip bilgisi (fulfillment sonrası push'ta dolu gelir)
   const takipNo = kargo?.trackingNumber ?? kargo?.barcode ?? null;
-  const kargoBarkod = kargo?.barcode && kargo.barcode !== takipNo ? kargo.barcode : null;
+  const telefon = (order.customerPhone ?? '').replace(/[^\d]/g, '').replace(/^90/, '');
 
   const evrak: MikroEvrak = {
     Tarih: placedAtIso,
     TeslimTarihi: placedAtIso,
     TeslimTuruKodu: shippingTeslimTuruKodu(kargo?.courier ?? null), // gerçek kurye (yoksa PTT default)
+    SaticiKodu: '',
     SrmMerkezKodu: env.MIKRO_SRM_MERKEZ,
-    DepoNo: env.MIKRO_DEPO_NO,
+    DepoNo: env.MIKRO_ARADEPO_DEPO,
     OdemePlaniNo: env.MIKRO_ODEME_PLANI_NO,
     ProjeKodu: env.MIKRO_PROJE_KODU,
     EvrakSeri: evrakSeri,
     EvrakSira: evrakSira,
+    Tip: 0,
     ...(takipNo ? { BelgeNo: takipNo.slice(0, 50) } : {}),
-    CariHesapKodu: cariKodu!,
+    CariHesapKodu: cariKodu,
     DovizCinsi: 'TL',
-    EvrakAciklama: {
-      Aciklama1: `Sipariş: ${order.shopifyOrderName ?? order.orderNumber ?? order.id}`,
-      Aciklama2: order.customerEmail ?? '',
-      Aciklama3: ship.address1 ?? '',
-      ...(takipNo ? { Aciklama4: `Kargo Takip: ${takipNo}` } : {}),
-      ...(kargoBarkod ? { Aciklama5: `Kargo Barkod: ${kargoBarkod}` } : {}),
-    },
-    SiparisDurumu: false,
+    DovizKuru: 1.0,
+    // El terminali/raporlar bu JSON'u okuyor (tkp = kargo takip no) — Yunus'un Woo şemasıyla aynı
+    EvrakDokumAciklamasi: JSON.stringify({
+      tkp: takipNo ?? '',
+      pzr: 'Shopify',
+      cid: '0',
+      cusr: `telefon: ${telefon}`,
+      cns: order.customerName ?? '',
+      tel: telefon,
+      svka: [ship.address1, ship.address2, ship.district, ship.city].filter(Boolean).join(' '),
+    }),
+    Vade: 0,
+    MikroUserNo: env.MIKRO_APPROVER_USER_NO,
+    AdresNo: 1,
+    SiparisDurumu: true, // onaylı girer — ayrı SiparisOnayla no-op (Result:false) döndüğü için kaldırıldı
     Satirlar: satirlar,
   };
 
@@ -328,40 +307,14 @@ export async function syncOrderToMikro(orderId: string, kargo?: MikroKargoBilgi)
     return { ok: false, orderId, step: 'siparis', error: siparisRes.error };
   }
 
-  await db
-    .update(orders)
-    .set({
-      mikroSyncStatus: 'order_added',
-      mikroEvrakSeri: evrakSeri,
-      mikroEvrakSira: evrakSira,
-      mikroError: null,
-      updatedAt: new Date(),
-    })
-    .where(eq(orders.id, orderId));
-
-  // 5. Onayla
-  const onayRes = await siparisOnayla({
-    EvrakSeri: evrakSeri,
-    EvrakSira: evrakSira,
-    Tip: 0,
-    OnaylayanMikroKullaniciNo: env.MIKRO_APPROVER_USER_NO,
-  });
-  if (!onayRes.ok) {
-    await db
-      .update(orders)
-      .set({
-        mikroSyncStatus: 'failed',
-        mikroError: `siparisOnayla: ${onayRes.error}`,
-        updatedAt: new Date(),
-      })
-      .where(eq(orders.id, orderId));
-    return { ok: false, orderId, step: 'onay', error: onayRes.error };
-  }
-
+  // SiparisDurumu:true ile evrak ONAYLI girer — ayrı SiparisOnayla adımı gerekmez
   await db
     .update(orders)
     .set({
       mikroSyncStatus: 'approved',
+      mikroCariKodu: cariKodu,
+      mikroEvrakSeri: evrakSeri,
+      mikroEvrakSira: evrakSira,
       mikroError: null,
       mikroSyncedAt: new Date(),
       updatedAt: new Date(),
@@ -380,7 +333,7 @@ export async function syncOrderToMikro(orderId: string, kargo?: MikroKargoBilgi)
   return {
     ok: true,
     orderId,
-    cariKodu: cariKodu!,
+    cariKodu,
     evrakSeri,
     evrakSira,
     status: 'approved',

@@ -70,12 +70,14 @@ export interface MikroCariDto {
 
 /** Sipariş satırı (Hareket) */
 export interface MikroHareket {
+  /** Satır GUID — yeni satırda sıfır-GUID placeholder: "{00000000-0000-0000-0000-000000000000}" */
+  Id?: string;
   /** 0: Stok, 1: Hizmet */
   Cinsi: 0 | 1;
   StokKodu: string;
   Barkodu?: string;
   isDelete?: boolean;
-  /** KDV % (örn. 20) */
+  /** DİKKAT: KDV TUTARI (TL) — oran DEĞİL! (Fiyat = KDV hariç birim fiyat; Yunus'un çalışan Woo formatı) */
   KDV?: number;
   IstisnaKodu?: number;
   Miktar: number;

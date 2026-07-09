@@ -88,6 +88,12 @@ const envSchema = z.object({
   KARGOLAB_AUTO_LABEL: z.coerce.boolean().default(true),
   /** Default depo no */
   MIKRO_DEPO_NO: z.coerce.number().default(1),
+  /** ARADEPO sabit carisi — Yunus'un günlük Woo→Mikro akışındaki cari (müşteri carisi AÇILMAZ) */
+  MIKRO_ARADEPO_CARI: z.string().default('120.02.01.V004'),
+  /** ARADEPO depo no (ViaDolapdere) */
+  MIKRO_ARADEPO_DEPO: z.coerce.number().default(60),
+  /** Evrak sıra — Yunus'un Woo akışındaki sabit (kanal kodu gibi) */
+  MIKRO_EVRAK_SIRA: z.coerce.number().default(4000),
   /** SRM merkez kodu */
   MIKRO_SRM_MERKEZ: z.string().default('99'),
   /** Ödeme planı no */
