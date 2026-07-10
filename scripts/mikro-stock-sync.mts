@@ -195,12 +195,12 @@ async function writeInventory(location: string, items: { invItem: string; qty: n
         name: 'available',
         reason: 'correction',
         referenceDocumentUri: 'viamood://mikro-stock-sync',
-        // 2026-04 forward-compatible: compareQuantity:null (compare check'i atla)
+        // compareQuantity:null artık reddediliyor → ignoreCompareQuantity ile compare check atlanır
+        ignoreCompareQuantity: true,
         quantities: batch.map((b) => ({
           inventoryItemId: `gid://shopify/InventoryItem/${b.invItem}`,
           locationId: location,
           quantity: b.qty,
-          compareQuantity: null,
         })),
       },
     });
