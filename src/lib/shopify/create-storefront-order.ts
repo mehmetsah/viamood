@@ -13,6 +13,9 @@ import { provinceCode } from './tr-provinces';
 import { env } from '../env';
 import { upsertCustomerAddress } from './customer-address';
 import { ensureTrCustomer } from './customer-locale';
+import { resolveVendorIbans } from './vendor-ibans';
+import { orderConfirmationEmail } from '../email/templates';
+import { sendEmail } from '../email/sender';
 
 export type StorefrontPaymentMethod = 'havale' | 'cod';
 
@@ -148,7 +151,9 @@ export async function createStorefrontOrder(
           ]
         : []),
     ],
-    send_receipt: true,
+    // Shopify makbuzu KAPALI: API-siparişlerinde customer_locale boş kaldığından İngilizce
+    // gidiyordu — onay mailini Türkçe olarak BİZ atıyoruz (aşağıda, Resend + IBAN talimatlı)
+    send_receipt: false,
     send_fulfillment_receipt: false,
     inventory_behaviour: 'decrement_obeying_policy',
     ...(b.customer_id ? { customer: { id: b.customer_id } } : {}),
@@ -190,6 +195,22 @@ export async function createStorefrontOrder(
       province: b.province,
       zip: b.zip,
     });
+    // TÜRKÇE onay e-postası (Shopify send_receipt yerine — havale'de IBAN talimatı da içerir)
+    try {
+      const vendors = await resolveVendorIbans(b.line_items, b.shipping_cost ?? 0);
+      const tpl = orderConfirmationEmail({
+        orderNumber: j.order.name,
+        customerName: `${b.first_name} ${b.last_name}`.trim(),
+        total: parseFloat(j.order.total_price || '0'),
+        method,
+        codMethod: b.cod_method,
+        vendors,
+      });
+      const to = b.customer_email || b.email;
+      if (to) await sendEmail({ to, subject: tpl.subject, html: tpl.html, text: tpl.text });
+    } catch (e) {
+      console.error('[storefront-order] onay maili hatası:', e);
+    }
     return {
       ok: true,
       orderId: j.order.id,
