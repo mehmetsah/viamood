@@ -24,6 +24,8 @@ export interface StorefrontOrderBody {
   line_items: Array<{ variant_id: number; quantity: number; sku?: string; price?: number; title?: string; product_type?: string }>;
   shipping_cost?: number; // TL
   shipping_courier?: string;
+  /** '1' → müşteri KAYITLI adres seçti; adres defterine TEKRAR kaydetme */
+  saved_address?: string;
   first_name: string;
   last_name: string;
   phone: string;
@@ -189,17 +191,19 @@ export async function createStorefrontOrder(
     const j = (await resp.json()) as { order?: { id: number; name: string; total_price?: string } };
     if (!j.order?.id) return { ok: false, error: 'order response boş' };
     // Adresi müşterinin defterine YAPILANDIRILMIŞ (il/ilçe/mahalle) kaydet — best-effort, dedup'lu
-    await upsertCustomerAddress({
-      customerId: b.customer_id,
-      first_name: b.first_name,
-      last_name: b.last_name,
-      phone: b.phone,
-      address1: b.address1,
-      address2: b.address2,
-      city: b.city,
-      province: b.province,
-      zip: b.zip,
-    });
+    if (b.saved_address !== '1') { // kayıtlı adres seçildiyse tekrar kaydetme (duplicate önlemi)
+      await upsertCustomerAddress({
+        customerId: b.customer_id,
+        first_name: b.first_name,
+        last_name: b.last_name,
+        phone: b.phone,
+        address1: b.address1,
+        address2: b.address2,
+        city: b.city,
+        province: b.province,
+        zip: b.zip,
+      });
+    }
     // TÜRKÇE onay e-postası (Shopify send_receipt yerine — havale'de IBAN talimatı da içerir)
     try {
       const vendors = await resolveVendorIbans(b.line_items, b.shipping_cost ?? 0);

@@ -58,6 +58,7 @@ interface PaytrInitBody {
   address2?: string;
   city: string; // ilçe
   province: string; // il
+  saved_address?: string; // '1' → kayıtlı adres seçildi, tekrar kaydetme
   zip?: string;
   customer_id?: number;
   customer_email?: string;
@@ -141,17 +142,19 @@ async function createDraftOrder(b: PaytrInitBody): Promise<number | null> {
     const j = (await resp.json()) as { draft_order?: { id: number } };
     const _did = j.draft_order?.id ?? null;
     if (_did && b.customer_id) {
-      await upsertCustomerAddress({
-        customerId: b.customer_id,
-        first_name: b.first_name,
-        last_name: b.last_name,
-        phone: b.phone,
-        address1: b.address1,
-        address2: b.address2,
-        city: b.city,
-        province: b.province,
-        zip: b.zip,
-      });
+      if (b.saved_address !== '1') { // kayıtlı adres seçildiyse tekrar kaydetme (duplicate önlemi)
+        await upsertCustomerAddress({
+          customerId: b.customer_id,
+          first_name: b.first_name,
+          last_name: b.last_name,
+          phone: b.phone,
+          address1: b.address1,
+          address2: b.address2,
+          city: b.city,
+          province: b.province,
+          zip: b.zip,
+        });
+      }
     }
     return _did;
   } catch {

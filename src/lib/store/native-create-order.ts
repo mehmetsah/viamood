@@ -156,17 +156,19 @@ export async function createNativeStorefrontOrder(
     }
 
     // Adres defterine yapılandırılmış kayıt (FAZ 1 fonksiyonu — RDS + best-effort Shopify)
-    upsertCustomerAddress({
-      customerId: b.customer_id,
-      first_name: b.first_name,
-      last_name: b.last_name,
-      phone: b.phone,
-      address1: b.address1,
-      address2: b.address2,
-      city: b.city,
-      province: b.province,
-      zip: b.zip,
-    }).catch(() => {});
+    if (b.saved_address !== '1') { // kayıtlı adres seçildiyse tekrar kaydetme (duplicate önlemi)
+      upsertCustomerAddress({
+        customerId: b.customer_id,
+        first_name: b.first_name,
+        last_name: b.last_name,
+        phone: b.phone,
+        address1: b.address1,
+        address2: b.address2,
+        city: b.city,
+        province: b.province,
+        zip: b.zip,
+      }).catch(() => {});
+    }
 
     // Onay e-postası (Shopify send_receipt yerine) — best-effort
     try {

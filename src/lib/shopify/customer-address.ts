@@ -26,6 +26,9 @@ export interface CustomerAddressInput {
 }
 
 const norm = (s?: string): string => (s || '').trim().toLocaleLowerCase('tr');
+// Mahalle karşılaştırması: 'Osmanağa Mah.' ≈ 'OSMANAĞA MAHALLESİ' ≈ 'osmanağa'
+const normMah = (s?: string): string =>
+  norm(s).replace(/mahallesi|mahalle|mah\.?/g, '').replace(/[^a-zçğıöşüû0-9]/g, '');
 
 export async function upsertCustomerAddress(p: CustomerAddressInput): Promise<void> {
   const token = env.SHOPIFY_ADMIN_ACCESS_TOKEN;
@@ -46,7 +49,7 @@ export async function upsertCustomerAddress(p: CustomerAddressInput): Promise<vo
           norm(a.city) === norm(p.city) &&
           norm(a.province) === norm(p.province) &&
           norm(a.zip) === norm(p.zip) &&
-          norm(a.address2) === norm(p.address2),
+          normMah(a.address2) === normMah(p.address2),
       );
       if (dup) return;
     }

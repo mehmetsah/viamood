@@ -85,6 +85,7 @@ export async function POST(req: NextRequest) {
       ok: true,
       order_code: created.orderName,
       order_name: created.orderName,
+      email: body.customer_email || body.email, // takip linki siparişin GERÇEK e-postasıyla kurulsun
       order_id: created.orderId,
       total: created.total,
       vendors,

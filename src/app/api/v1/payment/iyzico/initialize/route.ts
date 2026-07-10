@@ -104,17 +104,19 @@ async function createDraftOrder(body: InitBody): Promise<number | null> {
     const res = (await resp.json()) as DraftOrderResp;
     const _did = res.draft_order?.id ?? null;
     if (_did && body.customer_id) {
-      await upsertCustomerAddress({
-        customerId: body.customer_id,
-        first_name: body.first_name,
-        last_name: body.last_name,
-        phone: body.phone,
-        address1: body.address1,
-        address2: body.address2,
-        city: body.city,
-        province: body.province,
-        zip: body.zip,
-      });
+      if (body.saved_address !== '1') { // kayıtlı adres seçildiyse tekrar kaydetme (duplicate önlemi)
+        await upsertCustomerAddress({
+          customerId: body.customer_id,
+          first_name: body.first_name,
+          last_name: body.last_name,
+          phone: body.phone,
+          address1: body.address1,
+          address2: body.address2,
+          city: body.city,
+          province: body.province,
+          zip: body.zip,
+        });
+      }
     }
     return _did;
   } catch (e) {
@@ -162,6 +164,7 @@ interface InitBody {
   address2?: string;
   city: string; // İlçe
   province: string; // İl
+  saved_address?: string; // '1' → kayıtlı adres seçildi, tekrar kaydetme
   zip?: string;
   identity_number?: string;
   draft_order_id?: number; // Shopify draft order id (callback'te complete için)
