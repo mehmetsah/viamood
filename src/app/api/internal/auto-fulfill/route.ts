@@ -34,6 +34,16 @@ export async function GET(req: NextRequest) {
   if (!keyOk(sp.get('key'))) {
     return NextResponse.json({ ok: false, error: 'unauthorized' }, { status: 401 });
   }
+  // ?env=1 → hazırlık durumu (secret DEĞERİ sızdırmaz, sadece var/yok) — infra sohbeti bekçileri için
+  if (sp.get('env') === '1') {
+    return NextResponse.json({
+      ok: true,
+      resend: !!process.env.RESEND_API_KEY,
+      email_from: !!process.env.EMAIL_FROM,
+      auth_url: process.env.AUTH_URL ? 'set' : '',
+    });
+  }
+
   // ?sku=132 → variant eşleşme teşhisi (order-ingest neden satır yazamadı sorusu için)
   const sku = (sp.get('sku') ?? '').trim();
   if (sku) {
