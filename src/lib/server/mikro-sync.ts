@@ -162,6 +162,7 @@ async function pushToFirmaDb(params: {
 
     // Cari: telefonla dedupe (Woo akışında email boş geliyor) → yoksa yeni müşteri carisi aç
     const telefon = (order.customerPhone ?? ship.phone ?? '').replace(/[^\d]/g, '').replace(/^90/, ''); // müşteri profili boşsa teslimat adresindeki telefon
+    const alici = ship.name?.trim() || order.customerName; // cari/irsaliye adı = ADRESTEKİ alıcı (Shopify profili değil — Yunus kuralı)
     let cariKodu: string | null = null;
     if (telefon.length >= 10) {
       const found = await mikroFetch<{ Result?: Array<{ cari_kod: string }> }>('/MikroV17/sqlverioku', {
@@ -173,7 +174,7 @@ async function pushToFirmaDb(params: {
     if (!cariKodu) {
       const seq = await nextCariSequence();
       cariKodu = `${env.MIKRO_CARI_PREFIX}${seq}`;
-      const { soyad, ad } = splitName(order.customerName);
+      const { soyad, ad } = splitName(alici);
       const cariRes = await cariKayit({
         UnvaniSoyadi: soyad || '-',
         UnvaniAdi: ad || '.',
@@ -263,7 +264,7 @@ async function pushToFirmaDb(params: {
         pzr: 'Shopify',
         cid: '0',
         cusr: `telefon: ${telefon}`,
-        cns: order.customerName ?? '',
+        cns: alici ?? '',
         tel: telefon,
         svka: [ship.address1, ship.address2, ship.district, ship.city].filter(Boolean).join(' '),
       }),
@@ -271,7 +272,7 @@ async function pushToFirmaDb(params: {
       MikroUserNo: env.MIKRO_APPROVER_USER_NO,
       AdresNo: 1,
       // İrsaliyede adres çıksın (Yunus kuralı): 9+10=Ad Soyad/Adres, 7=tel, 6=platform kimliği
-      EvrakAciklama: evrakAciklamaFields(order.customerName, ship, telefon),
+      EvrakAciklama: evrakAciklamaFields(alici, ship, telefon),
       SiparisDurumu: true,
       Satirlar: satirlar,
     };
@@ -449,6 +450,7 @@ export async function syncOrderToMikro(orderId: string, kargo?: MikroKargoBilgi)
   // Kargo takip bilgisi (fulfillment sonrası push'ta dolu gelir)
   const takipNo = kargo?.trackingNumber ?? kargo?.barcode ?? null;
   const telefon = (order.customerPhone ?? ship.phone ?? '').replace(/[^\d]/g, '').replace(/^90/, ''); // müşteri profili boşsa teslimat adresindeki telefon
+  const alici = ship.name?.trim() || order.customerName; // cari/irsaliye adı = ADRESTEKİ alıcı (Shopify profili değil — Yunus kuralı)
 
   const evrak: MikroEvrak = {
     Tarih: placedAtIso,
@@ -472,7 +474,7 @@ export async function syncOrderToMikro(orderId: string, kargo?: MikroKargoBilgi)
       pzr: 'Shopify',
       cid: '0',
       cusr: `telefon: ${telefon}`,
-      cns: order.customerName ?? '',
+      cns: alici ?? '',
       tel: telefon,
       svka: [ship.address1, ship.address2, ship.district, ship.city].filter(Boolean).join(' '),
     }),
@@ -480,7 +482,7 @@ export async function syncOrderToMikro(orderId: string, kargo?: MikroKargoBilgi)
     MikroUserNo: env.MIKRO_APPROVER_USER_NO,
     AdresNo: 1,
     // İrsaliyede adres çıksın (Yunus kuralı): 9+10=Ad Soyad/Adres, 7=tel, 6=platform kimliği
-    EvrakAciklama: evrakAciklamaFields(order.customerName, ship, telefon),
+    EvrakAciklama: evrakAciklamaFields(alici, ship, telefon),
     SiparisDurumu: true, // onaylı girer — ayrı SiparisOnayla no-op (Result:false) döndüğü için kaldırıldı
     Satirlar: satirlar,
   };
