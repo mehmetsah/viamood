@@ -161,7 +161,7 @@ async function pushToFirmaDb(params: {
     if ((dupe?.Result?.[0]?.adet ?? 0) > 0) return { ok: true };
 
     // Cari: telefonla dedupe (Woo akışında email boş geliyor) → yoksa yeni müşteri carisi aç
-    const telefon = (order.customerPhone ?? '').replace(/[^\d]/g, '').replace(/^90/, '');
+    const telefon = (order.customerPhone ?? ship.phone ?? '').replace(/[^\d]/g, '').replace(/^90/, ''); // müşteri profili boşsa teslimat adresindeki telefon
     let cariKodu: string | null = null;
     if (telefon.length >= 10) {
       const found = await mikroFetch<{ Result?: Array<{ cari_kod: string }> }>('/MikroV17/sqlverioku', {
@@ -448,7 +448,7 @@ export async function syncOrderToMikro(orderId: string, kargo?: MikroKargoBilgi)
 
   // Kargo takip bilgisi (fulfillment sonrası push'ta dolu gelir)
   const takipNo = kargo?.trackingNumber ?? kargo?.barcode ?? null;
-  const telefon = (order.customerPhone ?? '').replace(/[^\d]/g, '').replace(/^90/, '');
+  const telefon = (order.customerPhone ?? ship.phone ?? '').replace(/[^\d]/g, '').replace(/^90/, ''); // müşteri profili boşsa teslimat adresindeki telefon
 
   const evrak: MikroEvrak = {
     Tarih: placedAtIso,
