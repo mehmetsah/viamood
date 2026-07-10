@@ -86,10 +86,8 @@ export default auth((req) => {
   }
 
   if (CUSTOMER_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`))) {
-    // Müşteri portalı: vendor/admin kendi paneline; customer (veya rolsüz authenticated) izinli.
-    if (role === 'admin' || role === 'super_admin') {
-      return NextResponse.redirect(buildRedirectUrl(req, '/admin'));
-    }
+    // Müşteri portalı: vendor kendi paneline; admin İZİNLİ (müşteri deneyimini test edebilsin
+    // — 'Hesabıma basınca admine yönleniyor' şikâyetinin düzeltmesi); customer izinli.
     if (role === 'vendor' || role === 'vendor_admin') {
       return NextResponse.redirect(buildRedirectUrl(req, '/dashboard'));
     }
