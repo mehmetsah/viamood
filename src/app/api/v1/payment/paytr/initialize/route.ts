@@ -12,6 +12,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { env } from '@/lib/env';
 import { provinceCode } from '@/lib/shopify/tr-provinces';
+import { normalizeTrPhone } from '@/lib/shopify/tr-format';
 import { upsertCustomerAddress } from '@/lib/shopify/customer-address';
 import { ensureTrCustomer } from '@/lib/shopify/customer-locale';
 import { getPaytrToken, buildMerchantOid, paytrConfigured, type PaytrBasketItem } from '@/lib/paytr/client';
@@ -86,7 +87,7 @@ function invoiceNote(b: PaytrInitBody): string {
 async function createDraftOrder(b: PaytrInitBody): Promise<number | null> {
   const token = env.SHOPIFY_ADMIN_ACCESS_TOKEN;
   if (!token) return null;
-  const phone = b.phone.replace(/\s/g, '');
+  const phone = normalizeTrPhone(b.phone) ?? '';
   const pcode = provinceCode(b.province);
   const addr: Record<string, unknown> = {
     first_name: b.first_name,

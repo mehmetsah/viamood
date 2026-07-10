@@ -10,6 +10,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { initializeCheckoutForm } from '@/lib/iyzico/client';
 import { provinceCode } from '@/lib/shopify/tr-provinces';
+import { normalizeTrPhone } from '@/lib/shopify/tr-format';
 import { env } from '@/lib/env';
 import { upsertCustomerAddress } from '@/lib/shopify/customer-address';
 import { ensureTrCustomer } from '@/lib/shopify/customer-locale';
@@ -28,7 +29,7 @@ interface DraftOrderResp {
 let _lastDraftError = '';
 async function createDraftOrder(body: InitBody): Promise<number | null> {
   try {
-    const phone = body.phone.replace(/\s/g, '');
+    const phone = normalizeTrPhone(body.phone) ?? '';
     const pcode = provinceCode(body.province); // İl adı → TR-XX kodu
     const addr: Record<string, unknown> = {
       first_name: body.first_name,
@@ -256,7 +257,7 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  const phone = body.phone.replace(/\s/g, '');
+  const phone = normalizeTrPhone(body.phone) ?? '';
   const gsm = phone.startsWith('+') ? phone : `+90${phone.replace(/^0/, '')}`;
   const fullAddr = `${body.address1}${body.address2 ? ', ' + body.address2 : ''}, ${body.city}/${body.province}`;
   const conversationId = `vm-${Date.now()}-${Math.floor(itemsTotal)}`;

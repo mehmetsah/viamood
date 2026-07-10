@@ -14,6 +14,7 @@ import { env } from '../env';
 import { upsertCustomerAddress } from './customer-address';
 import { ensureTrCustomer } from './customer-locale';
 import { resolveVendorIbans } from './vendor-ibans';
+import { normalizeTrPhone, shopifyErrorToTr } from './tr-format';
 import { orderConfirmationEmail } from '../email/templates';
 import { sendEmail } from '../email/sender';
 
@@ -97,12 +98,14 @@ export async function createStorefrontOrder(
   // Onay maili Türkçe gitsin: müşteri siparişten ÖNCE tr locale'iyle var edilir
   await ensureTrCustomer(b.customer_email || b.email);
 
-  const phone = b.phone.replace(/\s/g, '');
+  // Shopify phone E.164 ister — normalize edilemiyorsa alanı HİÇ gönderme (422 'is invalid' önlenir;
+  // telefon zaten note + Mikro EvrakDokum'da taşınıyor, sipariş telefonsuz da oluşabilmeli)
+  const phone = normalizeTrPhone(b.phone);
   const pcode = provinceCode(b.province);
   const addr: Record<string, unknown> = {
     first_name: b.first_name,
     last_name: b.last_name,
-    phone,
+    ...(phone ? { phone } : {}),
     address1: b.address1,
     address2: b.address2 || '',
     city: b.city, // ilçe
@@ -135,7 +138,7 @@ export async function createStorefrontOrder(
   const order: Record<string, unknown> = {
     line_items: lineItems,
     email: b.customer_email || b.email,
-    phone,
+    ...(phone ? { phone } : {}),
     shipping_address: addr,
     billing_address: addr,
     financial_status: 'pending', // ödenmemiş — havale onayı / kapıda tahsilat bekliyor
@@ -179,7 +182,9 @@ export async function createStorefrontOrder(
       },
     );
     if (!resp.ok) {
-      return { ok: false, error: `Shopify HTTP ${resp.status}: ${(await resp.text()).slice(0, 300)}` };
+      const bodyText = (await resp.text()).slice(0, 500);
+      console.error('[storefront-order] Shopify hata:', resp.status, bodyText); // ham hata LOG'a — müşteriye Türkçe
+      return { ok: false, error: shopifyErrorToTr(resp.status, bodyText) };
     }
     const j = (await resp.json()) as { order?: { id: number; name: string; total_price?: string } };
     if (!j.order?.id) return { ok: false, error: 'order response boş' };
