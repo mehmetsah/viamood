@@ -13,6 +13,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { env } from '@/lib/env';
 import { provinceCode } from '@/lib/shopify/tr-provinces';
 import { upsertCustomerAddress } from '@/lib/shopify/customer-address';
+import { ensureTrCustomer } from '@/lib/shopify/customer-locale';
 import { getPaytrToken, buildMerchantOid, paytrConfigured, type PaytrBasketItem } from '@/lib/paytr/client';
 import { getStore, type StorefrontOrderBody } from '@/lib/store';
 import { createNativeCardPendingOrder } from '@/lib/store/native-create-order';
@@ -203,6 +204,9 @@ export async function POST(req: NextRequest) {
   }));
   if (shipKurus > 0) basket.push({ name: 'Kargo', priceTl: shipKurus / 100, quantity: 1 });
   if (discKurus > 0) basket.push({ name: 'İndirim', priceTl: -discKurus / 100, quantity: 1 });
+
+  // Onay maili Türkçe gitsin: müşteri siparişten ÖNCE tr locale'iyle var edilir
+  await ensureTrCustomer(body.customer_email || body.email);
 
   // STORE_BACKEND='native' → RDS pending native order (numerik ref); aksi → Shopify draft (değişmez)
   const draftId =

@@ -12,6 +12,7 @@ import { initializeCheckoutForm } from '@/lib/iyzico/client';
 import { provinceCode } from '@/lib/shopify/tr-provinces';
 import { env } from '@/lib/env';
 import { upsertCustomerAddress } from '@/lib/shopify/customer-address';
+import { ensureTrCustomer } from '@/lib/shopify/customer-locale';
 import { getStore, type StorefrontOrderBody } from '@/lib/store';
 import { createNativeCardPendingOrder } from '@/lib/store/native-create-order';
 
@@ -259,6 +260,9 @@ export async function POST(req: NextRequest) {
   const gsm = phone.startsWith('+') ? phone : `+90${phone.replace(/^0/, '')}`;
   const fullAddr = `${body.address1}${body.address2 ? ', ' + body.address2 : ''}, ${body.city}/${body.province}`;
   const conversationId = `vm-${Date.now()}-${Math.floor(itemsTotal)}`;
+
+  // Onay maili Türkçe gitsin: müşteri siparişten ÖNCE tr locale'iyle var edilir
+  await ensureTrCustomer(body.customer_email || body.email);
 
   // Ödeme öncesi pending order yarat. Ödeme başarılı → callback complete eder → sipariş.
   // STORE_BACKEND='native' → RDS pending native order; aksi halde Shopify draft (değişmez).

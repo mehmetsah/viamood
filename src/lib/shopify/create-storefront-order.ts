@@ -12,6 +12,7 @@
 import { provinceCode } from './tr-provinces';
 import { env } from '../env';
 import { upsertCustomerAddress } from './customer-address';
+import { ensureTrCustomer } from './customer-locale';
 
 export type StorefrontPaymentMethod = 'havale' | 'cod';
 
@@ -89,6 +90,9 @@ export async function createStorefrontOrder(
 ): Promise<CreatedOrder | OrderErr> {
   const token = env.SHOPIFY_ADMIN_ACCESS_TOKEN;
   if (!token) return { ok: false, error: 'SHOPIFY_ADMIN_ACCESS_TOKEN yok' };
+
+  // Onay maili Türkçe gitsin: müşteri siparişten ÖNCE tr locale'iyle var edilir
+  await ensureTrCustomer(b.customer_email || b.email);
 
   const phone = b.phone.replace(/\s/g, '');
   const pcode = provinceCode(b.province);
