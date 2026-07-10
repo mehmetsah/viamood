@@ -220,7 +220,8 @@ export async function POST(req: NextRequest) {
     userName: `${body.first_name} ${body.last_name}`.trim(),
     userAddress: `${body.address1}${body.address2 ? ', ' + body.address2 : ''}, ${body.city}/${body.province}`,
     userPhone: body.phone.replace(/\s/g, ''),
-    okUrl: `${STOREFRONT}/pages/siparis-alindi${draftId ? '?order=' + draftId : ''}`,
+    // ref = merchant_oid → başarı sayfasında "Ödeme Referansı" olarak gösterilir (PayTR panelinde aranabilir)
+    okUrl: `${STOREFRONT}/pages/siparis-alindi?ref=${merchantOid}${draftId ? '&order=' + draftId : ''}`,
     failUrl: `${STOREFRONT}/pages/odeme-hata?reason=paytr`,
   });
 
