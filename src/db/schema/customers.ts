@@ -2,6 +2,7 @@ import { sql } from 'drizzle-orm';
 import {
   boolean,
   index,
+  jsonb,
   pgTable,
   text,
   unique,
@@ -32,6 +33,11 @@ export const customers = pgTable(
     email: text('email').notNull(),
     name: text('name'),
     phone: text('phone'),
+    // Bildirim tercihleri (portal Profil ekranı)
+    preferences: jsonb('preferences')
+      .$type<{ campaign?: boolean; sms?: boolean; whatsapp?: boolean }>()
+      .notNull()
+      .default({}),
     ...timestamps(),
   },
   (t) => [

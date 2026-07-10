@@ -1,118 +1,263 @@
 import Link from 'next/link';
-import { desc, eq, or, sql } from 'drizzle-orm';
+import { and, count, desc, eq, inArray, isNotNull, or, sql } from 'drizzle-orm';
 import { db } from '@/db/client';
-import { orders } from '@/db/schema';
+import { fulfillments, orders } from '@/db/schema';
 import { getSessionCustomer } from '@/lib/customers/session';
+import { CopyButton } from './_components/CopyButton';
+import { Pagination, parsePage } from './_components/Pagination';
+import { koridor, pul, siparisDurumu, tarih, tl, type Durum } from './_lib/format';
 
 export const dynamic = 'force-dynamic';
 
-function formatTRY(cents: bigint | number): string {
-  return (Number(cents) / 100).toLocaleString('tr-TR', { style: 'currency', currency: 'TRY' });
-}
+const PAGE = 6;
 
-const FIN_LABEL: Record<string, string> = {
-  pending: 'Ödeme bekliyor',
-  authorized: 'Onaylandı',
-  paid: 'Ödendi',
-  partially_paid: 'Kısmi ödendi',
-  refunded: 'İade edildi',
-  partially_refunded: 'Kısmi iade',
-  voided: 'İptal',
-};
-const FUL_LABEL: Record<string, string> = {
-  unfulfilled: 'Hazırlanıyor',
-  partial: 'Kısmen kargolandı',
-  fulfilled: 'Kargolandı',
-  restocked: 'İade/stok',
-};
+type RawLI = { title?: string; quantity?: number; variant_title?: string | null; price?: string };
 
-type RawLineItem = { title?: string; quantity?: number; variant_title?: string | null };
-
-export default async function SiparislerimPage() {
+export default async function SiparislerimPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const sp = await searchParams;
+  const page = parsePage(sp);
   const customer = await getSessionCustomer();
 
-  const list = customer
+  if (!customer) {
+    return (
+      <Bos
+        baslik="Siparişlerini görmek için giriş yap"
+        alt="Sipariş geçmişin ve kargo takibin burada görünecek."
+      />
+    );
+  }
+
+  const emailCond = or(
+    eq(sql`lower(${orders.customerEmail})`, customer.email.toLowerCase()),
+    customer.shopifyCustomerId ? eq(orders.customerId, customer.shopifyCustomerId) : sql`false`,
+  );
+
+  const [[toplamRow], [aktifRow], [teslimRow], list] = await Promise.all([
+    db.select({ n: count() }).from(orders).where(emailCond),
+    db
+      .select({ n: count() })
+      .from(orders)
+      .where(and(emailCond, eq(orders.fulfillmentStatus, 'fulfilled'), sql`${orders.cancelledAt} is null`)),
+    db
+      .select({ n: count() })
+      .from(orders)
+      .where(and(emailCond, eq(orders.fulfillmentStatus, 'fulfilled'))),
+    db
+      .select()
+      .from(orders)
+      .where(emailCond)
+      .orderBy(desc(orders.placedAt))
+      .limit(PAGE)
+      .offset((page - 1) * PAGE),
+  ]);
+
+  const toplam = toplamRow?.n ?? 0;
+  const yolda = aktifRow?.n ?? 0;
+  const teslim = teslimRow?.n ?? 0;
+
+  // görünen siparişlerin takip bilgisi
+  const ids = list.map((o) => o.id);
+  const fuls = ids.length
     ? await db
-        .select()
-        .from(orders)
-        .where(
-          or(
-            eq(sql`lower(${orders.customerEmail})`, customer.email),
-            customer.shopifyCustomerId
-              ? eq(orders.customerId, customer.shopifyCustomerId)
-              : sql`false`,
-          ),
-        )
-        .orderBy(desc(orders.placedAt))
-        .limit(100)
+        .select({
+          orderId: fulfillments.orderId,
+          carrier: fulfillments.carrier,
+          trackingNumber: fulfillments.trackingNumber,
+          trackingUrl: fulfillments.trackingUrl,
+        })
+        .from(fulfillments)
+        .where(and(inArray(fulfillments.orderId, ids), isNotNull(fulfillments.trackingNumber)))
     : [];
+  const takipByOrder = new Map(fuls.map((f) => [f.orderId, f]));
+
+  if (toplam === 0) {
+    return (
+      <>
+        <Baslik ozet={{ toplam: 0, yolda: 0, teslim: 0 }} />
+        <div className="vh-kart vh-bos">
+          <span className="vh-cati" aria-hidden="true" />
+          <b>Henüz siparişin yok.</b>
+          İlk siparişini verdiğinde burada durumu ve kargo takibiyle görünecek.
+          <div style={{ marginTop: 12 }}>
+            <a href="https://viamood.com.tr">Alışverişe başla →</a>
+          </div>
+        </div>
+      </>
+    );
+  }
 
   return (
-    <div>
-      <h1 className="text-xl font-bold mb-1">Siparişlerim</h1>
-      <p className="text-sm text-neutral-500 mb-6">Geçmiş siparişlerin ve durumları</p>
+    <>
+      <Baslik ozet={{ toplam, yolda, teslim }} />
 
-      {list.length === 0 ? (
-        <div className="bg-white rounded-2xl border p-10 text-center">
-          <p className="text-neutral-600">Henüz siparişin yok.</p>
-          <Link
-            href="https://viamood.com.tr"
-            className="inline-block mt-4 text-[var(--color-brand-orange)] font-semibold hover:underline"
-          >
-            Alışverişe başla →
-          </Link>
-        </div>
-      ) : (
-        <div className="flex flex-col gap-4">
-          {list.map((o) => {
-            const items =
-              ((o.rawShopifyPayload as { line_items?: RawLineItem[] } | null)?.line_items) ?? [];
-            return (
-              <div key={o.id} className="bg-white rounded-2xl border p-5">
-                <div className="flex items-center justify-between gap-3 flex-wrap">
-                  <div>
-                    <div className="font-semibold">{o.shopifyOrderName}</div>
-                    <div className="text-xs text-neutral-500">
-                      {new Date(o.placedAt).toLocaleDateString('tr-TR', {
-                        day: '2-digit',
-                        month: 'long',
-                        year: 'numeric',
-                      })}
-                    </div>
+      {list.map((o, idx) => {
+        const items = ((o.rawShopifyPayload as { line_items?: RawLI[] } | null)?.line_items) ?? [];
+        const takip = takipByOrder.get(o.id);
+        const durum = siparisDurumu({
+          financialStatus: o.financialStatus,
+          fulfillmentStatus: o.fulfillmentStatus,
+          cancelledAt: o.cancelledAt,
+          hasTracking: !!takip,
+        });
+        const adimlar = koridor({ cip: durum.cip, placedAt: o.placedAt });
+        const havaleBekliyor =
+          durum.cip === 'bekliyor' && (o.tags ?? []).some((t) => String(t).includes('havale'));
+        const ad = o.shopifyOrderName ?? o.orderNumber ?? '#—';
+        const teslimEdilebilir = o.fulfillmentStatus === 'fulfilled' && !o.cancelledAt;
+
+        return (
+          <details className="vh-kart vh-sip" key={o.id} open={idx === 0}>
+            <summary>
+              <div>
+                <span className="vh-sip-no">{ad}</span>
+                <span className="vh-sip-tarih">{tarih(o.placedAt)}</span>
+              </div>
+              <Cip durum={durum} />
+              <div className="vh-pul-yigin" aria-hidden="true">
+                {items.slice(0, 3).map((li, i) => (
+                  <span className="vh-pul" key={i}>
+                    {i === 2 && items.length > 3 ? `+${items.length - 2}` : pul(li.title)}
+                  </span>
+                ))}
+              </div>
+              <span className="vh-tutar">{tl(o.totalCents)}</span>
+              <span className="vh-ok" aria-hidden="true">
+                ▾
+              </span>
+            </summary>
+
+            <div className="vh-detay">
+              <div className="vh-koridor" style={{ gridTemplateColumns: `repeat(${adimlar.length},1fr)` }}>
+                {adimlar.map((a, i) => (
+                  <div className={`vh-adim ${a.hal}`} key={i}>
+                    {a.ad}
+                    <small>{a.alt}</small>
                   </div>
-                  <div className="text-right">
-                    <div className="font-bold">{formatTRY(o.totalCents)}</div>
-                    <div className="flex gap-1.5 mt-1 justify-end">
-                      <span className="text-[11px] px-2 py-0.5 rounded-full bg-neutral-100 text-neutral-600">
-                        {FIN_LABEL[o.financialStatus] ?? o.financialStatus}
-                      </span>
-                      <span className="text-[11px] px-2 py-0.5 rounded-full bg-amber-50 text-amber-700">
-                        {FUL_LABEL[o.fulfillmentStatus] ?? o.fulfillmentStatus}
-                      </span>
+                ))}
+              </div>
+
+              {items.length > 0 && (
+                <div className="vh-kalemler">
+                  {items.map((li, i) => (
+                    <div className="vh-kalem" key={i}>
+                      <span className="vh-pul">{pul(li.title)}</span>
+                      <div>
+                        <b>{li.title}</b>
+                        <span>
+                          {li.quantity ?? 1} adet
+                          {li.variant_title &&
+                          li.variant_title !== 'Default Title' &&
+                          li.variant_title !== 'Default'
+                            ? ` · ${li.variant_title}`
+                            : ''}
+                        </span>
+                      </div>
+                      {li.price ? (
+                        <span className="fiyat">{tl(Math.round(parseFloat(li.price) * 100))}</span>
+                      ) : null}
                     </div>
+                  ))}
+                </div>
+              )}
+
+              {havaleBekliyor && (
+                <div className="vh-havale">
+                  <span aria-hidden="true">🏦</span>
+                  <div>
+                    <b>Havale bekleniyor.</b> Açıklamaya <b>{ad}</b> yazarak 3 iş günü içinde
+                    ödemeni tamamla; IBAN bilgileri onay e-postanda. Ödeme onaylanınca hazırlamaya
+                    başlıyoruz.
                   </div>
                 </div>
+              )}
 
-                {items.length > 0 && (
-                  <ul className="mt-4 pt-4 border-t flex flex-col gap-1.5 text-sm">
-                    {items.map((li, i) => (
-                      <li key={i} className="flex justify-between gap-3 text-neutral-700">
-                        <span>
-                          {li.title}
-                          {li.variant_title && li.variant_title !== 'Default Title' && li.variant_title !== 'Default' ? (
-                            <span className="text-neutral-400"> · {li.variant_title}</span>
-                          ) : null}
-                        </span>
-                        <span className="text-neutral-400 shrink-0">× {li.quantity ?? 1}</span>
-                      </li>
-                    ))}
-                  </ul>
+              {takip?.trackingNumber && (
+                <div className="vh-kargo">
+                  <div>
+                    <span className="etiket">{takip.carrier ?? 'Kargo'} · Takip No</span>
+                    <span className="no">{takip.trackingNumber}</span>
+                  </div>
+                  <div className="vh-kargo-akt">
+                    <CopyButton value={takip.trackingNumber} />
+                    <a
+                      className="vh-btn vh-btn-dolu"
+                      href={
+                        takip.trackingUrl ??
+                        `https://kargolab.com/tracking/${takip.trackingNumber}`
+                      }
+                      target="_blank"
+                      rel="noopener"
+                    >
+                      Kargoyu Takip Et →
+                    </a>
+                  </div>
+                </div>
+              )}
+
+              <div className="vh-alt">
+                {teslimEdilebilir && (
+                  <Link className="vh-btn vh-btn-bos" href={`/hesabim/iade-talebi/${o.id}`}>
+                    İade talebi oluştur
+                  </Link>
                 )}
+                <Link className="vh-btn vh-btn-sessiz" href="/hesabim/iadeler">
+                  İadelerim
+                </Link>
               </div>
-            );
-          })}
+            </div>
+          </details>
+        );
+      })}
+
+      <Pagination total={toplam} page={page} pageSize={PAGE} basePath="/hesabim" />
+    </>
+  );
+}
+
+function Baslik({ ozet }: { ozet: { toplam: number; yolda: number; teslim: number } }) {
+  return (
+    <>
+      <div className="vh-baslik">
+        <h1>Siparişlerim</h1>
+        <p>{ozet.toplam} sipariş</p>
+      </div>
+      <div className="vh-ozet">
+        <div className="vh-kart">
+          <b>{ozet.toplam}</b>
+          <span>Toplam</span>
         </div>
-      )}
-    </div>
+        <div className="vh-kart">
+          <b style={{ color: 'var(--vh-turuncu)' }}>{ozet.yolda}</b>
+          <span>Yolda</span>
+        </div>
+        <div className="vh-kart">
+          <b style={{ color: 'var(--vh-iyi)' }}>{ozet.teslim}</b>
+          <span>Teslim</span>
+        </div>
+      </div>
+    </>
+  );
+}
+
+function Cip({ durum }: { durum: Durum }) {
+  return <span className={`vh-cip ${durum.cip}`}>{durum.metin}</span>;
+}
+
+function Bos({ baslik, alt }: { baslik: string; alt: string }) {
+  return (
+    <>
+      <div className="vh-baslik">
+        <h1>Siparişlerim</h1>
+      </div>
+      <div className="vh-kart vh-bos">
+        <span className="vh-cati" aria-hidden="true" />
+        <b>{baslik}</b>
+        {alt}
+      </div>
+    </>
   );
 }

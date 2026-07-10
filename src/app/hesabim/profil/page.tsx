@@ -7,14 +7,17 @@ export default async function ProfilPage() {
   const customer = await getSessionCustomer();
 
   return (
-    <div>
-      <h1 className="text-xl font-bold mb-1">Profil</h1>
-      <p className="text-sm text-neutral-500 mb-6">Hesap bilgilerin ve şifren</p>
+    <>
+      <div className="vh-baslik">
+        <h1>Profilim</h1>
+        <p>Hesap bilgilerin ve tercihlerin</p>
+      </div>
       <ProfileForms
         initialName={customer?.name ?? ''}
         initialPhone={customer?.phone ?? ''}
         email={customer?.email ?? ''}
+        initialPrefs={customer?.preferences ?? {}}
       />
-    </div>
+    </>
   );
 }

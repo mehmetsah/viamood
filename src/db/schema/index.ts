@@ -7,6 +7,7 @@ export * from './inventory';
 export * from './orders';
 export * from './carts';
 export * from './customers';
+export * from './returns';
 export * from './events';
 export * from './routing';
 export * from './fulfillments';

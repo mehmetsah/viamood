@@ -1,38 +1,71 @@
-import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { signOutAction } from '@/lib/actions/auth';
+import { and, count, eq, isNull, or, sql } from 'drizzle-orm';
+import './hesabim.css';
+import { db } from '@/db/client';
+import { customerAddresses, orders, returns } from '@/db/schema';
 import { auth } from '@/lib/auth';
-import { Logo } from '@/components/ui/Logo';
+import { getSessionCustomer } from '@/lib/customers/session';
+import { AccountHeader } from './_components/AccountHeader';
+import { basHarfler } from './_lib/format';
+
+export const dynamic = 'force-dynamic';
+
+// İlk boyamadan önce kayıtlı temayı uygula (yanıp sönmeyi engeller). Sistem teması CSS'te varsayılan.
+const TEMA_SCRIPT = `(function(){try{var t=localStorage.getItem('vm_tema');if(t==='dark'||t==='light')document.documentElement.setAttribute('data-theme',t);}catch(e){}})();`;
 
 export default async function HesabimLayout({ children }: { children: React.ReactNode }) {
   const session = await auth();
-  // Defans katmanı (middleware zaten korur): müşteri + ADMIN izinli
-  // (admin müşteri deneyimini test edebilsin — 'Hesabıma basınca admine yönleniyor' düzeltmesi).
   const role = session?.user?.role;
   if (!session?.user) redirect('/auth/sign-in?callbackUrl=/hesabim');
+  // Müşteri + admin (admin müşteri deneyimini test edebilsin) izinli; vendor kendi paneline.
   if (role !== 'customer' && role !== 'admin' && role !== 'super_admin') redirect('/post-login');
 
+  const customer = await getSessionCustomer();
+
+  let siparis = 0;
+  let iade = 0;
+  let adres = 0;
+  if (customer) {
+    const emailCond = or(
+      eq(sql`lower(${orders.customerEmail})`, customer.email.toLowerCase()),
+      customer.shopifyCustomerId ? eq(orders.customerId, customer.shopifyCustomerId) : sql`false`,
+    );
+    const [[o], [a]] = await Promise.all([
+      db.select({ n: count() }).from(orders).where(and(emailCond, isNull(orders.cancelledAt))),
+      db
+        .select({ n: count() })
+        .from(customerAddresses)
+        .where(eq(customerAddresses.customerId, customer.id)),
+    ]);
+    siparis = o?.n ?? 0;
+    adres = a?.n ?? 0;
+    // returns tablosu migration inince dolacak — yoksa 0 (deploy geçiş güvenliği)
+    try {
+      const [r] = await db
+        .select({ n: count() })
+        .from(returns)
+        .where(eq(returns.customerId, customer.id));
+      iade = r?.n ?? 0;
+    } catch {
+      iade = 0;
+    }
+  }
+
+  const name = customer?.name || session.user.name || session.user.email || 'Hesabım';
+  const memberSince = customer?.createdAt
+    ? new Date(customer.createdAt).toLocaleDateString('tr-TR', { month: 'long', year: 'numeric' })
+    : undefined;
+
   return (
-    <div className="min-h-screen bg-[var(--color-brand-cream)]">
-      <header className="bg-white border-b sticky top-0 z-10">
-        <div className="max-w-4xl mx-auto px-4 h-16 flex items-center justify-between gap-4">
-          <Link href="/hesabim" className="flex items-center gap-3">
-            <Logo width={110} />
-            <span className="text-sm font-semibold text-neutral-500 hidden sm:inline">Hesabım</span>
-          </Link>
-          <nav className="flex items-center gap-1 text-sm">
-            <Link href="/hesabim" className="px-3 py-2 rounded-lg hover:bg-neutral-100">Siparişlerim</Link>
-            <Link href="/hesabim/adresler" className="px-3 py-2 rounded-lg hover:bg-neutral-100">Adreslerim</Link>
-            <Link href="/hesabim/profil" className="px-3 py-2 rounded-lg hover:bg-neutral-100">Profil</Link>
-            <form action={signOutAction}>
-              <button type="submit" className="px-3 py-2 rounded-lg text-neutral-500 hover:text-neutral-900 hover:bg-neutral-100">
-                Çıkış
-              </button>
-            </form>
-          </nav>
-        </div>
-      </header>
-      <main className="max-w-4xl mx-auto px-4 py-8">{children}</main>
+    <div className="vh-portal">
+      <script dangerouslySetInnerHTML={{ __html: TEMA_SCRIPT }} />
+      <AccountHeader
+        initials={basHarfler(name)}
+        name={name}
+        memberSince={memberSince}
+        counts={{ siparis, iade, adres }}
+      />
+      <main className="vh-sayfa">{children}</main>
     </div>
   );
 }

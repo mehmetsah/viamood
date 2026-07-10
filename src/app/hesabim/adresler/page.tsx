@@ -1,20 +1,39 @@
-import { desc, eq } from 'drizzle-orm';
+import { count, desc, eq } from 'drizzle-orm';
 import { db } from '@/db/client';
 import { customerAddresses } from '@/db/schema';
 import { getSessionCustomer } from '@/lib/customers/session';
 import { AddressBook, type AddressDTO } from './AddressBook';
+import { Pagination, parsePage } from '../_components/Pagination';
 
 export const dynamic = 'force-dynamic';
 
-export default async function AdreslerPage() {
+const PAGE = 9;
+
+export default async function AdreslerPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const sp = await searchParams;
+  const page = parsePage(sp);
   const customer = await getSessionCustomer();
-  const rows = customer
-    ? await db
-        .select()
-        .from(customerAddresses)
-        .where(eq(customerAddresses.customerId, customer.id))
-        .orderBy(desc(customerAddresses.isDefault), desc(customerAddresses.createdAt))
-    : [];
+
+  const [toplam, rows] = customer
+    ? await Promise.all([
+        db
+          .select({ n: count() })
+          .from(customerAddresses)
+          .where(eq(customerAddresses.customerId, customer.id))
+          .then((r) => r[0]?.n ?? 0),
+        db
+          .select()
+          .from(customerAddresses)
+          .where(eq(customerAddresses.customerId, customer.id))
+          .orderBy(desc(customerAddresses.isDefault), desc(customerAddresses.createdAt))
+          .limit(PAGE)
+          .offset((page - 1) * PAGE),
+      ])
+    : [0, []];
 
   const addresses: AddressDTO[] = rows.map((r) => ({
     id: r.id,
@@ -31,12 +50,13 @@ export default async function AdreslerPage() {
   }));
 
   return (
-    <div>
-      <h1 className="text-xl font-bold mb-1">Adreslerim</h1>
-      <p className="text-sm text-neutral-500 mb-6">
-        Kaydettiğin adresler checkout&apos;ta otomatik dolar (il/ilçe/mahalle dahil)
-      </p>
+    <>
+      <div className="vh-baslik">
+        <h1>Adreslerim</h1>
+        <p>{toplam > 0 ? `${toplam} kayıtlı adres` : 'Kayıtlı adresin yok'}</p>
+      </div>
       <AddressBook addresses={addresses} />
-    </div>
+      <Pagination total={toplam} page={page} pageSize={PAGE} basePath="/hesabim/adresler" />
+    </>
   );
 }
