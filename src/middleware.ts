@@ -53,6 +53,7 @@ export default auth((req) => {
     pathname.startsWith('/api/v1/payment') ||
     pathname.startsWith('/api/v1/shipping') ||
     pathname.startsWith('/api/v1/discount') ||
+    pathname.startsWith('/api/v1/order-track') || // halka açık sipariş takibi (no+email doğrulamalı)
     pathname.startsWith('/api/dev') ||
     pathname.startsWith('/api/internal') || // kendi secret'ıyla korunur (webhook secret)
     pathname.startsWith('/api/cron') || // kendi secret'ıyla korunur

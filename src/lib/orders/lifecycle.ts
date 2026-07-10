@@ -53,8 +53,9 @@ export async function markOrderPaid(orderId: string): Promise<MarkPaidResult> {
 }
 
 /**
- * Native sipariş için "kargoya verildi" e-postası (FAZ 2 Dilim 3). Best-effort, fire-and-forget.
- * Shopify siparişlerinde Shopify kendi shipment mailini yollar → atlanır (backend !== 'native').
+ * "Kargoya verildi" e-postası — HER backend için (Türkçe, takip linkli). Best-effort.
+ * Shopify siparişlerinde de bizden gider: scope eksikken Shopify kendi kargo mailini
+ * atamıyor; scope gelse de fulfillmentCreate notifyCustomer:false → bizimki tek kaynak.
  */
 export async function notifyNativeOrderShipped(
   orderId: string,
@@ -65,15 +66,16 @@ export async function notifyNativeOrderShipped(
       .select({
         backend: orders.backend,
         orderNumber: orders.orderNumber,
+        shopifyOrderName: orders.shopifyOrderName,
         email: orders.customerEmail,
         name: orders.customerName,
       })
       .from(orders)
       .where(eq(orders.id, orderId))
       .limit(1);
-    if (!o || o.backend !== 'native' || !o.email) return;
+    if (!o || !o.email) return;
     const tpl = orderShippedEmail({
-      orderNumber: o.orderNumber ?? orderId,
+      orderNumber: o.shopifyOrderName ?? o.orderNumber ?? orderId,
       customerName: o.name ?? '',
       carrier: ship.carrier,
       trackingNumber: ship.trackingNumber,
