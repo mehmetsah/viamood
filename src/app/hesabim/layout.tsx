@@ -6,8 +6,11 @@ import { Logo } from '@/components/ui/Logo';
 
 export default async function HesabimLayout({ children }: { children: React.ReactNode }) {
   const session = await auth();
-  // Defans katmanı (middleware zaten korur): sadece müşteri.
-  if (session?.user?.role !== 'customer') redirect('/post-login');
+  // Defans katmanı (middleware zaten korur): müşteri + ADMIN izinli
+  // (admin müşteri deneyimini test edebilsin — 'Hesabıma basınca admine yönleniyor' düzeltmesi).
+  const role = session?.user?.role;
+  if (!session?.user) redirect('/auth/sign-in?callbackUrl=/hesabim');
+  if (role !== 'customer' && role !== 'admin' && role !== 'super_admin') redirect('/post-login');
 
   return (
     <div className="min-h-screen bg-[var(--color-brand-cream)]">
