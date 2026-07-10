@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import { signOutAction } from '@/lib/actions/auth';
+import { Logo } from '@/components/ui/Logo';
 
 interface Props {
   initials: string;
@@ -56,10 +57,9 @@ export function AccountHeader({ initials, name, memberSince, counts }: Props) {
   return (
     <header className="vh-ust">
       <div className="vh-ust-ic">
-        <Link href="/hesabim" className="vh-marka" aria-label="Via Mood — Hesabım">
-          <span className="vh-cati" aria-hidden="true" />
-          <b>VIA MOOD</b>
-        </Link>
+        <a href="https://viamood.com.tr" className="vh-marka" aria-label="Via Mood — mağazaya dön">
+          <Logo width={64} priority />
+        </a>
 
         <nav className="vh-nav" aria-label="Hesap menüsü">
           {NAV.map((n) => {
