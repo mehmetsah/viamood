@@ -210,6 +210,23 @@ details[open] .vh-ok{transform:rotate(180deg)}
 .vh-alan input,.vh-alan select{width:100%;height:42px;border:1px solid var(--vh-cizgi);border-radius:10px;padding:0 12px;font:inherit;background:var(--vh-zemin);color:var(--vh-murekkep)}
 .vh-alan input:focus,.vh-alan select:focus{outline:2px solid var(--vh-turuncu);outline-offset:1px;border-color:transparent}
 .vh-form-alt{margin-top:16px;display:flex;justify-content:flex-end;gap:10px}
+
+/* Form kontrolleri — Tailwind Input bileşeni portal temasına bağlanır.
+   Kök neden: input rengi token'a bağlı değildi; koyu temada beyaz kutu içinde
+   açık mürekkep → placeholder + yazılan metin okunmuyordu. */
+.vh-portal input:not([type='checkbox']):not([type='radio']),
+.vh-portal select,
+.vh-portal textarea{
+  color:var(--vh-murekkep);
+  background:var(--vh-kagit);
+  border-color:var(--vh-cizgi);
+}
+.vh-portal input::placeholder,
+.vh-portal textarea::placeholder{color:var(--vh-kul);opacity:1}
+.vh-portal label{color:var(--vh-murekkep)}
+/* AddressForm'un kendi beyaz kutusu vh-kart içinde ikinci kart olmasın
+   (koyu temada beyaz blok sorunu) — tek kart görünümüne düzleştir */
+.vh-portal .vh-kart > form{background:transparent;border:0;padding:0;box-shadow:none}
 .vh-tercih{display:flex;align-items:center;gap:14px;padding:12px 0;border-bottom:1px solid var(--vh-cizgi)}
 .vh-tercih:last-child{border-bottom:0}
 .vh-tercih b{font-size:14px;font-weight:600;display:block}
