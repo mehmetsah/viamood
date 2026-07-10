@@ -57,21 +57,8 @@ export function AccountHeader({ initials, name, memberSince, counts }: Props) {
     <header className="vh-ust">
       <div className="vh-ust-ic">
         <Link href="/hesabim" className="vh-marka" aria-label="Via Mood — Hesabım">
-          <span className="vh-logo" aria-hidden="true">
-            <svg
-              className="vh-logo-cati"
-              viewBox="0 0 56 14"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.8"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M2 12 28 2.5 54 12" />
-            </svg>
-            <b>VIA</b>
-            <b>MOOD</b>
-          </span>
+          <span className="vh-cati" aria-hidden="true" />
+          <b>VIA MOOD</b>
         </Link>
 
         <nav className="vh-nav" aria-label="Hesap menüsü">
