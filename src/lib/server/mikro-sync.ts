@@ -174,10 +174,10 @@ async function pushToFirmaDb(params: {
     if (!cariKodu) {
       const seq = await nextCariSequence();
       cariKodu = `${env.MIKRO_CARI_PREFIX}${seq}`;
-      const { soyad, ad } = splitName(alici);
+      // Yunus'un Woo düzeni: tam ad tek alanda (cari_unvan1="Büşra Kaynak") — bölme
       const cariRes = await cariKayit({
-        UnvaniSoyadi: soyad || '-',
-        UnvaniAdi: ad || '.',
+        UnvaniSoyadi: (alici ?? '-').trim() || '-',
+        UnvaniAdi: '.',
         Kodu: cariKodu,
         EpostaAdresi: order.customerEmail ?? '',
         CepTelefonu: telefon.slice(0, 20),
