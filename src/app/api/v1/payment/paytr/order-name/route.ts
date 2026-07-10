@@ -52,14 +52,36 @@ export async function GET(req: NextRequest) {
     if (!orderId) return NextResponse.json({ ok: true, completed: false }, { status: 200, headers });
 
     const oRes = await fetch(
-      `https://${env.SHOPIFY_STORE_DOMAIN}/admin/api/${env.SHOPIFY_API_VERSION}/orders/${orderId}.json?fields=name,financial_status`,
+      `https://${env.SHOPIFY_STORE_DOMAIN}/admin/api/${env.SHOPIFY_API_VERSION}/orders/${orderId}.json?fields=name,financial_status,order_status_url,total_price,line_items`,
       { headers: { 'X-Shopify-Access-Token': token } },
     );
     if (!oRes.ok) return NextResponse.json({ ok: true, completed: false }, { status: 200, headers });
-    const oj = (await oRes.json()) as { order?: { name?: string } };
-    const name = oj.order?.name;
-    if (!name) return NextResponse.json({ ok: true, completed: false }, { status: 200, headers });
-    return NextResponse.json({ ok: true, completed: true, name }, { status: 200, headers });
+    const oj = (await oRes.json()) as {
+      order?: {
+        name?: string;
+        order_status_url?: string;
+        total_price?: string;
+        line_items?: Array<{ title?: string; quantity?: number; price?: string }>;
+      };
+    };
+    const o = oj.order;
+    if (!o?.name) return NextResponse.json({ ok: true, completed: false }, { status: 200, headers });
+    return NextResponse.json(
+      {
+        ok: true,
+        completed: true,
+        name: o.name,
+        // Üyeliksiz sipariş takibi: Shopify'ın token'lı public durum sayfası
+        status_url: o.order_status_url ?? null,
+        total: o.total_price ?? null,
+        items: (o.line_items ?? []).slice(0, 20).map((li) => ({
+          title: li.title ?? '',
+          qty: li.quantity ?? 1,
+          price: li.price ?? '',
+        })),
+      },
+      { status: 200, headers },
+    );
   } catch {
     return NextResponse.json({ ok: true, completed: false }, { status: 200, headers });
   }
