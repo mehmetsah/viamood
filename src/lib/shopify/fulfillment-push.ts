@@ -220,8 +220,9 @@ export async function pushFulfillmentToShopify(
 
   const fcRes = await shopifyGraphQL<FCResp>(FC_MUTATION, {
     fulfillment: {
-      // false: kargo mailini BİZ atıyoruz (Türkçe, lifecycle) — Shopify'ın İngilizce maili çift olmasın
-      notifyCustomer: false,
+      // true: kargo mailini Shopify atar — 'Kargo onayı' şablonu panelden TÜRKÇELEŞTİRİLDİ
+      // (Resend anahtarı olmadığından bizim lifecycle maili stub'a düşüyor; tek mail garanti)
+      notifyCustomer: true,
       trackingInfo: {
         number: f.trackingNumber ?? '',
         url: f.trackingUrl ?? undefined,

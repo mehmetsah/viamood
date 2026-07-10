@@ -156,9 +156,10 @@ export async function createStorefrontOrder(
           ]
         : []),
     ],
-    // Shopify makbuzu KAPALI: API-siparişlerinde customer_locale boş kaldığından İngilizce
-    // gidiyordu — onay mailini Türkçe olarak BİZ atıyoruz (aşağıda, Resend + IBAN talimatlı)
-    send_receipt: false,
+    // Shopify makbuzu AÇIK: bildirim şablonlarının ANA içeriği Türkçeleştirildi (panelden) —
+    // locale'den bağımsız herkese Türkçe gider. (Resend'e gerek kalmadı; anahtar yoksa
+    // aşağıdaki bizim mail zaten stub'a düşüyor, çift mail riski yok.)
+    send_receipt: true,
     send_fulfillment_receipt: false,
     inventory_behaviour: 'decrement_obeying_policy',
     ...(b.customer_id ? { customer: { id: b.customer_id } } : {}),
