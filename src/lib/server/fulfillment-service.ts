@@ -368,7 +368,7 @@ export async function createFulfillmentForOrderVendor(
         carrier: courrier,
         trackingNumber: shipRes.barcode ?? shipRes.trackingNumber ?? null,
         trackingUrl: shipRes.barcode
-          ? `https://kargolab.com/track/${shipRes.barcode}`
+          ? `https://kargolab.com/tracking/${shipRes.barcode}`
           : null,
         status: 'label_created',
         shipFromAddress: { kargolabAddressId: senderRes.addressId },
@@ -429,7 +429,7 @@ export async function createFulfillmentForOrderVendor(
   notifyNativeOrderShipped(orderId, {
     carrier: courrier,
     trackingNumber: shipRes.barcode ?? shipRes.trackingNumber ?? null,
-    trackingUrl: shipRes.barcode ? `https://kargolab.com/track/${shipRes.barcode}` : null,
+    trackingUrl: shipRes.barcode ? `https://kargolab.com/tracking/${shipRes.barcode}` : null,
   }).catch(() => {});
 
   // Mikro push — KARGO ETİKETİ SONRASI, takip no ile (Yunus akışı: el terminali sipariş

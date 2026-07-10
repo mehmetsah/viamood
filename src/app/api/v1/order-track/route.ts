@@ -128,7 +128,12 @@ async function buildResponse(o: {
     fulfillments: withTracking.map((f) => ({
       carrier: f.carrier,
       tracking_number: f.trackingNumber,
-      tracking_url: f.trackingUrl,
+      // eski kayıtlar /track/ (login'e yönlendiren) URL taşıyor → public /tracking/'e normalize
+      tracking_url:
+        (f.trackingUrl ?? `https://kargolab.com/tracking/${f.trackingNumber}`).replace(
+          'kargolab.com/track/',
+          'kargolab.com/tracking/',
+        ),
     })),
   };
 }
