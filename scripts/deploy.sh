@@ -104,6 +104,9 @@ else
   exit 1
 fi
 
+# hesap.viamood.com.tr SSL kurulumu (idempotent, best-effort — deploy'u asla bozmaz)
+bash scripts/hesap-ssl.sh || echo "  (hesap-ssl adımı atlandı)"
+
 echo ""
 echo "════════════════════════════════════════════"
 echo "  ✓ Deploy tamam: $OLD_COMMIT → $NEW_COMMIT"
