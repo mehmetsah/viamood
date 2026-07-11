@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { and, count, desc, eq, inArray, isNotNull, or, sql } from 'drizzle-orm';
 import { db } from '@/db/client';
-import { fulfillments, orders } from '@/db/schema';
+import { fulfillments, orders, products, productVariants } from '@/db/schema';
 import { getSessionCustomer } from '@/lib/customers/session';
 import { CopyButton } from './_components/CopyButton';
 import { Pagination, parsePage } from './_components/Pagination';
@@ -11,7 +11,13 @@ export const dynamic = 'force-dynamic';
 
 const PAGE = 6;
 
-type RawLI = { title?: string; quantity?: number; variant_title?: string | null; price?: string };
+type RawLI = {
+  title?: string;
+  quantity?: number;
+  variant_title?: string | null;
+  price?: string;
+  variant_id?: number | string | null;
+};
 
 export default async function SiparislerimPage({
   searchParams,
@@ -74,6 +80,33 @@ export default async function SiparislerimPage({
     : [];
   const takipByOrder = new Map(fuls.map((f) => [f.orderId, f]));
 
+  // Ürün galeri görselleri — raw line item variant_id → products.featuredImageUrl
+  const rawVariantIds = Array.from(
+    new Set(
+      list
+        .flatMap(
+          (o) => ((o.rawShopifyPayload as { line_items?: RawLI[] } | null)?.line_items) ?? [],
+        )
+        .map((li) => (li.variant_id != null ? String(li.variant_id) : null))
+        .filter((v): v is string => !!v),
+    ),
+  );
+  const imgRows = rawVariantIds.length
+    ? await db
+        .select({
+          vid: productVariants.shopifyVariantId,
+          img: products.featuredImageUrl,
+        })
+        .from(productVariants)
+        .innerJoin(products, eq(products.id, productVariants.productId))
+        .where(inArray(productVariants.shopifyVariantId, rawVariantIds))
+    : [];
+  const imgByVariant = new Map(
+    imgRows.filter((r) => r.img).map((r) => [r.vid, r.img as string]),
+  );
+  const liImg = (li: RawLI) =>
+    li.variant_id != null ? imgByVariant.get(String(li.variant_id)) : undefined;
+
   if (toplam === 0) {
     return (
       <>
@@ -118,11 +151,13 @@ export default async function SiparislerimPage({
               </div>
               <Cip durum={durum} />
               <div className="vh-pul-yigin" aria-hidden="true">
-                {items.slice(0, 3).map((li, i) => (
-                  <span className="vh-pul" key={i}>
-                    {i === 2 && items.length > 3 ? `+${items.length - 2}` : pul(li.title)}
-                  </span>
-                ))}
+                {items.slice(0, 3).map((li, i) =>
+                  i === 2 && items.length > 3 ? (
+                    <span className="vh-pul" key={i}>{`+${items.length - 2}`}</span>
+                  ) : (
+                    <Pul key={i} img={liImg(li)} title={li.title} />
+                  ),
+                )}
               </div>
               <span className="vh-tutar">{tl(o.totalCents)}</span>
               <span className="vh-ok" aria-hidden="true">
@@ -144,7 +179,7 @@ export default async function SiparislerimPage({
                 <div className="vh-kalemler">
                   {items.map((li, i) => (
                     <div className="vh-kalem" key={i}>
-                      <span className="vh-pul">{pul(li.title)}</span>
+                      <Pul img={liImg(li)} title={li.title} />
                       <div>
                         <b>{li.title}</b>
                         <span>
@@ -176,26 +211,34 @@ export default async function SiparislerimPage({
               )}
 
               {takip?.trackingNumber && (
-                <div className="vh-kargo">
-                  <div>
-                    <span className="etiket">{takip.carrier ?? 'Kargo'} · Takip No</span>
-                    <span className="no">{takip.trackingNumber}</span>
+                <>
+                  <div className="vh-kargo">
+                    <div>
+                      <span className="etiket">{takip.carrier ?? 'Kargo'} · Takip No</span>
+                      <span className="no">{takip.trackingNumber}</span>
+                    </div>
+                    <div className="vh-kargo-akt">
+                      <CopyButton value={takip.trackingNumber} />
+                      <a
+                        className="vh-btn vh-btn-dolu"
+                        href={
+                          takip.trackingUrl ??
+                          `https://kargolab.com/tracking/${takip.trackingNumber}`
+                        }
+                        target="_blank"
+                        rel="noopener"
+                      >
+                        Kargoyu Takip Et →
+                      </a>
+                    </div>
                   </div>
-                  <div className="vh-kargo-akt">
-                    <CopyButton value={takip.trackingNumber} />
-                    <a
-                      className="vh-btn vh-btn-dolu"
-                      href={
-                        takip.trackingUrl ??
-                        `https://kargolab.com/tracking/${takip.trackingNumber}`
-                      }
-                      target="_blank"
-                      rel="noopener"
-                    >
-                      Kargoyu Takip Et →
-                    </a>
-                  </div>
-                </div>
+                  {durum.cip === 'yolda' && (
+                    <p className="vh-kargo-not">
+                      Takip numarası, kargo firması paketi teslim aldıktan sonra kargo sitesinde
+                      aktifleşir.
+                    </p>
+                  )}
+                </>
               )}
 
               <div className="vh-alt">
@@ -245,6 +288,17 @@ function Baslik({ ozet }: { ozet: { toplam: number; yolda: number; teslim: numbe
 
 function Cip({ durum }: { durum: Durum }) {
   return <span className={`vh-cip ${durum.cip}`}>{durum.metin}</span>;
+}
+
+/** Ürün pulu — galeri görseli varsa onu, yoksa baş harfleri gösterir */
+function Pul({ img, title }: { img?: string; title?: string }) {
+  if (!img) return <span className="vh-pul">{pul(title)}</span>;
+  return (
+    <span className="vh-pul vh-pul-gorsel">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={img} alt={title ?? ''} loading="lazy" />
+    </span>
+  );
 }
 
 function Bos({ baslik, alt }: { baslik: string; alt: string }) {

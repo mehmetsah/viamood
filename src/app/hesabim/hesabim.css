@@ -127,6 +127,8 @@
 .vh-sip-tarih{color:var(--vh-kul);font-size:12.5px;display:block}
 .vh-pul-yigin{display:flex;margin-left:auto}
 .vh-pul{width:38px;height:38px;border-radius:10px;background:var(--vh-kagit2);border:2px solid var(--vh-kagit);display:grid;place-items:center;font-family:var(--vh-display);font-weight:700;font-size:13px;color:var(--vh-kul);margin-left:-10px;flex:none}
+.vh-pul-gorsel{padding:0;overflow:hidden}
+.vh-pul-gorsel img{width:100%;height:100%;object-fit:cover;display:block}
 .vh-pul:first-child{margin-left:0}
 .vh-tutar{font-family:var(--vh-veri);font-weight:700;font-variant-numeric:tabular-nums;min-width:96px;text-align:right}
 .vh-ok{color:var(--vh-kul);transition:transform .18s;flex:none}
@@ -157,6 +159,7 @@ details[open] .vh-ok{transform:rotate(180deg)}
 .vh-kalem .fiyat{margin-left:auto;font-family:var(--vh-veri);font-variant-numeric:tabular-nums;font-weight:600}
 
 .vh-kargo{background:var(--vh-kagit2);border-radius:12px;padding:14px 16px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.vh-kargo-not{color:var(--vh-kul);font-size:12.5px;margin:8px 2px 0}
 .vh-kargo .etiket{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--vh-kul);display:block}
 .vh-kargo .no{font-family:var(--vh-veri);font-weight:700;font-size:15px;letter-spacing:.04em}
 .vh-kargo-akt{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap}
