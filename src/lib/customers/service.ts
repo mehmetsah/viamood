@@ -103,7 +103,28 @@ const eqND = (col: AnyColumn, val: string | null | undefined) =>
   sql`${col} IS NOT DISTINCT FROM ${val ?? null}`;
 
 /**
- * RDS adres upsert — null-safe dedup (customerId + açık adres + il/ilçe/mahalle/posta).
+ * Görüntü-katmanı adres dedup'ı — aynı açık adres+ilçe+il'den yalnız İLKİ kalır
+ * (liste default-önce/yeni-önce sıralı geldiğinden varsayılan/en güncel korunur).
+ * Eski duplicate DB kayıtları storefront köprüsünde tekilleştirmek için.
+ */
+export function dedupeAddressRows<
+  T extends { address1: string | null; district: string | null; province: string | null },
+>(rows: T[]): T[] {
+  const seen = new Set<string>();
+  return rows.filter((r) => {
+    const key = [r.address1, r.district, r.province]
+      .map((s) => (s ?? '').trim().toLocaleLowerCase('tr-TR'))
+      .join('|');
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+/**
+ * RDS adres upsert — null-safe dedup: aynı AÇIK ADRES + İLÇE + İL = AYNI adres
+ * (mahalle/posta/telefon farkı yeni kayıt üretmez — sipariş başına duplicate
+ * birikmesin; eşleşmede bu alanlar en güncel değerle GÜNCELLENİR).
  * Varsa shopifyAddressId'yi günceller; yoksa ekler. isDefault verilmezse: müşterinin ilk
  * adresi otomatik default olur. isDefault=true ise diğerlerinin default'u kaldırılır.
  * Best-effort. Eklenen/var olan adresin id'sini döner.
@@ -119,19 +140,24 @@ export async function upsertCustomerAddressRds(input: RdsAddressInput): Promise<
           eqND(customerAddresses.address1, input.address1),
           eqND(customerAddresses.district, input.district),
           eqND(customerAddresses.province, input.province),
-          eqND(customerAddresses.neighborhood, input.neighborhood),
-          eqND(customerAddresses.postalCode, input.postalCode),
         ),
       )
       .limit(1);
 
     if (existingMatch[0]) {
-      if (input.shopifyAddressId) {
-        await db
-          .update(customerAddresses)
-          .set({ shopifyAddressId: input.shopifyAddressId, updatedAt: new Date() })
-          .where(eq(customerAddresses.id, existingMatch[0].id));
-      }
+      await db
+        .update(customerAddresses)
+        .set({
+          // en güncel bilgiyle tazele (yeni değer yoksa mevcut kalsın)
+          neighborhood: input.neighborhood ?? sql`${customerAddresses.neighborhood}`,
+          postalCode: input.postalCode ?? sql`${customerAddresses.postalCode}`,
+          phone: input.phone ?? sql`${customerAddresses.phone}`,
+          firstName: input.firstName ?? sql`${customerAddresses.firstName}`,
+          lastName: input.lastName ?? sql`${customerAddresses.lastName}`,
+          shopifyAddressId: input.shopifyAddressId ?? sql`${customerAddresses.shopifyAddressId}`,
+          updatedAt: new Date(),
+        })
+        .where(eq(customerAddresses.id, existingMatch[0].id));
       return existingMatch[0].id;
     }
 

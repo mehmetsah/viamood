@@ -15,6 +15,7 @@ import { desc, eq } from 'drizzle-orm';
 import { db } from '@/db/client';
 import { customerAddresses } from '@/db/schema';
 import { getSessionCustomer } from '@/lib/customers/session';
+import { dedupeAddressRows } from '@/lib/customers/service';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -56,7 +57,7 @@ export async function GET(req: NextRequest) {
   return NextResponse.json(
     {
       ok: true,
-      adresler: rows.map((r) => ({
+      adresler: dedupeAddressRows(rows).map((r) => ({
         label: r.label,
         firstName: r.firstName,
         lastName: r.lastName,
