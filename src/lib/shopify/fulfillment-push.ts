@@ -134,7 +134,13 @@ export async function pushFulfillmentToShopify(
   }
 
   const [order] = await db
-    .select({ id: orders.id, shopifyOrderId: orders.shopifyOrderId })
+    .select({
+      id: orders.id,
+      shopifyOrderId: orders.shopifyOrderId,
+      shopifyOrderName: orders.shopifyOrderName,
+      orderNumber: orders.orderNumber,
+      customerEmail: orders.customerEmail,
+    })
     .from(orders)
     .where(eq(orders.id, f.orderId))
     .limit(1);
@@ -218,6 +224,15 @@ export async function pushFulfillmentToShopify(
 
   const company = COMPANY_FROM_CARRIER[f.carrier ?? ''] ?? f.carrier ?? 'Other';
 
+  // E-postadaki takip linki KargoLab'a DEĞİL kendi takip sayfamıza gider:
+  // KargoLab, kargo firması paketi teslim almadan (kabul) "kayıt bulunamadı" diyor.
+  // Takip sayfası durumu + notu gösterir, KargoLab'a oradan tek tıkla geçilir.
+  const takipNo = (order.shopifyOrderName ?? order.orderNumber ?? '').replace(/^#/, '');
+  const emailTrackingUrl =
+    takipNo && order.customerEmail
+      ? `https://viamood.com.tr/pages/siparis-takip?order=${encodeURIComponent(takipNo)}&email=${encodeURIComponent(order.customerEmail)}`
+      : f.trackingUrl ?? undefined;
+
   const fcRes = await shopifyGraphQL<FCResp>(FC_MUTATION, {
     fulfillment: {
       // true: kargo mailini Shopify atar — 'Kargo onayı' şablonu panelden TÜRKÇELEŞTİRİLDİ
@@ -225,7 +240,7 @@ export async function pushFulfillmentToShopify(
       notifyCustomer: true,
       trackingInfo: {
         number: f.trackingNumber ?? '',
-        url: f.trackingUrl ?? undefined,
+        url: emailTrackingUrl,
         company,
       },
       lineItemsByFulfillmentOrder: lineItemsByFO,

@@ -357,6 +357,17 @@ export async function createFulfillmentForOrderVendor(
 
   if (!shipRes.ok) return shipRes;
 
+  // Müşteri e-postasındaki takip linki: KargoLab sayfası kabul (pickup) öncesi
+  // "kayıt bulunamadı" diyor → kendi takip sayfamıza yönlendir (durum + not +
+  // KargoLab'a tek tık). no+email deep-link'i sayfada otomatik sorgulanır.
+  const takipNo = (order.orderName ?? order.orderNumber ?? '').replace(/^#/, '');
+  const musteriTrackingUrl =
+    takipNo && order.customerEmail
+      ? `https://viamood.com.tr/pages/siparis-takip?order=${encodeURIComponent(takipNo)}&email=${encodeURIComponent(order.customerEmail)}`
+      : shipRes.barcode
+        ? `https://kargolab.com/tracking/${shipRes.barcode}`
+        : null;
+
   let fulfillmentId = '';
   await db.transaction(async (tx) => {
     const [fulfillment] = await tx
@@ -367,6 +378,9 @@ export async function createFulfillmentForOrderVendor(
         kargolabShipmentId: String(shipRes.shipmentId),
         carrier: courrier,
         trackingNumber: shipRes.barcode ?? shipRes.trackingNumber ?? null,
+        // DB'de HAM kargo linki durur (takip sayfası "Kargoyu Takip Et" butonu bunu
+        // kullanır — takip-sayfası URL'i yazılırsa self-loop olur). Müşteri e-postası
+        // linki ayrı: musteriTrackingUrl (fulfillment-push + native mail).
         trackingUrl: shipRes.barcode
           ? `https://kargolab.com/tracking/${shipRes.barcode}`
           : null,
@@ -429,7 +443,7 @@ export async function createFulfillmentForOrderVendor(
   notifyNativeOrderShipped(orderId, {
     carrier: courrier,
     trackingNumber: shipRes.barcode ?? shipRes.trackingNumber ?? null,
-    trackingUrl: shipRes.barcode ? `https://kargolab.com/tracking/${shipRes.barcode}` : null,
+    trackingUrl: musteriTrackingUrl,
   }).catch(() => {});
 
   // Mikro push — KARGO ETİKETİ SONRASI, takip no ile (Yunus akışı: el terminali sipariş
