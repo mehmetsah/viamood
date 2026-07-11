@@ -38,6 +38,9 @@ const KOMUTLAR: Array<[string, string]> = [
   ['disk', 'df -h / | tail -1'],
   ['os', 'head -2 /etc/os-release 2>/dev/null'],
   ['apt_kilit', 'command -v apt-get >/dev/null && echo apt_var || echo apt_yok'],
+  ['ssl_log', 'tail -40 /var/www/viamood/ssl-kurulum.log 2>/dev/null || echo yok'],
+  ['nginx_conf', 'sudo -n cat /etc/nginx/sites-enabled/* 2>/dev/null | head -100 || echo okunamadi'],
+  ['https_test', 'curl -sk -o /dev/null -w "%{http_code}" --max-time 8 https://hesap.viamood.com.tr/api/health 2>&1'],
 ];
 
 export async function GET(req: NextRequest) {
