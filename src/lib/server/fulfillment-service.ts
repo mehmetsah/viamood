@@ -9,7 +9,7 @@
  *   5. fulfillments + fulfillment_line_items DB'ye yaz.
  *   6. Line items status'u 'awaiting_pickup' → mevcut.
  */
-import { and, eq } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 import { db } from '@/db/client';
 import {
   fulfillmentLineItems,
@@ -335,6 +335,40 @@ export async function createFulfillmentForOrderVendor(
     return { ok: false, error: `KargoLab kurye ID çözülemedi (kurye: ${courrier}, il: ${ship.city ?? '-'})` };
   }
 
+  // ── Mükerrer etiket koruması (race guard) ──────────────────────────────────
+  // PayTR paid siparişte Shopify orders/create + orders/paid webhook'ları auto-fulfill'i
+  // EŞZAMANLI tetikliyordu → ikisi de "etiket yok" görüp KargoLab'de sırt sırta 2 gönderi
+  // (ardışık shipmentId) oluşturuyordu. Etiketten HEMEN ÖNCE, (order+vendor) advisory lock
+  // altında tek "pending" claim kaydı oluşturan çağrı devam eder; eşzamanlı diğer çağrı
+  // mevcut kaydı görüp ETİKET KESMEDEN döner. Lock DB-global (pg_advisory) → pm2 cluster'da
+  // ve çoklu instance'ta da güvenli. claim, etiket başarısız olursa aşağıda geri alınır.
+  type ClaimResult =
+    | { kind: 'existing'; id: string; shipmentId: string | null }
+    | { kind: 'claimed'; id: string };
+  const claim: ClaimResult = await db.transaction(async (tx) => {
+    await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${orderId}), hashtext(${vendorId}))`);
+    const [ex] = await tx
+      .select({ id: fulfillments.id, kargolabShipmentId: fulfillments.kargolabShipmentId })
+      .from(fulfillments)
+      .where(and(eq(fulfillments.orderId, orderId), eq(fulfillments.vendorId, vendorId)))
+      .limit(1);
+    if (ex) return { kind: 'existing', id: ex.id, shipmentId: ex.kargolabShipmentId };
+    const [row] = await tx
+      .insert(fulfillments)
+      .values({ orderId, vendorId, status: 'pending' })
+      .returning({ id: fulfillments.id });
+    return { kind: 'claimed', id: row!.id };
+  });
+  if (claim.kind === 'existing') {
+    // Eşzamanlı başka bir çağrı zaten etiketi kesiyor/kesti → mükerrer önlendi.
+    return {
+      ok: true,
+      fulfillmentId: claim.id,
+      kargolabShipmentId: Number(claim.shipmentId ?? 0),
+    };
+  }
+  const claimId = claim.id;
+
   const shipRes = await createKargoLabShipment({
     courrier: courrierId,
     addresses: {
@@ -355,7 +389,12 @@ export async function createFulfillmentForOrderVendor(
     additional_services: 0,
   });
 
-  if (!shipRes.ok) return shipRes;
+  if (!shipRes.ok) {
+    // Etiket kesilemedi → "pending" claim'i geri al ki sonraki tetikleme yeniden deneyebilsin
+    // (aksi halde placeholder kayıt kalır ve idempotensi kontrolü etiketi kalıcı bloke ederdi).
+    await db.delete(fulfillments).where(eq(fulfillments.id, claimId));
+    return shipRes;
+  }
 
   // Müşteri e-postasındaki takip linki: KargoLab sayfası kabul (pickup) öncesi
   // "kayıt bulunamadı" diyor → kendi takip sayfamıza yönlendir (durum + not +
@@ -370,11 +409,11 @@ export async function createFulfillmentForOrderVendor(
 
   let fulfillmentId = '';
   await db.transaction(async (tx) => {
-    const [fulfillment] = await tx
-      .insert(fulfillments)
-      .values({
-        orderId,
-        vendorId,
+    // Claim aşamasında (advisory lock altında) oluşturulan "pending" kaydı etiket bilgisiyle
+    // TAMAMLA — insert DEĞİL update (mükerrer önleme claim'i yukarıda zaten oluşturdu).
+    await tx
+      .update(fulfillments)
+      .set({
         kargolabShipmentId: String(shipRes.shipmentId),
         carrier: courrier,
         trackingNumber: shipRes.barcode ?? shipRes.trackingNumber ?? null,
@@ -392,14 +431,12 @@ export async function createFulfillmentForOrderVendor(
         labelCreatedAt: new Date(),
         metadata: { kargolabResponse: shipRes.raw as Record<string, unknown> },
       })
-      .returning({ id: fulfillments.id });
-
-    if (!fulfillment) throw new Error('fulfillment insert başarısız');
-    fulfillmentId = fulfillment.id;
+      .where(eq(fulfillments.id, claimId));
+    fulfillmentId = claimId;
 
     await tx.insert(fulfillmentLineItems).values(
       lis.map((li) => ({
-        fulfillmentId: fulfillment.id,
+        fulfillmentId: claimId,
         lineItemId: li.id,
         quantity: li.quantity,
       })),
@@ -421,7 +458,7 @@ export async function createFulfillmentForOrderVendor(
       actorType: 'vendor',
       actorId: vendorId,
       payload: {
-        fulfillmentId: fulfillment.id,
+        fulfillmentId: claimId,
         kargolabShipmentId: shipRes.shipmentId,
         barcode: shipRes.barcode,
         carrier: courrier,
