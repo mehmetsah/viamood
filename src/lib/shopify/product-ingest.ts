@@ -50,9 +50,12 @@ export interface ProductIngestResult {
 }
 
 /** Shopify vendor adı (lowercase) → AWS vendor slug özel eşlemesi. */
+// Via Mood'un KENDİ ürünleri Via'nın vendor'ına atanır (Asrın'a DEĞİL).
+// Not: 'via-mood' vendor'ı canlıda tanımlı olmalı; yoksa resolveVendor eski fallback'e
+// (asrin-plastik) düşer — yani vendor oluşturulana kadar bu eşleme güvenle no-op'tur.
 const VENDOR_NAME_OVERRIDE: Record<string, string> = {
-  'via mood': 'asrin-plastik',
-  viamood: 'asrin-plastik',
+  'via mood': 'via-mood',
+  viamood: 'via-mood',
 };
 
 function toCents(price?: string | null): bigint {

@@ -78,6 +78,33 @@ function shippingTeslimTuruKodu(carrier: string | null | undefined): string {
   return 'PTT';
 }
 
+/** Kargo (orders.shippingCents) → Mikro evrak satırı.
+ *  Kargo tutarı Mikro'ya YALNIZCA MIKRO_KARGO_STOK tanımlıysa yansıtılır; boşsa null döner
+ *  (mevcut davranış: evraka sadece ürünler girer → toplam eksik kalırdı, bkz. #1044).
+ *  Ürün satırlarıyla aynı format: Fiyat = KDV HARİÇ, KDV alanı = KDV TUTARI. */
+function kargoSatiri(shippingCents: number | bigint | null | undefined): MikroHareket | null {
+  const kargoTl = Number(shippingCents ?? 0) / 100;
+  if (!(kargoTl > 0) || !env.MIKRO_KARGO_STOK) return null;
+  const kdvOran = env.MIKRO_KARGO_KDV;
+  const fiyatHaric = kargoTl / (1 + kdvOran / 100);
+  return {
+    Id: '{00000000-0000-0000-0000-000000000000}',
+    Cinsi: env.MIKRO_KARGO_CINSI === 1 ? 1 : 0, // 0=Stok (ürünlerle aynı) | 1=Hizmet
+    StokKodu: env.MIKRO_KARGO_STOK,
+    Barkodu: '',
+    KDV: fiyatHaric * (kdvOran / 100),
+    IstisnaKodu: 0,
+    Miktar: 1,
+    Fiyat: fiyatHaric,
+    Iskonto1: 0,
+    Iskonto2: 0,
+    Iskonto3: 0,
+    Iskonto4: 0,
+    Iskonto5: 0,
+    Aciklama: 'Kargo',
+  };
+}
+
 interface ShippingAddr {
   name?: string;
   phone?: string;
@@ -134,6 +161,7 @@ async function pushToFirmaDb(params: {
     customerPhone: string | null;
     customerEmail: string | null;
     placedAt: Date;
+    shippingCents: number | bigint | null;
   };
   ship: ShippingAddr;
   lineItems: Array<{
@@ -242,6 +270,10 @@ async function pushToFirmaDb(params: {
         Aciklama: '',
       };
     });
+
+    // Kargo satırı (aradepo ile aynı kural) — MIKRO_KARGO_STOK boşsa no-op
+    const kargoLine = kargoSatiri(order.shippingCents);
+    if (kargoLine) satirlar.push(kargoLine);
 
     const evrak: MikroEvrak = {
       Tarih: placedAtIso,
@@ -382,6 +414,7 @@ export async function syncOrderToMikro(orderId: string, kargo?: MikroKargoBilgi)
             customerPhone: order.customerPhone,
             customerEmail: order.customerEmail,
             placedAt: order.placedAt,
+            shippingCents: order.shippingCents,
           },
           ship,
           lineItems,
@@ -444,6 +477,11 @@ export async function syncOrderToMikro(orderId: string, kargo?: MikroKargoBilgi)
       Aciklama: '',
     };
   });
+
+  // Kargo tutarını (orders.shippingCents) evraka ekle — #1044: kargo Mikro'ya girmiyor,
+  // evrak sadece ürün satırlarından kuruluyordu (1800 yerine 1650). MIKRO_KARGO_STOK boşsa no-op.
+  const kargoLine = kargoSatiri(order.shippingCents);
+  if (kargoLine) satirlar.push(kargoLine);
 
   const placedAtIso = order.placedAt.toISOString().slice(0, 19);
 
@@ -531,6 +569,7 @@ export async function syncOrderToMikro(orderId: string, kargo?: MikroKargoBilgi)
         customerPhone: order.customerPhone,
         customerEmail: order.customerEmail,
         placedAt: order.placedAt,
+        shippingCents: order.shippingCents,
       },
       ship,
       lineItems,

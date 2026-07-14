@@ -44,6 +44,15 @@ export async function GET(req: NextRequest) {
     });
   }
 
+  // ?vendors=1 → tanımlı tedarikçiler (salt-okunur) — vendor eşleme teşhisi ("Via Mood" var mı?)
+  if (sp.get('vendors') === '1') {
+    const rows = await db
+      .select({ id: vendors.id, slug: vendors.slug, name: vendors.name })
+      .from(vendors)
+      .orderBy(vendors.name);
+    return NextResponse.json({ ok: true, count: rows.length, vendors: rows });
+  }
+
   // ?sku=132 → variant eşleşme teşhisi (order-ingest neden satır yazamadı sorusu için)
   const sku = (sp.get('sku') ?? '').trim();
   if (sku) {

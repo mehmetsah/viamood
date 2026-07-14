@@ -76,6 +76,15 @@ const envSchema = z.object({
   /** Stok kodu prefix — Yunus: ara depoya sevkiyat için "VIA" eklenir
    *  (ör. bizim SKU '100' → Mikro stok kodu 'VIA100') */
   MIKRO_STOK_PREFIX: z.string().default('VIA'),
+  /** Kargo tutarını Mikro evrağına satır olarak yansıtmak için stok/hizmet kodu.
+   *  BOŞ (default) → kargo satırı EKLENMEZ (mevcut davranış; evraka sadece ürünler girer).
+   *  Yunus'un Woo→Mikro akışındaki kargo kalemi kodu (ör. 'KARGO' / 'VIAKARGO') girilince
+   *  orders.shippingCents bir satır olarak evraka eklenir (KDV-dahil→ayrıştırılmış). */
+  MIKRO_KARGO_STOK: z.string().default(''),
+  /** Kargo satırının Mikro cinsi: 0=Stok (default, ürünlerle aynı), 1=Hizmet. */
+  MIKRO_KARGO_CINSI: z.coerce.number().default(0),
+  /** Kargo KDV oranı (%). Kargo TR'de %20; muafiyet için 0. */
+  MIKRO_KARGO_KDV: z.coerce.number().default(20),
   /** Otomatik Mikro push aktif mi? (false → sadece DB'ye yazılır, manuel push gerek) */
   MIKRO_AUTO_PUSH: z.coerce.boolean().default(true),
   /** true → Mikro push SİPARİŞ ANINDA (eski davranış, takip no'suz).
