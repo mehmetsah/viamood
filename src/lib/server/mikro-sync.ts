@@ -256,7 +256,7 @@ async function pushToFirmaDb(params: {
       return {
         Id: '{00000000-0000-0000-0000-000000000000}',
         Cinsi: 0,
-        StokKodu: String(li.variantSku ?? li.sku ?? '').trim(), // firma DB'de PREFIX'SİZ
+        StokKodu: String(li.variantSku ?? li.sku ?? '').trim().replace(/^FIRSAT/i, ''), // firma DB'de PREFIX'SİZ; Yunus: varyantlı SKU'daki "FIRSAT" öneki sıyrılır (FIRSAT439→439)
         Barkodu: '',
         KDV: fiyatHaric * (kdvOran / 100),
         IstisnaKodu: 0,
@@ -449,7 +449,9 @@ export async function syncOrderToMikro(orderId: string, kargo?: MikroKargoBilgi)
   const satirlar: MikroHareket[] = lineItems.map((li) => {
     const unitPriceTl = Number(li.unitPriceCents) / 100;
     const discountTl = Number(li.discountCents) / 100;
-    const rawSku = String(li.variantSku ?? li.sku ?? '').trim();
+    // Yunus kuralı: varyantlı üründe Shopify aynı SKU'yu iki kez kabul etmediğinden "FIRSAT" öneki eklenmiş
+    // (FIRSAT439). Mikro'ya GERÇEK SKU eşleşmeli → önce öneki sıyır, sonra VIA prefix'i uygula.
+    const rawSku = String(li.variantSku ?? li.sku ?? '').trim().replace(/^FIRSAT/i, '');
     // Yunus: ara depoya sevkiyat için VIA prefix. Zaten VIA ile başlıyorsa tekrar ekleme.
     const stokKodu = rawSku.toUpperCase().startsWith(env.MIKRO_STOK_PREFIX.toUpperCase())
       ? rawSku
