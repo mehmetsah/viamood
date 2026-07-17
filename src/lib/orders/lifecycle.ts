@@ -74,8 +74,13 @@ export interface CodSettleResult {
  * COD_AUTO_PAID_DRY_RUN true iken: koşulları kontrol eder, loglar ama Shopify'a POST YAPMAZ.
  * Best-effort — teslim akışını (statü/mail) bloklamaz.
  */
-export async function settleCodOrderOnDelivery(orderId: string): Promise<CodSettleResult> {
-  if (!env.COD_AUTO_PAID_ON_DELIVERY) return { skipped: 'disabled' };
+export async function settleCodOrderOnDelivery(
+  orderId: string,
+  opts: { force?: boolean; forceDryRun?: boolean } = {},
+): Promise<CodSettleResult> {
+  // opts.force: master switch'i baypas eder (yalnız secret-korumalı test endpoint kullanır).
+  // opts.forceDryRun: env'den bağımsız dry-run zorlar (test → asla gerçek POST).
+  if (!opts.force && !env.COD_AUTO_PAID_ON_DELIVERY) return { skipped: 'disabled' };
 
   const [o] = await db
     .select({
@@ -107,7 +112,7 @@ export async function settleCodOrderOnDelivery(orderId: string): Promise<CodSett
 
   const amount = (Number(o.totalCents) / 100).toFixed(2);
 
-  if (env.COD_AUTO_PAID_DRY_RUN) {
+  if (opts.forceDryRun || env.COD_AUTO_PAID_DRY_RUN) {
     console.log('[cod-settle] DRY-RUN — teslim edildi, ödendi YAPILACAKTI (POST yok):', {
       orderId,
       name: o.name,
