@@ -66,12 +66,17 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         routingDecisions: await db.select().from(routingDecisions).where(inArray(routingDecisions.orderId, orphanIds)),
       };
     }
-    return NextResponse.json({
+    const payload = {
       dryRun: true,
       keep,
       orphanCount: orphans.length,
       orphans: orphans.map((o) => ({ name: o.name, fin: o.fin })),
       dump,
+    };
+    // bigint kolonlar (totalCents vb.) → string (JSON.stringify BigInt'i serialize edemez)
+    return new NextResponse(JSON.stringify(payload, (_k, v) => (typeof v === 'bigint' ? v.toString() : v)), {
+      status: 200,
+      headers: { 'content-type': 'application/json' },
     });
   }
 
