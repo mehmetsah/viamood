@@ -95,6 +95,21 @@ const envSchema = z.object({
    *  seçtiği kurye + kapıda ödeme ile; havale-pending paid olana dek bekler).
    *  false → sadece tedarikçi panelindeki manuel buton. */
   KARGOLAB_AUTO_LABEL: z.coerce.boolean().default(true),
+
+  /** COD (kapıda ödeme) sipariş kargo TESLİM edilince Shopify'da otomatik "ödendi" (paid)
+   *  yapılsın mı? MASTER SWITCH / KILL SWITCH.
+   *  DİKKAT: z.coerce.boolean() KULLANMA — Boolean('false')===true olduğu için "false" ile
+   *  kapatılamaz (kill switch bozulur). Sadece 'true'/'1' açar; başka her şey (false/0/boş) kapalı. */
+  COD_AUTO_PAID_ON_DELIVERY: z
+    .string()
+    .transform((v) => v === 'true' || v === '1')
+    .default('false'),
+  /** true iken: koşulları kontrol eder + loglar ama Shopify'a POST YAPMAZ (dry-run).
+   *  Canlı yayın için 'false' yaz (o zaman gerçek POST). Aynı 'true'/'1' → dry-run mantığı. */
+  COD_AUTO_PAID_DRY_RUN: z
+    .string()
+    .transform((v) => v === 'true' || v === '1')
+    .default('true'),
   /** Default depo no */
   MIKRO_DEPO_NO: z.coerce.number().default(1),
   /** ARADEPO sabit carisi — Yunus'un günlük Woo→Mikro akışındaki cari (müşteri carisi AÇILMAZ) */
