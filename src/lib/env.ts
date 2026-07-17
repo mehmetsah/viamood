@@ -96,6 +96,11 @@ const envSchema = z.object({
    *  false → sadece tedarikçi panelindeki manuel buton. */
   KARGOLAB_AUTO_LABEL: z.coerce.boolean().default(true),
 
+  /** KargoLab durum webhook'u imza secret'ı. KargoLab bu secret'ı `?key=` veya
+   *  `x-kargolab-secret` header'ında gönderir → /api/kargolab/webhook doğrular.
+   *  Boşsa webhook 401 döner (kapalı). */
+  KARGOLAB_WEBHOOK_SECRET: z.string().optional(),
+
   /** COD (kapıda ödeme) sipariş kargo TESLİM edilince Shopify'da otomatik "ödendi" (paid)
    *  yapılsın mı? MASTER SWITCH / KILL SWITCH.
    *  DİKKAT: z.coerce.boolean() KULLANMA — Boolean('false')===true olduğu için "false" ile
