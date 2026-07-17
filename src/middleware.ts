@@ -46,6 +46,7 @@ export default auth((req) => {
     pathname.startsWith('/api/auth') ||
     pathname.startsWith('/api/health') ||
     pathname.startsWith('/api/shopify/webhooks') ||
+    pathname.startsWith('/api/kargolab/webhook') || // KargoLab durum webhook'u — kendi secret'ıyla korunur
     pathname.startsWith('/api/shopify/shipping-rates') ||
     pathname.startsWith('/api/v1/tr') ||
     pathname.startsWith('/api/v1/vendor') ||
