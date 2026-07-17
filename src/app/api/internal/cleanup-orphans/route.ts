@@ -13,7 +13,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { timingSafeEqual } from 'node:crypto';
 import { and, inArray, isNotNull, notInArray } from 'drizzle-orm';
 import { db } from '@/db/client';
-import { orders, fulfillments, fulfillmentLineItems, commissionLedger } from '@/db/schema';
+import { orders, orderLineItems, fulfillments, fulfillmentLineItems, commissionLedger, trackingEvents, orderEvents, routingDecisions } from '@/db/schema';
 import { env } from '@/lib/env';
 
 function safeEqual(a: string, b: string): boolean {
@@ -29,7 +29,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   const key = req.nextUrl.searchParams.get('key') ?? '';
   if (!secret || !safeEqual(key, secret)) return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
 
-  let body: { keepOrderNames?: unknown; apply?: unknown };
+  let body: { keepOrderNames?: unknown; apply?: unknown; dump?: unknown };
   try {
     body = (await req.json()) as typeof body;
   } catch {
@@ -52,11 +52,26 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   const orphanIds = orphans.map((o) => o.id);
 
   if (!apply) {
+    let dump: unknown;
+    if (body.dump === true && orphanIds.length > 0) {
+      const fids = (await db.select({ id: fulfillments.id }).from(fulfillments).where(inArray(fulfillments.orderId, orphanIds))).map((x) => x.id);
+      dump = {
+        orders: await db.select().from(orders).where(inArray(orders.id, orphanIds)),
+        orderLineItems: await db.select().from(orderLineItems).where(inArray(orderLineItems.orderId, orphanIds)),
+        fulfillments: await db.select().from(fulfillments).where(inArray(fulfillments.orderId, orphanIds)),
+        fulfillmentLineItems: fids.length ? await db.select().from(fulfillmentLineItems).where(inArray(fulfillmentLineItems.fulfillmentId, fids)) : [],
+        commissionLedger: await db.select().from(commissionLedger).where(inArray(commissionLedger.orderId, orphanIds)),
+        trackingEvents: fids.length ? await db.select().from(trackingEvents).where(inArray(trackingEvents.fulfillmentId, fids)) : [],
+        orderEvents: await db.select().from(orderEvents).where(inArray(orderEvents.orderId, orphanIds)),
+        routingDecisions: await db.select().from(routingDecisions).where(inArray(routingDecisions.orderId, orphanIds)),
+      };
+    }
     return NextResponse.json({
       dryRun: true,
       keep,
       orphanCount: orphans.length,
       orphans: orphans.map((o) => ({ name: o.name, fin: o.fin })),
+      dump,
     });
   }
 
