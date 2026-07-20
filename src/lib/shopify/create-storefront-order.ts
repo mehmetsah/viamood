@@ -163,7 +163,10 @@ export async function createStorefrontOrder(
     send_fulfillment_receipt: false,
     inventory_behaviour: 'decrement_obeying_policy',
     ...(b.customer_id ? { customer: { id: b.customer_id } } : {}),
-    ...(shippingTl > 0
+    // Seçilen kargo firması HER ZAMAN yazılır (ücretsiz kargoda price 0.00 ile de). Aksi halde
+    // sepet ≥1500 → shippingTl=0 → shipping_lines eklenmiyor → auto-fulfill courier'ı okuyamayıp
+    // PTT'ye düşüyordu (#1048: müşteri SÜRAT seçti, PTT ile gitti).
+    ...(b.shipping_courier || shippingTl > 0
       ? { shipping_lines: [{ title: b.shipping_courier || 'Kargo (KargoLab)', price: shippingTl.toFixed(2), code: 'kargolab' }] }
       : {}),
     ...(b.discount_code && (b.discount_amount || 0) > 0
