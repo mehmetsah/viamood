@@ -20,11 +20,15 @@ async function moderate(formData: FormData) {
   'use server';
   const id = String(formData.get('id') ?? '');
   const action = String(formData.get('action') ?? '');
-  if (!id || !['approved', 'rejected'].includes(action)) return;
-  await db
-    .update(reviews)
-    .set({ status: action, moderatedAt: new Date().toISOString() })
-    .where(eq(reviews.id, id));
+  if (!id || !['approved', 'rejected', 'delete'].includes(action)) return;
+  if (action === 'delete') {
+    await db.delete(reviews).where(eq(reviews.id, id));
+  } else {
+    await db
+      .update(reviews)
+      .set({ status: action, moderatedAt: new Date().toISOString() })
+      .where(eq(reviews.id, id));
+  }
   revalidatePath('/admin/reviews');
 }
 
@@ -162,6 +166,11 @@ export default async function AdminReviewsPage({ searchParams }: PageProps) {
                     <button style={{ padding: '6px 12px', borderRadius: 8, border: '1px solid #ddd', background: '#fff', color: '#c0392b', fontWeight: 600, cursor: 'pointer' }}>Reddet</button>
                   </form>
                 )}
+                <form action={moderate}>
+                  <input type="hidden" name="id" value={r.id} />
+                  <input type="hidden" name="action" value="delete" />
+                  <button style={{ padding: '6px 10px', borderRadius: 8, border: '1px solid #eee', background: '#fafafa', color: '#999', fontWeight: 600, cursor: 'pointer' }} title="Kalıcı sil">Sil</button>
+                </form>
               </div>
             </div>
             <p style={{ margin: '10px 0 0', lineHeight: 1.6, color: '#3c3934' }}>{r.body}</p>
