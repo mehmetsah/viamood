@@ -61,7 +61,7 @@ npx drizzle-kit migrate || echo "  (drizzle-kit migrate uyarı/no-op)"
 # yeni kod eksik kolona/tabloya düşmez. Yeni elle migration eklenince listeye ekle.
 echo ""
 echo "▸ Elle migration'lar (idempotent)..."
-for m in 0008_customers 0009_native_orders 0010_carts 0011_store_settings 0012_settings_backend_theme 0013_returns 0014_reviews 0015_goknil_admin 0016_goknil_pwreset; do
+for m in 0008_customers 0009_native_orders 0010_carts 0011_store_settings 0012_settings_backend_theme 0013_returns 0014_reviews 0015_goknil_admin 0016_goknil_pwreset 0017_goknil_upsert; do
   if [ -f "drizzle/$m.sql" ]; then
     psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -q -f "drizzle/$m.sql" && echo "  ✓ $m" || { echo "  ✗ $m FAİL"; exit 1; }
   fi
