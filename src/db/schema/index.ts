@@ -18,3 +18,4 @@ export * from './api-tokens';
 export * from './bundles';
 export * from './shipping';
 export * from './settings';
+export * from './reviews';
