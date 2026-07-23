@@ -3,15 +3,14 @@
 -- HİÇBİR YERDE OLMAYAN bir hash'e (zRLz…) çekiyordu → Mehmet'e iletilen bilinen şifre ile login FAİL.
 -- Bu sürüm DB'yi TEK bilinen değere (yxcy…) oturtur; düz şifre Mehmet'e ayrı iletildi (repoda/raporda YOK).
 --
--- Idempotent + güvenli guard: yalnızca hash HÂLÂ makine-üretimi bilinen değerlerden biriyken günceller.
--- Göknil ileride şifresini kendisi değiştirirse (hash bilinenlerden farklı) DOKUNMAZ. Her deploy no-op'a düşer.
--- Kullanıcı yoksa oluşturur (yxcy… hash + role=admin).
+-- KOŞULSUZ (guard YOK): önceki guard'lı sürümler DB'yi düz metni bilinmeyen bir hash'te bırakmış
+-- olabilir → giriş FAİL. Tek adanmış panel hesabı (goknil@viamood.com.tr) olduğundan hash'i her
+-- deploy'da DOĞRUDAN bilinen değere (yxcy… = 'Orkide-Gunes-8831%') sabitliyoruz. Kullanıcı yoksa oluşturur.
+-- IS DISTINCT FROM ile: hash zaten doğruysa yazma yapılmaz (gereksiz write churn yok), idempotent.
+-- NOT: Göknil panelden şifresini değiştirirse bir sonraki deploy geri alır → o gün bu migration nötrlenmeli.
 INSERT INTO "users" ("name","email","password_hash","role")
 VALUES ('Göknil','goknil@viamood.com.tr','$2b$12$yxcypEpT3awpgDUWqLkXfuzBDtcJ7qy8PCy.cpZMWQCVF/52vmukq','admin')
 ON CONFLICT ("email") DO UPDATE
   SET "password_hash" = EXCLUDED."password_hash", "role" = 'admin'
-  WHERE "users"."password_hash" IN (
-    '$2b$12$mLoR2bZkoCCdx1RQ96t13um2uw8eX8UAQ3yi7xsfP9mQcGFezxqMm',  -- 0015 orijinal
-    '$2b$12$yxcypEpT3awpgDUWqLkXfuzBDtcJ7qy8PCy.cpZMWQCVF/52vmukq',  -- 0016 (= bilinen şifre)
-    '$2b$12$zRLz0swIUVNRgJGwV/QNbekDmAyVxjgTbHoJ.OUqtlHGodtVLk4mq'   -- eski 0017 (düz metni yok)
-  );
+  WHERE "users"."password_hash" IS DISTINCT FROM EXCLUDED."password_hash"
+     OR "users"."role" IS DISTINCT FROM 'admin';
