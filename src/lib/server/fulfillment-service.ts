@@ -84,6 +84,21 @@ function stateCodeFromName(state: string | null | undefined): string {
   return TR_STATE_CODE[key] ?? '34';
 }
 
+/**
+ * Türkçe aksanları katlayıp BÜYÜK harfe çevirir (kurye adı eşleştirmesi için).
+ * KargoLab kurye adı "SÜRAT" (Ü) döner; auto-fulfill.courierCode ise ASCII "SURAT" (U)
+ * üretir → düz .includes() Ü≠U yüzünden EŞLEŞMEZ ve sessizce en ucuz kuryeye (PTT) düşerdi
+ * (#1055: müşteri SÜRAT+kapıda-kart seçti, PTT etiketi kesildi). foldTr('SÜRAT')==='SURAT'.
+ */
+function foldTr(s: string | null | undefined): string {
+  return (s ?? '')
+    .replace(/ı/g, 'i')
+    .replace(/İ/g, 'I')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toUpperCase();
+}
+
 async function ensureSenderAddress(vendorId: string): Promise<
   { ok: true; addressId: number } | { ok: false; error: string }
 > {
@@ -301,6 +316,9 @@ export async function createFulfillmentForOrderVendor(
   const isCod = (order.tags ?? []).some((t) =>
     ['kapida-odeme', 'tahsilatli-kargo', 'cod'].includes(String(t).toLowerCase()),
   );
+  // Kapıda KART mı? (createStorefrontOrder 'kapida-kart' etiketi ekler) → kurye seçiminde
+  // kartla-kapıda-tahsilat kabul eden havuz kullanılır (PTT gibi cod_card=0 kuryeler elenir).
+  const isCodCard = isCod && (order.tags ?? []).some((t) => String(t).toLowerCase() === 'kapida-kart');
   const codAmount = isCod ? Math.round(Number(order.totalCents)) / 100 : 0;
   const COD_PAYMENT_TYPE: 1 | 2 | 3 = 3; // KargoLab: 3 = kapıda ödeme (tahsilatlı). İlk COD kargoda doğrula.
 
@@ -318,14 +336,33 @@ export async function createFulfillmentForOrderVendor(
       fromDistrict: 'Beyoğlu',
     });
     if (rateRes.ok) {
-      const want = courrier.toUpperCase();
-      const pool = isCod ? rateRes.rates.filter((r) => r.acceptsCOD) : rateRes.rates;
+      // Kurye adı eşleştirmesi TÜRKÇE AKSANDAN BAĞIMSIZ (foldTr): KargoLab "SÜRAT" (Ü) ↔
+      // seçilen ASCII "SURAT" (U) düz .includes() ile eşleşmiyordu → sessizce PTT'ye düşüyordu.
+      const want = foldTr(courrier);
+      // Kapıda KART siparişinde kurye kartla-kapıda-tahsilatı da desteklemeli (PTT cod_card=0):
+      // önce kart-kabul havuzu; boşsa nakit-COD, o da boşsa tüm rate'ler (etiketi bloke etme).
+      let pool = isCod
+        ? rateRes.rates.filter((r) => (isCodCard ? r.acceptsCODCard : r.acceptsCOD))
+        : rateRes.rates;
+      if (pool.length === 0) pool = isCod ? rateRes.rates.filter((r) => r.acceptsCOD) : rateRes.rates;
+      if (pool.length === 0) pool = rateRes.rates;
+      const selected = pool.find((r) => foldTr(r.courrierName).includes(want));
       const match =
-        pool.find((r) => r.courrierName.toUpperCase().includes(want)) ??
+        selected ??
         pool.reduce<typeof pool[number] | null>(
           (a, b) => (a && a.priceCents <= b.priceCents ? a : b),
           null,
         );
+      if (!selected && match) {
+        // Seçilen kurye bu rota/COD havuzunda YOK → en ucuza düşüldü. Teşhis için logla
+        // (sessiz kurye değişimi #1055'te fark edilememişti).
+        console.warn('[fulfillment] seçilen kurye eşleşmedi → en ucuza düşüldü', {
+          orderId,
+          istenen: courrier,
+          secilen: match.courrierName,
+          havuz: pool.map((r) => r.courrierName),
+        });
+      }
       courrierId = match?.courrierId ?? null;
     }
   } catch {
