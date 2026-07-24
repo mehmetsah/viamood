@@ -68,14 +68,21 @@ async function nextCariSequence(): Promise<number> {
 }
 
 function shippingTeslimTuruKodu(carrier: string | null | undefined): string {
-  if (!carrier) return 'PTT';
-  const c = carrier.toUpperCase();
-  if (c.includes('PTT')) return 'PTT';
-  if (c.includes('ARAS')) return 'ARAS';
-  if (c.includes('MNG')) return 'MNG';
-  if (c.includes('YURT')) return 'YURTICI';
-  if (c.includes('SURAT') || c.includes('SÜRAT')) return 'SURAT';
-  return 'PTT';
+  const code = ((): string => {
+    if (!carrier) return 'PTT';
+    const c = carrier.toUpperCase();
+    if (c.includes('PTT')) return 'PTT';
+    if (c.includes('ARAS')) return 'ARAS';
+    if (c.includes('MNG')) return 'MNG';
+    if (c.includes('YURT')) return 'YURTICI';
+    if (c.includes('SURAT') || c.includes('SÜRAT')) return 'SURAT';
+    return 'PTT';
+  })();
+  // Mikro SIPARISLER.sip_teslimturu sütunu 4 KARAKTER. 'SURAT'(5)/'YURTICI'(7) taşınca
+  // MSSQL 'String or binary data would be truncated' 500'ü TÜM siparisEkle'yi düşürüyordu
+  // (#1055/#1056: dünkü kurye-fix'i doğru SÜRAT üretti → Mikro sütunu taştı). 4'e kırp.
+  // (Not: Yunus/Okan Mikro'da Sürat/Yurtiçi için özel teslim-türü kodu isterse burada map'lenir.)
+  return code.slice(0, 4);
 }
 
 /** Kargo (orders.shippingCents) → Mikro evrak satırı.
