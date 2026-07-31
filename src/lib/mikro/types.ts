@@ -77,7 +77,8 @@ export interface MikroHareket {
   StokKodu: string;
   Barkodu?: string;
   isDelete?: boolean;
-  /** DİKKAT: KDV TUTARI (TL) — oran DEĞİL! (Fiyat = KDV hariç birim fiyat; Yunus'un çalışan Woo formatı) */
+  /** DİKKAT: KDV TUTARI (TL) — oran DEĞİL! Fiyat = KDV hariç BİRİM fiyat; KDV = SATIR TOPLAMI KDV (birim×miktar).
+   *  Mikro, Fiyat'ı Miktar ile çarpıp tutarı üretir ama KDV alanını çarpmaz → KDV satır-toplamı verilmeli (MADDE-2). */
   KDV?: number;
   IstisnaKodu?: number;
   Miktar: number;

@@ -329,7 +329,10 @@ async function pushToFirmaDb(params: {
         Cinsi: 0,
         StokKodu: String(li.variantSku ?? li.sku ?? '').trim().replace(/^FIRSAT/i, ''), // firma DB'de PREFIX'SİZ; Yunus: varyantlı SKU'daki "FIRSAT" öneki sıyrılır (FIRSAT439→439)
         Barkodu: '',
-        KDV: fiyatHaric * (kdvOran / 100),
+        // MADDE-2: KDV = SATIR TOPLAMI (birim değil). Mikro Fiyat'ı Miktar ile çarpıp sip_tutar'ı üretiyor
+        // ama KDV alanını çarpMIYOR (empirik: S1049/1059/1065 çok-adetli satırlar birim-KDV ile %10 görünüp
+        // belge harmanını %16'ya düşürüyordu; qty=1 satırlar %20 doğruydu). → ×li.quantity ile satır-toplamı.
+        KDV: fiyatHaric * (kdvOran / 100) * li.quantity,
         IstisnaKodu: 0,
         Miktar: li.quantity,
         Fiyat: fiyatHaric,
@@ -537,7 +540,7 @@ export async function syncOrderToMikro(orderId: string, kargo?: MikroKargoBilgi)
     // Yunus'un çalışan formatı: Fiyat = KDV HARİÇ birim fiyat, KDV alanı = KDV TUTARI (oran DEĞİL!)
     const kdvOran = li.variantIsTaxable === false ? 0 : 20;
     const fiyatHaric = unitPriceTl / (1 + kdvOran / 100);
-    const kdvTutar = fiyatHaric * (kdvOran / 100);
+    const kdvTutarBirim = fiyatHaric * (kdvOran / 100); // BİRİM başına KDV
     return {
       Id: '{00000000-0000-0000-0000-000000000000}',
       Cinsi: 0, // Stok
@@ -545,7 +548,9 @@ export async function syncOrderToMikro(orderId: string, kargo?: MikroKargoBilgi)
       // Barkodu BİLEREK BOŞ: Mikro SiparisEkle, Barkodu doluysa stok aramasını BARKODLA yapıyor;
       // Shopify barkodu Mikro'da kayıtlı olmadığından "Stok bilgisi bulunamadı" veriyor (kanıtlandı).
       Barkodu: '',
-      KDV: kdvTutar,
+      // MADDE-2: KDV = SATIR TOPLAMI (birim × miktar). Mikro Fiyat×Miktar=sip_tutar yapıyor ama KDV'yi
+      // çarpMIYOR → çok-adetli satırlar yarı KDV ile görünüp (%10) belge harmanını %16'ya düşürüyordu.
+      KDV: kdvTutarBirim * li.quantity,
       IstisnaKodu: 0,
       Miktar: li.quantity,
       Fiyat: fiyatHaric,
