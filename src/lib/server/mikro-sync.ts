@@ -134,6 +134,30 @@ function allocateOrderDiscountCents(
   });
 }
 
+// MADDE-1: CARI MuhasebeKodu1 — ödeme yöntemi + kargo firmasına göre (Yunus kuralı 2026-07-31).
+const MUHASEBE_KODU_PAYTR = '120.20.01.P001'; // online / PayTR ile ödendi
+const MUHASEBE_KODU_PTT_COD = '120.20.01.P002'; // kapıda ödeme + PTT
+const MUHASEBE_KODU_SURAT_COD = '120.20.01.P003'; // kapıda ödeme/kart + Sürat
+
+/** Ödeme yöntemi (orders.tags) + kargo firması (courier) → cari MuhasebeKodu1.
+ *  COD ise kod KARGO FİRMASINA bağlı (Sürat→P003, PTT/diğer→P002); PayTR ödendi→P001;
+ *  havale/diğer → cari'nin KENDİ kodu (cariKodu). COD'de courier bilinmeden çağrılmamalı
+ *  (bkz. pushToFirmaDb erteleme guard'ı) — yoksa yanlışlıkla PTT(P002) sabitlenir. */
+function muhasebeKodu1For(
+  tags: string[] | null | undefined,
+  courier: string | null | undefined,
+  cariKodu: string,
+): string {
+  const t = (tags ?? []).map((x) => String(x).toLowerCase());
+  const isCod = t.some((x) => ['kapida-odeme', 'tahsilatli-kargo', 'cod'].includes(x));
+  const isPaytr = t.some((x) => x.includes('paytr'));
+  const c = (courier ?? '').toUpperCase();
+  const isSurat = c.includes('SURAT') || c.includes('SÜRAT');
+  if (isCod) return isSurat ? MUHASEBE_KODU_SURAT_COD : MUHASEBE_KODU_PTT_COD;
+  if (isPaytr) return MUHASEBE_KODU_PAYTR;
+  return cariKodu; // havale / diğer → kendi cari kodu
+}
+
 interface ShippingAddr {
   name?: string;
   phone?: string;
@@ -191,6 +215,7 @@ async function pushToFirmaDb(params: {
     customerEmail: string | null;
     placedAt: Date;
     shippingCents: number | bigint | null;
+    tags: string[] | null;
   };
   ship: ShippingAddr;
   lineItems: Array<{
@@ -229,6 +254,15 @@ async function pushToFirmaDb(params: {
       cariKodu = found?.Result?.[0]?.cari_kod ?? null;
     }
     if (!cariKodu) {
+      // MADDE-1 ZAMANLAMA: COD carisinin MuhasebeKodu1'i kargo firmasına bağlı (Sürat P003 / PTT P002).
+      // orders/create webhook sync'i courier'sız çağırıyor → courier bilinmeden YENİ cari AÇMA
+      // (yanlışlıkla PTT/P002 sabitlenmesin). Fulfillment sonrası courier'lı re-sync'te açılır.
+      // (PayTR/havale carrier'dan bağımsız olduğundan onlar courier'sız da açılır.)
+      const tCod = (order.tags ?? []).map((x) => String(x).toLowerCase());
+      const isCodNew = tCod.some((x) => ['kapida-odeme', 'tahsilatli-kargo', 'cod'].includes(x));
+      if (isCodNew && !params.courier) {
+        return { ok: false, error: 'COD — kargo firması bilinmiyor, yeni Via cari açılışı fulfillment sonrasına ertelendi' };
+      }
       const seq = await nextCariSequence();
       cariKodu = `${env.MIKRO_CARI_PREFIX}${seq}`;
       // Mikro CARI Cadde/Adres alanı 50 KARAKTER. Uzun adreslerde cariKayit 400
@@ -236,11 +270,14 @@ async function pushToFirmaDb(params: {
       // sipariş aradepo'da kalıp Via'ya AKTARILAMIYORDU (#1045/1051/1053/1060-63/1066/1069). 50'ye kırp.
       // (Tam adres zaten EvrakDokumAciklamasi.svka + EvrakAciklama'da eksiksiz taşınıyor.)
       const cadde50 = [ship.address1, ship.address2].filter(Boolean).join(' ').slice(0, 50);
+      // MADDE-1: ödeme yöntemi + kargoya göre muhasebe kodu (PayTR P001 / PTT-COD P002 / Sürat-COD P003 / havale=cariKodu)
+      const muhasebeKodu1 = muhasebeKodu1For(order.tags, params.courier, cariKodu);
       // Yunus'un Woo düzeni: tam ad tek alanda (cari_unvan1="Büşra Kaynak") — bölme
       const cariRes = await cariKayit({
         UnvaniSoyadi: (alici ?? '-').trim() || '-',
         UnvaniAdi: '.',
         Kodu: cariKodu,
+        MuhasebeKodu1: muhasebeKodu1,
         EpostaAdresi: order.customerEmail ?? '',
         CepTelefonu: telefon.slice(0, 20),
         Telefon1: telefon.slice(0, 20), // cari_CepTel boş kalabiliyor — Telefon1'e de yaz
@@ -455,6 +492,7 @@ export async function syncOrderToMikro(orderId: string, kargo?: MikroKargoBilgi)
             customerEmail: order.customerEmail,
             placedAt: order.placedAt,
             shippingCents: order.shippingCents,
+            tags: order.tags,
           },
           ship,
           lineItems: lineItemsForFirma,
@@ -612,6 +650,7 @@ export async function syncOrderToMikro(orderId: string, kargo?: MikroKargoBilgi)
         customerEmail: order.customerEmail,
         placedAt: order.placedAt,
         shippingCents: order.shippingCents,
+        tags: order.tags,
       },
       ship,
       lineItems: lineItemsForFirma,
