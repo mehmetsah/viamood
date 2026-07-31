@@ -332,11 +332,15 @@ async function pushToFirmaDb(params: {
         // MADDE-2: KDV = SATIR TOPLAMI (birim değil). Mikro Fiyat'ı Miktar ile çarpıp sip_tutar'ı üretiyor
         // ama KDV alanını çarpMIYOR (empirik: S1049/1059/1065 çok-adetli satırlar birim-KDV ile %10 görünüp
         // belge harmanını %16'ya düşürüyordu; qty=1 satırlar %20 doğruydu). → ×li.quantity ile satır-toplamı.
-        KDV: fiyatHaric * (kdvOran / 100) * li.quantity,
+        // MADDE-2 satır-toplamı + MADDE-3 FIX: KDV matrahı indirim SONRASI (Yunus'un 25690 evrağı: tam indirim→sip_vergi 0).
+        KDV: (fiyatHaric * li.quantity - (discountTl > 0 ? discountTl / (1 + kdvOran / 100) : 0)) * (kdvOran / 100),
         IstisnaKodu: 0,
         Miktar: li.quantity,
         Fiyat: fiyatHaric,
-        Iskonto1: discountTl > 0 ? discountTl / (1 + kdvOran / 100) : 0,
+        // MADDE-3 FIX: Iskonto1 = İSKONTO YÜZDESİ. Mikro bu alanı sip_tutar'a uygulayıp sip_iskonto_1 float
+        // AMOUNT'unu üretir (Yunus'un 25690'ı gibi: indirim TUTAR olarak sip_iskonto_1'de). Eski kod TL tutar
+        // yazıyordu → Mikro %sanıp 5× şişiriyordu (#1061: 50 TL → %50 → 250 TL). Yüzde = brüt indirim / brüt satır × 100.
+        Iskonto1: discountTl > 0 && unitPriceTl > 0 ? (discountTl / (unitPriceTl * li.quantity)) * 100 : 0,
         Iskonto2: 0,
         Iskonto3: 0,
         Iskonto4: 0,
@@ -540,7 +544,7 @@ export async function syncOrderToMikro(orderId: string, kargo?: MikroKargoBilgi)
     // Yunus'un çalışan formatı: Fiyat = KDV HARİÇ birim fiyat, KDV alanı = KDV TUTARI (oran DEĞİL!)
     const kdvOran = li.variantIsTaxable === false ? 0 : 20;
     const fiyatHaric = unitPriceTl / (1 + kdvOran / 100);
-    const kdvTutarBirim = fiyatHaric * (kdvOran / 100); // BİRİM başına KDV
+    // MADDE-3 FIX: indirim Iskonto1'e YÜZDE olarak yazılır (bkz. firma leg + 25690); KDV matrahı da indirim SONRASI.
     return {
       Id: '{00000000-0000-0000-0000-000000000000}',
       Cinsi: 0, // Stok
@@ -550,11 +554,11 @@ export async function syncOrderToMikro(orderId: string, kargo?: MikroKargoBilgi)
       Barkodu: '',
       // MADDE-2: KDV = SATIR TOPLAMI (birim × miktar). Mikro Fiyat×Miktar=sip_tutar yapıyor ama KDV'yi
       // çarpMIYOR → çok-adetli satırlar yarı KDV ile görünüp (%10) belge harmanını %16'ya düşürüyordu.
-      KDV: kdvTutarBirim * li.quantity,
+      KDV: (fiyatHaric * li.quantity - (discountTl > 0 ? discountTl / (1 + kdvOran / 100) : 0)) * (kdvOran / 100),
       IstisnaKodu: 0,
       Miktar: li.quantity,
       Fiyat: fiyatHaric,
-      Iskonto1: discountTl > 0 ? discountTl / (1 + kdvOran / 100) : 0,
+      Iskonto1: discountTl > 0 && unitPriceTl > 0 ? (discountTl / (unitPriceTl * li.quantity)) * 100 : 0, // MADDE-3 FIX: YÜZDE (bkz. firma leg)
       Iskonto2: 0,
       Iskonto3: 0,
       Iskonto4: 0,
