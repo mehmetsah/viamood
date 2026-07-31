@@ -112,6 +112,28 @@ function kargoSatiri(shippingCents: number | bigint | null | undefined): MikroHa
   };
 }
 
+/** Order-seviyesi indirimi (orders.discount_cents) satırlara BRÜT tutar oranında dağıtır.
+ *  Shopify indirimi satırlara işlenmediğinden (order_line_items.discount_cents HEP 0 — #1049/#1058/
+ *  #1061/#1070) burada dağıtılır; dönen değer satır başına KDV-DAHİL indirim (kuruş). Satır formülü
+ *  KDV-hariçe çevirip Iskonto1'e yazar. Son satıra yuvarlama artığı → toplam indirim birebir korunur. */
+function allocateOrderDiscountCents(
+  lineItems: Array<{ unitPriceCents: number | bigint; quantity: number }>,
+  orderDiscountCents: number | bigint | null | undefined,
+): number[] {
+  const disc = Number(orderDiscountCents ?? 0);
+  if (!(disc > 0) || lineItems.length === 0) return lineItems.map(() => 0);
+  const grosses = lineItems.map((li) => Number(li.unitPriceCents) * li.quantity);
+  const total = grosses.reduce((a, b) => a + b, 0);
+  if (!(total > 0)) return lineItems.map(() => 0);
+  let remaining = disc;
+  return grosses.map((g, i) => {
+    if (i === grosses.length - 1) return Math.max(0, remaining);
+    const share = Math.round(disc * (g / total));
+    remaining -= share;
+    return share;
+  });
+}
+
 interface ShippingAddr {
   name?: string;
   phone?: string;
@@ -382,6 +404,12 @@ export async function syncOrderToMikro(orderId: string, kargo?: MikroKargoBilgi)
     return { ok: false, orderId, step: 'lookup', error: 'Sipariş satırı yok' };
   }
 
+  // MADDE-3: Shopify order-seviyesi indirimini (orders.discount_cents) satırlara oransal dağıt.
+  // order_line_items.discount_cents hep 0 geldiğinden aradepo + firma evrağı Iskonto'suz gidiyordu
+  // (indirim Mikro'ya yansımıyordu). Dağıtılmış değeri firma push'una da taşı (li.discountCents override).
+  const lineDiscounts = allocateOrderDiscountCents(lineItems, order.discountCents);
+  const lineItemsForFirma = lineItems.map((li, i) => ({ ...li, discountCents: lineDiscounts[i] ?? 0 }));
+
   // 3. Cari: ARADEPO modunda SABİT cari — Yunus'un günlük Woo→Mikro akışıyla birebir.
   // Müşteri bilgisi evrakın EvrakDokumAciklamasi JSON'unda taşınır; cariKayit GEREKMEZ.
   const cariKodu = env.MIKRO_ARADEPO_CARI;
@@ -429,7 +457,7 @@ export async function syncOrderToMikro(orderId: string, kargo?: MikroKargoBilgi)
             shippingCents: order.shippingCents,
           },
           ship,
-          lineItems,
+          lineItems: lineItemsForFirma,
           orderDigits,
           courier: kargo?.courier ?? null,
         });
@@ -458,9 +486,9 @@ export async function syncOrderToMikro(orderId: string, kargo?: MikroKargoBilgi)
     return { ok: false, orderId, step: 'siparis', error: err };
   }
 
-  const satirlar: MikroHareket[] = lineItems.map((li) => {
+  const satirlar: MikroHareket[] = lineItems.map((li, i) => {
     const unitPriceTl = Number(li.unitPriceCents) / 100;
-    const discountTl = Number(li.discountCents) / 100;
+    const discountTl = lineDiscounts[i]! / 100; // MADDE-3: order indiriminden dağıtılan satır payı
     // Yunus kuralı: varyantlı üründe Shopify aynı SKU'yu iki kez kabul etmediğinden "FIRSAT" öneki eklenmiş
     // (FIRSAT439). Mikro'ya GERÇEK SKU eşleşmeli → önce öneki sıyır, sonra VIA prefix'i uygula.
     const rawSku = String(li.variantSku ?? li.sku ?? '').trim().replace(/^FIRSAT/i, '');
@@ -586,7 +614,7 @@ export async function syncOrderToMikro(orderId: string, kargo?: MikroKargoBilgi)
         shippingCents: order.shippingCents,
       },
       ship,
-      lineItems,
+      lineItems: lineItemsForFirma,
       orderDigits,
       courier: kargo?.courier ?? null,
     });
