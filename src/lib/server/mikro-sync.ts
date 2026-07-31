@@ -209,6 +209,11 @@ async function pushToFirmaDb(params: {
     if (!cariKodu) {
       const seq = await nextCariSequence();
       cariKodu = `${env.MIKRO_CARI_PREFIX}${seq}`;
+      // Mikro CARI Cadde/Adres alanı 50 KARAKTER. Uzun adreslerde cariKayit 400
+      // "Cari Cadde alanı 50 karakteri geçmemelidir!" ile düşüyor → firma(Via) push fail,
+      // sipariş aradepo'da kalıp Via'ya AKTARILAMIYORDU (#1045/1051/1053/1060-63/1066/1069). 50'ye kırp.
+      // (Tam adres zaten EvrakDokumAciklamasi.svka + EvrakAciklama'da eksiksiz taşınıyor.)
+      const cadde50 = [ship.address1, ship.address2].filter(Boolean).join(' ').slice(0, 50);
       // Yunus'un Woo düzeni: tam ad tek alanda (cari_unvan1="Büşra Kaynak") — bölme
       const cariRes = await cariKayit({
         UnvaniSoyadi: (alici ?? '-').trim() || '-',
@@ -227,7 +232,7 @@ async function pushToFirmaDb(params: {
         VergiMukellefi: false,
         // DİKKAT ters isimlendirme (order-ingest): ship.district = İL, ship.city = İLÇE
         Adres1: {
-          Adres: [ship.address1, ship.address2].filter(Boolean).join(' '),
+          Adres: cadde50,
           Ulke: ship.country ?? 'TURKEY',
           Sehir: ship.district ?? ship.city ?? '',
           Kasaba: ship.city ?? '',
@@ -236,14 +241,14 @@ async function pushToFirmaDb(params: {
         // Yunus: cari adres boş kalıyordu — fatura + sevk adresi de doldurulur
         // (MikroAddressFatura'da serbest 'Adres' alanı yok → satır adresi Cadde'ye yazılır)
         FaturaAdresi: {
-          Cadde: [ship.address1, ship.address2].filter(Boolean).join(' '),
+          Cadde: cadde50,
           Ulke: ship.country ?? 'TURKEY',
           Sehir: ship.district ?? ship.city ?? '',
           Kasaba: ship.city ?? '',
           PostaKodu: ship.postalCode ?? '',
         },
         SevkAdresi: {
-          Cadde: [ship.address1, ship.address2].filter(Boolean).join(' '),
+          Cadde: cadde50,
           Ulke: ship.country ?? 'TURKEY',
           Sehir: ship.district ?? ship.city ?? '',
           Kasaba: ship.city ?? '',
