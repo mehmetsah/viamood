@@ -1,10 +1,10 @@
 /**
- * GET /api/internal/auto-fulfill?key=<SHOPIFY_CLIENT_SECRET>&order=<#1015|orderId>[&run=1]
+ * GET /api/internal/auto-fulfill?key=<INTERNAL_API_KEY>&order=<#1015|orderId>[&run=1]
  *
  * SSH'sız uzaktan teşhis: bir siparişin otomatik-etiket durumunu raporlar —
  * satırlara vendor atanmış mı, bizde fulfillment var mı, (run=1 ile) autoFulfillOrder'ı
  * çalıştırıp sonucu (etiket OK / KargoLab hatası / neden atlandı) JSON döner.
- * Yetki: key, webhook secret'ı ile birebir eşleşmeli.
+ * Yetki: key, INTERNAL_API_KEY ile birebir eşleşmeli.
  */
 import { NextResponse, type NextRequest } from 'next/server';
 import crypto from 'node:crypto';
@@ -22,7 +22,7 @@ export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
 function keyOk(key: string | null): boolean {
-  const secret = env.SHOPIFY_CLIENT_SECRET;
+  const secret = env.INTERNAL_API_KEY;
   if (!secret || !key) return false;
   const a = Buffer.from(key);
   const b = Buffer.from(secret);

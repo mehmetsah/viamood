@@ -6,7 +6,7 @@
  * (order Shopify'dan silinmiş), yoksa (b) takip-no formatı KargoLab /track ile uyumsuz mu.
  * DEĞİŞİKLİK YAPMAZ — sadece okur.
  *
- * GET /api/internal/track-diag?key=<SHOPIFY_CLIENT_SECRET>&limit=10
+ * GET /api/internal/track-diag?key=<INTERNAL_API_KEY>&limit=10
  */
 import { NextRequest, NextResponse } from 'next/server';
 import { timingSafeEqual } from 'node:crypto';
@@ -23,7 +23,7 @@ function safeEqual(a: string, b: string): boolean {
 }
 
 export async function GET(req: NextRequest): Promise<NextResponse> {
-  const secret = env.SHOPIFY_CLIENT_SECRET ?? '';
+  const secret = env.INTERNAL_API_KEY ?? '';
   const key = req.nextUrl.searchParams.get('key') ?? '';
   if (!secret || !safeEqual(key, secret)) {
     return NextResponse.json({ error: 'unauthorized' }, { status: 401 });

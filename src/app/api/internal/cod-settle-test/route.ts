@@ -5,7 +5,7 @@
  * ve env dry-run'dan BAĞIMSIZ, guard'ları çalıştırır ama Shopify'a ASLA POST yapmaz.
  * Sunucu env'i değiştirmeden mekanizmayı gerçek sipariş üzerinde doğrulamak için.
  *
- * GET /api/internal/cod-settle-test?key=<SHOPIFY_CLIENT_SECRET>&order=<#1044|uuid>
+ * GET /api/internal/cod-settle-test?key=<INTERNAL_API_KEY>&order=<#1044|uuid>
  */
 import { NextRequest, NextResponse } from 'next/server';
 import { timingSafeEqual } from 'node:crypto';
@@ -23,7 +23,7 @@ function safeEqual(a: string, b: string): boolean {
 
 export async function GET(req: NextRequest): Promise<NextResponse> {
   const key = req.nextUrl.searchParams.get('key') ?? '';
-  const secret = env.SHOPIFY_CLIENT_SECRET ?? '';
+  const secret = env.INTERNAL_API_KEY ?? '';
   if (!secret || !safeEqual(key, secret)) {
     return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
   }

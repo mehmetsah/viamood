@@ -6,7 +6,7 @@
  * sadece shopifyOrderId dolu (Shopify-origin) VE keep listesinde OLMAYAN kayıtlar silinir.
  * #1044-#1047 hard-keep. Native sipariş (shopifyOrderId null) asla silinmez. apply=false → dry-run.
  *
- * POST /api/internal/cleanup-orphans?key=<SHOPIFY_CLIENT_SECRET>
+ * POST /api/internal/cleanup-orphans?key=<INTERNAL_API_KEY>
  *   body: { keepOrderNames: string[], apply?: boolean }
  */
 import { NextRequest, NextResponse } from 'next/server';
@@ -25,7 +25,7 @@ function safeEqual(a: string, b: string): boolean {
 const HARD_KEEP = ['#1044', '#1045', '#1046', '#1047'];
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
-  const secret = env.SHOPIFY_CLIENT_SECRET ?? '';
+  const secret = env.INTERNAL_API_KEY ?? '';
   const key = req.nextUrl.searchParams.get('key') ?? '';
   if (!secret || !safeEqual(key, secret)) return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
 

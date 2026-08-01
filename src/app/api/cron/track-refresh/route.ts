@@ -6,7 +6,7 @@
  * sorgular, teslim tespit edilirse applyFulfillmentStatus ile aynı akışı (COD auto-paid) tetikler.
  *
  * TETİKLEME (sunucu crontab / external scheduler — secret'la):
- *   GET https://<vendor-platform>/api/cron/track-refresh?key=<SHOPIFY_CLIENT_SECRET>&limit=40
+ *   GET https://<vendor-platform>/api/cron/track-refresh?key=<INTERNAL_API_KEY>&limit=40
  * Öneri sıklık: 30-60 dk (KargoLab rate limit + teslim aciliyeti dengesi).
  */
 import { NextRequest, NextResponse } from 'next/server';
@@ -28,7 +28,7 @@ const RANK = ['picked_up', 'in_transit', 'out_for_delivery', 'delivered'];
 const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
 export async function GET(req: NextRequest): Promise<NextResponse> {
-  const secret = env.SHOPIFY_CLIENT_SECRET ?? '';
+  const secret = env.INTERNAL_API_KEY ?? '';
   const key = req.nextUrl.searchParams.get('key') ?? '';
   if (!secret || !safeEqual(key, secret)) {
     return NextResponse.json({ error: 'unauthorized' }, { status: 401 });

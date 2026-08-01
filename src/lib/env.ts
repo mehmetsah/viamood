@@ -38,6 +38,9 @@ const envSchema = z.object({
   SHOPIFY_WEBHOOK_SECRET: z.string().optional(),
   SHOPIFY_CLIENT_ID: z.string().optional(),
   SHOPIFY_CLIENT_SECRET: z.string().optional(),
+  // Internal/cron endpoint anahtarı — SHOPIFY_CLIENT_SECRET'tan AYRI tutulur (sızan Shopify
+  // secret'ıyla tehlikeli internal endpoint'ler çağrılamasın; decouple 2026-08-01).
+  INTERNAL_API_KEY: z.string().optional(),
   SHOPIFY_SCOPES: z.string().default('read_products,write_products,read_orders,write_orders,read_inventory,write_inventory,read_fulfillments,write_fulfillments,read_customers,write_customers,read_locations,read_shipping,write_shipping,read_themes,write_themes,write_content,read_content,write_discounts,read_discounts,write_marketing_events,read_marketing_events,write_price_rules,read_price_rules'),
 
   // Iyzico

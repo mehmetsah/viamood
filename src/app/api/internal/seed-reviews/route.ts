@@ -9,9 +9,9 @@
  * sourceImage zaten varsa YENİDEN EKLENMEZ (skipped:true döner). Böylece endpoint
  * tekrar tekrar çağrılabilir, kart iki kez eklenmez.
  *
- *  GET  /api/internal/seed-reviews?key=<SHOPIFY_CLIENT_SECRET>
+ *  GET  /api/internal/seed-reviews?key=<INTERNAL_API_KEY>
  *       → mevcut seed sourceImage listesi + onaylı sayım (idempotency/doğrulama).
- *  POST /api/internal/seed-reviews?key=<SHOPIFY_CLIENT_SECRET>
+ *  POST /api/internal/seed-reviews?key=<INTERNAL_API_KEY>
  *       body: { sourceImage, isim, metin, urun?, konum?, puan?, imageB64?, mimeType? }
  *       → tek yorum ekler (idempotent). imageB64 verilirse Shopify Files'a yüklenir.
  */
@@ -34,7 +34,7 @@ function safeEqual(a: string, b: string): boolean {
 
 function authed(req: NextRequest): boolean {
   const key = req.nextUrl.searchParams.get('key') ?? '';
-  const secret = env.SHOPIFY_CLIENT_SECRET ?? '';
+  const secret = env.INTERNAL_API_KEY ?? '';
   return Boolean(secret) && safeEqual(key, secret);
 }
 
