@@ -43,6 +43,16 @@ export async function OPTIONS(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const headers = { 'Content-Type': 'application/json', ...corsHeaders(req.headers.get('origin')) };
 
+  // Kapıda ödeme KAPALI (COD_ENABLED, varsayılan false). Tema checkout'unda seçenek zaten
+  // gizli; bu kapı önbellekten gelen eski sayfa / doğrudan POST ile COD siparişi açılmasını da
+  // engeller. Mevcut açık COD siparişleri etkilenmez — burası yalnız YENİ sipariş yolu.
+  if (!env.COD_ENABLED) {
+    return NextResponse.json(
+      { ok: false, error: 'cod_disabled', detail: 'Kapıda ödeme şu anda kullanılamıyor. Lütfen kart veya havale/EFT ile ödeyin.' },
+      { status: 403, headers },
+    );
+  }
+
   let body: StorefrontOrderBody;
   try {
     body = (await req.json()) as StorefrontOrderBody;

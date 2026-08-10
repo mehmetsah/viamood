@@ -104,6 +104,16 @@ const envSchema = z.object({
    *  Boşsa webhook 401 döner (kapalı). */
   KARGOLAB_WEBHOOK_SECRET: z.string().optional(),
 
+  /** Kapıda ödeme (COD) ile YENİ SİPARİŞ alınabilir mi? KAPALI (Mehmet kararı, 10 Ağu 2026).
+   *  Tema checkout'unda seçenek zaten gizli; bu sunucu kapısı doğrudan POST'u da reddeder.
+   *  Mevcut açık COD siparişlerini ETKİLEMEZ — sadece yeni sipariş oluşturmayı engeller.
+   *  Açmak için: sunucu env'ine COD_ENABLED=true + Theme Editor'da "Kapıda Ödeme açık".
+   *  DİKKAT: z.coerce.boolean() KULLANMA — Boolean('false')===true (kill switch bozulur). */
+  COD_ENABLED: z
+    .string()
+    .transform((v) => v === 'true' || v === '1')
+    .default('false'),
+
   /** COD (kapıda ödeme) sipariş kargo TESLİM edilince Shopify'da otomatik "ödendi" (paid)
    *  yapılsın mı? MASTER SWITCH / KILL SWITCH.
    *  DİKKAT: z.coerce.boolean() KULLANMA — Boolean('false')===true olduğu için "false" ile

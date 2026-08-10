@@ -5,6 +5,7 @@
  */
 import { NextResponse, type NextRequest } from 'next/server';
 import { cartCors, checkoutCart } from '@/lib/cart/service';
+import { env } from '@/lib/env';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -28,6 +29,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(
       { ok: false, error: 'payment_method havale|cod olmalı (kart için payment/*/initialize)' },
       { status: 422, headers },
+    );
+  }
+  // Kapıda ödeme KAPALI (COD_ENABLED, varsayılan false) — native sepet yolu da aynı kapıdan geçer.
+  // Havale'ye DOKUNMAZ; mevcut açık COD siparişleri etkilenmez.
+  if (body.payment_method === 'cod' && !env.COD_ENABLED) {
+    return NextResponse.json(
+      { ok: false, error: 'cod_disabled', detail: 'Kapıda ödeme şu anda kullanılamıyor. Lütfen kart veya havale/EFT ile ödeyin.' },
+      { status: 403, headers },
     );
   }
   const result = await checkoutCart(body.token, body.payment_method);
