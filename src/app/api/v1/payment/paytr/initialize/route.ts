@@ -114,7 +114,12 @@ async function createDraftOrder(b: PaytrInitBody): Promise<number | null> {
       tags: 'via-mood-storefront,paytr-pending',
       note: `📍 ${b.first_name} ${b.last_name} · ${b.province}/${b.city}\n💳 PayTR\n${invoiceNote(b)}`,
       use_customer_default_address: false,
-      ...(shippingTl > 0
+      // Seçilen kargo firması HER ZAMAN yazılır (ücretsiz kargoda price 0.00 ile de). Aksi halde
+      // sepet ≥1500 → shippingTl=0 → shipping_line eklenmiyor → draft complete olunca siparişte
+      // shipping_lines boş kalıyor → auto-fulfill kuryeyi okuyamayıp PTT'ye düşüyordu
+      // (#1077: müşteri SÜRAT seçti, PTT etiketi kesildi). Havale/COD yolunda aynı hata #1048'de
+      // create-storefront-order.ts'de düzeltilmişti; kart yolları o fix'in dışında kalmıştı.
+      ...(b.shipping_courier || shippingTl > 0
         ? { shipping_line: { title: b.shipping_courier || 'Standart Kargo (KargoLab)', price: shippingTl.toFixed(2) } }
         : {}),
       ...((b.discount_amount ?? 0) > 0

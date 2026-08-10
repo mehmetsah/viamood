@@ -62,8 +62,13 @@ async function createDraftOrder(body: InitBody): Promise<number | null> {
         tags: 'via-mood-storefront,iyzico-pending',
         note: `📍 ${body.first_name} ${body.last_name} · ${body.province}/${body.city}\n${buildInvoiceNote(body)}`,
         use_customer_default_address: false,
-        // Kargo — Shopify draft order shipping_line
-        ...(shippingTl > 0
+        // Kargo — Shopify draft order shipping_line.
+        // Seçilen kargo firması HER ZAMAN yazılır (ücretsiz kargoda price 0.00 ile de). Aksi halde
+        // sepet ≥1500 → shippingTl=0 → shipping_line eklenmiyor → draft complete olunca siparişte
+        // shipping_lines boş kalıyor → auto-fulfill kuryeyi okuyamayıp PTT'ye düşüyordu
+        // (#1077: müşteri SÜRAT seçti, PTT etiketi kesildi). Havale/COD yolunda aynı hata #1048'de
+        // create-storefront-order.ts'de düzeltilmişti; kart yolları o fix'in dışında kalmıştı.
+        ...(body.shipping_courier || shippingTl > 0
           ? {
               shipping_line: {
                 title: body.shipping_courier || 'Standart Kargo (KargoLab)',

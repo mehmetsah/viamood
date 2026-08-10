@@ -73,6 +73,14 @@ export async function autoFulfillOrder(orderId: string): Promise<AutoFulfillRepo
       /* ayar okunamazsa PTT'ye düş */
     }
   }
+  if (!courrier) {
+    // Sessiz PTT fallback'i #1048/#1055/#1077'de üç kez müşteriye yanlış kurye olarak yansıdı.
+    // Bir daha sessiz kalmasın: siparişte kurye bilgisi YOKSA bunu teşhis edilebilir şekilde logla.
+    console.error('[auto-fulfill] siparişte kurye bilgisi YOK → PTT varsayılanına düşülüyor', {
+      orderId,
+      shippingLineTitles: (raw?.shipping_lines ?? []).map((l) => l?.title ?? null),
+    });
+  }
   courrier = courrier ?? 'PTT';
 
   // Routing'in vendor atadığı satırlar — vendor başına tek etiket
