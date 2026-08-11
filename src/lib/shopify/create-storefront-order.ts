@@ -97,6 +97,27 @@ export async function createStorefrontOrder(
   const token = env.SHOPIFY_ADMIN_ACCESS_TOKEN;
   if (!token) return { ok: false, error: 'SHOPIFY_ADMIN_ACCESS_TOKEN yok' };
 
+  // SON SAVUNMA (11 Ağu 2026): indirim sepeti sıfırlıyorsa SİPARİŞ AÇMA.
+  // Kart yollarında (iyzico/paytr initialize) aynı kontrol var; havale/kapıda ödeme bu
+  // yolun DIŞINDA kalmıştı — frontend'ten gelen discount_amount hatalı ya da kötüye
+  // kullanılmışsa burada 0 TL'lik sipariş açılır, ürün fiilen bedavaya giderdi.
+  // Sessizce düzeltme yok: net hata dön ki müşteri de biz de görelim.
+  const discountTl = Math.max(0, b.discount_amount ?? 0);
+  if (discountTl > 0) {
+    const itemsTl = b.line_items.reduce((s, li) => s + ((li.price ?? 0) / 100) * li.quantity, 0);
+    const codTl = method === 'cod' ? (b.cod_surcharge ?? 0) : 0;
+    const netTl = itemsTl + (b.shipping_cost ?? 0) + codTl - discountTl;
+    if (netTl <= 0) {
+      console.error('[storefront-order] indirim sepeti sıfırladı — sipariş açılmadı', {
+        itemsTl, shipping: b.shipping_cost ?? 0, discountTl, code: b.discount_code, method,
+      });
+      return {
+        ok: false,
+        error: 'İndirim tutarı sepet toplamını karşılıyor. Lütfen kuponu kaldırıp tekrar deneyin.',
+      };
+    }
+  }
+
   // Onay maili Türkçe gitsin: müşteri siparişten ÖNCE tr locale'iyle var edilir
   await ensureTrCustomer(b.customer_email || b.email);
 
@@ -169,10 +190,20 @@ export async function createStorefrontOrder(
     ...(b.shipping_courier || shippingTl > 0
       ? { shipping_lines: [{ title: b.shipping_courier || 'Kargo (KargoLab)', price: shippingTl.toFixed(2), code: 'kargolab' }] }
       : {}),
-    ...(b.discount_code && (b.discount_amount || 0) > 0
+    // İndirim: TUTAR varsa HER ZAMAN yazılır — kod adı boş olabilir.
+    // (11 Ağu 2026) Eskiden `b.discount_code && amount>0` şartı vardı. Shopify'ın kampanya
+    // linkiyle (/discount/KOD) gelen kuponlar SATIR bazında uygulanır; sepette
+    // cart_level_discount_applications BOŞ kalır → tema kod adını gönderemiyordu → şart
+    // düşüyor ve sipariş İNDİRİMSİZ açılıyordu (müşteriye 150 TL gösterilip 350 TL'lik
+    // sipariş kaydı). Kod adı yoksa jenerik etiketle yaz.
+    ...((b.discount_amount || 0) > 0
       ? {
           discount_codes: [
-            { code: b.discount_code, amount: (b.discount_amount as number).toFixed(2), type: 'fixed_amount' },
+            {
+              code: b.discount_code || 'INDIRIM',
+              amount: (b.discount_amount as number).toFixed(2),
+              type: 'fixed_amount',
+            },
           ],
         }
       : {}),

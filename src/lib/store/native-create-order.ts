@@ -89,6 +89,17 @@ export async function createNativeStorefrontOrder(
     const codCard = method === 'cod' && b.cod_method === 'kart' && (b.cod_surcharge ?? 0) > 0;
     const codCents = codCard ? toCents(b.cod_surcharge as number) : 0n;
     const totalCents = subtotalCents + shippingCents + codCents - discountCents;
+    // SON SAVUNMA (11 Ağu 2026) — Shopify yolundaki (create-storefront-order.ts) kontrolün
+    // native karşılığı: indirim sepeti sıfırlıyorsa sipariş AÇILMAZ (ürün bedavaya gitmesin).
+    if (discountCents > 0n && totalCents <= 0n) {
+      console.error('[native-order] indirim sepeti sıfırladı — sipariş açılmadı', {
+        subtotalCents: String(subtotalCents), discountCents: String(discountCents), code: b.discount_code, method,
+      });
+      return {
+        ok: false,
+        error: 'İndirim tutarı sepet toplamını karşılıyor. Lütfen kuponu kaldırıp tekrar deneyin.',
+      };
+    }
 
     const orderNumber = await nextOrderNumber();
     const codTipi = method === 'cod' ? (b.cod_method === 'kart' ? 'Kart' : 'Nakit') : '';
