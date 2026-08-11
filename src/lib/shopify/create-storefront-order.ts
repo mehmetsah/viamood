@@ -102,8 +102,17 @@ export async function createStorefrontOrder(
   // yolun DIŞINDA kalmıştı — frontend'ten gelen discount_amount hatalı ya da kötüye
   // kullanılmışsa burada 0 TL'lik sipariş açılır, ürün fiilen bedavaya giderdi.
   // Sessizce düzeltme yok: net hata dön ki müşteri de biz de görelim.
+  // Not: native sepet yolu (cartToStorefrontBody) satırlara `price` KOYMAZ — fiyatı
+  // bilmediğimiz sepette guard'ı çalıştırmak indirimli her siparişi haksız yere reddederdi.
+  // O yüzden fiyat bilinmiyorsa kontrol atlanır (uyarı loglanır), uydurma tutarla karar verilmez.
   const discountTl = Math.max(0, b.discount_amount ?? 0);
-  if (discountTl > 0) {
+  const pricesKnown = b.line_items.every((li) => (li.price ?? 0) > 0);
+  if (discountTl > 0 && !pricesKnown) {
+    console.warn('[storefront-order] satır fiyatları yok — 0 TL guard atlandı', {
+      discountTl, code: b.discount_code, method,
+    });
+  }
+  if (discountTl > 0 && pricesKnown) {
     const itemsTl = b.line_items.reduce((s, li) => s + ((li.price ?? 0) / 100) * li.quantity, 0);
     const codTl = method === 'cod' ? (b.cod_surcharge ?? 0) : 0;
     const netTl = itemsTl + (b.shipping_cost ?? 0) + codTl - discountTl;
