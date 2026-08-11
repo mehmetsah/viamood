@@ -204,7 +204,18 @@ export async function POST(req: NextRequest) {
   const itemsKurus = body.line_items.reduce((s, li) => s + Math.round(li.price ?? 0) * li.quantity, 0);
   const shipKurus = Math.round((body.shipping_cost || 0) * 100);
   const discKurus = Math.round((body.discount_amount || 0) * 100);
-  const paymentAmountKurus = Math.max(1, itemsKurus + shipKurus - discKurus);
+  const paymentAmountKurus = itemsKurus + shipKurus - discKurus;
+  // SON SAVUNMA (11 Ağu 2026): eskiden Math.max(1, ...) vardı — indirim sepeti aşınca
+  // sessizce 1 KURUŞ tahsil edip ürünü fiilen bedavaya veriyordu. Artık ödeme başlatılmaz.
+  if (paymentAmountKurus <= 0) {
+    console.error('[paytr/initialize] indirim sepeti sıfırladı — ödeme başlatılmadı', {
+      itemsKurus, shipKurus, discKurus, code: body.discount_code,
+    });
+    return NextResponse.json(
+      { ok: false, error: 'İndirim tutarı sepet toplamını karşılıyor. Lütfen kuponu kaldırıp tekrar deneyin.' },
+      { status: 422, headers },
+    );
+  }
 
   const basket: PaytrBasketItem[] = body.line_items.map((li) => ({
     name: li.title || `Ürün ${li.variant_id}`,

@@ -47,6 +47,14 @@ interface PriceRule {
   prerequisite_subtotal_range?: { greater_than_or_equal_to: string } | null;
   customer_selection?: string;
   status?: string;
+  /** 'all' = tüm ürünler · 'entitled' = SADECE belirli ürün/koleksiyon */
+  target_selection?: string;
+  /** 'line_item' | 'shipping_line' */
+  target_type?: string;
+  entitled_product_ids?: number[];
+  entitled_variant_ids?: number[];
+  entitled_collection_ids?: number[];
+  allocation_method?: string;
 }
 
 export async function POST(req: NextRequest) {
@@ -97,6 +105,40 @@ export async function POST(req: NextRequest) {
     if (pr.value_type !== 'percentage' && pr.value_type !== 'fixed_amount') {
       return NextResponse.json(
         { ok: false, error: 'Bu kupon bu sayfada uygulanamıyor.' },
+        { status: 200, headers },
+      );
+    }
+
+    // ── KAPSAM KONTROLÜ (11 Ağu 2026 — gelir kaybı açığı) ────────────────────────
+    // Bu uç nokta eskiden SADECE tip/değer/tarih/min-tutar okuyordu; price rule'un ÜRÜN
+    // KISITINI (target_selection='entitled') hiç bakmıyordu. Sonuç: tek bir ürüne tanımlı
+    // 200 TL'lik 18SETFIRSAT kuponu, sepetteki HERHANGİ bir ucuz ürüne (27 TL'ye kadar
+    // 32 aktif ürün) uygulanabiliyor, indirim sepet tutarına kırpılıp toplam 0,00 TL'ye
+    // düşüyordu → ürün bedavaya gidiyordu. Tema per-ürün indirim hesaplayamadığı için
+    // kapsamlı kuponlar burada REDDEDİLİR; müşteri Shopify'ın kendi kupon linkini
+    // (/discount/KOD) kullanır — orada kısıtı Shopify'ın kendisi doğru uygular.
+    const scoped =
+      pr.target_selection === 'entitled' ||
+      (pr.entitled_product_ids?.length ?? 0) > 0 ||
+      (pr.entitled_variant_ids?.length ?? 0) > 0 ||
+      (pr.entitled_collection_ids?.length ?? 0) > 0;
+    if (scoped) {
+      return NextResponse.json(
+        { ok: false, error: 'Bu kupon yalnızca belirli ürünlerde geçerli. Kampanya bağlantısından uygulayın.' },
+        { status: 200, headers },
+      );
+    }
+    // Kargo indirimi bu kutudan uygulanamaz (tema kargo satırını ayrı hesaplıyor)
+    if (pr.target_type && pr.target_type !== 'line_item') {
+      return NextResponse.json(
+        { ok: false, error: 'Bu kupon bu sayfada uygulanamıyor.' },
+        { status: 200, headers },
+      );
+    }
+    // Kişiye özel kuponlar burada doğrulanamaz (müşteri segmenti kontrolü yok) → reddet
+    if (pr.customer_selection && pr.customer_selection !== 'all') {
+      return NextResponse.json(
+        { ok: false, error: 'Bu kupon hesabınıza tanımlı değil.' },
         { status: 200, headers },
       );
     }

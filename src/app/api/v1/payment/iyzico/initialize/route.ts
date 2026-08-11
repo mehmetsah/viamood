@@ -254,6 +254,19 @@ export async function POST(req: NextRequest) {
   const shipping = body.shipping_cost ?? 0;
   const discount = Math.max(0, body.discount_amount ?? 0); // TL — indirim kuponu
   const paidTotal = Math.max(0, itemsTotal + shipping - discount); // İyzico'nun tahsil edeceği tutar (indirim düşülmüş)
+  // SON SAVUNMA (11 Ağu 2026): indirim sepeti sıfırlıyorsa ödeme BAŞLATMA. Frontend'in
+  // gönderdiği discount_amount'a körü körüne güvenilmez — hatalı/kötüye kullanılan bir
+  // kupon burada 0 TL tahsilata dönüşürdü (ürün bedavaya giderdi). Sessizce düzeltme yok:
+  // net hata dön ki müşteri de biz de görelim.
+  if (paidTotal <= 0) {
+    console.error('[iyzico/initialize] indirim sepeti sıfırladı — ödeme başlatılmadı', {
+      itemsTotal, shipping, discount, code: body.discount_code,
+    });
+    return NextResponse.json(
+      { ok: false, error: 'İndirim tutarı sepet toplamını karşılıyor. Lütfen kuponu kaldırıp tekrar deneyin.' },
+      { status: 422, headers },
+    );
+  }
 
   // Kargo'yu basket'e ayrı item olarak ekle ki price === sum(basketItems)
   if (shipping > 0) {
