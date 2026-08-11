@@ -12,6 +12,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { env } from '@/lib/env';
 import { getStore, type StorefrontOrderBody } from '@/lib/store';
 import { resolveVendorIbans } from '@/lib/shopify/vendor-ibans';
+import { trustedDiscountTl } from '@/lib/shopify/discount-resolve';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -62,6 +63,12 @@ export async function POST(req: NextRequest) {
   if (missing.length) {
     return NextResponse.json({ ok: false, error: 'missing_fields', missing }, { status: 422, headers });
   }
+
+  // İNDİRİM SUNUCUDA YENİDEN HESAPLANIR — istemciden gelen tutara GÜVENİLMEZ.
+  // (11 Ağu 2026 açığı: kapsam okunmadığı için tek ürüne tanımlı kupon tüm sepete
+  //  uygulanıp toplamı sıfırlıyordu.) Kupon ürün-bazlıysa yalnız hak eden satırlara,
+  //  o satırların tutarıyla sınırlı uygulanır; hak eden yoksa 0.
+  body.discount_amount = await trustedDiscountTl(body.discount_code, body.line_items ?? []);
 
   // Tedarikçi IBAN'larını çöz (sipariş oluşturmadan önce — hata olsa bile bilgi gösterilir)
   let vendors: Awaited<ReturnType<typeof resolveVendorIbans>> = [];

@@ -16,6 +16,7 @@ import { upsertCustomerAddress } from '@/lib/shopify/customer-address';
 import { ensureTrCustomer } from '@/lib/shopify/customer-locale';
 import { getStore, type StorefrontOrderBody } from '@/lib/store';
 import { createNativeCardPendingOrder } from '@/lib/store/native-create-order';
+import { trustedDiscountTl } from '@/lib/shopify/discount-resolve';
 
 interface DraftOrderResp {
   draft_order?: { id: number; invoice_url?: string };
@@ -236,6 +237,12 @@ export async function POST(req: NextRequest) {
   if (missing.length) {
     return NextResponse.json({ ok: false, error: 'missing_fields', missing }, { status: 422, headers });
   }
+
+  // İNDİRİM SUNUCUDA YENİDEN HESAPLANIR — istemciden gelen tutara GÜVENİLMEZ.
+  // (11 Ağu 2026 açığı: kapsam okunmadığı için tek ürüne tanımlı kupon tüm sepete
+  //  uygulanıp toplamı sıfırlıyordu.) Kupon ürün-bazlıysa yalnız hak eden satırlara,
+  //  o satırların tutarıyla sınırlı uygulanır; hak eden yoksa 0.
+  body.discount_amount = await trustedDiscountTl(body.discount_code, body.line_items ?? []);
 
   // Fiyat hesabı (TL)
   let itemsTotal = 0;
