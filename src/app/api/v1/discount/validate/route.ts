@@ -47,7 +47,7 @@ export async function OPTIONS(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const headers = { 'Content-Type': 'application/json', ...cors(req.headers.get('origin')) };
 
-  let body: { code?: string; line_items?: DiscountLineInput[] };
+  let body: { code?: string; line_items?: DiscountLineInput[]; email?: string; phone?: string; customer_id?: number };
   try {
     body = (await req.json()) as typeof body;
   } catch {
@@ -58,7 +58,11 @@ export async function POST(req: NextRequest) {
   if (!code) return NextResponse.json({ ok: false, error: 'Kod bo\u015f.' }, { status: 422, headers });
 
   try {
-    const r = await resolveDiscount(code, body.line_items ?? []);
+    const r = await resolveDiscount(code, body.line_items ?? [], {
+      email: body.email,
+      phone: body.phone,
+      customerId: body.customer_id,
+    });
     if (!r.ok) {
       return NextResponse.json({ ok: false, error: r.error }, { status: 200, headers });
     }

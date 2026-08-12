@@ -205,7 +205,11 @@ export async function POST(req: NextRequest) {
   // (11 Ağu 2026 açığı: kapsam okunmadığı için tek ürüne tanımlı kupon tüm sepete
   //  uygulanıp toplamı sıfırlıyordu.) Kupon ürün-bazlıysa yalnız hak eden satırlara,
   //  o satırların tutarıyla sınırlı uygulanır; hak eden yoksa 0.
-  body.discount_amount = await trustedDiscountTl(body.discount_code, body.line_items ?? []);
+  body.discount_amount = await trustedDiscountTl(body.discount_code, body.line_items ?? [], {
+    email: body.customer_email || body.email,
+    phone: body.phone,
+    customerId: body.customer_id,
+  });
 
   // Tutar (kuruş): ürünler + kargo − indirim
   const itemsKurus = body.line_items.reduce((s, li) => s + Math.round(li.price ?? 0) * li.quantity, 0);

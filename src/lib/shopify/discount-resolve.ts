@@ -25,6 +25,92 @@ export interface DiscountLineInput {
   price?: number;
 }
 
+/** Kuponu uygulayan müşteri — kullanım limiti kontrolü için */
+export interface DiscountCustomer {
+  email?: string;
+  phone?: string;
+  customerId?: number;
+}
+
+/** E-posta/telefonu karşılaştırılabilir hale getirir (büyük-küçük, boşluk, +90/0 önekleri) */
+function normEmail(e?: string | null): string {
+  return (e ?? '').trim().toLowerCase();
+}
+function normPhone(p?: string | null): string {
+  const d = (p ?? '').replace(/\D/g, '');
+  return d.length >= 10 ? d.slice(-10) : '';
+}
+
+interface Redemptions {
+  /** İptal edilmemiş, bu kuponu taşıyan sipariş sayısı */
+  total: number;
+  emails: Set<string>;
+  phones: Set<string>;
+  customerIds: Set<number>;
+}
+
+/**
+ * Kuponun GERÇEK kullanım sayısı.
+ *
+ * Shopify'ın kendi sayacı (asyncUsageCount) BİZİM akışımızı SAYMIYOR: siparişi biz
+ * Orders API ile açıp `discount_codes` yazdığımızda Shopify bunu price rule'un
+ * redemption'ı saymıyor — 11 gerçek kullanımda sayaç 2 görünüyordu (11 Ağu). Bu yüzden
+ * sayım, kodu taşıyan SİPARİŞLER üzerinden yapılır: hem bizim akışımızı hem Shopify'ın
+ * kendi checkout'undan geçenleri kapsar, çift saymaz.
+ */
+async function countRedemptions(code: string): Promise<Redemptions | null> {
+  const sb = shopBase();
+  const out: Redemptions = { total: 0, emails: new Set(), phones: new Set(), customerIds: new Set() };
+  if (!sb) return null;
+  const q = `
+    query($q: String!) {
+      orders(first: 250, query: $q) {
+        edges { node { cancelledAt email phone customer { id phone email } } }
+      }
+    }`;
+  try {
+    const resp = await fetch(`${sb.base}/graphql.json`, {
+      method: 'POST',
+      headers: sb.headers,
+      body: JSON.stringify({
+        query: q,
+        variables: { q: `discount_code:${JSON.stringify(code)} status:any` },
+      }),
+    });
+    if (!resp.ok) return null;
+    const j = (await resp.json()) as {
+      errors?: unknown;
+      data?: {
+        orders?: {
+          edges?: Array<{
+            node?: {
+              cancelledAt?: string | null;
+              email?: string | null;
+              phone?: string | null;
+              customer?: { id?: string; phone?: string | null; email?: string | null } | null;
+            };
+          }>;
+        };
+      };
+    };
+    if (j.errors || !j.data?.orders?.edges) return null;
+    for (const e of j.data.orders.edges) {
+      const n = e.node;
+      if (!n || n.cancelledAt) continue; // iptal edilen sipariş kullanım saymaz
+      out.total += 1;
+      const em = normEmail(n.email ?? n.customer?.email);
+      if (em) out.emails.add(em);
+      const ph = normPhone(n.phone ?? n.customer?.phone);
+      if (ph) out.phones.add(ph);
+      const cid = Number(String(n.customer?.id ?? '').split('/').pop());
+      if (cid) out.customerIds.add(cid);
+    }
+    return out;
+  } catch {
+    return null;
+  }
+}
+
 export interface DiscountResolved {
   ok: true;
   code: string;
@@ -59,6 +145,10 @@ interface PriceRule {
   entitled_variant_ids?: number[];
   entitled_collection_ids?: number[];
   prerequisite_subtotal_range?: { greater_than_or_equal_to: string } | null;
+  /** Toplam kullanım hakkı (null = sınırsız) */
+  usage_limit?: number | null;
+  /** Müşteri başına 1 kullanım */
+  once_per_customer?: boolean;
 }
 
 function shopBase(): { base: string; headers: Record<string, string> } | null {
@@ -132,6 +222,7 @@ async function resolveVariantScope(
 export async function resolveDiscount(
   rawCode: string,
   lineItems: DiscountLineInput[],
+  customer: DiscountCustomer = {},
 ): Promise<DiscountResult> {
   const code = (rawCode || '').trim();
   if (!code) return { ok: false, error: 'Kod boş.' };
@@ -169,6 +260,37 @@ export async function resolveDiscount(
   }
   if (pr.ends_at && new Date(pr.ends_at).getTime() < now) {
     return { ok: false, error: 'Bu kuponun süresi dolmuş.' };
+  }
+
+  // ── KULLANIM LİMİTİ (11 Ağu 2026 — canlı suistimal) ─────────────────────────
+  // Shopify limitleri YALNIZCA kendi checkout'unda uygular. Bizim özel akışımızda
+  // sipariş Orders API ile açılıp `discount_codes` yazıldığı için Shopify bunu
+  // redemption saymıyor: 10 kullanımlık kupon 11 kez kullanıldı, sayaç 2 gösterdi ve
+  // aynı e-posta (suleymandanaci99@) iki kez sipariş verdi. Limitleri BİZ uygulamalıyız.
+  const usageLimit = pr.usage_limit ?? null;
+  const oncePerCustomer = pr.once_per_customer === true;
+  if (usageLimit != null || oncePerCustomer) {
+    const red = await countRedemptions(lj.discount_code?.code || code);
+    if (!red) {
+      // Sayım yapılamadı (API hatası) → limitli kuponu uygulama. Fail-closed:
+      // aşırı kullanım geri alınamaz, "tekrar deneyin" geri alınabilir.
+      console.error('[discount] kullanım sayımı başarısız — limitli kupon reddedildi', { code });
+      return { ok: false, error: 'Kupon şu anda doğrulanamıyor, lütfen tekrar deneyin.' };
+    }
+    if (usageLimit != null && red.total >= usageLimit) {
+      return { ok: false, error: 'Bu kuponun kullanım hakkı doldu.' };
+    }
+    if (oncePerCustomer) {
+      const em = normEmail(customer.email);
+      const ph = normPhone(customer.phone);
+      const used =
+        (em && red.emails.has(em)) ||
+        (ph && red.phones.has(ph)) ||
+        (customer.customerId != null && red.customerIds.has(customer.customerId));
+      if (used) {
+        return { ok: false, error: 'Bu kuponu daha önce kullandınız.' };
+      }
+    }
   }
 
   const value = Math.abs(parseFloat(pr.value));
@@ -255,11 +377,16 @@ export async function resolveDiscount(
 export async function trustedDiscountTl(
   code: string | undefined,
   lineItems: DiscountLineInput[],
+  customer: DiscountCustomer = {},
 ): Promise<number> {
   if (!code?.trim()) return 0;
   try {
-    const r = await resolveDiscount(code, lineItems);
-    return r.ok ? r.amountKurus / 100 : 0;
+    const r = await resolveDiscount(code, lineItems, customer);
+    if (!r.ok) {
+      console.warn('[discount] sipariş anında kupon reddedildi', { code, reason: r.error });
+      return 0;
+    }
+    return r.amountKurus / 100;
   } catch {
     return 0;
   }
