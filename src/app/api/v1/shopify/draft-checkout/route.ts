@@ -14,20 +14,14 @@
  * CORS: storefront (via-mood.myshopify.com) → bu endpoint (Vendor Platform).
  */
 import { NextResponse, type NextRequest } from 'next/server';
+import { getAllowedOrigins } from '@/lib/cors';
 import { env } from '@/lib/env';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
 const DEFAULT_ORIGIN = env.STOREFRONT_URL;
-const ALLOWED_ORIGINS = [
-  DEFAULT_ORIGIN,
-  'https://d3z34m-iw.myshopify.com',
-  'https://viamood.com',
-  'https://www.viamood.com',
-  'https://viamood.com.tr',
-  'https://www.viamood.com.tr',
-];
+const ALLOWED_ORIGINS = getAllowedOrigins();
 
 function corsHeaders(origin: string | null): Record<string, string> {
   const allow = origin && ALLOWED_ORIGINS.includes(origin) ? origin : DEFAULT_ORIGIN;

@@ -16,6 +16,7 @@ import crypto from 'node:crypto';
 import { NextResponse, type NextRequest } from 'next/server';
 import { desc, eq, sql } from 'drizzle-orm';
 import { db } from '@/db/client';
+import { env } from '@/lib/env';
 import { customerAddresses, customers } from '@/db/schema';
 import { dedupeAddressRows } from '@/lib/customers/service';
 
@@ -23,11 +24,12 @@ export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
 // via-checkout.liquid ile paylaşılan köprü anahtarı — DEĞİŞİRSE temayı da güncelle.
-const BRIDGE_KEY = '15e66ee567ae0186394a79588f077a84ba483c8f341508f237bd5f7500524734';
+// Tenant başına FARKLI olmalı (multi-instance): env varsa onu kullan; yoksa mevcut Via Mood sabiti (geriye uyumlu).
+const BRIDGE_KEY = process.env.STOREFRONT_BRIDGE_KEY ?? '15e66ee567ae0186394a79588f077a84ba483c8f341508f237bd5f7500524734';
 
 function corsHeaders() {
   return {
-    'Access-Control-Allow-Origin': 'https://viamood.com.tr',
+    'Access-Control-Allow-Origin': env.STOREFRONT_URL.replace(/\/$/, ''),
     'Access-Control-Allow-Methods': 'GET, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type',
     'Cache-Control': 'no-store',

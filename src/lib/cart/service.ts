@@ -7,6 +7,7 @@
  * oluşturmaya devredilebilir (havale/COD/kart akışları).
  */
 import { randomUUID } from 'node:crypto';
+import { getAllowedOrigins } from '@/lib/cors';
 import { eq, inArray } from 'drizzle-orm';
 import { db } from '@/db/client';
 import { carts, productVariants, vendors, type CartItem } from '@/db/schema';
@@ -37,14 +38,7 @@ export interface CartView {
   note: string | null;
 }
 
-const ALLOWED_ORIGINS = [
-  env.STOREFRONT_URL,
-  'https://d3z34m-iw.myshopify.com',
-  'https://viamood.com',
-  'https://www.viamood.com',
-  'https://viamood.com.tr',
-  'https://www.viamood.com.tr',
-];
+const ALLOWED_ORIGINS = getAllowedOrigins();
 export function cartCors(origin: string | null): Record<string, string> {
   const allow = origin && ALLOWED_ORIGINS.includes(origin) ? origin : env.STOREFRONT_URL;
   return {

@@ -8,6 +8,7 @@
  * Ödeme sonrası İyzico → /api/v1/payment/iyzico/callback POST'lar.
  */
 import { NextResponse, type NextRequest } from 'next/server';
+import { getAllowedOrigins } from '@/lib/cors';
 import { initializeCheckoutForm } from '@/lib/iyzico/client';
 import { provinceCode } from '@/lib/shopify/tr-provinces';
 import { normalizeTrPhone } from '@/lib/shopify/tr-format';
@@ -135,14 +136,7 @@ export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
 const DEFAULT_ORIGIN = env.STOREFRONT_URL;
-const ALLOWED_ORIGINS = [
-  DEFAULT_ORIGIN,
-  'https://d3z34m-iw.myshopify.com',
-  'https://viamood.com',
-  'https://www.viamood.com',
-  'https://viamood.com.tr',
-  'https://www.viamood.com.tr',
-];
+const ALLOWED_ORIGINS = getAllowedOrigins();
 
 function corsHeaders(origin: string | null): Record<string, string> {
   const allow = origin && ALLOWED_ORIGINS.includes(origin) ? origin : DEFAULT_ORIGIN;

@@ -7,6 +7,7 @@
  * Margin: KargoLab maliyetinin üzerine sabit kar payı eklenir (admin ayarı).
  */
 import { NextResponse, type NextRequest } from 'next/server';
+import { getAllowedOrigins } from '@/lib/cors';
 import { env } from '@/lib/env';
 import { quoteShipmentRate } from '@/lib/kargolab/rates';
 import { getStoreSettings } from '@/lib/settings/store';
@@ -15,14 +16,7 @@ export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
 const DEFAULT_ORIGIN = env.STOREFRONT_URL;
-const ALLOWED = [
-  DEFAULT_ORIGIN,
-  'https://d3z34m-iw.myshopify.com',
-  'https://viamood.com',
-  'https://www.viamood.com',
-  'https://viamood.com.tr',
-  'https://www.viamood.com.tr',
-];
+const ALLOWED = getAllowedOrigins();
 
 function cors(origin: string | null): Record<string, string> {
   const allow = origin && ALLOWED.includes(origin) ? origin : DEFAULT_ORIGIN;

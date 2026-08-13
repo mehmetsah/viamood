@@ -6,19 +6,14 @@
  * aynı numarayı görsün. Tamamlanmadıysa {completed:false} (sayfa poll eder).
  */
 import { NextResponse, type NextRequest } from 'next/server';
+import { getAllowedOrigins } from '@/lib/cors';
 import { env } from '@/lib/env';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
 const DEFAULT_ORIGIN = env.STOREFRONT_URL;
-const ALLOWED = [
-  DEFAULT_ORIGIN,
-  'https://viamood.com',
-  'https://www.viamood.com',
-  'https://viamood.com.tr',
-  'https://www.viamood.com.tr',
-];
+const ALLOWED = getAllowedOrigins();
 function cors(origin: string | null): Record<string, string> {
   const allow = origin && ALLOWED.includes(origin) ? origin : DEFAULT_ORIGIN;
   return {

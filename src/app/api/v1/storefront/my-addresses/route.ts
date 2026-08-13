@@ -11,6 +11,7 @@
  * dek tema HMAC köprüsüne düşer.
  */
 import { NextResponse, type NextRequest } from 'next/server';
+import { getAllowedOrigins } from '@/lib/cors';
 import { desc, eq } from 'drizzle-orm';
 import { db } from '@/db/client';
 import { customerAddresses } from '@/db/schema';
@@ -20,10 +21,7 @@ import { dedupeAddressRows } from '@/lib/customers/service';
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
-const ALLOWED_ORIGINS = new Set([
-  'https://viamood.com.tr',
-  'https://www.viamood.com.tr',
-]);
+const ALLOWED_ORIGINS = new Set(getAllowedOrigins());
 
 function corsHeaders(req: NextRequest) {
   const origin = req.headers.get('origin') ?? '';
