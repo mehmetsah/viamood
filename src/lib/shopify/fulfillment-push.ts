@@ -7,6 +7,7 @@
  *   3. fulfillmentCreate(input: { trackingInfo, lineItemsByFulfillmentOrder })
  */
 import { eq } from 'drizzle-orm';
+import { trackingPageUrl } from '@/lib/brand';
 import { db } from '@/db/client';
 import {
   fulfillmentLineItems,
@@ -230,7 +231,7 @@ export async function pushFulfillmentToShopify(
   const takipNo = (order.shopifyOrderName ?? order.orderNumber ?? '').replace(/^#/, '');
   const emailTrackingUrl =
     takipNo && order.customerEmail
-      ? `https://viamood.com.tr/pages/siparis-takip?order=${encodeURIComponent(takipNo)}&email=${encodeURIComponent(order.customerEmail)}`
+      ? trackingPageUrl(takipNo, order.customerEmail)
       : f.trackingUrl ?? undefined;
 
   const fcRes = await shopifyGraphQL<FCResp>(FC_MUTATION, {

@@ -8,6 +8,7 @@
  * Tek tedarikçi varsa kargo da onun tutarına eklenir.
  */
 import { eq, inArray } from 'drizzle-orm';
+import { BRAND_NAME } from '@/lib/brand';
 import { db } from '@/db/client';
 import { productVariants, vendors } from '@/db/schema';
 
@@ -52,7 +53,7 @@ export async function resolveVendorIbans(
       acc.get(r.vendorId) ??
       {
         vendorId: r.vendorId,
-        name: r.vname ?? 'Via Mood',
+        name: r.vname ?? BRAND_NAME,
         iban: r.iban ?? undefined,
         account_holder: r.holder ?? undefined,
         bank: r.bank ?? undefined,

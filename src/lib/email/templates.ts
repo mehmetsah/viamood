@@ -4,6 +4,7 @@
  * istemcilerde de okunur kalır. İleride MJML/React-email migrasyonu mümkün.
  */
 import { env } from '../env';
+import { BRAND_NAME, VENDOR_SUPPORT_EMAIL } from '../brand';
 
 const FONT = `-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif`;
 
@@ -41,7 +42,7 @@ function wrap(content: string): string {
 <meta name="x-apple-disable-message-reformatting" />
 <meta name="color-scheme" content="light" />
 <meta name="supported-color-schemes" content="light" />
-<title>Via Mood</title>
+<title>${BRAND_NAME}</title>
 <!--[if mso]><style type="text/css">body,table,td,h1,p,a{font-family:Arial,Helvetica,sans-serif !important;}</style><![endif]-->
 <style type="text/css">
   html,body{margin:0 !important;padding:0 !important;width:100% !important;background:#faf6ec;}
@@ -67,10 +68,10 @@ function wrap(content: string): string {
       <table role="presentation" class="em-container" width="600" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:600px;">
         <tr>
           <td class="em-pad" style="padding:36px 32px;font-family:${FONT};color:#14201d;font-size:16px;line-height:1.6;">
-            <h1 class="em-h1" style="font-size:24px;color:#e1691f;margin:0 0 24px;font-weight:700;">Via Mood</h1>
+            <h1 class="em-h1" style="font-size:24px;color:#e1691f;margin:0 0 24px;font-weight:700;">${BRAND_NAME}</h1>
             ${content}
             <hr style="border:none;border-top:1px solid #e6e0d4;margin:32px 0 0;" />
-            <p style="font-size:12px;color:#6b7280;margin:20px 0 0;">Bu mail Via Mood Vendor Platform'dan otomatik gönderildi.</p>
+            <p style="font-size:12px;color:#6b7280;margin:20px 0 0;">Bu mail ${env.APP_NAME}'dan otomatik gönderildi.</p>
           </td>
         </tr>
       </table>
@@ -82,20 +83,20 @@ function wrap(content: string): string {
 
 export function vendorWelcomeEmail(vendorName: string): { subject: string; html: string; text: string } {
   return {
-    subject: `Via Mood: Tedarikçi başvurun alındı`,
+    subject: `${BRAND_NAME}: Tedarikçi başvurun alındı`,
     html: wrap(`
       <p>Merhaba <strong>${vendorName}</strong>,</p>
-      <p>Via Mood pazaryerine tedarikçi başvurun alındı. Ekibimiz inceledikten sonra (genelde 1 iş günü) sana bilgi vereceğiz.</p>
+      <p>${BRAND_NAME} pazaryerine tedarikçi başvurun alındı. Ekibimiz inceledikten sonra (genelde 1 iş günü) sana bilgi vereceğiz.</p>
       <p>Bu süre zarfında panele giriş yapabilir, profil bilgilerini güncelleyebilirsin.</p>
       ${button(`${env.APP_URL}/dashboard`, 'Panele Git')}
     `),
-    text: `Via Mood başvurun alındı, ${vendorName}. Admin onayı sonrası ürün ekleyebilirsin. Panel: ${env.APP_URL}/dashboard`,
+    text: `${BRAND_NAME} başvurun alındı, ${vendorName}. Admin onayı sonrası ürün ekleyebilirsin. Panel: ${env.APP_URL}/dashboard`,
   };
 }
 
 export function vendorApprovedEmail(vendorName: string): { subject: string; html: string; text: string } {
   return {
-    subject: `🎉 Via Mood tedarikçi başvurun onaylandı`,
+    subject: `🎉 ${BRAND_NAME} tedarikçi başvurun onaylandı`,
     html: wrap(`
       <p>Merhaba <strong>${vendorName}</strong>,</p>
       <p>Tebrikler — başvurun onaylandı! Artık ürün ekleyebilir, stok yönetebilir, sipariş alabilirsin.</p>
@@ -107,14 +108,14 @@ export function vendorApprovedEmail(vendorName: string): { subject: string; html
 
 export function vendorRejectedEmail(vendorName: string, reason: string): { subject: string; html: string; text: string } {
   return {
-    subject: `Via Mood başvuru sonucu`,
+    subject: `${BRAND_NAME} başvuru sonucu`,
     html: wrap(`
       <p>Merhaba <strong>${vendorName}</strong>,</p>
       <p>Üzgünüz — başvurun bu defa onaylanmadı.</p>
       <p><strong>Sebep:</strong> ${reason}</p>
-      <p>Sorularını <a href="mailto:vendor@viamood.com">vendor@viamood.com</a> adresine iletebilirsin.</p>
+      <p>Sorularını <a href="mailto:${VENDOR_SUPPORT_EMAIL}">${VENDOR_SUPPORT_EMAIL}</a> adresine iletebilirsin.</p>
     `),
-    text: `${vendorName}, başvurun onaylanmadı. Sebep: ${reason}. İletişim: vendor@viamood.com`,
+    text: `${vendorName}, başvurun onaylanmadı. Sebep: ${reason}. İletişim: ${VENDOR_SUPPORT_EMAIL}`,
   };
 }
 
@@ -135,14 +136,14 @@ export function orderConfirmationEmail(p: {
 
   if (p.method === 'card') {
     return {
-      subject: `Via Mood siparişin onaylandı — ${p.orderNumber}`,
+      subject: `${BRAND_NAME} siparişin onaylandı — ${p.orderNumber}`,
       html: wrap(`
         <p>Merhaba <strong>${p.customerName || 'değerli müşterimiz'}</strong>,</p>
         <p>Ödemen alındı ✅ — <strong>${p.orderNumber}</strong> numaralı siparişin onaylandı. Toplam: <strong>${tl(p.total)}</strong>.</p>
         <p>Siparişin hazırlanıyor; kargoya verilince seni bilgilendireceğiz.</p>
         ${button(`${env.APP_URL}/hesabim`, 'Siparişlerim')}
       `),
-      text: `Via Mood siparişin ${p.orderNumber} onaylandı (ödeme alındı). Toplam ${tl(p.total)}.`,
+      text: `${BRAND_NAME} siparişin ${p.orderNumber} onaylandı (ödeme alındı). Toplam ${tl(p.total)}.`,
     };
   }
 
@@ -159,7 +160,7 @@ export function orderConfirmationEmail(p: {
       )
       .join('');
     return {
-      subject: `Via Mood siparişin alındı — ${p.orderNumber} (havale bekleniyor)`,
+      subject: `${BRAND_NAME} siparişin alındı — ${p.orderNumber} (havale bekleniyor)`,
       html: wrap(`
         <p>Merhaba <strong>${p.customerName || 'değerli müşterimiz'}</strong>,</p>
         <p>Siparişin <strong>${p.orderNumber}</strong> alındı. Toplam tutar: <strong>${tl(p.total)}</strong>.</p>
@@ -168,7 +169,7 @@ export function orderConfirmationEmail(p: {
         ${button(`${env.APP_URL}/hesabim`, 'Siparişlerim')}
       `),
       text:
-        `Via Mood siparişin ${p.orderNumber} alındı. Toplam ${tl(p.total)}. Havale: ` +
+        `${BRAND_NAME} siparişin ${p.orderNumber} alındı. Toplam ${tl(p.total)}. Havale: ` +
         banks.map((v) => `${v.name} ${v.iban} (${tl(v.amount)})`).join(' | ') +
         `. Açıklamaya ${p.orderNumber} yaz.`,
     };
@@ -176,14 +177,14 @@ export function orderConfirmationEmail(p: {
 
   const odeme = p.codMethod === 'kart' ? 'kapıda kart' : 'kapıda nakit';
   return {
-    subject: `Via Mood siparişin alındı — ${p.orderNumber} (kapıda ödeme)`,
+    subject: `${BRAND_NAME} siparişin alındı — ${p.orderNumber} (kapıda ödeme)`,
     html: wrap(`
       <p>Merhaba <strong>${p.customerName || 'değerli müşterimiz'}</strong>,</p>
       <p>Siparişin <strong>${p.orderNumber}</strong> alındı. Ödeme yöntemin: <strong>${odeme}</strong>.</p>
       <p>Teslimat sırasında kuryeye <strong>${tl(p.total)}</strong> ödeyeceksin.</p>
       ${button(`${env.APP_URL}/hesabim`, 'Siparişlerim')}
     `),
-    text: `Via Mood siparişin ${p.orderNumber} alındı. ${odeme}, teslimatta ${tl(p.total)} ödenecek.`,
+    text: `${BRAND_NAME} siparişin ${p.orderNumber} alındı. ${odeme}, teslimatta ${tl(p.total)} ödenecek.`,
   };
 }
 
@@ -210,7 +211,7 @@ export function orderShippedEmail(p: {
       ${btn}
     `),
     text:
-      `Via Mood siparişin ${p.orderNumber} kargoya verildi.` +
+      `${BRAND_NAME} siparişin ${p.orderNumber} kargoya verildi.` +
       (p.trackingNumber ? ` Takip: ${p.trackingNumber}${p.carrier ? ' (' + p.carrier + ')' : ''}.` : '') +
       (p.trackingUrl ? ` ${p.trackingUrl}` : ''),
   };
@@ -229,7 +230,7 @@ export function orderDeliveredEmail(p: {
       <p>Ürünlerimizi beğendiysen değerlendirmen bizim için çok kıymetli.</p>
       ${button(`${env.APP_URL}/hesabim`, 'Siparişlerim')}
     `),
-    text: `Via Mood siparişin ${p.orderNumber} teslim edildi. Afiyet olsun!`,
+    text: `${BRAND_NAME} siparişin ${p.orderNumber} teslim edildi. Afiyet olsun!`,
   };
 }
 

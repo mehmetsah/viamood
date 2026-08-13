@@ -12,6 +12,7 @@
  * Bizim DB komponent stoğunu zaten allocate ediyor (prepareBundleStock).
  */
 import { eq, isNull } from 'drizzle-orm';
+import { BRAND_NAME } from '@/lib/brand';
 import { db } from '@/db/client';
 import { productBundles, shopifyConnections } from '@/db/schema';
 import { shopifyGraphQL } from './client';
@@ -96,7 +97,7 @@ export async function pushBundleToShopify(bundleId: string): Promise<BundlePushR
     productType: 'Set',
     tags: ['set', 'bundle'],
     status: bundle.status === 'active' ? 'ACTIVE' : 'DRAFT',
-    vendor: bundle.displayVendorName ?? 'Via Mood',
+    vendor: bundle.displayVendorName ?? BRAND_NAME,
     productOptions: [
       { name: 'Title', position: 1, values: [{ name: 'Default Title' }] },
     ],

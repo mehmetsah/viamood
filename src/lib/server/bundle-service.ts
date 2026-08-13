@@ -15,6 +15,7 @@
  *   - Bundle "düzenlenince" snapshot tazelenir
  */
 import { and, eq, inArray, isNull, sql } from 'drizzle-orm';
+import { BRAND_NAME } from '@/lib/brand';
 import { db } from '@/db/client';
 import {
   bundleComponents,
@@ -302,7 +303,7 @@ export async function createBundle(input: CreateBundleInput): Promise<BundleResu
   }
 
   // Karma bundle (admin) için vendor name
-  let displayVendorName = 'Via Mood';
+  let displayVendorName = BRAND_NAME;
   if (input.vendorId) {
     const [v] = await db
       .select({ name: vendors.name })

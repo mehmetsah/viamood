@@ -10,6 +10,7 @@
  *   6. Line items status'u 'awaiting_pickup' → mevcut.
  */
 import { and, eq, sql } from 'drizzle-orm';
+import { trackingPageUrl } from '@/lib/brand';
 import { db } from '@/db/client';
 import {
   fulfillmentLineItems,
@@ -439,7 +440,7 @@ export async function createFulfillmentForOrderVendor(
   const takipNo = (order.orderName ?? order.orderNumber ?? '').replace(/^#/, '');
   const musteriTrackingUrl =
     takipNo && order.customerEmail
-      ? `https://viamood.com.tr/pages/siparis-takip?order=${encodeURIComponent(takipNo)}&email=${encodeURIComponent(order.customerEmail)}`
+      ? trackingPageUrl(takipNo, order.customerEmail)
       : shipRes.barcode
         ? `https://kargolab.com/tracking/${shipRes.barcode}`
         : null;
