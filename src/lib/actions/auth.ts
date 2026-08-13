@@ -6,6 +6,7 @@ import { z } from 'zod';
 import { db } from '@/db/client';
 import { users } from '@/db/schema';
 import { signIn } from '@/lib/auth';
+import { env } from '@/lib/env';
 import { upsertCustomerByEmail } from '@/lib/customers/service';
 import { hashPassword, validatePassword } from '@/lib/password';
 
@@ -163,4 +164,22 @@ export async function customerSignUpAction(formData: FormData): Promise<ActionRe
 export async function signOutAction() {
   const { signOut } = await import('@/lib/auth');
   await signOut({ redirectTo: '/' });
+}
+
+/**
+ * MÜŞTERİ hesabı çıkışı (hesap.viamood.com.tr) → ANA SİTEYE döner.
+ *
+ * signOutAction'ı burada kullanamayız: onun hedefi '/' ve bu alan adında kök,
+ * hesap uygulamasının kendi ana sayfası — müşteri çıkış yapınca oraya düşüp
+ * sitenin eski sürümünü görüyordu (Yunus, 12 Ağu). Admin/tedarikçi çıkışı
+ * uygulama içinde kalmalı, o yüzden ayrı bir action.
+ *
+ * `signOut({ redirectTo })` DEĞİL: NextAuth harici (farklı origin) hedefleri
+ * güvenlik gereği eler. Önce oturumu kapat, sonra Next'in redirect'i ile mutlak
+ * URL'e git. Giriş akışına (callbackUrl=/hesabim) dokunulmaz.
+ */
+export async function signOutToStorefrontAction() {
+  const { signOut } = await import('@/lib/auth');
+  await signOut({ redirect: false });
+  redirect(env.STOREFRONT_URL);
 }

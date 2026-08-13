@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
-import { signOutAction } from '@/lib/actions/auth';
+import { signOutToStorefrontAction } from '@/lib/actions/auth';
 import { Logo } from '@/components/ui/Logo';
 
 interface Props {
@@ -143,7 +143,7 @@ export function AccountHeader({ initials, name, memberSince, counts }: Props) {
               <Link href="/hesabim/adresler" role="menuitem">
                 Adreslerim
               </Link>
-              <form action={signOutAction}>
+              <form action={signOutToStorefrontAction}>
                 <button type="submit" className="cikis" role="menuitem">
                   Çıkış yap
                 </button>
