@@ -99,6 +99,28 @@ function makeKey(input: QuoteInput): string {
  *
  * KargoLab API'si yurtiçi (TR→TR) için çalışır. Yurtdışı şu an kapalı.
  */
+/**
+ * Kurye adını aksan-bağımsız BÜYÜK harfe katlar.
+ * KargoLab "SÜRAT" (Ü) döndürüyor; ASCII "SURAT" ile düz karşılaştırma EŞLEŞMEZ ve kurye
+ * sessizce açık kalırdı — #1055'te aynı tuzak yaşandı (SÜRAT seçili sipariş PTT'ye düştü).
+ */
+function foldTrAd(s: string | null | undefined): string {
+  return (s ?? '')
+    .replace(/ı/g, 'i')
+    .replace(/İ/g, 'I')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toUpperCase();
+}
+
+/** Kapalı kurye mi? (KAPALI_KURYELER fonksiyon içinde tanımlı, foldTr ile eşleşir) */
+function kapaliMiFactory(liste: string[]) {
+  return (ad: string | null | undefined) => {
+    const a = foldTrAd(ad);
+    return liste.some((k) => a.includes(foldTrAd(k)));
+  };
+}
+
 export async function quoteShipmentRate(
   input: QuoteInput,
 ): Promise<QuoteResult | QuoteError> {
@@ -180,13 +202,14 @@ export async function quoteShipmentRate(
   // sunulmayacak. Liste KargoLab'den geldiği için kodda sabit değil; burada eleniyor.
   // Tek yer: hem checkout kurye listesi (/api/v1/shipping/quote) hem otomatik etiket
   // kurye seçimi (fulfillment-service) bu fonksiyonu kullanıyor → ikisinde de kapalı.
-  // DİKKAT: eşleşme "COMETOHOME" üzerinden — düz "PTT" ile eşleşirse normal PTT de
-  // elenirdi. SÜRAT ve diğer kuryelere dokunulmuyor.
-  const KAPALI_KURYELER = ['COMETOHOME'];
-  const rates: CourierRate[] = rawRates.filter((r) => {
-    const ad = (r.courrierName ?? '').toLocaleUpperCase('tr-TR');
-    return !KAPALI_KURYELER.some((k) => ad.includes(k));
-  });
+  // DİKKAT: "Cometohome PTT" için eşleşme "COMETOHOME" üzerinden — düz "PTT" ile
+  // eşleştirilseydi normal PTT de elenirdi.
+  // 15 Ağu 2026: SÜRAT de kapatıldı (Mehmet onayı) → müşteriye şu an yalnız PTT açık.
+  // Eşleşme foldTrAd ile aksan-bağımsız: KargoLab "SÜRAT" (Ü) döndürüyor, ASCII 'SURAT'
+  // ile düz includes() TUTMAZDI (#1055 tuzağı) — kurye sessizce açık kalırdı.
+  const KAPALI_KURYELER = ['COMETOHOME', 'SURAT'];
+  const kapaliMi = kapaliMiFactory(KAPALI_KURYELER);
+  const rates: CourierRate[] = rawRates.filter((r) => !kapaliMi(r.courrierName));
 
   if (rates.length === 0) {
     // Filtre TÜM kuryeleri elediyse (beklenmez) checkout'u kilitleme — ham listeye dön.
