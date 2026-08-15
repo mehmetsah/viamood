@@ -166,7 +166,7 @@ export async function quoteShipmentRate(
   }
 
   // 4) Map to typed rates
-  const rates: CourierRate[] = resp.data.map((r) => ({
+  const rawRates: CourierRate[] = resp.data.map((r) => ({
     courrierId: r.courrier_id,
     courrierName: r.courrier_name,
     priceCents: Math.round(parseFloat(r.price) * 100),
@@ -176,7 +176,35 @@ export async function quoteShipmentRate(
     returnCostCents: Math.round(parseFloat(r.return_cost) * 100),
   }));
 
+  // 4b) KAPALI KURYELER — Mehmet onayı (14 Ağu 2026): "Cometohome PTT" müşteriye
+  // sunulmayacak. Liste KargoLab'den geldiği için kodda sabit değil; burada eleniyor.
+  // Tek yer: hem checkout kurye listesi (/api/v1/shipping/quote) hem otomatik etiket
+  // kurye seçimi (fulfillment-service) bu fonksiyonu kullanıyor → ikisinde de kapalı.
+  // DİKKAT: eşleşme "COMETOHOME" üzerinden — düz "PTT" ile eşleşirse normal PTT de
+  // elenirdi. SÜRAT ve diğer kuryelere dokunulmuyor.
+  const KAPALI_KURYELER = ['COMETOHOME'];
+  const rates: CourierRate[] = rawRates.filter((r) => {
+    const ad = (r.courrierName ?? '').toLocaleUpperCase('tr-TR');
+    return !KAPALI_KURYELER.some((k) => ad.includes(k));
+  });
+
   if (rates.length === 0) {
+    // Filtre TÜM kuryeleri elediyse (beklenmez) checkout'u kilitleme — ham listeye dön.
+    if (rawRates.length > 0) {
+      console.warn('[rates] kapalı-kurye filtresi tüm listeyi eledi, ham liste kullanılıyor', {
+        gelen: rawRates.map((r) => r.courrierName),
+      });
+      const fallbackCheapest = rawRates.reduce((a, b) => (a.priceCents <= b.priceCents ? a : b));
+      const fbResult: QuoteResult = {
+        ok: true,
+        rates: rawRates,
+        cheapest: fallbackCheapest,
+        requestCode: resp.request_code ?? '',
+        cached: false,
+      };
+      cache.set(key, { at: Date.now(), result: fbResult });
+      return fbResult;
+    }
     return { ok: false, error: 'KargoLab fiyat dönmedi' };
   }
 
