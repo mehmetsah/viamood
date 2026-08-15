@@ -1,5 +1,7 @@
 import { count, desc, eq, isNull, sql } from 'drizzle-orm';
 import Link from 'next/link';
+import { Suspense } from 'react';
+import CustodyStatusPanel from '@/components/dashboard/CustodyStatusPanel';
 import { db } from '@/db/client';
 import { inventoryLevels, productVariants, products, vendors } from '@/db/schema';
 
@@ -80,6 +82,17 @@ export default async function AdminDashboardPage() {
     <div className="p-8 max-w-7xl mx-auto">
       <h1 className="text-3xl font-bold mb-2">Admin Panel</h1>
       <p className="text-neutral-600 mb-8">Pazaryeri operatör görünümü</p>
+
+      {/* Zimmet durumu — KargoLab'den canlı. Suspense: yavaş yanıt sayfanın kalanını bekletmesin. */}
+      <Suspense
+        fallback={
+          <section className="mb-8">
+            <div className="h-28 rounded-xl bg-neutral-100 animate-pulse" />
+          </section>
+        }
+      >
+        <CustodyStatusPanel />
+      </Suspense>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
         {stats.map((s) => (
