@@ -2,6 +2,7 @@ import { count, desc, eq, isNull, sql } from 'drizzle-orm';
 import Link from 'next/link';
 import { Suspense } from 'react';
 import CustodyStatusPanel from '@/components/dashboard/CustodyStatusPanel';
+import StatementSummaryPanel from '@/components/dashboard/StatementSummaryPanel';
 import { db } from '@/db/client';
 import { inventoryLevels, productVariants, products, vendors } from '@/db/schema';
 
@@ -92,6 +93,17 @@ export default async function AdminDashboardPage() {
         }
       >
         <CustodyStatusPanel />
+      </Suspense>
+
+      {/* Cari ozeti — KargoLab'den canli. Detay icin tek tikla gecis (C8). */}
+      <Suspense
+        fallback={
+          <section className="mb-8">
+            <div className="h-28 rounded-xl bg-neutral-100 animate-pulse" />
+          </section>
+        }
+      >
+        <StatementSummaryPanel />
       </Suspense>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
