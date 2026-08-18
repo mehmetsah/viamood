@@ -7,7 +7,7 @@
  *   3. getLabel(shipmentId) → PDF/URL
  *   4. trackByBarcode(barcode) → mevcut event'ler
  */
-import { authFetch } from './internal';
+import { authFetch, KargoLabError } from './internal';
 
 // ============================================================================
 // Types
@@ -388,4 +388,62 @@ export async function trackByBarcode(
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : 'unknown' };
   }
+}
+
+/* ------------------------------------------------- kargo listesi (okuma) */
+
+/**
+ * Admin panelindeki "Kargo & Cari" ekranı için son gönderiler.
+ *
+ * ⚠️ `external_source` dolu satırlar KargoLab üzerinden değil, pazaryeri
+ *    ekranından (Trendyol vb.) oluşturulmuş "ayna" kayıtlardır. Bunlar için
+ *    KargoLab'de fiyat/cari hareketi ÜRETİLMEZ — listede ciro gibi sayılmamalı.
+ */
+export interface RecentShipment {
+  id: number;
+  refNumber: string;
+  trackingNumber: string;
+  createdAt: string;
+  statusLabel: string;
+  receiver: string;
+  city: string;
+  /** 'trendyol' vb. — pazaryerinde oluşturulmuşsa dolu, KargoLab'de oluşturulmuşsa boş */
+  externalSource: string;
+  externalOrderNo: string;
+}
+
+interface ShipmentsEnvelope {
+  status: number;
+  message?: string;
+  data?: Array<Record<string, unknown>>;
+  all_data_count?: number;
+}
+
+export async function fetchRecentShipments(limit = 10): Promise<RecentShipment[]> {
+  const res = await authFetch<ShipmentsEnvelope>('/shipments', {
+    method: 'POST',
+    body: JSON.stringify({
+      pagination: { limit, page: 1 },
+      filter: {},
+    }),
+  });
+
+  // KargoLab HTTP 200 döner; gerçek durum gövdedeki `status` alanındadır.
+  if (res.status !== 200 || !Array.isArray(res.data)) {
+    throw new KargoLabError(res.status ?? 500, res, res.message ?? 'Kargo listesi alınamadı');
+  }
+
+  const s = (v: unknown): string => (v === null || v === undefined ? '' : String(v));
+
+  return res.data.map((r) => ({
+    id: Number(r.id ?? 0),
+    refNumber: s(r.ref_number) || s(r.id),
+    trackingNumber: s(r.tracking_number),
+    createdAt: s(r.created_at).slice(0, 10),
+    statusLabel: s(r.status_text) || s(r.status),
+    receiver: s(r.receiver_contact_name) || s(r.receiver_company_name),
+    city: [s(r.receiver_state), s(r.receiver_city)].filter(Boolean).join(' / '),
+    externalSource: s(r.external_source),
+    externalOrderNo: s(r.external_order_no),
+  }));
 }
