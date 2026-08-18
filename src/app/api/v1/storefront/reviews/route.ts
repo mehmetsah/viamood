@@ -67,16 +67,24 @@ export async function GET(req: NextRequest) {
     .orderBy(desc(reviews.createdAt))
     .limit(limit);
 
+  // ÖZET, listeyle AYNI filtreyi kullanır (`where`).
+  // Eskiden burada sabit `eq(status,'approved')` vardı: ?handle= ile liste doğru
+  // filtreleniyor ama count/average SİTE GENELİ dönüyordu → ürün sayfasında her üründe
+  // aynı "31 Değerlendirme / 5.0" görünürdü. Bu değer yıldız bileşenine ve JSON-LD
+  // aggregateRating'e beslendiği için Google'a da yanlış (fiilen uydurma) rating gider.
   const [agg] = await db
     .select({ n: sql<number>`count(*)::int`, avg: sql<number>`coalesce(avg(${reviews.rating}),0)` })
     .from(reviews)
-    .where(eq(reviews.status, 'approved'));
+    .where(where);
+
+  const count = agg?.n ?? 0;
 
   return NextResponse.json(
     {
       ok: true,
-      count: agg?.n ?? 0,
-      average: Number(agg?.avg ?? 0).toFixed(1),
+      count,
+      // Yorum yoksa ortalama ANLAMSIZ → null. Tema "0.0 yıldız" basmasın diye.
+      average: count > 0 ? Number(agg?.avg ?? 0).toFixed(1) : null,
       reviews: rows,
     },
     { headers: corsHeaders() },
