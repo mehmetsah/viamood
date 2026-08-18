@@ -64,6 +64,22 @@ const envSchema = z.object({
   KARGOLAB_MEMBER_ID: z.coerce.number().optional(),
   KARGOLAB_API_KEY: z.string().optional(), // legacy
 
+  // Via Mood BAYİ TENANT'ı (kargo.viamood.com.tr) — tedarikçiler burada ayrı üye
+  // olarak açılır. Yukarıdaki KARGOLAB_* ayarları ANA tenant içindir (Via Mood'un
+  // kendi müşteri hesabı, üye 7000070); ikisi karıştırılmamalı.
+  KARGOLAB_TENANT_HOST: z.string().optional(),
+  KARGOLAB_TENANT_ADMIN_EMAIL: z.string().email().optional(),
+  KARGOLAB_TENANT_ADMIN_PASSWORD: z.string().optional(),
+
+  // Trendyol Product Integration API (FAZ 2 katalog çekimi — çoklu tedarikçi)
+  // Test kaynağı: KargoLab member_id=30 mağazasının Trendyol entegrasyon bilgileri
+  // (integration_api_keys: api_key / secret_key / supplier_id). Prod'da her tedarikçi
+  // (Halil İbrahim vb.) kendi supplier bilgisiyle bağlanır. İstemci creds'i parametre
+  // alır; bu env yalnızca tek-tedarikçi script/test kolaylığı içindir.
+  TRENDYOL_SUPPLIER_ID: z.string().optional(),
+  TRENDYOL_API_KEY: z.string().optional(),
+  TRENDYOL_SECRET_KEY: z.string().optional(),
+
   // Mikro V17 ERP
   MIKRO_API_URL: z.string().url().optional(),         // örn. http://85.111.96.204:7781/api
   MIKRO_USERNAME: z.string().optional(),

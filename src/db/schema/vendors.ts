@@ -84,6 +84,13 @@ export const vendors = pgTable(
     paymentTermsDays: integer('payment_terms_days').default(30),
     iyzicoSubmerchantKey: text('iyzico_submerchant_key'), // Iyzico Pazaryeri ID
 
+    // KargoLab entegrasyonu — her tedarikçi Via Mood tenant'ında (kargo.viamood.com.tr)
+    // AYRI bir üye olarak açılır. Bu alan o üyenin numarasını tutar; boşsa tedarikçi
+    // henüz KargoLab'e kaydedilmemiştir (panelde kargo/cari bölümü kapalı gelir).
+    kargolabMemberId: integer('kargolab_member_id'),
+    kargolabSyncedAt: timestamp('kargolab_synced_at', { withTimezone: true }),
+    kargolabSyncError: text('kargolab_sync_error'),
+
     // Denormalized counters (trigger-updated)
     productCount: integer('product_count').notNull().default(0),
     activeOrderCount: integer('active_order_count').notNull().default(0),

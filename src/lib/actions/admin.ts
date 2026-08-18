@@ -7,6 +7,7 @@ import { db } from '@/db/client';
 import { users, vendorMemberships, vendors } from '@/db/schema';
 import { auth } from '@/lib/auth';
 import { auditUser } from '@/lib/audit/logger';
+import { createKargoLabMemberForVendor } from '@/lib/kargolab/vendor-member';
 import { sendEmail } from '@/lib/email/sender';
 import { vendorApprovedEmail, vendorRejectedEmail } from '@/lib/email/templates';
 import { createSubmerchant } from '@/lib/iyzico/client';
@@ -50,6 +51,13 @@ export async function approveVendorAction(formData: FormData): Promise<void> {
   // Hata olursa sadece audit log kalır, vendor approve etkilenmez.
   void createIyzicoSubmerchantForVendor(vendorId, admin.id!).catch((err) => {
     console.error('[iyzico submerchant] create failed:', err);
+  });
+
+  // KargoLab üyesi — tedarikçi Via Mood TENANT'ında (kargo.viamood.com.tr) ayrı üye
+  // olarak açılır; panelindeki kargo/cari bölümü buna dayanır. Iyzico ile aynı desen:
+  // best-effort, hata onayı geri almaz (hata vendors.kargolabSyncError'a yazılır).
+  void createKargoLabMemberForVendor(vendorId).catch((err) => {
+    console.error('[kargolab member] create failed:', err);
   });
 
   // Email notification
