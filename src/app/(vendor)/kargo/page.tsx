@@ -44,6 +44,26 @@ function Card({
   );
 }
 
+/**
+ * Gönderinin nerede oluşturulduğu.
+ *
+ * `externalSource` dolu satırlar pazaryeri ekranından (Trendyol vb.) oluşmuştur;
+ * KargoLab üzerinden açılmamıştır. Tedarikçi "bunu ben oluşturmadım" dediğinde
+ * cevabı bu sütun verir. Admin ekranıyla (/admin/kargo) aynı anlamı taşır.
+ */
+function KaynakRozeti({ kaynak, siparisNo }: { kaynak: string; siparisNo: string }) {
+  if (!kaynak) return <span className="text-xs text-neutral-400">KargoLab</span>;
+  const etiket = kaynak.charAt(0).toUpperCase() + kaynak.slice(1);
+  return (
+    <span
+      className="inline-block px-2 py-0.5 rounded-full text-xs font-semibold bg-orange-50 text-orange-700"
+      title={`Pazaryeri ekranından oluşturuldu — ${etiket}` + (siparisNo ? ` (sipariş ${siparisNo})` : '')}
+    >
+      {etiket}
+    </span>
+  );
+}
+
 function Bilgi({ baslik, metin }: { baslik: string; metin: string }) {
   return (
     <div className="bg-neutral-50 border border-neutral-200 rounded-xl p-5">
@@ -188,6 +208,7 @@ export default async function VendorKargoPage() {
                     <th className="px-4 py-2.5 font-semibold">Alıcı</th>
                     <th className="px-4 py-2.5 font-semibold">İl / İlçe</th>
                     <th className="px-4 py-2.5 font-semibold">Durum</th>
+                    <th className="px-4 py-2.5 font-semibold">Kaynak</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-neutral-100">
@@ -198,6 +219,9 @@ export default async function VendorKargoPage() {
                       <td className="px-4 py-2.5">{g.receiver || '—'}</td>
                       <td className="px-4 py-2.5 text-neutral-600">{g.city || '—'}</td>
                       <td className="px-4 py-2.5 text-neutral-600">{g.statusLabel || '—'}</td>
+                      <td className="px-4 py-2.5">
+                        <KaynakRozeti kaynak={g.externalSource} siparisNo={g.externalOrderNo} />
+                      </td>
                     </tr>
                   ))}
                 </tbody>
