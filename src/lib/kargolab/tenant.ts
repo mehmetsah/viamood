@@ -16,6 +16,8 @@
  * kaydeder, bu yüzden host burada sabit tutulur ve env'den okunur.
  */
 import { env } from '../env';
+import type { RecentShipment } from './shipments';
+import type { StatementSummary } from './statement';
 
 export class TenantNotConfiguredError extends Error {
   constructor() {
@@ -185,4 +187,96 @@ export function isTenantConfigured(): boolean {
       env.KARGOLAB_TENANT_ADMIN_EMAIL &&
       env.KARGOLAB_TENANT_ADMIN_PASSWORD,
   );
+}
+
+/* ------------------------------------------- tedarikçi adına okuma (impersonation) */
+
+/**
+ * Tedarikçinin KENDİ verisi için üye token'ı.
+ *
+ * Tenant admin oturumu `admin/member-login-as` ile tedarikçi üyesi adına bir üye
+ * token'ı açar; sonrasında normal ÜYE uçları (statement-summary, shipments,
+ * custody-summary) o token'la çağrılır. Böylece kapsam KargoLab tarafında
+ * uygulanır — panel "hangi üyenin verisi" sorusunu kendisi filtrelemeye çalışmaz.
+ *
+ * ⚠️ `member-login-as` yetkisi KargoLab'de DEFAULT-DENY ve audit'lidir; eski
+ *    statik-token "herhangi bir üye olarak giriş" arka kapısı kaldırılmıştır.
+ */
+const memberTokens = new Map<number, CachedAdminToken>();
+
+async function memberToken(memberId: number): Promise<string> {
+  const hit = memberTokens.get(memberId);
+  if (hit && hit.expiresAt > Date.now()) return hit.token;
+
+  const res = await adminFetch<{ status: number; message?: string; data?: { token?: string } }>(
+    '/admin/member-login-as',
+    { method: 'POST', body: JSON.stringify({ member_id: memberId }) },
+  );
+
+  if (res.status !== 200 || !res.data?.token) {
+    throw new TenantApiError(res.status ?? 500, res, res.message ?? 'Üye oturumu açılamadı');
+  }
+
+  memberTokens.set(memberId, { token: res.data.token, expiresAt: Date.now() + TOKEN_TTL_MS });
+  return res.data.token;
+}
+
+async function memberFetch<T>(memberId: number, path: string, body: unknown): Promise<T> {
+  const { base, host } = config();
+  const token = await memberToken(memberId);
+
+  const res = await fetch(`${base}${path}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+      Host: host,
+    },
+    body: JSON.stringify(body),
+    cache: 'no-store',
+  });
+
+  return (await res.json()) as T;
+}
+
+/** Tedarikçinin cari özeti — alan sözleşmesi `statement.ts` ile aynı. */
+export async function fetchMemberStatementSummary(memberId: number): Promise<StatementSummary> {
+  const res = await memberFetch<{ status: number; message?: string; data?: StatementSummary }>(
+    memberId,
+    '/statement-summary',
+    { recent_limit: 5 },
+  );
+
+  // KargoLab HTTP 200 döner; gerçek durum gövdedeki `status` alanındadır.
+  if (res.status !== 200 || !res.data) {
+    throw new TenantApiError(res.status ?? 500, res, res.message ?? 'Cari özeti alınamadı');
+  }
+  return res.data;
+}
+
+/** Tedarikçinin son gönderileri. */
+export async function fetchMemberShipments(memberId: number, limit = 10): Promise<RecentShipment[]> {
+  const res = await memberFetch<{ status: number; message?: string; data?: Array<Record<string, unknown>> }>(
+    memberId,
+    '/shipments',
+    { pagination: { limit, page: 1 }, filter: {} },
+  );
+
+  if (res.status !== 200 || !Array.isArray(res.data)) {
+    throw new TenantApiError(res.status ?? 500, res, res.message ?? 'Kargo listesi alınamadı');
+  }
+
+  const s = (v: unknown): string => (v === null || v === undefined ? '' : String(v));
+
+  return res.data.map((r) => ({
+    id: Number(r.id ?? 0),
+    refNumber: s(r.ref_number) || s(r.id),
+    trackingNumber: s(r.tracking_number),
+    createdAt: s(r.created_at).slice(0, 10),
+    statusLabel: s(r.status_text) || s(r.status),
+    receiver: s(r.receiver_contact_name) || s(r.receiver_company_name),
+    city: [s(r.receiver_state), s(r.receiver_city)].filter(Boolean).join(' / '),
+    externalSource: s(r.external_source),
+    externalOrderNo: s(r.external_order_no),
+  }));
 }
