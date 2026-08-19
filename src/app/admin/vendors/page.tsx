@@ -1,7 +1,13 @@
 import { count, desc, eq } from 'drizzle-orm';
 import { db } from '@/db/client';
 import { vendors } from '@/db/schema';
-import { approveVendorAction, rejectVendorAction, setCommissionAction, suspendVendorAction } from '@/lib/actions/admin';
+import {
+  approveVendorAction,
+  rejectVendorAction,
+  setCommissionAction,
+  setVendorKargolabAction,
+  suspendVendorAction,
+} from '@/lib/actions/admin';
 import { Pagination, parsePage } from '@/components/ui/Pagination';
 
 const PAGE_SIZE = 15;
@@ -147,6 +153,46 @@ export default async function AdminVendorsPage({ searchParams }: PageProps) {
                           >
                             Kaydet
                           </button>
+                        </form>
+                        {/* KargoLab ile çalışma anahtarı — üye açılışının TETİKLEYİCİSİ.
+                            Onay akışında değil burada; onaylanmış ama kargo anlaşması
+                            olmayan tedarikçiye üye açmak boş cari hesap yaratırdı. */}
+                        <form action={setVendorKargolabAction} className="flex gap-2 items-center flex-wrap">
+                          <input type="hidden" name="vendorId" value={v.id} />
+                          <input type="hidden" name="enabled" value={v.kargolabEnabled ? '0' : '1'} />
+                          <span className="text-xs text-neutral-500">KargoLab</span>
+                          {v.kargolabEnabled ? (
+                            <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-800">
+                              çalışıyor
+                              {v.kargolabMemberId ? ` · üye ${v.kargolabMemberId}` : ' · üye açılıyor'}
+                            </span>
+                          ) : (
+                            <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-neutral-100 text-neutral-600">
+                              kapalı
+                            </span>
+                          )}
+                          <input
+                            type="text"
+                            name="contractNo"
+                            defaultValue={v.kargolabContractNo ?? ''}
+                            placeholder="alt sözleşme no"
+                            className="w-36 h-8 px-2 border rounded text-sm"
+                          />
+                          <button
+                            type="submit"
+                            className={`px-3 py-1 rounded text-xs font-semibold ${
+                              v.kargolabEnabled
+                                ? 'bg-neutral-200 text-neutral-800'
+                                : 'bg-neutral-800 text-white'
+                            }`}
+                          >
+                            {v.kargolabEnabled ? 'Kapat' : 'KargoLab ile çalışsın'}
+                          </button>
+                          {v.kargolabSyncError && (
+                            <span className="text-xs text-red-700" title={v.kargolabSyncError}>
+                              üye açılamadı
+                            </span>
+                          )}
                         </form>
                         <form action={suspendVendorAction} className="flex gap-2">
                           <input type="hidden" name="vendorId" value={v.id} />

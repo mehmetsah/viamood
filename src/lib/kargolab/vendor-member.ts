@@ -35,6 +35,7 @@ export async function createKargoLabMemberForVendor(vendorId: string): Promise<n
       district: vendors.district,
       addressLine1: vendors.addressLine1,
       kargolabMemberId: vendors.kargolabMemberId,
+      kargolabEnabled: vendors.kargolabEnabled,
     })
     .from(vendors)
     .where(eq(vendors.id, vendorId))
@@ -44,6 +45,12 @@ export async function createKargoLabMemberForVendor(vendorId: string): Promise<n
 
   // Zaten açılmışsa tekrar açma — çift üye, çift cari demektir.
   if (v.kargolabMemberId) return v.kargolabMemberId;
+
+  // ⚠️ Üye yalnız "KargoLab ile çalışacak" işaretli tedarikçi için açılır.
+  //    Bu kontrol action'da da var; burada ikinci kez bakılıyor çünkü servis
+  //    ileride başka bir yerden (toplu işlem, cron) çağrılabilir ve o çağrı
+  //    anahtarı kontrol etmeyi unutursa boş cari hesap açılırdı.
+  if (!v.kargolabEnabled) return null;
 
   try {
     const { memberId } = await createTenantMember({
