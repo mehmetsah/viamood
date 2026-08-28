@@ -17,7 +17,7 @@ import { upsertCustomerAddress } from '@/lib/shopify/customer-address';
 import { ensureTrCustomer } from '@/lib/shopify/customer-locale';
 import { getStore, type StorefrontOrderBody } from '@/lib/store';
 import { createNativeCardPendingOrder } from '@/lib/store/native-create-order';
-import { trustedDiscountTl } from '@/lib/shopify/discount-resolve';
+import { trustedDiscountDetailed } from '@/lib/shopify/discount-resolve';
 
 interface DraftOrderResp {
   draft_order?: { id: number; invoice_url?: string };
@@ -236,11 +236,20 @@ export async function POST(req: NextRequest) {
   // (11 Ağu 2026 açığı: kapsam okunmadığı için tek ürüne tanımlı kupon tüm sepete
   //  uygulanıp toplamı sıfırlıyordu.) Kupon ürün-bazlıysa yalnız hak eden satırlara,
   //  o satırların tutarıyla sınırlı uygulanır; hak eden yoksa 0.
-  body.discount_amount = await trustedDiscountTl(body.discount_code, body.line_items ?? [], {
+  // Kupon reddedilirse SESSİZCE devam etme (Yunus, 27 Ağu 2026 — OZEL10): müşteri sepette
+  // indirimi görüp ödeme adımında indirimsiz tutarla karşılaşıyordu. Sebebi göster, ödeme başlatma.
+  const disc = await trustedDiscountDetailed(body.discount_code, body.line_items ?? [], {
     email: body.customer_email || body.email,
     phone: body.phone,
     customerId: body.customer_id,
   });
+  if (disc.rejected) {
+    return NextResponse.json(
+      { ok: false, error: 'discount_rejected', message: `Kupon uygulanamadı: ${disc.rejected}` },
+      { status: 422, headers },
+    );
+  }
+  body.discount_amount = disc.amountTl;
 
   // Fiyat hesabı (TL)
   let itemsTotal = 0;

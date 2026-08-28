@@ -374,6 +374,35 @@ export async function resolveDiscount(
  * kuponu sepete göre yeniden hesaplar. Kupon yoksa/geçersizse 0 döner (sipariş
  * indirimsiz devam eder — müşteriyi ödeme anında bloklamayız).
  */
+/**
+ * Kuponu güvenilir biçimde çözer VE reddedildiyse SEBEBİNİ de döndürür.
+ *
+ * Neden: `trustedDiscountTl()` reddi SESSİZCE 0'a çeviriyordu. Müşteri sepette indirimi
+ * görüp ödeme adımında indirimsiz tutarla karşılaşıyor, neden olduğunu anlamıyordu
+ * (Yunus, 27 Ağu 2026 — OZEL10 "sepette yansıdı, PayTR'de yansımadı"). Kök neden:
+ * sepette müşterinin e-postası/telefonu HENÜZ BİLİNMİYOR, bu yüzden "tek müşteri bir kez"
+ * kontrolü orada çalışmıyor; ödeme anında kimlik biliniyor ve kupon haklı olarak düşüyor.
+ * Ödeme yolları artık sessizce devam etmek yerine bu sebebi müşteriye gösterir.
+ */
+export async function trustedDiscountDetailed(
+  code: string | undefined,
+  lineItems: DiscountLineInput[],
+  customer: DiscountCustomer = {},
+): Promise<{ amountTl: number; rejected?: string }> {
+  if (!code?.trim()) return { amountTl: 0 };
+  try {
+    const r = await resolveDiscount(code, lineItems, customer);
+    if (!r.ok) {
+      console.warn('[discount] sipariş anında kupon reddedildi', { code, reason: r.error });
+      return { amountTl: 0, rejected: r.error };
+    }
+    return { amountTl: r.amountKurus / 100 };
+  } catch (e) {
+    console.error('[discount] kupon çözümlenemedi', { code, error: String(e) });
+    return { amountTl: 0, rejected: 'Kupon doğrulanamadı, lütfen tekrar deneyin.' };
+  }
+}
+
 export async function trustedDiscountTl(
   code: string | undefined,
   lineItems: DiscountLineInput[],
