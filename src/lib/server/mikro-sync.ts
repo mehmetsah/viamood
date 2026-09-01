@@ -397,6 +397,28 @@ async function pushToFirmaDb(params: {
 
 /** Idempotent sync — orderId için Mikro pipeline'ını çalıştırır.
  *  kargo verilirse takip no evraka yazılır (BelgeNo + Aciklama4) ve TeslimTuruKodu gerçek kurye olur. */
+/** Firma bacağı hatasını kalıcı kaydeder. Aradepo başarılıysa statüyü BOZMAZ
+ *  ('approved' kalır — evrak gerçekten orada); yalnız sebebi mikroError'a not düşer
+ *  ve Shopify'da `mikro-hata` etiketiyle görünür kılar. Kendisi asla throw etmez. */
+async function kaydetFirmaHatasi(orderId: string, sebep: string | undefined): Promise<void> {
+  const mesaj = `firma bacağı: ${sebep ?? 'bilinmeyen hata'}`;
+  console.error('[mikro-sync] FİRMA DB push hatası:', { orderId, error: sebep });
+  try {
+    const [o] = await db
+      .select({ shopifyOrderId: orders.shopifyOrderId })
+      .from(orders)
+      .where(eq(orders.id, orderId))
+      .limit(1);
+    await db
+      .update(orders)
+      .set({ mikroError: mesaj.slice(0, 500), updatedAt: new Date() })
+      .where(eq(orders.id, orderId));
+    void tagMikroHatali(o?.shopifyOrderId, mesaj);
+  } catch (err) {
+    console.error('[mikro-sync] firma hatası kaydedilemedi:', err);
+  }
+}
+
 export async function syncOrderToMikro(orderId: string, kargo?: MikroKargoBilgi): Promise<SyncResult> {
   // 1. Order çek
   const [order] = await db
@@ -408,17 +430,18 @@ export async function syncOrderToMikro(orderId: string, kargo?: MikroKargoBilgi)
     return { ok: false, orderId, step: 'lookup', error: 'Order bulunamadı' };
   }
 
-  // Zaten tamamlanmışsa skip
-  if (order.mikroSyncStatus === 'approved') {
-    return {
-      ok: true,
-      orderId,
-      cariKodu: order.mikroCariKodu ?? '',
-      evrakSeri: order.mikroEvrakSeri ?? '',
-      evrakSira: order.mikroEvrakSira ?? 1,
-      status: 'approved',
-    };
-  }
+  // DİKKAT — 'approved' erken çıkışı BİLEREK buradan kaldırıldı (defter #428).
+  // Eskiden burada koşulsuz return vardı; aradepo bacağı başarılı olur olmaz statü
+  // 'approved' yazıldığı için, ANA FİRMA bacağı eksik kalsa bile sonraki hiçbir
+  // çağrı onu tamamlayamıyordu — çağrı bu satırda geri dönüyordu. Bunun iki sonucu:
+  //   1) COD ertelemesi (bkz. pushToFirmaDb, "fulfillment sonrasına ertelendi")
+  //      yerine getirilemiyordu: fulfillment'taki re-sync buradan geri dönüyordu.
+  //      Kodun vaat ettiği erteleme yapısal olarak imkânsızdı.
+  //   2) Firma bacağı herhangi bir sebeple düşen sipariş (#1108, 20 Ağu) kalıcı
+  //      olarak yarım kalıyordu — üstelik statü 'approved' olduğu için "tamam" görünüyordu.
+  // Yeni davranış aşağıda: aradepo zaten varsa TEKRAR YAZILMAZ, yalnız firma
+  // bacağı mutabakat edilir (pushToFirmaDb kendi içinde seri kontrolü yapan idempotent
+  // bir fonksiyon — evrak varsa dokunmaz).
   if (order.mikroSyncStatus === 'skipped') {
     return {
       ok: false,
@@ -467,6 +490,43 @@ export async function syncOrderToMikro(orderId: string, kargo?: MikroKargoBilgi)
     (order.mikroEvrakSeri ?? '').trim() ||
     (orderDigits ? `${env.MIKRO_MUSTERI_NO}${env.MIKRO_PAZARYERI}${orderDigits}` : '');
   const evrakSira = order.mikroEvrakSira ?? env.MIKRO_EVRAK_SIRA;
+
+  // Aradepo bacağı zaten tamam → evrağı TEKRAR YAZMA, yalnız firma bacağını mutabakat et.
+  // (Eski koşulsuz erken çıkışın yerini alan blok — bkz. yukarıdaki not.)
+  if (order.mikroSyncStatus === 'approved') {
+    let firmaMutabakat: SyncOk['firma'];
+    if (env.MIKRO_FIRMA_PUSH && env.MIKRO_FIRMA_API_URL) {
+      firmaMutabakat = await pushToFirmaDb({
+        order: {
+          customerName: order.customerName,
+          customerPhone: order.customerPhone,
+          customerEmail: order.customerEmail,
+          placedAt: order.placedAt,
+          shippingCents: order.shippingCents,
+          tags: order.tags,
+        },
+        ship,
+        lineItems: lineItemsForFirma,
+        orderDigits,
+        courier: kargo?.courier ?? null,
+      });
+      if (!firmaMutabakat.ok) {
+        // Sessiz kalmasın: sebep DB'ye de yazılıyor (eskiden yalnız console'a gidiyordu,
+        // bu yüzden #1108'in gerçek hatası geriye dönük kurtarılamadı).
+        await kaydetFirmaHatasi(orderId, firmaMutabakat.error);
+      }
+    }
+    return {
+      ok: true,
+      orderId,
+      cariKodu: order.mikroCariKodu ?? '',
+      evrakSeri: order.mikroEvrakSeri ?? evrakSeri,
+      evrakSira: order.mikroEvrakSira ?? evrakSira,
+      firma: firmaMutabakat,
+      status: 'approved',
+    };
+  }
+
   if (!evrakSeri) {
     return { ok: false, orderId, step: 'siparis', error: 'Evrak seri üretilemedi (sipariş numarası yok)' };
   }
@@ -671,7 +731,7 @@ export async function syncOrderToMikro(orderId: string, kargo?: MikroKargoBilgi)
       orderDigits,
       courier: kargo?.courier ?? null,
     });
-    if (!firma.ok) console.error('[mikro-sync] FİRMA DB push hatası:', { orderId, error: firma.error });
+    if (!firma.ok) await kaydetFirmaHatasi(orderId, firma.error);
   }
 
   await logAudit({
