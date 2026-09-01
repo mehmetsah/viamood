@@ -24,6 +24,7 @@ import {
 } from '@/db/schema';
 import { logAudit } from '@/lib/audit/logger';
 import { env } from '@/lib/env';
+import { tagMikroBasarili, tagMikroHatali } from '@/lib/shopify/mikro-tag';
 import { cariKayit, siparisEkle } from '@/lib/mikro/operations';
 import { mikroFetch } from '@/lib/mikro/client';
 import type { MikroEvrak, MikroEvrakAciklama, MikroHareket } from '@/lib/mikro/types';
@@ -508,6 +509,8 @@ export async function syncOrderToMikro(orderId: string, kargo?: MikroKargoBilgi)
         });
         if (!firmaDup.ok) console.error('[mikro-sync] FİRMA DB push hatası (dup-dal):', { orderId, error: firmaDup.error });
       }
+      // GÖRÜNÜRLÜK: zaten aktarılmış — Shopify'da da öyle görünsün (etiket yoksa basılır)
+      void tagMikroBasarili(order.shopifyOrderId, evrakSeri);
       return { ok: true, orderId, cariKodu, evrakSeri, evrakSira, firma: firmaDup, status: 'approved' };
     }
   } catch {
@@ -528,6 +531,7 @@ export async function syncOrderToMikro(orderId: string, kargo?: MikroKargoBilgi)
         updatedAt: new Date(),
       })
       .where(eq(orders.id, orderId));
+    void tagMikroHatali(order.shopifyOrderId, err);
     return { ok: false, orderId, step: 'siparis', error: err };
   }
 
@@ -632,6 +636,7 @@ export async function syncOrderToMikro(orderId: string, kargo?: MikroKargoBilgi)
       entityId: orderId,
       after: { step: 'siparisEkle', error: siparisRes.error },
     });
+    void tagMikroHatali(order.shopifyOrderId, `siparisEkle: ${siparisRes.error}`);
     return { ok: false, orderId, step: 'siparis', error: siparisRes.error };
   }
 
@@ -677,6 +682,11 @@ export async function syncOrderToMikro(orderId: string, kargo?: MikroKargoBilgi)
     entityId: orderId,
     after: { cariKodu, evrakSeri, evrakSira, lineItems: lineItems.length, firma },
   });
+
+  // GÖRÜNÜRLÜK: aktarım başarılı → Shopify siparişine `mikro-ok` + `mikro-<seri>` etiketi.
+  // Bilinçli olarak await EDİLMİYOR: etiket kozmetik, aktarımın sonucunu geciktirmemeli
+  // ve hata verse bile (modül kendi içinde yutuyor) buraya taşmamalı.
+  void tagMikroBasarili(order.shopifyOrderId, evrakSeri);
 
   return {
     ok: true,
