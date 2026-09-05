@@ -30,6 +30,7 @@ import {
   type ShipmentDimension,
 } from '@/lib/kargolab/shipments';
 import { pushFulfillmentToShopify } from '@/lib/shopify/fulfillment-push';
+import { ilAdiniOnar } from '@/lib/shopify/tr-provinces';
 import { notifyNativeOrderShipped } from '@/lib/orders/lifecycle';
 import { syncOrderToMikro } from '@/lib/server/mikro-sync';
 import { quoteShipmentRate } from '@/lib/kargolab/rates';
@@ -286,8 +287,12 @@ export async function createFulfillmentForOrderVendor(
     // ters isimlendirme: town/city = İLÇE (ship.city), state = İL (ship.district)
     town: ship.city ?? '',
     city: ship.city ?? '',
-    state: ship.district ?? ship.city ?? '',
-    state_code: stateCodeFromName(ship.district ?? ship.city),
+    // ONARIM (#573): 26 Ağu–5 Eyl arası siparişlerin adresinde il alanı ISO kodu
+    // ("TR-04") olarak donmuş durumda. Shopify adres alanları sipariş anında sabitlendiği
+    // için geçmiş siparişlerde bu değer düzelmez; etiket üretilirken burada onarılır.
+    // Kod değilse ilAdiniOnar değeri aynen döndürür — yeni siparişleri etkilemez.
+    state: ilAdiniOnar(ship.district ?? ship.city ?? ''),
+    state_code: stateCodeFromName(ilAdiniOnar(ship.district ?? ship.city)),
     country: ship.countryCode ?? 'TR',
     email: order.customerEmail ?? undefined,
     phone: ship.phone ?? order.customerPhone ?? '',

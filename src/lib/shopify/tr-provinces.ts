@@ -1,7 +1,15 @@
 /**
- * TR il adı → Shopify province_code (ISO 3166-2:TR) eşleştirmesi.
- * Shopify shipping_address.province_code bu kodu bekler (TR-34 gibi).
- * İl adı string olarak gönderilince Shopify bazen tanımıyor → boş kalıyor.
+ * TR il adı ↔ ISO 3166-2:TR kodu eşleştirmesi.
+ *
+ * ⚠️ DİKKAT (#573 / PTT etiket bug'ı, 5 Eyl 2026): Bu kodlar Shopify siparişine
+ * `province_code` olarak GÖNDERİLMEZ. Bu mağazada Shopify'ın Türkiye tanımında
+ * il listesi BOŞ (`GET /countries.json` → TR.provinces = []). İl listesi olmayan
+ * bir ülkeye `province_code` verilince Shopify kodu çözemiyor ve kodu doğrudan
+ * `province` ALANINA yazıp `province_code`'u null'luyor. Sonuç: adres il adı
+ * yerine "TR-04" taşıyor, bu değer order-ingest → KargoLab → PTT etiketine kadar
+ * gidiyor ve etikette il "TR-04" olarak basılıyor (PTT kabul etmiyor).
+ *
+ * Kodlar burada, YALNIZCA ters yönde (kod → ad onarımı) kullanılmak üzere duruyor.
  */
 const TR_PROVINCE_CODES: Record<string, string> = {
   adana: 'TR-01', adıyaman: 'TR-02', afyonkarahisar: 'TR-03', ağrı: 'TR-04',
@@ -28,9 +36,34 @@ const TR_PROVINCE_CODES: Record<string, string> = {
   düzce: 'TR-81',
 };
 
-/** İl adı → province_code (TR-XX). Bulunamazsa null. */
+/** İl adı → ISO kodu (TR-XX). Bulunamazsa null.
+ *  Shopify'a GÖNDERİLMEZ — bkz. dosya başındaki uyarı. */
 export function provinceCode(name?: string): string | null {
   if (!name) return null;
   const key = name.trim().toLocaleLowerCase('tr');
   return TR_PROVINCE_CODES[key] ?? null;
+}
+
+/** Kod → il adı (ters harita, bir kez kurulur). */
+const TR_CODE_TO_NAME: Record<string, string> = Object.fromEntries(
+  Object.entries(TR_PROVINCE_CODES).map(([ad, kod]) => [
+    kod,
+    ad.charAt(0).toLocaleUpperCase('tr') + ad.slice(1),
+  ]),
+);
+
+/**
+ * ONARIM: "TR-04" gibi bir ISO kodu geldiyse gerçek il adına ("Ağrı") çevirir.
+ * Kod değilse değeri olduğu gibi döndürür — yani her yerde güvenle sarılabilir.
+ *
+ * Geriye dönük gerekli: 26 Ağu–5 Eyl arasında oluşan siparişlerin adreslerinde
+ * il alanı ISO kodu olarak DONMUŞ durumda (Shopify adres alanları sipariş anında
+ * sabitlenir). Bu siparişler yeniden etiketlenirse doğru il basılsın diye
+ * etiket üretim yolunda bu onarım uygulanır.
+ */
+export function ilAdiniOnar(deger?: string | null): string {
+  const v = (deger ?? '').trim();
+  if (!v) return '';
+  const kod = v.toUpperCase();
+  return TR_CODE_TO_NAME[kod] ?? v;
 }

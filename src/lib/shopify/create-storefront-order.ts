@@ -9,7 +9,6 @@
  *
  * Gerçek sipariş = Orders API (draft değil) ki webhook + müşteri hesabı + routing çalışsın.
  */
-import { provinceCode } from './tr-provinces';
 import { env } from '../env';
 import { upsertCustomerAddress } from './customer-address';
 import { ensureTrCustomer } from './customer-locale';
@@ -133,7 +132,6 @@ export async function createStorefrontOrder(
   // Shopify phone E.164 ister — normalize edilemiyorsa alanı HİÇ gönderme (422 'is invalid' önlenir;
   // telefon zaten note + Mikro EvrakDokum'da taşınıyor, sipariş telefonsuz da oluşabilmeli)
   const phone = normalizeTrPhone(b.phone);
-  const pcode = provinceCode(b.province);
   const addr: Record<string, unknown> = {
     first_name: b.first_name,
     last_name: b.last_name,
@@ -146,7 +144,11 @@ export async function createStorefrontOrder(
     country: 'Turkey',
     country_code: 'TR',
   };
-  if (pcode) addr.province_code = pcode;
+  // province_code BİLEREK GÖNDERİLMİYOR (#573 / PTT etiket bug'ı, 5 Eyl 2026):
+  // Bu mağazanın Shopify Türkiye tanımında il listesi boş (TR.provinces = []).
+  // İl listesi olmayan ülkeye province_code verilince Shopify kodu çözemiyor,
+  // kodu `province` alanına yazıp province_code'u null'luyor → adres il adı yerine
+  // "TR-04" taşıyor ve bu değer PTT etiketine kadar gidiyor. Yalnız il ADI gönderilir.
 
   const shippingTl = b.shipping_cost || 0;
 
@@ -179,6 +181,10 @@ export async function createStorefrontOrder(
     note: `📍 ${b.first_name} ${b.last_name} · ${b.province}/${b.city}\n💳 ${GATEWAY[method]}${codTipi ? ' (' + codTipi + ')' : ''}\n${invoiceNote(b)}`,
     note_attributes: [
       { name: '_odeme_yontemi', value: method },
+      // Adres normalizasyonundan bağımsız, güvenilir il/ilçe kaynağı (#573).
+      // Shopify shipping_address.province alanı bu mağazada güvenilmez.
+      { name: '_tr_il', value: b.province ?? '' },
+      { name: '_tr_ilce', value: b.city ?? '' },
       ...(method === 'cod'
         ? [
             { name: '_kapida_odeme', value: '1' },
