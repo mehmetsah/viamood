@@ -311,13 +311,75 @@ export async function paySmart3D(
   }
 }
 
-/** İşlem durumu sorgula — 3D dönüşünün SUNUCU tarafı doğrulaması (tek güven kaynağı). */
+/**
+ * getpos yanıtındaki tek bir taksit seçeneği (alanlar canlı test yanıtından alındı).
+ *
+ * ⚠️ TEST ortamında tüm komisyon oranları 0 olduğu için `payable_amount` ile
+ * `amount_to_be_paid` her taksitte istenen tutara EŞİT çıkıyor; ikisinin farkı
+ * ancak komisyonlu canlı ortamda görülür. Arayüzde müşteriye gösterilecek TOPLAM
+ * için `amount_to_be_paid` bağlanmalı (string, 2 hane).
+ */
+export interface HalkodeInstallment {
+  pos_id: number;
+  campaign_id: number;
+  allocation_id: number;
+  installments_number: number;
+  card_type: string; // "CREDIT CARD" / "DEBIT CARD"
+  card_program: string; // QNB Finansbank CC, MAXIMUM, AXESS, WORLD…
+  card_scheme: string; // visa / mastercard / troy
+  payable_amount: number; // taksit BAŞINA tutar (dokümana göre)
+  amount_to_be_paid: string; // müşterinin ödeyeceği TOPLAM
+  currency_code: string;
+  currency_id: number;
+  title: string | number; // 1 → "Single payment", diğerleri → taksit sayısı
+  hash_key?: string;
+}
+
+/**
+ * Karta tanımlı taksit tablosu. `creditCard` = kart numarasının İLK 6 HANESİ
+ * (tarım kartlarında tamamı). Ödeme ekranında taksit seçenekleri bundan basılır.
+ */
+export async function getPos(
+  creditCardBin: string,
+  amount: number,
+  token: string,
+  currencyCode = 'TRY',
+): Promise<
+  | { ok: true; installments: HalkodeInstallment[] }
+  | { ok: false; statusCode: number; error: string }
+> {
+  const { json } = await postJson(
+    '/api/getpos',
+    {
+      credit_card: creditCardBin.replace(/\s/g, '').slice(0, 6),
+      amount,
+      currency_code: currencyCode,
+      merchant_key: cfg().merchantKey,
+    },
+    token,
+  );
+  const code = Number(json.status_code ?? -1);
+  if (code === HALKODE_STATUS.SUCCESS && Array.isArray(json.data)) {
+    return { ok: true, installments: json.data as HalkodeInstallment[] };
+  }
+  return { ok: false, statusCode: code, error: String(json.status_description ?? 'taksit bilgisi alınamadı') };
+}
+
+/**
+ * İşlem durumu sorgula — 3D dönüşünün SUNUCU tarafı doğrulaması (tek güven kaynağı).
+ *
+ * ⚠️ ÖLÇÜLDÜ (8 Eyl 2026): checkstatus alanları `data` ALTINDA DEĞİL, yanıtın EN ÜST
+ * seviyesinde geliyor (dokümandaki örnek `data` sarmalı gösteriyor). Yalnız `json.data`
+ * okunursa başarılı ödeme "tamamlanmadı" sanılır → müşteriden para çekilir ama sipariş
+ * açılmaz. Bu yüzden `data` yoksa kökün kendisi kullanılır.
+ */
 export async function checkStatus(
   invoiceId: string,
   token: string,
 ): Promise<{ ok: boolean; statusCode: number; description: string; data: Json }> {
   const { json } = await postJson('/api/checkstatus', { invoice_id: invoiceId, merchant_key: cfg().merchantKey }, token);
-  const data = (json.data ?? {}) as Json;
+  const nested = json.data;
+  const data: Json = nested && typeof nested === 'object' && Object.keys(nested as Json).length ? (nested as Json) : json;
   const code = Number(json.status_code ?? -1);
   return {
     ok: code === HALKODE_STATUS.SUCCESS && String(data.transaction_status ?? '').toLowerCase() === 'completed',
@@ -330,6 +392,11 @@ export async function checkStatus(
 /**
  * İade / iptal. Halköde ikisi için de AYNI ucu kullanır:
  * tutar işlem tutarının tamamı → iptal, kısmi → iade.
+ *
+ * ⚠️ İade hash'i ÖDEME hash'inden FARKLI — dokümante edilmemiş, test ortamında
+ * ölçüldü (8 Eyl 2026):
+ *     data = amount|invoice_id|merchant_key        (2 hane ondalık: "22.00")
+ * Ödemedeki `total|installments|currency|merchant_key|invoice_id` burada 68 döner.
  */
 export async function refund(
   invoiceId: string,
@@ -337,10 +404,7 @@ export async function refund(
   token: string,
 ): Promise<{ ok: boolean; statusCode: number; description: string; data: Json }> {
   const c = cfg();
-  const hashKey = generateHashKey(
-    { total: amount.toFixed(2), installmentsNumber: 1, currencyCode: 'TRY', merchantKey: c.merchantKey, invoiceId },
-    c.appSecret,
-  );
+  const hashKey = encryptBundle([amount.toFixed(2), invoiceId, c.merchantKey].join('|'), c.appSecret);
   const { json } = await postJson(
     '/api/refund',
     {

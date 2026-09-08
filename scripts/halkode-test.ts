@@ -24,10 +24,13 @@ import {
   halkodeIsLive,
   buildInvoiceId,
   encryptBundle,
+  getPos,
   HALKODE_STATUS,
 } from '../src/lib/halkode/client.ts';
 
-const TEST_CARD = '4155141122223339'; // docs örnek kartı
+// ⚠️ Dokümandaki örnek kart (4155 1411 ...) test ortamında TANIMSIZ → banka V111 döner.
+// Çalışan kart: QNB Finansbank test visa (getpos'ta 1-6 taksit tanımlı).
+const TEST_CARD = '4155650100416111';
 const BAD_CARD = '4111111111111111'; // red beklenen kart
 
 function h(title: string) {
@@ -86,6 +89,19 @@ async function main() {
   const wrong = decodeHashKey(hk, 'yanlis-secret-degeri');
   if (wrong === null) ok('yanlış secret ile çözülemiyor (beklenen)');
   else no(`yanlış secret ile ÇÖZÜLDÜ — güvenlik sorunu: ${JSON.stringify(wrong.raw)}`);
+
+  // ── 2b) TAKSİT TABLOSU
+  h('2b) POST /api/getpos — karta tanımlı taksitler');
+  const pos = await getPos(TEST_CARD, 22.0, token);
+  if (pos.ok) {
+    const first = pos.installments[0];
+    ok(`${pos.installments.length} seçenek · ${first?.card_program}/${first?.card_scheme} (${first?.card_type})`);
+    for (const i of pos.installments) {
+      console.log(`    ${String(i.installments_number).padStart(2)} taksit · taksit başı ${i.payable_amount} · toplam ${i.amount_to_be_paid} ${i.currency_code} · pos_id=${i.pos_id}`);
+    }
+  } else {
+    no(`taksit alınamadı: ${pos.statusCode} ${pos.error}`);
+  }
 
   // ── 3) 3D ödeme başlat
   h('3) POST /api/paySmart3D — başarı senaryosu');

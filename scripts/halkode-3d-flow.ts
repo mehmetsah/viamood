@@ -1,7 +1,7 @@
 /**
  * Halköde TEST ortamı — UÇTAN UCA 3D akışı (tarayıcısız).
  *
- *   node --env-file=.env.local scripts/halkode-3d-flow.ts [ok|fail]
+ *   node --env-file=.env.local scripts/halkode-3d-flow.ts [ok|fail] [kartNo] [taksit]
  *
  * Adımlar:
  *   1. paySmart3D            → bankaya auto-submit HTML (PaReq/TermUrl/MD)
@@ -19,6 +19,8 @@
 import { getToken, paySmart3D, checkStatus, decodeHashKey, buildInvoiceId } from '../src/lib/halkode/client.ts';
 
 const MODE = (process.argv[2] ?? 'ok') as 'ok' | 'fail';
+const CARD = process.argv[3] ?? '4155650100416111'; // QNB Finansbank test visa (getpos'ta 1-6 taksit tanımlı)
+const INSTALLMENTS = Number(process.argv[4] ?? 1);
 const RETURN_URL = 'https://viamood.com.tr/api/v1/payment/halkode/callback';
 
 /** ACS (ASP.NET) oturumu çerezle taşınır — çerezsiz "Root element invalid" döner. */
@@ -84,16 +86,16 @@ if (!t.ok) {
 const invoiceId = buildInvoiceId(null, `f${Date.now()}`);
 const TOTAL = 22.0;
 
-h(`1) paySmart3D — invoice_id=${invoiceId} · mod=${MODE}`);
+h(`1) paySmart3D — invoice_id=${invoiceId} · mod=${MODE} · kart=${CARD.slice(0,6)}****${CARD.slice(-4)} · taksit=${INSTALLMENTS}`);
 const pay = await paySmart3D(
   {
     ccHolderName: 'Test Kart',
-    ccNo: '4155141122223339',
+    ccNo: CARD,
     expiryMonth: '12',
     expiryYear: '2028',
     cvv: '555',
     total: TOTAL,
-    installmentsNumber: 1,
+    installmentsNumber: INSTALLMENTS,
     invoiceId,
     name: 'Test',
     surname: 'Kullanici',

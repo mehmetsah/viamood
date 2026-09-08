@@ -29,6 +29,8 @@
     ".next",
     "scripts/halkode-test.ts",
     "scripts/halkode-probe.ts",
-    "scripts/halkode-3d-flow.ts"
+    "scripts/halkode-3d-flow.ts",
+    "scripts/halkode-cards.ts",
+    "scripts/halkode-refund.ts"
   ]
 }

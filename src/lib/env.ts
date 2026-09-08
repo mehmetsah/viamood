@@ -57,9 +57,14 @@ const envSchema = z.object({
   PAYTR_TEST_MODE: z.coerce.number().default(1), // 1=test, 0=canlı
 
   // HALKÖDE (Halkbank) Sanal POS — üçüncü kart gateway'i (3D Secure)
-  // BASE_URL test: https://staging.halkode.com.tr/ccpayment
+  // BASE_URL test: https://testapp.halkode.com.tr/ccpayment
   //          canlı: https://app.halkode.com.tr/ccpayment  (anahtarlar Halköde onayından SONRA gelir)
-  HALKODE_BASE_URL: z.string().url().default('https://staging.halkode.com.tr/ccpayment'),
+  //
+  // ⚠️ staging.halkode.com.tr KULLANMA. Dokümantasyonda test adresi olarak o yazıyor ve
+  // istekleri kabul ediyor (token veriyor, 3D formu üretiyor) ama üye işyeri POS tanımı
+  // orada YOK → finansal bacak banka hatası V004 ile düşüyor. Halköde 8 Eyl 2026'da
+  // doğru test adresinin testapp.halkode.com.tr olduğunu bildirdi.
+  HALKODE_BASE_URL: z.string().url().default('https://testapp.halkode.com.tr/ccpayment'),
   HALKODE_APP_ID: z.string().optional(),
   HALKODE_APP_SECRET: z.string().optional(),
   HALKODE_MERCHANT_KEY: z.string().optional(),
