@@ -82,7 +82,12 @@ export interface HalkodeHashParts {
 
 function cfg() {
   return {
-    baseUrl: (process.env.HALKODE_BASE_URL || 'https://staging.halkode.com.tr/ccpayment').replace(/\/+$/, ''),
+    // Yedek değer TESTAPP olmalı: staging.halkode.com.tr istekleri kabul eder (token verir,
+    // 3D formu üretir) ama üye işyeri POS tanımı orada YOK → banka V004 ile düşer. Doğru
+    // test adresi testapp.halkode.com.tr (bkz. src/lib/env.ts). Bu dosya process.env'i
+    // DOĞRUDAN okuduğu için env.ts'deki zod default'u buraya uygulanmaz — yedek burada da
+    // doğru olmalı, yoksa HALKODE_BASE_URL tanımsızken sessizce staging'e düşeriz.
+    baseUrl: (process.env.HALKODE_BASE_URL || 'https://testapp.halkode.com.tr/ccpayment').replace(/\/+$/, ''),
     appId: process.env.HALKODE_APP_ID || '',
     appSecret: process.env.HALKODE_APP_SECRET || '',
     merchantKey: process.env.HALKODE_MERCHANT_KEY || '',
@@ -100,7 +105,7 @@ export function halkodeConfigured(): boolean {
   return !!(c.baseUrl && c.appId && c.appSecret && c.merchantKey);
 }
 
-/** Halköde CANLI ortamda mı? (app.halkode.com.tr = canlı, staging = test) */
+/** Halköde CANLI ortamda mı? (app.halkode.com.tr = canlı, testapp.halkode.com.tr = test) */
 export function halkodeIsLive(): boolean {
   return /(^|\/\/)app\.halkode\./i.test(cfg().baseUrl);
 }
