@@ -1,0 +1,374 @@
+/**
+ * HALKÖDE (Halkbank) Sanal POS istemcisi — 3D Secure kart gateway'i.
+ *
+ * İyzico/PayTR'ye PARALEL üçüncü kart gateway'i. Akış (docs.halkode.com.tr):
+ *   1) POST /api/token          → app_id + app_secret → JWT (sonraki tüm çağrılar Bearer)
+ *   2) POST /api/paySmart3D     → kart + hash_key → bankaya auto-submit eden HTML form döner
+ *   3) tarayıcı 3D/OTP → return_url'e (başarı) veya cancel_url'e (hata) GET/POST ile döner
+ *   4) dönüşteki hash_key ÇÖZÜLÜP doğrulanır (tutar/invoice kurcalanmamış mı)
+ *   5) POST /api/checkstatus    → sunucu-sunucu kesin doğrulama (tek güven kaynağı)
+ *   6) POST /api/refund         → iade/iptal (aynı uç; tutar tam ise iptal, kısmi ise iade)
+ *
+ * ⚠️ HASH — PHP referans kodunun BİREBİR karşılığı (docs "hashGenerator"):
+ *     data  = total|installments_number|currency_code|merchant_key|invoice_id
+ *     iv    = sha1(rastgele)[0..16)          → 16 KARAKTERLİK ASCII STRING (byte değil)
+ *     pass  = sha1(app_secret)
+ *     salt  = sha1(rastgele)[0..4)
+ *     key   = sha256(pass + salt)            → 64 KARAKTERLİK HEX STRING
+ *     enc   = AES-256-CBC(data, key, iv) → base64
+ *     bundle= iv:salt:enc  ve  '/' → '__'
+ *
+ *   PHP'nin openssl_encrypt'i key/iv'yi HAM STRING olarak alır: 64 karakterlik hex
+ *   string'in İLK 32 BYTE'ını anahtar yapar (hex decode ETMEZ). Node'da birebir eşlemek
+ *   için Buffer.from(hex,'utf8').subarray(0,32) kullanılır — 'hex' encoding KULLANMA,
+ *   yoksa hash tutmaz ve Halköde 68 (hash uyuşmazlığı) döner.
+ */
+import crypto from 'node:crypto';
+
+/**
+ * Not: bu modül bilerek `src/lib/env.ts`'i İTHAL ETMEZ, process.env'i doğrudan okur.
+ * Sebep: gateway'i Next boot'undan bağımsız, tek başına koşturulabilir tutmak
+ * (`scripts/halkode-test.ts` staging'e böyle bağlanıyor; env.ts DATABASE_URL/REDIS_URL
+ * ister ve tüm uygulamayı ayağa kaldırır). HALKODE_* değişkenleri env.ts şemasında
+ * ayrıca TANIMLI — uygulama boot'unda doğrulama/dokümantasyon oradan gelir.
+ */
+
+/** Halköde uygulama durum kodları (docs/durum-kodlari). 100 = başarı. */
+export const HALKODE_STATUS = {
+  SUCCESS: 100,
+  INVALID_CREDENTIALS: 30,
+  TRANSACTION_NOT_FOUND: 31,
+  INVALID_INVOICE: 32,
+  ORDER_OR_PAYMENT_FAILED: 41,
+  REFUND_FAILED: 49,
+  HASH_MISMATCH: 68,
+} as const;
+
+export interface HalkodeItem {
+  name: string;
+  price: number; // TL — items toplamı `total` ile EŞİT olmalı (yoksa status 13)
+  quantity: number;
+  description?: string;
+}
+
+export interface Halkode3DParams {
+  ccHolderName: string;
+  ccNo: string;
+  expiryMonth: string; // "08"
+  expiryYear: string; // "2028"
+  cvv: string;
+  total: number; // TL
+  installmentsNumber: number; // 1 = tek çekim
+  invoiceId: string; // bizim benzersiz sipariş no
+  invoiceDescription?: string;
+  name: string;
+  surname: string;
+  items: HalkodeItem[];
+  returnUrl: string;
+  cancelUrl: string;
+  currencyCode?: string; // default TRY
+  transactionType?: 'Auth' | 'PreAuth';
+}
+
+/** Dönüş hash'i çözülünce elde edilen alanlar. */
+export interface HalkodeHashParts {
+  status: string;
+  total: string;
+  invoiceId: string;
+  orderId: string;
+  currencyCode: string;
+  raw: string[]; // ham parçalar (spec dışı sıra çıkarsa teşhis için)
+}
+
+function cfg() {
+  return {
+    baseUrl: (process.env.HALKODE_BASE_URL || 'https://staging.halkode.com.tr/ccpayment').replace(/\/+$/, ''),
+    appId: process.env.HALKODE_APP_ID || '',
+    appSecret: process.env.HALKODE_APP_SECRET || '',
+    merchantKey: process.env.HALKODE_MERCHANT_KEY || '',
+  };
+}
+
+/** Kill switch — kimlik bilgileri dolu olsa bile bu açık değilse ödeme başlatılmaz. */
+export function halkodeEnabled(): boolean {
+  const v = process.env.HALKODE_ENABLED;
+  return v === 'true' || v === '1';
+}
+
+export function halkodeConfigured(): boolean {
+  const c = cfg();
+  return !!(c.baseUrl && c.appId && c.appSecret && c.merchantKey);
+}
+
+/** Halköde CANLI ortamda mı? (app.halkode.com.tr = canlı, staging = test) */
+export function halkodeIsLive(): boolean {
+  return /(^|\/\/)app\.halkode\./i.test(cfg().baseUrl);
+}
+
+// ── Hash ────────────────────────────────────────────────────────────────────
+
+/** PHP openssl_encrypt/decrypt semantiği: key = hex string'in ilk 32 byte'ı. */
+function aesKey(password: string, salt: string): Buffer {
+  const hex = crypto.createHash('sha256').update(password + salt, 'utf8').digest('hex');
+  return Buffer.from(hex, 'utf8').subarray(0, 32);
+}
+
+/**
+ * Ham `iv:salt:enc` paketi üretir. Hem istek hash'i hem (testte) dönüş hash'i
+ * bu SAME şifrelemeyi kullanır — fark yalnız `data`'nın alan sırasıdır.
+ */
+export function encryptBundle(data: string, appSecret: string, seed?: { iv: string; salt: string }): string {
+  const iv = seed?.iv ?? crypto.createHash('sha1').update(crypto.randomBytes(16)).digest('hex').slice(0, 16);
+  const salt = seed?.salt ?? crypto.createHash('sha1').update(crypto.randomBytes(16)).digest('hex').slice(0, 4);
+  const password = crypto.createHash('sha1').update(appSecret, 'utf8').digest('hex');
+
+  const cipher = crypto.createCipheriv('aes-256-cbc', aesKey(password, salt), Buffer.from(iv, 'utf8'));
+  const encrypted = Buffer.concat([cipher.update(data, 'utf8'), cipher.final()]).toString('base64');
+
+  return `${iv}:${salt}:${encrypted}`.replace(/\//g, '__');
+}
+
+/** İstek hash_key'i (paySmart3D / refund öncesi). */
+export function generateHashKey(
+  params: { total: number | string; installmentsNumber: number; currencyCode: string; merchantKey: string; invoiceId: string },
+  appSecret: string,
+  seed?: { iv: string; salt: string },
+): string {
+  const data = [params.total, params.installmentsNumber, params.currencyCode, params.merchantKey, params.invoiceId].join('|');
+  return encryptBundle(data, appSecret, seed);
+}
+
+/**
+ * Dönüş hash_key'ini ÇÖZER (3D dönüşü / complete yanıtı).
+ * Çözülemezse null → çağıran tarafı işlemi REDDETMELİ.
+ */
+export function decodeHashKey(hashKey: string, appSecret: string): HalkodeHashParts | null {
+  if (!hashKey || !appSecret) return null;
+  try {
+    const bundle = hashKey.replace(/__/g, '/');
+    const parts = bundle.split(':');
+    if (parts.length < 3) return null;
+    const iv = parts[0] ?? '';
+    const salt = parts[1] ?? '';
+    const encrypted = parts.slice(2).join(':');
+    if (!iv || !salt || !encrypted) return null;
+    const password = crypto.createHash('sha1').update(appSecret, 'utf8').digest('hex');
+
+    const decipher = crypto.createDecipheriv('aes-256-cbc', aesKey(password, salt), Buffer.from(iv, 'utf8'));
+    const decrypted = Buffer.concat([decipher.update(encrypted, 'base64'), decipher.final()]).toString('utf8');
+
+    const a = decrypted.split('|');
+    return {
+      status: a[0] ?? '',
+      total: a[1] ?? '',
+      invoiceId: a[2] ?? '',
+      orderId: a[3] ?? '',
+      currencyCode: a[4] ?? '',
+      raw: a,
+    };
+  } catch {
+    return null; // yanlış secret / kurcalanmış hash → çözülemez
+  }
+}
+
+/**
+ * 3D dönüşünü doğrular: hash çözülüyor MU ve içindeki invoice/total BİZİM
+ * beklediğimizle aynı MI. Tutar karşılaştırması kuruş bazında yapılır
+ * ("1.00" ile "1.0" ve "1" aynı sayılır).
+ */
+export function verifyReturnHash(
+  hashKey: string,
+  expected: { invoiceId: string; total: number },
+  appSecret = cfg().appSecret,
+): { ok: boolean; reason?: string; parts?: HalkodeHashParts } {
+  const parts = decodeHashKey(hashKey, appSecret);
+  if (!parts) return { ok: false, reason: 'hash çözülemedi (imza geçersiz)' };
+  if (parts.invoiceId !== expected.invoiceId) {
+    return { ok: false, reason: 'invoice_id uyuşmuyor', parts };
+  }
+  const got = Math.round(parseFloat(parts.total) * 100);
+  const want = Math.round(expected.total * 100);
+  if (!Number.isFinite(got) || got !== want) return { ok: false, reason: 'tutar uyuşmuyor', parts };
+  return { ok: true, parts };
+}
+
+// ── HTTP ────────────────────────────────────────────────────────────────────
+
+type Json = Record<string, unknown>;
+
+async function postJson(path: string, body: Json, token?: string): Promise<{ httpStatus: number; json: Json }> {
+  const resp = await fetch(`${cfg().baseUrl}${path}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify(body),
+  });
+  const text = await resp.text();
+  let json: Json = {};
+  try {
+    json = JSON.parse(text) as Json;
+  } catch {
+    json = { status_code: -1, status_description: text.slice(0, 500) };
+  }
+  return { httpStatus: resp.status, json };
+}
+
+/** Token servisi. Token kısa ömürlü; çağrı başına alınır (cache yok — basit ve güvenli). */
+export async function getToken(): Promise<{ ok: true; token: string; is3d: number } | { ok: false; error: string }> {
+  const c = cfg();
+  if (!c.appId || !c.appSecret) return { ok: false, error: 'HALKODE kimlik bilgileri eksik' };
+  try {
+    const { json } = await postJson('/api/token', { app_id: c.appId, app_secret: c.appSecret });
+    const data = (json.data ?? {}) as Json;
+    if (json.status_code === HALKODE_STATUS.SUCCESS && typeof data.token === 'string') {
+      return { ok: true, token: data.token, is3d: Number(data.is_3d ?? 0) };
+    }
+    return { ok: false, error: `token alınamadı (${json.status_code}: ${String(json.status_description ?? '')})` };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : String(e) };
+  }
+}
+
+/**
+ * 3D ödeme başlat. Halköde başarıda BANKAYA auto-submit eden HTML döner
+ * (JSON değil) — bu HTML tarayıcıya olduğu gibi basılır.
+ * Hata durumunda JSON döner (status_code != 100).
+ */
+export async function paySmart3D(
+  p: Halkode3DParams,
+  token: string,
+): Promise<{ ok: true; html: string } | { ok: false; statusCode: number; error: string; raw?: Json }> {
+  const c = cfg();
+  const currency = p.currencyCode ?? 'TRY';
+  const total = p.total.toFixed(2);
+
+  const hashKey = generateHashKey(
+    {
+      total,
+      installmentsNumber: p.installmentsNumber,
+      currencyCode: currency,
+      merchantKey: c.merchantKey,
+      invoiceId: p.invoiceId,
+    },
+    c.appSecret,
+  );
+
+  const body: Json = {
+    cc_holder_name: p.ccHolderName,
+    cc_no: p.ccNo,
+    expiry_month: p.expiryMonth,
+    expiry_year: p.expiryYear,
+    cvv: p.cvv,
+    currency_code: currency,
+    installments_number: p.installmentsNumber,
+    invoice_id: p.invoiceId,
+    invoice_description: p.invoiceDescription ?? `Via Mood #${p.invoiceId}`,
+    total: Number(total),
+    items: p.items.map((i) => ({
+      name: i.name.slice(0, 100),
+      price: i.price,
+      quantity: i.quantity,
+      description: i.description ?? i.name.slice(0, 100),
+    })),
+    name: p.name,
+    surname: p.surname,
+    merchant_key: c.merchantKey,
+    hash_key: hashKey,
+    return_url: p.returnUrl,
+    cancel_url: p.cancelUrl,
+    transaction_type: p.transactionType ?? 'Auth',
+    payment_completed_by: 'app', // ödemeyi Halköde tamamlar (ayrıca /complete çağırmayız)
+  };
+
+  try {
+    const resp = await fetch(`${c.baseUrl}/api/paySmart3D`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify(body),
+    });
+    const text = await resp.text();
+
+    // Başarı = HTML form; hata = JSON
+    const trimmed = text.trimStart();
+    if (trimmed.startsWith('<')) return { ok: true, html: text };
+
+    let json: Json = {};
+    try {
+      json = JSON.parse(text) as Json;
+    } catch {
+      // Gövde boş/JSON değil (ör. geçersiz kart no → HTTP 404, boş gövde)
+      return { ok: false, statusCode: -1, error: text.slice(0, 500) || `HTTP ${resp.status} (boş yanıt)` };
+    }
+    const data = (json.data ?? {}) as Json;
+    const code = Number(json.status_code ?? data.status_code ?? -1);
+    const desc = String(json.status_description ?? data.error ?? data.status_description ?? 'bilinmeyen hata');
+    return { ok: false, statusCode: code, error: desc, raw: json };
+  } catch (e) {
+    return { ok: false, statusCode: -1, error: e instanceof Error ? e.message : String(e) };
+  }
+}
+
+/** İşlem durumu sorgula — 3D dönüşünün SUNUCU tarafı doğrulaması (tek güven kaynağı). */
+export async function checkStatus(
+  invoiceId: string,
+  token: string,
+): Promise<{ ok: boolean; statusCode: number; description: string; data: Json }> {
+  const { json } = await postJson('/api/checkstatus', { invoice_id: invoiceId, merchant_key: cfg().merchantKey }, token);
+  const data = (json.data ?? {}) as Json;
+  const code = Number(json.status_code ?? -1);
+  return {
+    ok: code === HALKODE_STATUS.SUCCESS && String(data.transaction_status ?? '').toLowerCase() === 'completed',
+    statusCode: code,
+    description: String(json.status_description ?? ''),
+    data,
+  };
+}
+
+/**
+ * İade / iptal. Halköde ikisi için de AYNI ucu kullanır:
+ * tutar işlem tutarının tamamı → iptal, kısmi → iade.
+ */
+export async function refund(
+  invoiceId: string,
+  amount: number,
+  token: string,
+): Promise<{ ok: boolean; statusCode: number; description: string; data: Json }> {
+  const c = cfg();
+  const hashKey = generateHashKey(
+    { total: amount.toFixed(2), installmentsNumber: 1, currencyCode: 'TRY', merchantKey: c.merchantKey, invoiceId },
+    c.appSecret,
+  );
+  const { json } = await postJson(
+    '/api/refund',
+    {
+      invoice_id: invoiceId,
+      merchant_key: c.merchantKey,
+      amount: Number(amount.toFixed(2)),
+      app_id: c.appId,
+      app_secret: c.appSecret,
+      hash_key: hashKey,
+    },
+    token,
+  );
+  const code = Number(json.status_code ?? -1);
+  return {
+    ok: code === HALKODE_STATUS.SUCCESS,
+    statusCode: code,
+    description: String(json.status_description ?? ''),
+    data: (json.data ?? json) as Json,
+  };
+}
+
+/** invoice_id'ye draft/sipariş id'sini göm (PayTR merchant_oid deseniyle aynı). */
+export function buildInvoiceId(draftOrderId: number | string | null, uniq: string): string {
+  return `vm${draftOrderId ?? 0}t${uniq}`.replace(/[^a-zA-Z0-9]/g, '').slice(0, 64);
+}
+
+export function parseDraftIdFromInvoiceId(invoiceId: string): string | null {
+  const m = /^vm(\d+)t/.exec(invoiceId);
+  const id = m?.[1];
+  return id && id !== '0' ? id : null;
+}

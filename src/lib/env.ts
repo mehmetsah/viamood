@@ -56,6 +56,20 @@ const envSchema = z.object({
   PAYTR_MERCHANT_SALT: z.string().optional(),
   PAYTR_TEST_MODE: z.coerce.number().default(1), // 1=test, 0=canlı
 
+  // HALKÖDE (Halkbank) Sanal POS — üçüncü kart gateway'i (3D Secure)
+  // BASE_URL test: https://staging.halkode.com.tr/ccpayment
+  //          canlı: https://app.halkode.com.tr/ccpayment  (anahtarlar Halköde onayından SONRA gelir)
+  HALKODE_BASE_URL: z.string().url().default('https://staging.halkode.com.tr/ccpayment'),
+  HALKODE_APP_ID: z.string().optional(),
+  HALKODE_APP_SECRET: z.string().optional(),
+  HALKODE_MERCHANT_KEY: z.string().optional(),
+  /** Gateway açık mı? Kimlik bilgileri dolu olsa bile bu 'true' olmadan ödeme başlatılmaz.
+   *  DİKKAT: z.coerce.boolean() KULLANMA — Boolean('false')===true (kill switch bozulur). */
+  HALKODE_ENABLED: z
+    .string()
+    .transform((v) => v === 'true' || v === '1')
+    .default('false'),
+
   // KargoLab
   KARGOLAB_API_URL: z.string().url().default('https://kargolab.com/api/v1'),
   KARGOLAB_HOST_HEADER: z.string().default('kargolab.com'),

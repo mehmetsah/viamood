@@ -24,5 +24,11 @@
     "exactOptionalPropertyTypes": false
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
-  "exclude": ["node_modules", ".next"]
+  "exclude": [
+    "node_modules",
+    ".next",
+    "scripts/halkode-test.ts",
+    "scripts/halkode-probe.ts",
+    "scripts/halkode-3d-flow.ts"
+  ]
 }
