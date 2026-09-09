@@ -7,6 +7,7 @@ import { db } from '@/db/client';
 import { users, vendorMemberships, vendors } from '@/db/schema';
 import { auth } from '@/lib/auth';
 import { auditUser } from '@/lib/audit/logger';
+import { createKargoLabMemberForVendor } from '@/lib/kargolab/vendor-member';
 import { sendEmail } from '@/lib/email/sender';
 import { vendorApprovedEmail, vendorRejectedEmail } from '@/lib/email/templates';
 import { createSubmerchant } from '@/lib/iyzico/client';
@@ -235,4 +236,41 @@ export async function registerWebhooksAction(
       message: err instanceof Error ? err.message : 'Bilinmeyen hata',
     };
   }
+}
+
+/**
+ * Tedarikçinin KargoLab ile çalışma durumunu değiştirir.
+ *
+ * ⚠️ KargoLab üyesi BURADA açılır, onay akışında değil (kullanıcı kararı
+ *    2026-08-19: "ilgili üye kargolab ile çalışır dediğimizde bu oluşmalı").
+ *    Onaylanmış ama kargo anlaşması olmayan her tedarikçiye üye açmak, Via Mood
+ *    tenant'ında kullanılmayan boş cari hesaplar biriktirirdi.
+ *
+ * Kapatma üyeyi SİLMEZ — geçmiş kargolar ve cari hareketi orada durur; yalnız
+ * tedarikçi panelindeki bölüm kapanır ve yeni üye açılmaz.
+ */
+export async function setVendorKargolabAction(formData: FormData): Promise<void> {
+  const admin = await requireAdmin();
+  const vendorId = z.string().uuid().parse(formData.get('vendorId'));
+  const enabled = formData.get('enabled') === '1';
+  const contractNo = (formData.get('contractNo') as string | null)?.trim() || null;
+
+  await db
+    .update(vendors)
+    .set({ kargolabEnabled: enabled, kargolabContractNo: contractNo, updatedAt: new Date() })
+    .where(eq(vendors.id, vendorId));
+
+  await auditUser(admin.id!, 'vendor.kargolab_enabled', 'vendor', vendorId, {
+    after: { kargolabEnabled: enabled, kargolabContractNo: contractNo },
+  });
+
+  // Açıldıysa üyeyi aç. Best-effort: KargoLab erişilemezse anahtar yine de açık
+  // kalır, hata vendors.kargolabSyncError'a yazılır ve sonra tekrar denenebilir.
+  if (enabled) {
+    void createKargoLabMemberForVendor(vendorId).catch((err) => {
+      console.error('[kargolab member] create failed:', err);
+    });
+  }
+
+  revalidatePath('/admin/vendors');
 }

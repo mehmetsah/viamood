@@ -1,6 +1,7 @@
 import { sql } from 'drizzle-orm';
 import {
   bigint,
+  boolean,
   index,
   integer,
   jsonb,
@@ -83,6 +84,21 @@ export const vendors = pgTable(
     paymentMode: paymentMode('payment_mode').notNull().default('cari'),
     paymentTermsDays: integer('payment_terms_days').default(30),
     iyzicoSubmerchantKey: text('iyzico_submerchant_key'), // Iyzico Pazaryeri ID
+
+    // KargoLab entegrasyonu — her tedarikçi Via Mood tenant'ında (kargo.viamood.com.tr)
+    // AYRI bir üye olarak açılır. Bu alan o üyenin numarasını tutar; boşsa tedarikçi
+    // henüz KargoLab'e kaydedilmemiştir (panelde kargo/cari bölümü kapalı gelir).
+    // Tedarikçi KargoLab ile çalışmayı kabul etti mi? Üye açılışının TETİKLEYİCİSİ
+    // budur — başvuru onayı değil (kullanıcı kararı 2026-08-19: "ilgili üye kargolab
+    // ile çalışır dediğimizde bu oluşmalı"). Onaylanmış ama kargo anlaşması olmayan
+    // tedarikçiye KargoLab üyesi açmak boş cari hesap yaratırdı.
+    kargolabEnabled: boolean('kargolab_enabled').notNull().default(false),
+    // Via Mood üst sözleşmesi altında tedarikçiye verilen alt sözleşme numarası
+    // (varsa). Bilgi amaçlı; kargo çıkışı Via Mood sözleşmesiyle yapılır.
+    kargolabContractNo: text('kargolab_contract_no'),
+    kargolabMemberId: integer('kargolab_member_id'),
+    kargolabSyncedAt: timestamp('kargolab_synced_at', { withTimezone: true }),
+    kargolabSyncError: text('kargolab_sync_error'),
 
     // Denormalized counters (trigger-updated)
     productCount: integer('product_count').notNull().default(0),

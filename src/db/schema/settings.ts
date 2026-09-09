@@ -4,9 +4,10 @@ import { jsonb, pgTable, text, timestamp } from 'drizzle-orm/pg-core';
 export interface PaymentSettings {
   iyzico_enabled?: boolean;
   paytr_enabled?: boolean;
+  halkode_enabled?: boolean;
   havale_enabled?: boolean;
   cod_enabled?: boolean;
-  card_gateway?: 'iyzico' | 'paytr'; // kart için aktif gateway
+  card_gateway?: 'iyzico' | 'paytr' | 'halkode'; // kart için aktif gateway
   cod_card_surcharge_pct?: number; // kapıda kart komisyonu (%)
   paytr_merchant_id?: string;
   paytr_merchant_key?: string;
@@ -15,6 +16,12 @@ export interface PaymentSettings {
   iyzico_api_key?: string;
   iyzico_secret_key?: string;
   iyzico_test_mode?: number;
+  // Halköde (Halkbank) sanal POS — test modu 1 iken testapp.halkode.com.tr,
+  // 0 iken app.halkode.com.tr kullanılır (bkz. lib/halkode/client.ts).
+  halkode_app_id?: string;
+  halkode_app_secret?: string;
+  halkode_merchant_key?: string;
+  halkode_test_mode?: number;
 }
 
 /** Mağaza kargo ayarları. */

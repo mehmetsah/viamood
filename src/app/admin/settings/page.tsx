@@ -60,6 +60,7 @@ export default async function AdminSettingsPage({ searchParams }: PageProps) {
           <h2 className="font-bold border-b pb-2 mb-3">Ödeme yöntemleri</h2>
           <Toggle name="iyzico_enabled" label="İyzico (kredi/banka kartı)" checked={s.payment.iyzico_enabled} />
           <Toggle name="paytr_enabled" label="PayTR (kredi/banka kartı)" checked={s.payment.paytr_enabled} />
+          <Toggle name="halkode_enabled" label="Halköde (Halkbank) — kredi/banka kartı" hint="Canlı anahtarlar gelene dek kapalı tutun" checked={s.payment.halkode_enabled} />
           <Toggle name="havale_enabled" label="Havale / EFT" checked={s.payment.havale_enabled} />
           <Toggle name="cod_enabled" label="Kapıda ödeme (COD)" hint="Kargocu kapıda nakit/kart tahsil eder" checked={s.payment.cod_enabled} />
 
@@ -69,6 +70,7 @@ export default async function AdminSettingsPage({ searchParams }: PageProps) {
               <select name="card_gateway" defaultValue={s.payment.card_gateway ?? 'iyzico'} className={inputCls}>
                 <option value="iyzico">İyzico</option>
                 <option value="paytr">PayTR</option>
+                <option value="halkode">Halköde (Halkbank)</option>
               </select>
               <p className="text-xs text-neutral-500 mt-1">Kart ödemesi hangi sağlayıcıyla alınsın</p>
             </div>
@@ -97,6 +99,17 @@ export default async function AdminSettingsPage({ searchParams }: PageProps) {
               <div><label className="text-xs font-medium block mb-1">Gizli Anahtar</label><input name="paytr_merchant_salt" type="password" autoComplete="off" placeholder={s.payment.paytr_merchant_salt ? '•••• kayıtlı' : 'Gizli Anahtar'} className={inputCls} /></div>
             </div>
             <label className="flex items-center gap-2 text-sm cursor-pointer mt-3"><input type="checkbox" name="paytr_test_mode" defaultChecked={(s.payment.paytr_test_mode ?? 1) === 1} className="w-4 h-4 accent-[var(--color-brand-orange)]" />Test modu (sandbox) — gerçek para çekilmez</label>
+          </div>
+
+          <div className="mt-4 pt-4 border-t">
+            <p className="text-sm font-semibold mb-1">Halköde (Halkbank) API bilgileri</p>
+            <p className="text-xs text-neutral-500 mb-3">Halköde üye işyeri panelinden alınır. Kayıtlıysa kutu boş görünür — değiştirmek için yeni değer gir.</p>
+            <div className="grid grid-cols-3 gap-3">
+              <div><label className="text-xs font-medium block mb-1">App ID</label><input name="halkode_app_id" autoComplete="off" placeholder={s.payment.halkode_app_id ? '•••• kayıtlı' : 'App ID'} className={inputCls} /></div>
+              <div><label className="text-xs font-medium block mb-1">App Secret</label><input name="halkode_app_secret" type="password" autoComplete="off" placeholder={s.payment.halkode_app_secret ? '•••• kayıtlı' : 'App Secret'} className={inputCls} /></div>
+              <div><label className="text-xs font-medium block mb-1">Merchant Key</label><input name="halkode_merchant_key" type="password" autoComplete="off" placeholder={s.payment.halkode_merchant_key ? '•••• kayıtlı' : 'Merchant Key'} className={inputCls} /></div>
+            </div>
+            <label className="flex items-center gap-2 text-sm cursor-pointer mt-3"><input type="checkbox" name="halkode_test_mode" defaultChecked={(s.payment.halkode_test_mode ?? 1) === 1} className="w-4 h-4 accent-[var(--color-brand-orange)]" />Test modu — testapp.halkode.com.tr’ye gider, gerçek para çekilmez</label>
           </div>
         </section>
 

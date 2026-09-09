@@ -16,7 +16,21 @@ const tl = (c: number) => (c / 100).toLocaleString('tr-TR', { minimumFractionDig
 const inputCls =
   'h-11 w-full px-3 rounded-lg border border-neutral-300 text-sm outline-none focus:border-[var(--color-brand-orange)]';
 
-type Method = 'havale' | 'cod';
+type Method = 'havale' | 'cod' | 'card';
+
+/**
+ * Kart ödemesi — YALNIZ Halköde uygulandı.
+ * İyzico/PayTR bu native checkout'ta HİÇ bağlanmamıştı (aşağıda "yakında" yer tutucusu
+ * duruyordu, hiçbir initialize çağrısı yoktu); canlı kart ödemesi Shopify temasındaki
+ * via-checkout.liquid üzerinden akıyor. Bu yüzden burada "üçüncü dal" eklenemedi —
+ * kart yolu ilk kez Halköde için kuruldu. Gateway 'iyzico'/'paytr' iken davranış
+ * DEĞİŞMEDİ: eski yer tutucu aynen gösterilir.
+ */
+const CARD_GATEWAY_LABEL: Record<string, string> = {
+  halkode: 'Halkbank (Halköde)',
+  iyzico: 'İyzico',
+  paytr: 'PayTR',
+};
 
 export function CheckoutForm({ payment }: { payment: PaymentSettings }) {
   const [cart, setCart] = useState<CartView | null>(null);
@@ -32,7 +46,17 @@ export function CheckoutForm({ payment }: { payment: PaymentSettings }) {
   const [status, setStatus] = useState<'idle' | 'submitting'>('idle');
   const [result, setResult] = useState<{ ok: boolean; orderCode?: string; error?: string } | null>(null);
 
+  // Kart (Halköde) — SAKLANMAZ, yalnız initialize'a iletilir
+  const [card, setCard] = useState({ holder: '', no: '', month: '', year: '', cvv: '' });
+  const [installments, setInstallments] = useState<{ installments_number: number; amount_to_be_paid: string }[]>([]);
+  const [selectedInstallment, setSelectedInstallment] = useState(1);
+
   const ilceler = useMemo(() => (il ? getIlceler(il) : []), [il]);
+
+  const gateway = payment.card_gateway ?? 'iyzico';
+  // Kart formu şu an YALNIZ Halköde için uygulandı (yukarıdaki nota bakın).
+  // İyzico/PayTR seçiliyken eski "yakında" yer tutucusu aynen gösterilir.
+  const cardImplemented = gateway === 'halkode' && !!payment.halkode_enabled;
 
   // Sepet yükle
   useEffect(() => {
@@ -66,7 +90,35 @@ export function CheckoutForm({ payment }: { payment: PaymentSettings }) {
   const freeShip = false; // ayar eşiği ileride
   const total = subtotal + (freeShip ? 0 : ship);
 
-  const valid = f.first_name && f.last_name && f.phone && f.email.includes('@') && f.address1 && il && ilce && method;
+  // Kart BIN'i (ilk 6 hane) girilince taksit tablosunu çek — tam kart no GÖNDERİLMEZ
+  const bin = card.no.replace(/\D/g, '').slice(0, 6);
+  useEffect(() => {
+    if (!cardImplemented || method !== 'card' || bin.length < 6 || total <= 0) {
+      setInstallments([]);
+      return;
+    }
+    let iptal = false;
+    fetch('/api/v1/payment/halkode/installments', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ bin, amount: total / 100 }),
+    })
+      .then((r) => r.json())
+      .then((d) => {
+        if (!iptal) setInstallments(d.ok && Array.isArray(d.installments) ? d.installments : []);
+      })
+      .catch(() => !iptal && setInstallments([]));
+    return () => {
+      iptal = true;
+    };
+  }, [cardImplemented, method, bin, total]);
+
+  const cardValid =
+    method !== 'card' ||
+    (card.no.replace(/\D/g, '').length >= 15 && card.month && card.year && card.cvv.length >= 3 && card.holder);
+
+  const valid =
+    f.first_name && f.last_name && f.phone && f.email.includes('@') && f.address1 && il && ilce && method && cardValid;
 
   const submit = useCallback(async () => {
     if (!cart?.token || !valid || !method) return;
@@ -88,7 +140,51 @@ export function CheckoutForm({ payment }: { payment: PaymentSettings }) {
           },
         }),
       });
-      // 2) Siparişe dönüştür (havale/COD → native sipariş)
+
+      // 2a) KART (Halköde) → initialize; başarıda bankaya auto-submit eden 3D formu döner
+      if (method === 'card') {
+        const res = await fetch('/api/v1/payment/halkode/initialize', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            line_items: (cart.items ?? []).map((it) => ({
+              variant_id: Number(it.variant_id),
+              quantity: it.quantity,
+              title: it.title,
+              // initialize BİRİM fiyatı kuruş olarak bekler; sepet SATIR toplamı tutuyor
+              price: it.quantity > 0 ? Math.round(it.line_price_cents / it.quantity) : 0,
+            })),
+            shipping_cost: ship / 100,
+            first_name: f.first_name,
+            last_name: f.last_name,
+            phone: f.phone,
+            email: f.email,
+            address1: f.address1,
+            city: ilce, // Shopify şeması: city = ilçe
+            province: il,
+            zip: f.postal_code,
+            cc_holder_name: card.holder,
+            cc_no: card.no.replace(/\D/g, ''),
+            expiry_month: card.month,
+            expiry_year: card.year,
+            cvv: card.cvv,
+            installments_number: selectedInstallment,
+          }),
+        });
+        const d = await res.json();
+        if (d.ok && d.form_html) {
+          // 3D formu kendi kendine banka sayfasına POST eder — innerHTML script çalıştırmaz,
+          // bu yüzden belge doğrudan yazılır (PSP entegrasyonlarının standart yolu).
+          document.open();
+          document.write(d.form_html);
+          document.close();
+          return; // sayfa bankaya gidiyor
+        }
+        setResult({ ok: false, error: d.detail || d.error || 'Kart ödemesi başlatılamadı' });
+        return;
+      }
+
+      // 2b) Siparişe dönüştür (havale/COD → native sipariş)
       const res = await fetch('/api/v1/cart/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -106,7 +202,7 @@ export function CheckoutForm({ payment }: { payment: PaymentSettings }) {
     } finally {
       setStatus('idle');
     }
-  }, [cart, valid, method, f, il, ilce, mahalle, ship]);
+  }, [cart, valid, method, f, il, ilce, mahalle, ship, card, selectedInstallment]);
 
   if (result?.ok) {
     return (
@@ -117,7 +213,7 @@ export function CheckoutForm({ payment }: { payment: PaymentSettings }) {
           Sipariş numaran: <strong>{result.orderCode}</strong>
         </p>
         <p className="text-sm text-neutral-500 mt-2">
-          {method === 'havale' ? 'Havale bilgileri e-postana gönderildi.' : 'Kapıda ödeme ile teslim edilecek.'}
+          {method === 'havale' ? 'Havale bilgileri e-postana gönderildi.' : method === 'cod' ? 'Kapıda ödeme ile teslim edilecek.' : 'Ödemen alındı.'}
         </p>
         <Link href="/magaza" className="inline-block mt-6 px-6 py-3 rounded-full bg-[var(--color-brand-ink)] text-white font-semibold">
           Alışverişe devam et
@@ -179,7 +275,49 @@ export function CheckoutForm({ payment }: { payment: PaymentSettings }) {
                 <span className="font-medium text-sm">Kapıda ödeme</span>
               </label>
             )}
-            {(payment.iyzico_enabled || payment.paytr_enabled) && (
+            {cardImplemented && (
+              <div className="border rounded-lg overflow-hidden">
+                <label className="flex items-center gap-3 px-4 py-3 cursor-pointer">
+                  <input type="radio" name="m" checked={method === 'card'} onChange={() => setMethod('card')} />
+                  <span className="font-medium text-sm">
+                    Kredi / banka kartı <span className="text-neutral-400">· {CARD_GATEWAY_LABEL[gateway]}</span>
+                  </span>
+                </label>
+                {method === 'card' && (
+                  <div className="px-4 pb-4 pt-1 border-t bg-neutral-50/60 flex flex-col gap-3">
+                    <input className={inputCls} placeholder="Kart üzerindeki isim" autoComplete="cc-name"
+                      value={card.holder} onChange={(e) => setCard({ ...card, holder: e.target.value })} />
+                    <input className={inputCls} placeholder="Kart numarası" inputMode="numeric" autoComplete="cc-number"
+                      value={card.no} onChange={(e) => setCard({ ...card, no: e.target.value })} />
+                    <div className="grid grid-cols-3 gap-3">
+                      <input className={inputCls} placeholder="Ay (12)" inputMode="numeric" autoComplete="cc-exp-month"
+                        value={card.month} onChange={(e) => setCard({ ...card, month: e.target.value })} />
+                      <input className={inputCls} placeholder="Yıl (2028)" inputMode="numeric" autoComplete="cc-exp-year"
+                        value={card.year} onChange={(e) => setCard({ ...card, year: e.target.value })} />
+                      <input className={inputCls} placeholder="CVV" inputMode="numeric" autoComplete="cc-csc"
+                        value={card.cvv} onChange={(e) => setCard({ ...card, cvv: e.target.value })} />
+                    </div>
+                    {installments.length > 1 && (
+                      <div>
+                        <label className="text-xs font-medium block mb-1">Taksit</label>
+                        <select className={inputCls} value={selectedInstallment}
+                          onChange={(e) => setSelectedInstallment(Number(e.target.value))}>
+                          {installments.map((i) => (
+                            <option key={i.installments_number} value={i.installments_number}>
+                              {i.installments_number === 1 ? 'Tek çekim' : `${i.installments_number} taksit`} — {i.amount_to_be_paid} ₺
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+                    <p className="text-xs text-neutral-500">
+                      Ödeme, bankanın 3D Secure sayfasına yönlendirilerek tamamlanır. Kart bilgileriniz saklanmaz.
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+            {(payment.iyzico_enabled || payment.paytr_enabled) && !cardImplemented && (
               <div className="border rounded-lg px-4 py-3 text-sm text-neutral-400">
                 💳 Kredi/banka kartı — yakında (sandbox doğrulaması sonrası)
               </div>

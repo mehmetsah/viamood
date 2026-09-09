@@ -45,12 +45,18 @@ export async function updateStoreSettingsAction(formData: FormData): Promise<voi
   const str = (n: string) => { const v = String(formData.get(n) ?? '').trim(); return v || undefined; };
   const [exRow] = await db.select({ payment: storeSettings.payment }).from(storeSettings).where(eq(storeSettings.id, 'default')).limit(1);
   const exPay = (exRow?.payment as PaymentSettings) ?? {};
+  // Kart gateway'i beyaz liste — tanınmayan değer 'iyzico'ya düşer
+  const gatewayRaw = String(formData.get('card_gateway') ?? '');
+  const cardGateway: NonNullable<PaymentSettings['card_gateway']> =
+    gatewayRaw === 'paytr' || gatewayRaw === 'halkode' ? gatewayRaw : 'iyzico';
+
   const payment: PaymentSettings = {
     iyzico_enabled: bool('iyzico_enabled'),
     paytr_enabled: bool('paytr_enabled'),
+    halkode_enabled: bool('halkode_enabled'),
     havale_enabled: bool('havale_enabled'),
     cod_enabled: bool('cod_enabled'),
-    card_gateway: formData.get('card_gateway') === 'paytr' ? 'paytr' : 'iyzico',
+    card_gateway: cardGateway,
     cod_card_surcharge_pct: num('cod_card_surcharge_pct') ?? 4,
     paytr_merchant_id: str('paytr_merchant_id') ?? exPay.paytr_merchant_id,
     paytr_merchant_key: str('paytr_merchant_key') ?? exPay.paytr_merchant_key,
@@ -59,6 +65,11 @@ export async function updateStoreSettingsAction(formData: FormData): Promise<voi
     iyzico_api_key: str('iyzico_api_key') ?? exPay.iyzico_api_key,
     iyzico_secret_key: str('iyzico_secret_key') ?? exPay.iyzico_secret_key,
     iyzico_test_mode: bool('iyzico_test_mode') ? 1 : 0,
+    // Halköde sırları — boş bırakılırsa eski değer korunur (iyzico/paytr ile aynı davranış)
+    halkode_app_id: str('halkode_app_id') ?? exPay.halkode_app_id,
+    halkode_app_secret: str('halkode_app_secret') ?? exPay.halkode_app_secret,
+    halkode_merchant_key: str('halkode_merchant_key') ?? exPay.halkode_merchant_key,
+    halkode_test_mode: bool('halkode_test_mode') ? 1 : 0,
   };
   const shipping: ShippingSettings = {
     free_shipping_all: bool('free_shipping_all'),
