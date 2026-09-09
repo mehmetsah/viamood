@@ -110,8 +110,24 @@ async function paymentSettings(): Promise<Partial<import('@/db/schema').PaymentS
   }
 }
 
+/**
+ * Gizli önizleme çerezi var mı? (bkz. lib/halkode/preview.ts)
+ *
+ * `next/headers` yalnız istek bağlamında çalışır; betikler/cron bu modülü hiç
+ * yükleyemeyebilir. Bu yüzden DİNAMİK import + try/catch — paymentSettings() ile aynı kalıp.
+ */
+async function previewActive(): Promise<boolean> {
+  try {
+    const m = await import('./preview');
+    return await m.isHalkodePreview();
+  } catch {
+    return false;
+  }
+}
+
 async function cfg(): Promise<HalkodeCfg> {
   const ps = await paymentSettings();
+  const preview = await previewActive();
 
   // Taban adres önceliği:
   //  1) HALKODE_BASE_URL açıkça verilmişse o (operasyonel override / betikler)
@@ -122,15 +138,25 @@ async function cfg(): Promise<HalkodeCfg> {
   // test adresi testapp.halkode.com.tr (bkz. src/lib/env.ts). Bu dosya process.env'i
   // DOĞRUDAN okuduğu için env.ts'deki zod default'u buraya uygulanmaz — yedek burada da
   // doğru olmalı, yoksa HALKODE_BASE_URL tanımsızken sessizce staging'e düşeriz.
-  const testMode = ps.halkode_test_mode ?? 1;
-  const baseUrl = (process.env.HALKODE_BASE_URL || (testMode === 0 ? BASE_LIVE : BASE_TEST)).replace(/\/+$/, '');
+  // ÖNİZLEME: test modu ZORLANIR ve taban adres HER KOŞULDA testapp olur —
+  // HALKODE_BASE_URL override'ı bile bu yolda geçersizdir. Amaç: gizli önizleme
+  // linkinden canlı POS'a düşülüp gerçek para çekilmesinin İMKÂNSIZ olması.
+  const testMode = preview ? 1 : (ps.halkode_test_mode ?? 1);
+  const baseUrl = preview
+    ? BASE_TEST
+    : (process.env.HALKODE_BASE_URL || (testMode === 0 ? BASE_LIVE : BASE_TEST)).replace(/\/+$/, '');
 
   return {
     baseUrl,
     appId: ps.halkode_app_id || process.env.HALKODE_APP_ID || '',
     appSecret: ps.halkode_app_secret || process.env.HALKODE_APP_SECRET || '',
     merchantKey: ps.halkode_merchant_key || process.env.HALKODE_MERCHANT_KEY || '',
-    enabled: ps.halkode_enabled === true || process.env.HALKODE_ENABLED === 'true' || process.env.HALKODE_ENABLED === '1',
+    // Önizleme kill switch'i AÇAR (yalnız çerezi olan kişi için, yalnız test ortamında).
+    enabled:
+      preview ||
+      ps.halkode_enabled === true ||
+      process.env.HALKODE_ENABLED === 'true' ||
+      process.env.HALKODE_ENABLED === '1',
   };
 }
 

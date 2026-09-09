@@ -1,6 +1,7 @@
 import NextAuth from 'next-auth';
 import { NextResponse, type NextRequest } from 'next/server';
 import { authConfig } from '@/lib/auth.config';
+import { HALKODE_PREVIEW_COOKIE, HALKODE_PREVIEW_MAX_AGE } from '@/lib/halkode/preview-cookie';
 
 const { auth } = NextAuth(authConfig);
 
@@ -41,6 +42,28 @@ function buildRedirectUrl(req: NextRequest, pathname: string, params?: Record<st
 export default auth((req) => {
   const { pathname } = req.nextUrl;
   const session = req.auth;
+
+  // ── Halköde gizli önizleme kapısı ──────────────────────────────────────────
+  // ?halkode=1 → çerezi kur, parametresiz adrese yönlendir (Yunus'un test linki).
+  // ?halkode=0 → çerezi sil (çıkış yolu).
+  // Çerez YOKKEN hiçbir şey değişmez; ödeme ayarları DB'de değiştirilmez.
+  // Önizleme her zaman TEST ortamına gider (bkz. lib/halkode/client.ts cfg()).
+  const halkodeFlag = req.nextUrl.searchParams.get('halkode');
+  if (halkodeFlag === '1' || halkodeFlag === '0') {
+    const clean = buildRedirectUrl(req, pathname);
+    for (const [k, v] of req.nextUrl.searchParams) {
+      if (k !== 'halkode') clean.searchParams.set(k, v);
+    }
+    const res = NextResponse.redirect(clean);
+    res.cookies.set(HALKODE_PREVIEW_COOKIE, halkodeFlag === '1' ? '1' : '', {
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: process.env.NODE_ENV === 'production',
+      path: '/',
+      maxAge: halkodeFlag === '1' ? HALKODE_PREVIEW_MAX_AGE : 0,
+    });
+    return res;
+  }
 
   if (
     pathname.startsWith('/api/auth') ||
