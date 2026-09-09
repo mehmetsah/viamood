@@ -49,13 +49,15 @@ async function main() {
   console.log(`  app_id          : ${process.env.HALKODE_APP_ID?.length ?? 0} karakter`);
   console.log(`  app_secret      : ${process.env.HALKODE_APP_SECRET?.length ?? 0} karakter`);
   console.log(`  merchant_key    : ${process.env.HALKODE_MERCHANT_KEY?.length ?? 0} karakter`);
-  console.log(`  configured      : ${halkodeConfigured()}`);
-  console.log(`  CANLI ortam mı? : ${halkodeIsLive()}`);
-  if (halkodeIsLive()) {
+  const configured = await halkodeConfigured();
+  const isLive = await halkodeIsLive();
+  console.log(`  configured      : ${configured}`);
+  console.log(`  CANLI ortam mı? : ${isLive}`);
+  if (isLive) {
     no('CANLI ortam tespit edildi — test betiği durduruldu.');
     process.exit(1);
   }
-  if (!halkodeConfigured()) {
+  if (!configured) {
     no('Kimlik bilgileri eksik.');
     process.exit(1);
   }

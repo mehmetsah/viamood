@@ -22,10 +22,12 @@ const DEFAULTS: StoreSettings = {
   payment: {
     iyzico_enabled: true,
     paytr_enabled: false,
+    halkode_enabled: false, // canlı anahtarlar gelene dek KAPALI
     havale_enabled: true,
     cod_enabled: true,
     card_gateway: 'iyzico',
     cod_card_surcharge_pct: 4,
+    halkode_test_mode: 1,
   },
   shipping: { shipping_margin_tl: 20 },
   theme: {},

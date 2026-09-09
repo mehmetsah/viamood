@@ -26,6 +26,7 @@ import {
   decodeHashKey,
   parseDraftIdFromInvoiceId,
   halkodeConfigured,
+  halkodeAppSecret,
   HALKODE_STATUS,
 } from '@/lib/halkode/client';
 
@@ -77,7 +78,7 @@ async function collectParams(req: NextRequest): Promise<Record<string, string>> 
 }
 
 async function handle(req: NextRequest): Promise<NextResponse> {
-  if (!halkodeConfigured()) return failPage('not_configured');
+  if (!(await halkodeConfigured())) return failPage('not_configured');
 
   const p = await collectParams(req);
   const invoiceId = p.invoice_id || '';
@@ -89,7 +90,9 @@ async function handle(req: NextRequest): Promise<NextResponse> {
   }
 
   // 1+2) İMZA — çözülüyor mu, invoice tutuyor mu
-  const parts = decodeHashKey(hashKey, process.env.HALKODE_APP_SECRET || '');
+  // app_secret ayarlardan (yoksa env) — initialize ile AYNI kaynak olmalı, yoksa
+  // imza hiçbir zaman tutmaz ve her ödeme 'bad_signature' ile düşer.
+  const parts = decodeHashKey(hashKey, await halkodeAppSecret());
   if (!parts) {
     console.error('[halkode/callback] hash ÇÖZÜLEMEDİ — işlenmedi', { invoiceId });
     return failPage('bad_signature', invoiceId);

@@ -37,7 +37,7 @@ export async function OPTIONS(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const headers = { 'Content-Type': 'application/json', ...cors(req.headers.get('origin')) };
 
-  if (!halkodeEnabled() || !halkodeConfigured()) {
+  if (!(await halkodeEnabled()) || !(await halkodeConfigured())) {
     return NextResponse.json({ ok: false, error: 'Halköde kapalı.' }, { status: 503, headers });
   }
 

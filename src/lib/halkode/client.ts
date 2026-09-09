@@ -80,34 +80,78 @@ export interface HalkodeHashParts {
   raw: string[]; // ham parçalar (spec dışı sıra çıkarsa teşhis için)
 }
 
-function cfg() {
+/** Test/canlı taban adresleri — İKİSİ DE tek yerde tanımlı. */
+const BASE_TEST = 'https://testapp.halkode.com.tr/ccpayment';
+const BASE_LIVE = 'https://app.halkode.com.tr/ccpayment';
+
+interface HalkodeCfg {
+  baseUrl: string;
+  appId: string;
+  appSecret: string;
+  merchantKey: string;
+  enabled: boolean;
+}
+
+/**
+ * Admin ayarlarını (DB) okur. İyzico/PayTR ile AYNI kalıp: kimlikler önce ayarlardan,
+ * yoksa env'den.
+ *
+ * ⚠️ `import()` DİNAMİK ve try/catch içinde: `scripts/halkode-*.ts` bu modülü Node'un
+ * yerel TS desteğiyle, Next/webpack olmadan çalıştırıyor; orada `@/db/client` alias'ı
+ * çözülmez. İçe aktarma başarısız olursa sessizce env'e düşülür — betikler .env.local
+ * ile çalışmaya devam eder, sunucuda ise ayarlar okunur.
+ */
+async function paymentSettings(): Promise<Partial<import('@/db/schema').PaymentSettings>> {
+  try {
+    const m = await import('../settings/store');
+    return (await m.getStoreSettings()).payment ?? {};
+  } catch {
+    return {};
+  }
+}
+
+async function cfg(): Promise<HalkodeCfg> {
+  const ps = await paymentSettings();
+
+  // Taban adres önceliği:
+  //  1) HALKODE_BASE_URL açıkça verilmişse o (operasyonel override / betikler)
+  //  2) yoksa admin'deki "Test modu" seçimi: 1 → testapp, 0 → app
+  //
+  // Yedek değer TESTAPP olmalı: staging.halkode.com.tr istekleri kabul eder (token verir,
+  // 3D formu üretir) ama üye işyeri POS tanımı orada YOK → banka V004 ile düşer. Doğru
+  // test adresi testapp.halkode.com.tr (bkz. src/lib/env.ts). Bu dosya process.env'i
+  // DOĞRUDAN okuduğu için env.ts'deki zod default'u buraya uygulanmaz — yedek burada da
+  // doğru olmalı, yoksa HALKODE_BASE_URL tanımsızken sessizce staging'e düşeriz.
+  const testMode = ps.halkode_test_mode ?? 1;
+  const baseUrl = (process.env.HALKODE_BASE_URL || (testMode === 0 ? BASE_LIVE : BASE_TEST)).replace(/\/+$/, '');
+
   return {
-    // Yedek değer TESTAPP olmalı: staging.halkode.com.tr istekleri kabul eder (token verir,
-    // 3D formu üretir) ama üye işyeri POS tanımı orada YOK → banka V004 ile düşer. Doğru
-    // test adresi testapp.halkode.com.tr (bkz. src/lib/env.ts). Bu dosya process.env'i
-    // DOĞRUDAN okuduğu için env.ts'deki zod default'u buraya uygulanmaz — yedek burada da
-    // doğru olmalı, yoksa HALKODE_BASE_URL tanımsızken sessizce staging'e düşeriz.
-    baseUrl: (process.env.HALKODE_BASE_URL || 'https://testapp.halkode.com.tr/ccpayment').replace(/\/+$/, ''),
-    appId: process.env.HALKODE_APP_ID || '',
-    appSecret: process.env.HALKODE_APP_SECRET || '',
-    merchantKey: process.env.HALKODE_MERCHANT_KEY || '',
+    baseUrl,
+    appId: ps.halkode_app_id || process.env.HALKODE_APP_ID || '',
+    appSecret: ps.halkode_app_secret || process.env.HALKODE_APP_SECRET || '',
+    merchantKey: ps.halkode_merchant_key || process.env.HALKODE_MERCHANT_KEY || '',
+    enabled: ps.halkode_enabled === true || process.env.HALKODE_ENABLED === 'true' || process.env.HALKODE_ENABLED === '1',
   };
 }
 
 /** Kill switch — kimlik bilgileri dolu olsa bile bu açık değilse ödeme başlatılmaz. */
-export function halkodeEnabled(): boolean {
-  const v = process.env.HALKODE_ENABLED;
-  return v === 'true' || v === '1';
+export async function halkodeEnabled(): Promise<boolean> {
+  return (await cfg()).enabled;
 }
 
-export function halkodeConfigured(): boolean {
-  const c = cfg();
+export async function halkodeConfigured(): Promise<boolean> {
+  const c = await cfg();
   return !!(c.baseUrl && c.appId && c.appSecret && c.merchantKey);
 }
 
 /** Halköde CANLI ortamda mı? (app.halkode.com.tr = canlı, testapp.halkode.com.tr = test) */
-export function halkodeIsLive(): boolean {
-  return /(^|\/\/)app\.halkode\./i.test(cfg().baseUrl);
+export async function halkodeIsLive(): Promise<boolean> {
+  return /(^|\/\/)app\.halkode\./i.test((await cfg()).baseUrl);
+}
+
+/** Dönüş imzasını çözmek için gereken app_secret (ayar → env). */
+export async function halkodeAppSecret(): Promise<string> {
+  return (await cfg()).appSecret;
 }
 
 // ── Hash ────────────────────────────────────────────────────────────────────
@@ -184,7 +228,7 @@ export function decodeHashKey(hashKey: string, appSecret: string): HalkodeHashPa
 export function verifyReturnHash(
   hashKey: string,
   expected: { invoiceId: string; total: number },
-  appSecret = cfg().appSecret,
+  appSecret: string,
 ): { ok: boolean; reason?: string; parts?: HalkodeHashParts } {
   const parts = decodeHashKey(hashKey, appSecret);
   if (!parts) return { ok: false, reason: 'hash çözülemedi (imza geçersiz)' };
@@ -202,7 +246,7 @@ export function verifyReturnHash(
 type Json = Record<string, unknown>;
 
 async function postJson(path: string, body: Json, token?: string): Promise<{ httpStatus: number; json: Json }> {
-  const resp = await fetch(`${cfg().baseUrl}${path}`, {
+  const resp = await fetch(`${(await cfg()).baseUrl}${path}`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -223,7 +267,7 @@ async function postJson(path: string, body: Json, token?: string): Promise<{ htt
 
 /** Token servisi. Token kısa ömürlü; çağrı başına alınır (cache yok — basit ve güvenli). */
 export async function getToken(): Promise<{ ok: true; token: string; is3d: number } | { ok: false; error: string }> {
-  const c = cfg();
+  const c = await cfg();
   if (!c.appId || !c.appSecret) return { ok: false, error: 'HALKODE kimlik bilgileri eksik' };
   try {
     const { json } = await postJson('/api/token', { app_id: c.appId, app_secret: c.appSecret });
@@ -246,7 +290,7 @@ export async function paySmart3D(
   p: Halkode3DParams,
   token: string,
 ): Promise<{ ok: true; html: string } | { ok: false; statusCode: number; error: string; raw?: Json }> {
-  const c = cfg();
+  const c = await cfg();
   const currency = p.currencyCode ?? 'TRY';
   const total = p.total.toFixed(2);
 
@@ -359,7 +403,7 @@ export async function getPos(
       credit_card: creditCardBin.replace(/\s/g, '').slice(0, 6),
       amount,
       currency_code: currencyCode,
-      merchant_key: cfg().merchantKey,
+      merchant_key: (await cfg()).merchantKey,
     },
     token,
   );
@@ -382,7 +426,7 @@ export async function checkStatus(
   invoiceId: string,
   token: string,
 ): Promise<{ ok: boolean; statusCode: number; description: string; data: Json }> {
-  const { json } = await postJson('/api/checkstatus', { invoice_id: invoiceId, merchant_key: cfg().merchantKey }, token);
+  const { json } = await postJson('/api/checkstatus', { invoice_id: invoiceId, merchant_key: (await cfg()).merchantKey }, token);
   const nested = json.data;
   const data: Json = nested && typeof nested === 'object' && Object.keys(nested as Json).length ? (nested as Json) : json;
   const code = Number(json.status_code ?? -1);
@@ -408,7 +452,7 @@ export async function refund(
   amount: number,
   token: string,
 ): Promise<{ ok: boolean; statusCode: number; description: string; data: Json }> {
-  const c = cfg();
+  const c = await cfg();
   const hashKey = encryptBundle([amount.toFixed(2), invoiceId, c.merchantKey].join('|'), c.appSecret);
   const { json } = await postJson(
     '/api/refund',

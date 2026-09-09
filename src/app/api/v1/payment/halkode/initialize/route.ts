@@ -166,10 +166,10 @@ async function createDraftOrder(b: HalkodeInitBody, totalTl: number): Promise<nu
 export async function POST(req: NextRequest) {
   const headers = { 'Content-Type': 'application/json', ...cors(req.headers.get('origin')) };
 
-  if (!halkodeEnabled()) {
+  if (!(await halkodeEnabled())) {
     return NextResponse.json({ ok: false, error: 'Halköde kapalı (HALKODE_ENABLED).' }, { status: 503, headers });
   }
-  if (!halkodeConfigured()) {
+  if (!(await halkodeConfigured())) {
     return NextResponse.json({ ok: false, error: 'Halköde yapılandırılmadı (env eksik).' }, { status: 503, headers });
   }
 
