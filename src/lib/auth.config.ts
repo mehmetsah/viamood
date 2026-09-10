@@ -38,6 +38,8 @@ export const authConfig: NextAuthConfig = {
         '/auth/sign-up',
         '/auth/verify',
         '/auth/error',
+        '/sifremi-unuttum',
+        '/sifre-sifirla',
       ]);
       if (PUBLIC_PATHS.has(pathname)) return true;
       if (pathname.startsWith('/api/auth') || pathname.startsWith('/api/health')) return true;

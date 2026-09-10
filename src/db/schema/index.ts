@@ -1,6 +1,7 @@
 // Re-export all schema modules for Drizzle's relational queries / migrations
 export * from './_shared';
 export * from './auth';
+export * from './password-reset';
 export * from './vendors';
 export * from './products';
 export * from './inventory';

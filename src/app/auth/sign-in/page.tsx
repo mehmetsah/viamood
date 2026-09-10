@@ -15,6 +15,8 @@ function SignInInner() {
   const callbackUrl = searchParams.get('callbackUrl') ?? '/post-login';
   // Müşteri portalından (tema "Hesabım") gelenler tedarikçi metni görmesin
   const musteri = callbackUrl.startsWith('/hesabim');
+  // Şifre sıfırlama akışından dönenlere onay göster (bkz. /sifre-sifirla).
+  const sifreYenilendi = searchParams.get('sifre') === 'yenilendi';
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
@@ -49,6 +51,12 @@ function SignInInner() {
         </p>
       </div>
 
+      {sifreYenilendi && (
+        <p className="text-sm text-green-800 bg-green-50 border border-green-200 rounded-lg px-3 py-2 mb-4">
+          Şifren güncellendi. Yeni şifrenle giriş yapabilirsin.
+        </p>
+      )}
+
       <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-sm border p-8 flex flex-col gap-4">
         <Input
           name="email"
@@ -58,13 +66,21 @@ function SignInInner() {
           required
           autoComplete="email"
         />
-        <Input
-          name="password"
-          type="password"
-          label="Şifre"
-          required
-          autoComplete="current-password"
-        />
+        <div className="flex flex-col gap-1.5">
+          <Input
+            name="password"
+            type="password"
+            label="Şifre"
+            required
+            autoComplete="current-password"
+          />
+          <Link
+            href="/sifremi-unuttum"
+            className="self-end text-sm text-neutral-600 hover:text-[var(--color-brand-orange)] hover:underline"
+          >
+            Şifremi unuttum
+          </Link>
+        </div>
 
         {error && (
           <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">

@@ -12,6 +12,8 @@ const PUBLIC_PATHS = new Set([
   '/auth/customer-sign-up',
   '/auth/verify',
   '/auth/error',
+  '/sifremi-unuttum',
+  '/sifre-sifirla',
 ]);
 
 const ADMIN_PREFIX = '/admin';
