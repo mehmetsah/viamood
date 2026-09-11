@@ -2,6 +2,7 @@
 export * from './_shared';
 export * from './auth';
 export * from './password-reset';
+export * from './welcome-signup';
 export * from './vendors';
 export * from './products';
 export * from './inventory';
