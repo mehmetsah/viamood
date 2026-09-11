@@ -221,37 +221,6 @@
   </div>
   {%- endif -%}
 
-  {%- comment -%} ============ KATEGORİ KARTLARI ============ {%- endcomment -%}
-  {%- assign kategori_var = false -%}
-  {%- for block in section.blocks -%}{%- if block.type == "kategori" -%}{%- assign kategori_var = true -%}{%- endif -%}{%- endfor -%}
-  {%- if kategori_var -%}
-  <section class="vmh2-section vmh2-reveal" id="vmh2-categories">
-    <div class="vmh2-section-head">
-      <div>
-        {%- if sec.kat_kicker != blank -%}<div class="vmh2-section-kicker">{{ sec.kat_kicker }}</div>{%- endif -%}
-        <h2>{{ sec.kat_baslik }}</h2>
-      </div>
-      {%- if sec.kat_not != blank -%}<p class="vmh2-section-note">{{ sec.kat_not }}</p>{%- endif -%}
-    </div>
-    <div class="vmh2-category-grid">
-      {%- for block in section.blocks -%}
-        {%- if block.type == "kategori" -%}
-          <a class="vmh2-category-card" href="{{ block.settings.link | default: '/collections/all' }}" {{ block.shopify_attributes }}>
-            {%- if block.settings.gorsel -%}
-              <img src="{{ block.settings.gorsel | image_url: width: 1200 }}" alt="{{ block.settings.baslik | escape }}" loading="lazy">
-            {%- else -%}
-              <img src="{{ block.settings.gorsel_url | default: 'data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%221600%22 height=%221200%22><rect width=%221600%22 height=%221200%22 fill=%22%23ece5dc%22/></svg>' }}" alt="{{ block.settings.baslik | escape }}" loading="lazy">
-            {%- endif -%}
-            <div class="vmh2-category-copy">
-              {%- if block.settings.alt_metin != blank -%}<small>{{ block.settings.alt_metin }}</small>{%- endif -%}
-              <h3>{{ block.settings.baslik }}</h3>
-            </div>
-          </a>
-        {%- endif -%}
-      {%- endfor -%}
-    </div>
-  </section>
-  {%- endif -%}
 
   {%- comment -%} ============ ÜRÜN VİTRİNİ ============ {%- endcomment -%}
   {%- for block in section.blocks -%}
@@ -552,6 +521,38 @@
       });
     })();
   </script>
+
+  {%- comment -%} ============ KATEGORİ KARTLARI ============ {%- endcomment -%}
+  {%- assign kategori_var = false -%}
+  {%- for block in section.blocks -%}{%- if block.type == "kategori" -%}{%- assign kategori_var = true -%}{%- endif -%}{%- endfor -%}
+  {%- if kategori_var -%}
+  <section class="vmh2-section vmh2-reveal" id="vmh2-categories">
+    <div class="vmh2-section-head">
+      <div>
+        {%- if sec.kat_kicker != blank -%}<div class="vmh2-section-kicker">{{ sec.kat_kicker }}</div>{%- endif -%}
+        <h2>{{ sec.kat_baslik }}</h2>
+      </div>
+      {%- if sec.kat_not != blank -%}<p class="vmh2-section-note">{{ sec.kat_not }}</p>{%- endif -%}
+    </div>
+    <div class="vmh2-category-grid">
+      {%- for block in section.blocks -%}
+        {%- if block.type == "kategori" -%}
+          <a class="vmh2-category-card" href="{{ block.settings.link | default: '/collections/all' }}" {{ block.shopify_attributes }}>
+            {%- if block.settings.gorsel -%}
+              <img src="{{ block.settings.gorsel | image_url: width: 1200 }}" alt="{{ block.settings.baslik | escape }}" loading="lazy">
+            {%- else -%}
+              <img src="{{ block.settings.gorsel_url | default: 'data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%221600%22 height=%221200%22><rect width=%221600%22 height=%221200%22 fill=%22%23ece5dc%22/></svg>' }}" alt="{{ block.settings.baslik | escape }}" loading="lazy">
+            {%- endif -%}
+            <div class="vmh2-category-copy">
+              {%- if block.settings.alt_metin != blank -%}<small>{{ block.settings.alt_metin }}</small>{%- endif -%}
+              <h3>{{ block.settings.baslik }}</h3>
+            </div>
+          </a>
+        {%- endif -%}
+      {%- endfor -%}
+    </div>
+  </section>
+  {%- endif -%}
 
   {%- comment -%} ============ MARKALARIMIZ (V2 carousel — kutulu; yorumların altı) ============ {%- endcomment -%}
   {%- assign marka_var = false -%}
