@@ -87,7 +87,26 @@
     {%- if sec.rozet_goster and sec.rozet_buyuk != blank -%}
     <div class="vmh2-hero-badge"><div><strong>{{ sec.rozet_buyuk }}</strong><small>{{ sec.rozet_metin }}</small></div></div>
     {%- endif -%}
-    {%- if slide_sayisi > 1 -%}<div class="vmh2-hs-dots" role="tablist" aria-label="Slaytlar"></div>{%- endif -%}
+    {%- if slide_sayisi > 1 -%}
+      {%- comment -%}
+        Hero okları (Yunus 11 Eyl 2026). Buton öğesi → klavyeyle erişilebilir.
+        Tıklama `git(i, true)`'ya bağlanır; `true` otomatik geçiş sayacını SIFIRLAR,
+        yani mevcut 6.5 sn'lik akış bozulmaz, kullanıcı müdahalesinden sonra
+        baştan sayar. Banner modunda tüm alanı saran link var — oklar onun
+        ÜSTÜNDE (z-index) durmalı, yoksa tıklama koleksiyona gider.
+      {%- endcomment -%}
+      <button type="button" class="vmh2-hs-ok vmh2-hs-ok--geri" data-vmh2-prev aria-label="Önceki görsel">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <path d="M15 5 8 12l7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+      <button type="button" class="vmh2-hs-ok vmh2-hs-ok--ileri" data-vmh2-next aria-label="Sonraki görsel">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+      <div class="vmh2-hs-dots" role="tablist" aria-label="Slaytlar"></div>
+    {%- endif -%}
     {%- comment -%} Theme Editor: her slayt için seçim katmanı — önizlemede tıkla→solda blok seçilir; solda blok seç→slider o slayta atlar {%- endcomment -%}
     {%- if request.design_mode -%}
       {%- assign hs_i = 0 -%}
@@ -164,6 +183,10 @@
           alanAktifle();
           if(elle) kur();
         }
+        // Hero okları — `git(i,true)` çağrılır; true, autoplay sayacını sıfırlar.
+        var okGeri=hero.querySelector('[data-vmh2-prev]'), okIleri=hero.querySelector('[data-vmh2-next]');
+        if(okGeri) okGeri.addEventListener('click',function(e){ e.preventDefault(); e.stopPropagation(); git(idx-1,true); });
+        if(okIleri) okIleri.addEventListener('click',function(e){ e.preventDefault(); e.stopPropagation(); git(idx+1,true); });
         function kur(){ clearInterval(timer); if(DESIGN) return; if(!window.matchMedia('(prefers-reduced-motion: reduce)').matches){ timer=setInterval(function(){ git(idx+1,false); },6500); } }
         // ilk gösterim: karışık sıranın başı (server ilk bloğu bastı — anında değiştir)
         if(imgA) imgA.classList.add('vmh2-hm-gorunur');
@@ -733,12 +756,45 @@
   .vmh2-hs-dots{position:absolute;left:70px;bottom:34px;z-index:6;display:flex;gap:8px}
   /* Banner modu: görsel kendi tasarımını taşıyor → metin/gradyan/rozet kapatılır,
      yükseklik 3:2'ye sabitlenir (banner'lar 4:3 ve 3:2; cover ile kırpma ~%6 kalır). */
-  .vmh2-hero--banner{min-height:0;aspect-ratio:3/2;background:#14110e}
+  /* Banner modu oranı: 11 Eyl 2026'da gelen yeni banner'lar 1600x707 (~2.26:1).
+     Eskiden 3/2 (1.5) idi; bu oranda yeni görsellerin SOL ve SAĞ kenarındaki
+     ürünler `object-fit:cover` ile kırpılıyordu. Oran görselin kendi oranına
+     çekildi → kırpma yok. Yeni banner setinde oran değişirse burayı güncelle. */
+  .vmh2-hero--banner{min-height:0;aspect-ratio:1600/707;background:#14110e}
+
+  /* ── Hero okları (prev/next) ──────────────────────────────────────────────
+     Dokunma hedefi 48x48 (min 44 şartı). Kontrast: koyu yarı saydam daire +
+     beyaz çizgi ikon → açık ve koyu banner'ların ikisinde de okunur.
+     z-index banner modundaki tam alan linkinin (z-index:4) ÜSTÜNDE. */
+  .vmh2-hs-ok{
+    position:absolute; top:50%; transform:translateY(-50%);
+    z-index:6; width:48px; height:48px; padding:0;
+    display:grid; place-items:center;
+    border:0; border-radius:50%; cursor:pointer;
+    color:#fff; background:rgba(20,17,14,.42);
+    -webkit-backdrop-filter:blur(3px); backdrop-filter:blur(3px);
+    box-shadow:0 2px 10px rgba(0,0,0,.28);
+    transition:background .15s ease, transform .15s ease;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .vmh2-hs-ok svg{width:24px;height:24px;display:block}
+  .vmh2-hs-ok:hover{background:rgba(20,17,14,.64)}
+  .vmh2-hs-ok:active{transform:translateY(-50%) scale(.94)}
+  .vmh2-hs-ok:focus-visible{outline:3px solid #fff;outline-offset:2px}
+  .vmh2-hs-ok--geri{left:14px}
+  .vmh2-hs-ok--ileri{right:14px}
+  @media (max-width:749px){
+    .vmh2-hs-ok{width:44px;height:44px}
+    .vmh2-hs-ok svg{width:21px;height:21px}
+    .vmh2-hs-ok--geri{left:8px}
+    .vmh2-hs-ok--ileri{right:8px}
+  }
+  @media (prefers-reduced-motion:reduce){ .vmh2-hs-ok{transition:none} }
   .vmh2-hero--banner .vmh2-hero-media::after{display:none}
   .vmh2-hero--banner .vmh2-hero-content{display:none}
   .vmh2-hero--banner .vmh2-hero-badge{display:none}
   .vmh2-hero-link{position:absolute;inset:0;z-index:4;display:block}
-  @media (max-width:749px){ .vmh2-hero--banner{aspect-ratio:4/3} .vmh2-hero--banner .vmh2-hs-dots{left:50%;transform:translateX(-50%);bottom:14px} }
+  @media (max-width:749px){ .vmh2-hero--banner{aspect-ratio:1600/707} .vmh2-hero--banner .vmh2-hs-dots{left:50%;transform:translateX(-50%);bottom:14px} }
   .vmh2-hs-dots button{width:10px;height:10px;border-radius:50%;border:0;padding:0;background:rgba(255,255,255,.45);cursor:pointer;transition:.2s}
   .vmh2-hs-dots button.aktif{background:#fff;transform:scale(1.25)}
   @media(max-width:720px){.vmh2-hs-dots{left:20px;bottom:14px}}

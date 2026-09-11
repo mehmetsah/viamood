@@ -8,7 +8,7 @@
           "settings": {
             "ikon": "★",
             "baslik": "Çok Satanlar",
-            "link": "shopify:\/\/collections\/cok-satanlar-1"
+            "link": "shopify://collections/cok-satanlar-1"
           }
         },
         "hizli2": {
@@ -16,7 +16,7 @@
           "settings": {
             "ikon": "⌂",
             "baslik": "Mutfak",
-            "link": "shopify:\/\/collections\/mutfak"
+            "link": "shopify://collections/mutfak"
           }
         },
         "hizli3": {
@@ -24,7 +24,7 @@
           "settings": {
             "ikon": "✦",
             "baslik": "Hobi Ürünleri",
-            "link": "shopify:\/\/collections\/hobi-1"
+            "link": "shopify://collections/hobi-1"
           }
         },
         "hizli4": {
@@ -32,7 +32,7 @@
           "settings": {
             "ikon": "₺",
             "baslik": "500 TL Altı",
-            "link": "shopify:\/\/collections\/500-tl-alti"
+            "link": "shopify://collections/500-tl-alti"
           }
         },
         "hizli5": {
@@ -40,30 +40,7 @@
           "settings": {
             "ikon": "%",
             "baslik": "İndirim",
-            "link": "shopify:\/\/collections\/indirim"
-          }
-        },
-        "hs_banner_1": {
-          "type": "hero_slide",
-          "settings": {
-            "gorsel": "shopify:\/\/shop_images\/MUTFAK_saklama_kutularina_ozel_7d87bce1-d3d0-46d2-8809-5721421dacb3.jpg",
-            "gorsel_url": "",
-            "eyebrow": "MOOD10OFF ile sepette %10 indirim",
-            "baslik": "",
-            "metin": "",
-            "cta": "",
-            "cta_link": "\/collections\/all"
-          }
-        },
-        "hs_banner_2": {
-          "type": "hero_slide",
-          "settings": {
-            "gorsel_url": "\/\/viamood.com.tr\/cdn\/shop\/t\/3\/assets\/via-hero-banner-2.jpg",
-            "eyebrow": "Çok Al Az Öde — Süper-Bag depolama",
-            "baslik": "",
-            "metin": "",
-            "cta": "",
-            "cta_link": "\/collections\/hobi-1"
+            "link": "shopify://collections/indirim"
           }
         },
         "av1": {
@@ -101,41 +78,41 @@
         "kat1": {
           "type": "kategori",
           "settings": {
-            "gorsel": "shopify:\/\/shop_images\/Mutfak_-_Kategori_kartlari_1_dikey_1200x1500_e86cd6d5-85ab-4010-b73b-0e61ef98d22b.png",
-            "gorsel_url": "https:\/\/images.unsplash.com\/photo-1556911220-bff31c812dba?auto=format&fit=crop&w=1200&q=85",
+            "gorsel": "shopify://shop_images/Mutfak_-_Kategori_kartlari_1_dikey_1200x1500_e86cd6d5-85ab-4010-b73b-0e61ef98d22b.png",
+            "gorsel_url": "https://images.unsplash.com/photo-1556911220-bff31c812dba?auto=format&fit=crop&w=1200&q=85",
             "baslik": "Mutfak",
             "alt_metin": "58 ürün",
-            "link": "\/collections\/saklama-kabi"
+            "link": "/collections/saklama-kabi"
           }
         },
         "kat2": {
           "type": "kategori",
           "settings": {
-            "gorsel": "shopify:\/\/shop_images\/Banyo_1_kare_1200x1000_0b780bfa-a419-41f2-bf2d-c7a3bbfc259d.png",
-            "gorsel_url": "https:\/\/images.unsplash.com\/photo-1552321554-5fefe8c9ef14?auto=format&fit=crop&w=900&q=85",
+            "gorsel": "shopify://shop_images/Banyo_1_kare_1200x1000_0b780bfa-a419-41f2-bf2d-c7a3bbfc259d.png",
+            "gorsel_url": "https://images.unsplash.com/photo-1552321554-5fefe8c9ef14?auto=format&fit=crop&w=900&q=85",
             "baslik": "Banyo",
             "alt_metin": "12 ürün",
-            "link": "\/collections\/banyo"
+            "link": "/collections/banyo"
           }
         },
         "kat3": {
           "type": "kategori",
           "settings": {
-            "gorsel": "shopify:\/\/shop_images\/ev_yasam_1_kare_1200x1000_0d83517d-f27b-49ee-815a-99e14fc646c4.png",
-            "gorsel_url": "https:\/\/images.unsplash.com\/photo-1494438639946-1ebd1d20bf85?auto=format&fit=crop&w=900&q=85",
+            "gorsel": "shopify://shop_images/ev_yasam_1_kare_1200x1000_0d83517d-f27b-49ee-815a-99e14fc646c4.png",
+            "gorsel_url": "https://images.unsplash.com/photo-1494438639946-1ebd1d20bf85?auto=format&fit=crop&w=900&q=85",
             "baslik": "Ev & Yaşam",
             "alt_metin": "135 ürün",
-            "link": "shopify:\/\/collections\/ev-ve-yasam"
+            "link": "shopify://collections/ev-ve-yasam"
           }
         },
         "kat4": {
           "type": "kategori",
           "settings": {
-            "gorsel": "shopify:\/\/shop_images\/Hobi_Keyif_1_genis_1600x700_285f97f6-a214-41e7-8b21-2f09a7af909b.png",
-            "gorsel_url": "https:\/\/images.unsplash.com\/photo-1523413651479-597eb2da0ad6?auto=format&fit=crop&w=1500&q=85",
+            "gorsel": "shopify://shop_images/Hobi_Keyif_1_genis_1600x700_285f97f6-a214-41e7-8b21-2f09a7af909b.png",
+            "gorsel_url": "https://images.unsplash.com/photo-1523413651479-597eb2da0ad6?auto=format&fit=crop&w=1500&q=85",
             "baslik": "",
             "alt_metin": "",
-            "link": "shopify:\/\/collections\/hobi-1"
+            "link": "shopify://collections/hobi-1"
           }
         },
         "urun1": {
@@ -157,8 +134,8 @@
             "baslik": "Düzen sadece görünüm değil, iyi hissetme biçimi.",
             "metin": "Günlük rutini kolaylaştıran, evin estetiğine uyum sağlayan ve uzun süre severek kullanabileceğin ürünleri bir araya getiriyoruz.",
             "cta": "Hikâyemizi Oku →",
-            "link": "\/pages\/hakkimizda",
-            "gorsel": "shopify:\/\/shop_images\/1400x1260_-_hikaye1.png",
+            "link": "/pages/hakkimizda",
+            "gorsel": "shopify://shop_images/1400x1260_-_hikaye1.png",
             "etiket": "Seçili ürünler · doğal tonlar · günlük konfor"
           }
         },
@@ -181,8 +158,8 @@
             "kicker": "Mutfakta düzen",
             "baslik": "Saklama Kabı",
             "metin": "Tezgahtan kilere: sızdırmaz kapaklar, istiflenebilir formlar ve etiketli setlerle mutfağın her santimi kazanca döner.",
-            "gorsel": "shopify:\/\/shop_images\/Saklama_Kabi_1500x920_ed08bb0a-1f09-40bb-986a-1850f3655620.png",
-            "gorsel_url": "https:\/\/images.unsplash.com\/photo-1556911220-bff31c812dba?auto=format&fit=crop&w=1400&q=85",
+            "gorsel": "shopify://shop_images/Saklama_Kabi_1500x920_ed08bb0a-1f09-40bb-986a-1850f3655620.png",
+            "gorsel_url": "https://images.unsplash.com/photo-1556911220-bff31c812dba?auto=format&fit=crop&w=1400&q=85",
             "urun_adedi": 3,
             "cta": "Ürünleri keşfet →"
           }
@@ -194,8 +171,8 @@
             "kicker": "Yaşam alanları",
             "baslik": "Ev & Yaşam",
             "metin": "Mutfaktan Salona; evine karakter katan işlevsel ve estetik parçalar.",
-            "gorsel": "shopify:\/\/shop_images\/ChatGPT_Image_16_Tem_2026_15_36_26.png",
-            "gorsel_url": "https:\/\/images.unsplash.com\/photo-1600210492486-724fe5c67fb0?auto=format&fit=crop&w=1400&q=85",
+            "gorsel": "shopify://shop_images/ChatGPT_Image_16_Tem_2026_15_36_26.png",
+            "gorsel_url": "https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?auto=format&fit=crop&w=1400&q=85",
             "urun_adedi": 3,
             "cta": "Ürünlere git →"
           }
@@ -207,8 +184,8 @@
             "kicker": "Dolapta düzen",
             "baslik": "Dolap İçi Düzenleyici",
             "metin": "Rafların arasından dikey alan kazanın; her şey görünür, her şey erişilebilir.",
-            "gorsel": "shopify:\/\/shop_images\/ChatGPT_Image_16_Tem_2026_16_26_39.png",
-            "gorsel_url": "https:\/\/images.unsplash.com\/photo-1523413651479-597eb2da0ad6?auto=format&fit=crop&w=1400&q=85",
+            "gorsel": "shopify://shop_images/ChatGPT_Image_16_Tem_2026_16_26_39.png",
+            "gorsel_url": "https://images.unsplash.com/photo-1523413651479-597eb2da0ad6?auto=format&fit=crop&w=1400&q=85",
             "urun_adedi": 3,
             "cta": "Düzenleyicileri gör →"
           }
@@ -226,7 +203,7 @@
         "marka1": {
           "type": "marka",
           "settings": {
-            "gorsel": "shopify:\/\/shop_images\/via-marka-nandyhome.jpg",
+            "gorsel": "shopify://shop_images/via-marka-nandyhome.jpg",
             "isim": "NandyHome",
             "link": "",
             "acik_renk": false
@@ -235,7 +212,7 @@
         "marka2": {
           "type": "marka",
           "settings": {
-            "gorsel": "shopify:\/\/shop_images\/via-marka-asrin.png",
+            "gorsel": "shopify://shop_images/via-marka-asrin.png",
             "isim": "Asrın Plastik",
             "link": "",
             "acik_renk": true
@@ -244,7 +221,7 @@
         "marka3": {
           "type": "marka",
           "settings": {
-            "gorsel": "shopify:\/\/shop_images\/via-marka-prateaco.png",
+            "gorsel": "shopify://shop_images/via-marka-prateaco.png",
             "isim": "Prateaco",
             "link": "",
             "acik_renk": false
@@ -253,7 +230,7 @@
         "marka4": {
           "type": "marka",
           "settings": {
-            "gorsel": "shopify:\/\/shop_images\/via-marka-hotwheels.png",
+            "gorsel": "shopify://shop_images/via-marka-hotwheels.png",
             "isim": "Hot Wheels",
             "link": "",
             "acik_renk": false
@@ -262,7 +239,7 @@
         "marka5": {
           "type": "marka",
           "settings": {
-            "gorsel": "shopify:\/\/shop_images\/via-marka-knauf.png",
+            "gorsel": "shopify://shop_images/via-marka-knauf.png",
             "isim": "Knauf",
             "link": "",
             "acik_renk": false
@@ -271,7 +248,7 @@
         "marka6": {
           "type": "marka",
           "settings": {
-            "gorsel": "shopify:\/\/shop_images\/via-marka-supercell.png",
+            "gorsel": "shopify://shop_images/via-marka-supercell.png",
             "isim": "Supercell",
             "link": "",
             "acik_renk": false
@@ -280,7 +257,7 @@
         "marka7": {
           "type": "marka",
           "settings": {
-            "gorsel": "shopify:\/\/shop_images\/via-marka-squishmallows.png",
+            "gorsel": "shopify://shop_images/via-marka-squishmallows.png",
             "isim": "Squishmallows",
             "link": "",
             "acik_renk": false
@@ -289,7 +266,7 @@
         "marka8": {
           "type": "marka",
           "settings": {
-            "gorsel": "shopify:\/\/shop_images\/via-marka-playmobil.png",
+            "gorsel": "shopify://shop_images/via-marka-playmobil.png",
             "isim": "Playmobil",
             "link": "",
             "acik_renk": false
@@ -298,7 +275,7 @@
         "marka9": {
           "type": "marka",
           "settings": {
-            "gorsel": "shopify:\/\/shop_images\/via-marka-marka9.webp",
+            "gorsel": "shopify://shop_images/via-marka-marka9.webp",
             "isim": "Brawl Stars",
             "link": "",
             "acik_renk": false
@@ -307,7 +284,7 @@
         "marka10": {
           "type": "marka",
           "settings": {
-            "gorsel": "shopify:\/\/shop_images\/via-marka-minecraft.png",
+            "gorsel": "shopify://shop_images/via-marka-minecraft.png",
             "isim": "Minecraft",
             "link": "",
             "acik_renk": false
@@ -316,7 +293,7 @@
         "marka11": {
           "type": "marka",
           "settings": {
-            "gorsel": "shopify:\/\/shop_images\/via-marka-stumbleguys.png",
+            "gorsel": "shopify://shop_images/via-marka-stumbleguys.png",
             "isim": "Stumble Guys",
             "link": "",
             "acik_renk": false
@@ -325,7 +302,7 @@
         "marka12": {
           "type": "marka",
           "settings": {
-            "gorsel": "shopify:\/\/shop_images\/via-marka-giochi.png",
+            "gorsel": "shopify://shop_images/via-marka-giochi.png",
             "isim": "Giochi Preziosi",
             "link": "",
             "acik_renk": false
@@ -334,7 +311,7 @@
         "marka13": {
           "type": "marka",
           "settings": {
-            "gorsel": "shopify:\/\/shop_images\/via-marka-goojitzu.png",
+            "gorsel": "shopify://shop_images/via-marka-goojitzu.png",
             "isim": "Heroes of Goo Jit Zu",
             "link": "",
             "acik_renk": false
@@ -343,7 +320,7 @@
         "marka14": {
           "type": "marka",
           "settings": {
-            "gorsel": "shopify:\/\/shop_images\/via-marka-metalmachines.png",
+            "gorsel": "shopify://shop_images/via-marka-metalmachines.png",
             "isim": "Metal Machines",
             "link": "",
             "acik_renk": false
@@ -352,7 +329,7 @@
         "marka15": {
           "type": "marka",
           "settings": {
-            "gorsel": "shopify:\/\/shop_images\/via-marka-minnie.png",
+            "gorsel": "shopify://shop_images/via-marka-minnie.png",
             "isim": "Minnie Mouse",
             "link": "",
             "acik_renk": false
@@ -361,10 +338,54 @@
         "marka16": {
           "type": "marka",
           "settings": {
-            "gorsel": "shopify:\/\/shop_images\/via-marka-marka16.jpg",
+            "gorsel": "shopify://shop_images/via-marka-marka16.jpg",
             "isim": "Rainbocorns",
             "link": "",
             "acik_renk": false
+          }
+        },
+        "hs_2609_1": {
+          "type": "hero_slide",
+          "settings": {
+            "gorsel_url": "//viamood.com.tr/cdn/shop/t/5/assets/via-hero-2609-1-setler.jpg",
+            "eyebrow": "Avantajlı Setler — Baharatlık & Bakliyat Saklama Kapları",
+            "baslik": "",
+            "metin": "",
+            "cta": "",
+            "cta_link": "/collections/saklama-kabi"
+          }
+        },
+        "hs_2609_2": {
+          "type": "hero_slide",
+          "settings": {
+            "gorsel_url": "//viamood.com.tr/cdn/shop/t/5/assets/via-hero-2609-2-hobi.jpg",
+            "eyebrow": "Çok Al Az Öde — Hobi Ürün Grupları",
+            "baslik": "",
+            "metin": "",
+            "cta": "",
+            "cta_link": "/collections/hobi-1"
+          }
+        },
+        "hs_2609_3": {
+          "type": "hero_slide",
+          "settings": {
+            "gorsel_url": "//viamood.com.tr/cdn/shop/t/5/assets/via-hero-2609-3-mikrodalga.jpg",
+            "eyebrow": "Mikrodalga ve Dipfrize Uygun — Buzdolabı & Buzluk Düzeni",
+            "baslik": "",
+            "metin": "",
+            "cta": "",
+            "cta_link": "/collections/saklama-duzen"
+          }
+        },
+        "hs_2609_4": {
+          "type": "hero_slide",
+          "settings": {
+            "gorsel_url": "//viamood.com.tr/cdn/shop/t/5/assets/via-hero-2609-4-oyuncak.jpg",
+            "eyebrow": "Her Yaşa Bir Oyun — Oyuncaklarla Eğlenceyi Keşfet",
+            "baslik": "",
+            "metin": "",
+            "cta": "",
+            "cta_link": "/collections/oyuncak"
           }
         }
       },
@@ -374,8 +395,10 @@
         "hizli3",
         "hizli4",
         "hizli5",
-        "hs_banner_1",
-        "hs_banner_2",
+        "hs_2609_1",
+        "hs_2609_2",
+        "hs_2609_3",
+        "hs_2609_4",
         "av1",
         "av2",
         "av3",
@@ -411,7 +434,7 @@
       "settings": {
         "hero_karisik": false,
         "hero_cta1": "Koleksiyonu Keşfet →",
-        "hero_cta1_link": "\/collections\/all",
+        "hero_cta1_link": "/collections/all",
         "hero_cta2": "Kategorilere Bak",
         "hero_cta2_link": "#vmh2-categories",
         "rozet_goster": false,
