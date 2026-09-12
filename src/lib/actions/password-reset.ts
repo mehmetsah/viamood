@@ -5,7 +5,7 @@ import { z } from 'zod';
 import {
   consumeResetToken,
   requestPasswordReset,
-  RESET_TOKEN_TTL_MS,
+  ttlMetni,
 } from '@/lib/password-reset';
 import { validatePassword } from '@/lib/password';
 import type { ActionResult } from './auth';
@@ -91,10 +91,10 @@ export async function resetPasswordAction(formData: FormData): Promise<ActionRes
 
   const res = await consumeResetToken({ token, newPassword: password });
   if (!res.ok) {
-    const saat = Math.round(RESET_TOKEN_TTL_MS / 3_600_000);
+    const sure = ttlMetni();
     const mesaj =
       res.reason === 'expired'
-        ? `Bu bağlantının süresi dolmuş (${saat} saat geçerliydi). Lütfen yeni bir bağlantı iste.`
+        ? `Bu bağlantının süresi dolmuş (${sure} geçerliydi). Lütfen yeni bir bağlantı iste.`
         : res.reason === 'used'
           ? 'Bu bağlantı daha önce kullanılmış. Lütfen yeni bir bağlantı iste.'
           : 'Bağlantı geçersiz. Lütfen yeni bir bağlantı iste.';

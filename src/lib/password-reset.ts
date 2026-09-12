@@ -19,8 +19,20 @@ import { passwordResetEmail } from '@/lib/email/templates';
 import { env } from '@/lib/env';
 import { hashPassword } from '@/lib/password';
 
-/** Token geçerlilik süresi. Görev şartı: "en az 1 saat". */
-export const RESET_TOKEN_TTL_MS = 60 * 60 * 1000;
+/** Token geçerlilik süresi. #46 şartı: 30 dakika standart. */
+export const RESET_TOKEN_TTL_MS = 30 * 60 * 1000;
+
+/**
+ * TTL'i kullanıcıya gösterilecek Türkçe metne çevirir ("30 dakika" / "2 saat").
+ * Tek yerde durur ki mail, sayfa ve hata mesajları AYNI süreyi söylesin —
+ * TTL değişince metinler otomatik uyar.
+ */
+export function ttlMetni(ms: number = RESET_TOKEN_TTL_MS): string {
+  const dakika = Math.round(ms / 60000);
+  if (dakika < 60) return `${dakika} dakika`;
+  const saat = dakika / 60;
+  return `${Number.isInteger(saat) ? saat : saat.toFixed(1)} saat`;
+}
 
 /** Hız sınırı: aynı e-posta için saatte en fazla bu kadar istek. */
 const RATE_LIMIT_PER_EMAIL = 3;

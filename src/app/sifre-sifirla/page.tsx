@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { checkResetToken, RESET_TOKEN_TTL_MS } from '@/lib/password-reset';
+import { checkResetToken, ttlMetni } from '@/lib/password-reset';
 import { Logo } from '@/components/ui/Logo';
 import { ResetForm } from './ResetForm';
 
@@ -17,13 +17,13 @@ export default async function SifreSifirlaPage({
 }) {
   const { token } = await searchParams;
   const check = await checkResetToken(token ?? '');
-  const saat = Math.round(RESET_TOKEN_TTL_MS / 3_600_000);
+  const sure = ttlMetni();
 
   const hataMetni =
     check.valid === true
       ? null
       : check.reason === 'expired'
-        ? `Bu bağlantının süresi dolmuş (${saat} saat geçerliydi).`
+        ? `Bu bağlantının süresi dolmuş (${sure} geçerliydi).`
         : check.reason === 'used'
           ? 'Bu bağlantı daha önce kullanılmış.'
           : 'Bağlantı geçersiz.';

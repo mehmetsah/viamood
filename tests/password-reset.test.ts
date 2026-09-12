@@ -42,7 +42,7 @@ vi.mock('@/lib/email/sender', () => ({
 // (Drizzle sorgu kurucusunu taklit etmek yerine servisin sözleşmesini test ediyoruz.)
 const sha256 = (v: string) => createHash('sha256').update(v).digest('hex');
 
-const TTL = 60 * 60 * 1000;
+const TTL = 30 * 60 * 1000;
 const LIMIT_EMAIL = 3;
 const WINDOW = 60 * 60 * 1000;
 
@@ -138,7 +138,7 @@ describe('şifre sıfırlama — token yaşam döngüsü', () => {
     expect(state.users[0]!.passwordHash).toBe('bcrypt:YeniSifre1');
   });
 
-  it('süresi geçmiş token reddedilir (1 saat + 1 dk sonra)', () => {
+  it('süresi geçmiş token reddedilir (30 dk + 1 dk sonra)', () => {
     const t0 = Date.now();
     const r = requestReset('var@example.com', '1.1.1.1', t0);
     const sonra = t0 + TTL + 60_000;
@@ -148,7 +148,7 @@ describe('şifre sıfırlama — token yaşam döngüsü', () => {
     });
   });
 
-  it('token tam 1 saat boyunca geçerli kalır', () => {
+  it('token tam 30 dakika boyunca geçerli kalır', () => {
     const t0 = Date.now();
     const r = requestReset('var@example.com', '1.1.1.1', t0);
     expect(checkToken(r.ok ? r.token! : '', t0 + TTL - 1000).valid).toBe(true);
