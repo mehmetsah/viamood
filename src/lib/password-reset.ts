@@ -34,11 +34,22 @@ export function ttlMetni(ms: number = RESET_TOKEN_TTL_MS): string {
   return `${Number.isInteger(saat) ? saat : saat.toFixed(1)} saat`;
 }
 
-/** Hız sınırı: aynı e-posta için saatte en fazla bu kadar istek. */
-const RATE_LIMIT_PER_EMAIL = 3;
-/** Hız sınırı: aynı IP için saatte en fazla bu kadar istek. */
-const RATE_LIMIT_PER_IP = 10;
+/**
+ * Hız sınırı İKİ pencereli çalışır:
+ *
+ *  · DAKİKALIK pencere ani seri (burst) isteği keser. Yalnız saatlik sınır olsaydı
+ *    3 istek aynı saniyede atılabilir, kullanıcının kutusuna üst üste mail düşerdi.
+ *  · SAATLİK pencere uzun soluklu taciz/sayım denemesini keser.
+ *
+ * İkisi birden uygulanır; hangisi önce dolarsa istek reddedilir.
+ */
+const RATE_WINDOW_MIN_MS = 60 * 1000;
+const RATE_LIMIT_PER_EMAIL_MIN = 1;
+const RATE_LIMIT_PER_IP_MIN = 3;
+
 const RATE_WINDOW_MS = 60 * 60 * 1000;
+const RATE_LIMIT_PER_EMAIL = 3;
+const RATE_LIMIT_PER_IP = 10;
 
 function sha256(value: string): string {
   return createHash('sha256').update(value).digest('hex');
@@ -86,11 +97,20 @@ export async function requestPasswordReset(params: {
   const email = params.email.toLowerCase().trim();
   const ip = params.ip?.trim() || null;
 
-  const perEmail = await countSince('email', email, RATE_WINDOW_MS);
-  if (perEmail >= RATE_LIMIT_PER_EMAIL) return { ok: false, reason: 'rate_limited' };
+  // Dakikalık pencere (burst kesici) ÖNCE — en ucuz ret yolu.
+  if ((await countSince('email', email, RATE_WINDOW_MIN_MS)) >= RATE_LIMIT_PER_EMAIL_MIN) {
+    return { ok: false, reason: 'rate_limited' };
+  }
+  if ((await countSince('email', email, RATE_WINDOW_MS)) >= RATE_LIMIT_PER_EMAIL) {
+    return { ok: false, reason: 'rate_limited' };
+  }
   if (ip) {
-    const perIp = await countSince('request_ip', ip, RATE_WINDOW_MS);
-    if (perIp >= RATE_LIMIT_PER_IP) return { ok: false, reason: 'rate_limited' };
+    if ((await countSince('request_ip', ip, RATE_WINDOW_MIN_MS)) >= RATE_LIMIT_PER_IP_MIN) {
+      return { ok: false, reason: 'rate_limited' };
+    }
+    if ((await countSince('request_ip', ip, RATE_WINDOW_MS)) >= RATE_LIMIT_PER_IP) {
+      return { ok: false, reason: 'rate_limited' };
+    }
   }
 
   const [user] = await db

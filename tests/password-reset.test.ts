@@ -45,15 +45,19 @@ const sha256 = (v: string) => createHash('sha256').update(v).digest('hex');
 const TTL = 30 * 60 * 1000;
 const LIMIT_EMAIL = 3;
 const WINDOW = 60 * 60 * 1000;
+const LIMIT_EMAIL_MIN = 1;
+const WINDOW_MIN = 60 * 1000;
 
-function countSince(email: string) {
-  const since = Date.now() - WINDOW;
+function countSince(email: string, pencere = WINDOW, now = Date.now()) {
+  const since = now - pencere;
   return state.rows.filter((r) => r.email === email && r.createdAt.getTime() > since).length;
 }
 
 function requestReset(email: string, ip: string | null, now = Date.now()) {
   email = email.toLowerCase().trim();
-  if (countSince(email) >= LIMIT_EMAIL) return { ok: false as const, reason: 'rate_limited' as const };
+  // dakikalık pencere (burst kesici) önce, sonra saatlik
+  if (countSince(email, WINDOW_MIN, now) >= LIMIT_EMAIL_MIN) return { ok: false as const, reason: 'rate_limited' as const };
+  if (countSince(email, WINDOW, now) >= LIMIT_EMAIL) return { ok: false as const, reason: 'rate_limited' as const };
   const user = state.users.find((u) => u.email === email);
   const token = `tok-${++seq}`;
   state.rows.push({
@@ -155,10 +159,12 @@ describe('şifre sıfırlama — token yaşam döngüsü', () => {
   });
 
   it('şifre değişince kullanıcının DİĞER bekleyen tokenları da iptal olur', () => {
-    const a = requestReset('var@example.com', '1.1.1.1');
-    const b = requestReset('var@example.com', '1.1.1.1');
-    consumeToken(a.ok ? a.token! : '', 'YeniSifre1');
-    expect(consumeToken(b.ok ? b.token! : '', 'BaskaSifre2')).toEqual({ ok: false, reason: 'used' });
+    const t = Date.now();
+    // iki talep dakikalık sınıra takılmasın diye 2 dk arayla
+    const a = requestReset('var@example.com', '1.1.1.1', t);
+    const b = requestReset('var@example.com', '1.1.1.1', t + 120_000);
+    consumeToken(a.ok ? a.token! : '', 'YeniSifre1', t + 180_000);
+    expect(consumeToken(b.ok ? b.token! : '', 'BaskaSifre2', t + 181_000)).toEqual({ ok: false, reason: 'used' });
   });
 
   it('uydurma token geçersizdir', () => {
@@ -178,10 +184,12 @@ describe('şifre sıfırlama — ham token DB’de tutulmaz', () => {
 
 describe('şifre sıfırlama — hız sınırı', () => {
   it('aynı e-posta için saatte 3 istekten sonrası reddedilir', () => {
-    expect(requestReset('var@example.com', '1.1.1.1').ok).toBe(true);
-    expect(requestReset('var@example.com', '1.1.1.1').ok).toBe(true);
-    expect(requestReset('var@example.com', '1.1.1.1').ok).toBe(true);
-    expect(requestReset('var@example.com', '1.1.1.1')).toEqual({
+    const t = Date.now();
+    // dakikalık sınıra takılmamak için istekler 2'şer dakika arayla
+    expect(requestReset('var@example.com', '1.1.1.1', t).ok).toBe(true);
+    expect(requestReset('var@example.com', '1.1.1.1', t + 120_000).ok).toBe(true);
+    expect(requestReset('var@example.com', '1.1.1.1', t + 240_000).ok).toBe(true);
+    expect(requestReset('var@example.com', '1.1.1.1', t + 360_000)).toEqual({
       ok: false,
       reason: 'rate_limited',
     });
@@ -195,9 +203,22 @@ describe('şifre sıfırlama — hız sınırı', () => {
     expect(requestReset('var@example.com', '1.1.1.1', t0).ok).toBe(true);
   });
 
+  it('DAKİKALIK pencere ani seri isteği keser (burst)', () => {
+    const t = Date.now();
+    expect(requestReset('var@example.com', '1.1.1.1', t).ok).toBe(true);
+    // aynı saniyede ikinci istek → reddedilmeli
+    expect(requestReset('var@example.com', '1.1.1.1', t + 1000)).toEqual({
+      ok: false,
+      reason: 'rate_limited',
+    });
+    // 61 sn sonra tekrar serbest
+    expect(requestReset('var@example.com', '1.1.1.1', t + 61_000).ok).toBe(true);
+  });
+
   it('hız sınırı kayıtsız e-postada da çalışır (sayım denemesini yavaşlatır)', () => {
-    for (let i = 0; i < 3; i++) requestReset('yok@example.com', '1.1.1.1');
-    expect(requestReset('yok@example.com', '1.1.1.1')).toEqual({
+    const t0b = Date.now();
+    for (let i = 0; i < 3; i++) requestReset('yok@example.com', '1.1.1.1', t0b + i * 120_000);
+    expect(requestReset('yok@example.com', '1.1.1.1', t0b + 360_000)).toEqual({
       ok: false,
       reason: 'rate_limited',
     });
