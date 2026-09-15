@@ -1,0 +1,142 @@
+'use client';
+
+import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { Suspense, useState, type FormEvent } from 'react';
+import { signIn } from 'next-auth/react';
+import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
+import { Logo } from '@/components/ui/Logo';
+
+function SignInInner({ sosyal }: { sosyal: { google: boolean } }) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  // Özel hedef yoksa /post-login → role'e göre (customer→/hesabim, vendor→/dashboard, admin→/admin)
+  const callbackUrl = searchParams.get('callbackUrl') ?? '/post-login';
+  // Müşteri portalından (tema "Hesabım") gelenler tedarikçi metni görmesin
+  const musteri = callbackUrl.startsWith('/hesabim');
+  const [error, setError] = useState<string | null>(null);
+  const [pending, setPending] = useState(false);
+
+  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setError(null);
+    setPending(true);
+    const formData = new FormData(e.currentTarget);
+    const result = await signIn('credentials', {
+      email: String(formData.get('email') ?? ''),
+      password: String(formData.get('password') ?? ''),
+      redirect: false,
+    });
+    setPending(false);
+    if (result?.error) {
+      setError('E-posta veya şifre hatalı');
+      return;
+    }
+    router.push(callbackUrl);
+    router.refresh();
+  }
+
+  return (
+    <>
+      <div className="text-center mb-8">
+        <Link href="/" className="inline-block mb-4">
+          <Logo width={140} />
+        </Link>
+        <h1 className="text-2xl font-bold">Giriş Yap</h1>
+        <p className="text-sm text-neutral-600 mt-1">
+          {musteri ? 'Via Mood hesabına hoş geldin' : 'Tedarikçi paneline hoş geldin'}
+        </p>
+      </div>
+
+      {sosyal.google && (
+        <div className="mb-4">
+          <button
+            type="button"
+            onClick={() => signIn('google', { callbackUrl })}
+            className="w-full h-12 inline-flex items-center justify-center gap-3 rounded-full border-2 border-neutral-200 bg-white font-semibold text-[15px] hover:bg-neutral-50 transition"
+          >
+            {/* Google G — resmi renkli logo */}
+            <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true">
+              <path fill="#4285F4" d="M45.1 24.5c0-1.6-.1-3.1-.4-4.5H24v8.5h11.8c-.5 2.8-2.1 5.1-4.4 6.700v5.5h7.1c4.2-3.8 6.6-9.5 6.6-16.2z"/>
+              <path fill="#34A853" d="M24 46c6 0 11-2 14.6-5.3l-7.1-5.5c-2 1.3-4.5 2.1-7.5 2.1-5.8 0-10.6-3.9-12.4-9.1H4.3v5.7C7.9 41.1 15.4 46 24 46z"/>
+              <path fill="#FBBC05" d="M11.6 28.2c-.5-1.3-.7-2.7-.7-4.2s.3-2.9.7-4.2v-5.7H4.3C2.8 17 2 20.4 2 24s.8 7 2.3 9.9l7.3-5.7z"/>
+              <path fill="#EA4335" d="M24 10.7c3.3 0 6.2 1.1 8.5 3.3l6.3-6.3C34.9 4.1 30 2 24 2 15.4 2 7.9 6.9 4.3 14.1l7.3 5.7c1.8-5.2 6.6-9.1 12.4-9.1z"/>
+            </svg>
+            Google ile devam et
+          </button>
+          <div className="flex items-center gap-3 my-4">
+            <span className="h-px bg-neutral-200 flex-1" />
+            <span className="text-xs text-neutral-500">veya</span>
+            <span className="h-px bg-neutral-200 flex-1" />
+          </div>
+        </div>
+      )}
+
+      <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-sm border p-8 flex flex-col gap-4">
+        <Input
+          name="email"
+          type="email"
+          label="E-posta"
+          placeholder={musteri ? 'ornek@eposta.com' : 'ornek@firma.com'}
+          required
+          autoComplete="email"
+        />
+        <Input
+          name="password"
+          type="password"
+          label="Şifre"
+          required
+          autoComplete="current-password"
+        />
+
+        {error && (
+          <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+            {error}
+          </p>
+        )}
+
+        <Button type="submit" loading={pending} fullWidth size="lg">
+          Giriş yap
+        </Button>
+      </form>
+
+      <p className="text-center text-sm text-neutral-600 mt-6">
+        Hesabın yok mu?{' '}
+        {musteri ? (
+          <Link
+            href="/auth/customer-sign-up"
+            className="text-[var(--color-brand-orange)] font-semibold hover:underline"
+          >
+            Üye ol
+          </Link>
+        ) : (
+          <Link
+            href="/auth/sign-up"
+            className="text-[var(--color-brand-orange)] font-semibold hover:underline"
+          >
+            Tedarikçi başvurusu yap
+          </Link>
+        )}
+      </p>
+    </>
+  );
+}
+
+export function SignInClient({ sosyal }: { sosyal: { google: boolean } }) {
+  return (
+    <div className="min-h-screen flex items-center justify-center px-4 py-12 bg-[var(--color-brand-cream)]">
+      <div className="w-full max-w-md">
+        <Suspense
+          fallback={
+            <div className="bg-white rounded-2xl shadow-sm border p-8 text-center text-neutral-500">
+              Yükleniyor…
+            </div>
+          }
+        >
+          <SignInInner sosyal={sosyal} />
+        </Suspense>
+      </div>
+    </div>
+  );
+}

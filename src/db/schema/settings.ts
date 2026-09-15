@@ -24,6 +24,25 @@ export interface PaymentSettings {
   halkode_test_mode?: number;
 }
 
+/**
+ * Sosyal giriş (OAuth) ayarları — admin panelinden yönetilir.
+ *
+ * NEDEN DB'DE: prod sunucuya SSH kapalı, .env düzenlenemiyor. Kimlikler
+ * panelden girilsin diye burada tutulur. ENV VARSA ENV ÖNCELİKLİ (bkz.
+ * lib/auth/social.ts) — geriye dönük uyumluluk bozulmaz.
+ *
+ * `google_client_secret` API'den ASLA düz dönmez; yalnız maskeli özet gösterilir.
+ */
+export interface AuthSettings {
+  google_enabled?: boolean;
+  google_client_id?: string;
+  google_client_secret?: string;
+  /** Facebook için yer ayrıldı; kimlik yokken giriş ekranında GÖSTERİLMEZ. */
+  facebook_enabled?: boolean;
+  facebook_client_id?: string;
+  facebook_client_secret?: string;
+}
+
 /** Mağaza kargo ayarları. */
 export interface ShippingSettings {
   free_shipping_all?: boolean; // true → TÜM siparişlerde kargo ÜCRETSİZ (eşik/marj yok sayılır)
@@ -68,6 +87,7 @@ export const storeSettings = pgTable('store_settings', {
   // Altyapı switch'i: 'shopify' (sipariş Shopify'a) | 'native' (sipariş RDS'e). getStore() bunu okur.
   backend: text('backend').notNull().default('shopify'),
   payment: jsonb('payment').$type<PaymentSettings>().notNull().default({}),
+  auth: jsonb('auth').$type<AuthSettings>().notNull().default({}),
   shipping: jsonb('shipping').$type<ShippingSettings>().notNull().default({}),
   theme: jsonb('theme').$type<ThemeSettings>().notNull().default({}),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),

@@ -4,22 +4,25 @@
  * Tam config (auth.ts) bu config'i extend eder + Credentials authorize ekler.
  */
 import type { NextAuthConfig } from 'next-auth';
-import Google from 'next-auth/providers/google';
-import { env } from './env';
 
+/**
+ * Edge config'te SOSYAL PROVIDER YOK — bilinçli.
+ *
+ * Kimlikler artık DB'den okunuyor (store_settings.auth) ve DB/bcrypt EDGE'de
+ * çalışmaz. Middleware'in tek işi oturum var mı diye bakmak; provider listesine
+ * ihtiyacı yok. Google provider'ı node tarafında (auth.ts) tembel eklenir.
+ */
 const providers: NextAuthConfig['providers'] = [];
-
-if (env.AUTH_GOOGLE_ID && env.AUTH_GOOGLE_SECRET) {
-  providers.push(
-    Google({
-      clientId: env.AUTH_GOOGLE_ID,
-      clientSecret: env.AUTH_GOOGLE_SECRET,
-    }),
-  );
-}
 
 export const authConfig: NextAuthConfig = {
   providers,
+  /**
+   * PROD'DA AUTH_URL YANLIŞ: /api/auth/providers "https://localhost:4001/..."
+   * döndürüyordu → OAuth callback'i localhost'a kaçıyor, giriş çalışmıyordu.
+   * Sunucuya SSH kapalı olduğu için .env düzeltilemiyor; host'u GELEN İSTEKTEN
+   * türetiyoruz. nginx X-Forwarded-Host gönderiyor (middleware de onu okuyor).
+   */
+  trustHost: true,
   session: { strategy: 'jwt', maxAge: 60 * 60 * 24 * 7 }, // 7 gün
   pages: {
     signIn: '/auth/sign-in',

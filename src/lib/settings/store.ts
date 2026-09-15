@@ -2,6 +2,7 @@ import { eq } from 'drizzle-orm';
 import { db } from '@/db/client';
 import {
   storeSettings,
+  type AuthSettings,
   type PaymentSettings,
   type ShippingSettings,
   type ThemeSettings,
@@ -11,6 +12,7 @@ import { env } from '@/lib/env';
 export type StoreBackend = 'shopify' | 'native';
 
 export interface StoreSettings {
+  auth: AuthSettings;
   backend: StoreBackend;
   payment: PaymentSettings;
   shipping: ShippingSettings;
@@ -18,6 +20,7 @@ export interface StoreSettings {
 }
 
 const DEFAULTS: StoreSettings = {
+  auth: {},
   backend: 'shopify',
   payment: {
     iyzico_enabled: true,
@@ -39,6 +42,7 @@ export async function getStoreSettings(): Promise<StoreSettings> {
     const [row] = await db.select().from(storeSettings).where(eq(storeSettings.id, 'default')).limit(1);
     if (!row) return DEFAULTS;
     return {
+      auth: { ...DEFAULTS.auth, ...(row.auth ?? {}) },
       backend: row.backend === 'native' ? 'native' : 'shopify',
       payment: { ...DEFAULTS.payment, ...(row.payment ?? {}) },
       shipping: { ...DEFAULTS.shipping, ...(row.shipping ?? {}) },

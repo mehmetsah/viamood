@@ -7,9 +7,11 @@ import { DrizzleAdapter } from '@auth/drizzle-adapter';
 import { eq } from 'drizzle-orm';
 import NextAuth, { type DefaultSession, type NextAuthConfig } from 'next-auth';
 import Credentials from 'next-auth/providers/credentials';
+import Google from 'next-auth/providers/google';
 import { db } from '@/db/client';
 import * as schema from '@/db/schema';
 import { authConfig } from './auth.config';
+import { getGoogleCreds } from './auth/social';
 import { verifyPassword } from './password';
 
 declare module 'next-auth' {
@@ -21,7 +23,15 @@ declare module 'next-auth' {
   }
 }
 
-export const { handlers, auth, signIn, signOut } = NextAuth({
+/**
+ * TEMBEL CONFIG: NextAuth v5 config'i fonksiyon olarak kabul eder ve her
+ * istekte çağırır. Google kimlikleri DB'den geldiği için provider listesini
+ * istek anında kuruyoruz — panelden kimlik girilince YENİDEN DEPLOY GEREKMEZ.
+ * (Sunucuya SSH kapalı olduğundan .env yolu zaten kapalı.)
+ */
+export const { handlers, auth, signIn, signOut } = NextAuth(async () => {
+  const google = await getGoogleCreds();
+  return {
   ...authConfig,
   adapter: DrizzleAdapter(db, {
     usersTable: schema.users,
@@ -31,6 +41,15 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   }),
   providers: [
     ...authConfig.providers,
+    ...(google
+      ? [
+          Google({
+            clientId: google.clientId,
+            clientSecret: google.clientSecret,
+            allowDangerousEmailAccountLinking: true,
+          }),
+        ]
+      : []),
     Credentials({
       name: 'Email & Password',
       credentials: {
@@ -63,6 +82,36 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   ],
   callbacks: {
     ...authConfig.callbacks,
+    /**
+     * HESAP EŞLEME KURALI (test ile çivilendi):
+     *  · Google'dan gelen e-posta ZATEN KAYITLIYSA aynı hesaba bağlanır —
+     *    yinelenen üye AÇILMAZ (allowDangerousEmailAccountLinking + burada
+     *    e-posta doğrulanmış sayılır).
+     *  · Doğrulanmamış Google e-postası REDDEDİLİR (hesap ele geçirme yolu).
+     *  · Rol asla yükseltilmez; yeni kayıt daima 'customer'. Google ile gelen
+     *    hiç kimse admin olamaz.
+     */
+    async signIn({ account, profile }) {
+      if (account?.provider !== 'google') return true;
+      if (profile && profile.email_verified === false) return false;
+      const email = (profile?.email ?? '').toLowerCase().trim();
+      if (!email) return false;
+
+      const [mevcut] = await db
+        .select({ id: schema.users.id })
+        .from(schema.users)
+        .where(eq(schema.users.email, email))
+        .limit(1);
+
+      if (mevcut) {
+        // Var olan hesaba bağlanıyor: e-postayı doğrulanmış işaretle, ROLE DOKUNMA.
+        await db
+          .update(schema.users)
+          .set({ emailVerified: new Date() })
+          .where(eq(schema.users.id, mevcut.id));
+      }
+      return true;
+    },
     async jwt({ token, user, trigger }) {
       if (user?.id) {
         token.userId = user.id;
@@ -94,4 +143,5 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       return session;
     },
   },
-} satisfies NextAuthConfig);
+  } satisfies NextAuthConfig;
+});
