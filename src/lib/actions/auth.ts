@@ -183,3 +183,72 @@ export async function signOutToStorefrontAction() {
   await signOut({ redirect: false });
   redirect(env.STOREFRONT_URL);
 }
+
+// ── ŞİFREMİ UNUTTUM ────────────────────────────────────────────────────────
+
+/**
+ * Sıfırlama talebi.
+ *
+ * HESAP VARLIĞI SIZDIRILMAZ: e-posta kayıtlı olsun olmasın AYNI mesaj döner.
+ * Oran sınırına takılırsa ayrı mesaj verilir (bu, hesap varlığını değil istek
+ * sıklığını ele verir — kabul edilebilir).
+ */
+export async function requestPasswordResetAction(formData: FormData): Promise<ActionResult> {
+  const { headers } = await import('next/headers');
+  const { requestPasswordReset } = await import('@/lib/password-reset');
+
+  const email = String(formData.get('email') ?? '').toLowerCase().trim();
+  const parsed = z.string().email().safeParse(email);
+  if (!parsed.success) {
+    return { success: false, error: 'Geçerli bir e-posta gir', fieldErrors: { email: 'Geçerli bir e-posta gir' } };
+  }
+
+  const h = await headers();
+  const ip = (h.get('x-forwarded-for') ?? '').split(',')[0]?.trim() || h.get('x-real-ip');
+
+  const res = await requestPasswordReset({ email, ip });
+  if (!res.ok) {
+    return { success: false, error: 'Az önce bir bağlantı gönderdik. Lütfen 5 dakika sonra tekrar dene.' };
+  }
+
+  // DİKKAT: res.mailGitti'ye göre FARKLI mesaj döndürme — hesap varlığını ele verir.
+  return {
+    success: true,
+    data: {
+      message:
+        'E-posta adresin kayıtlıysa şifre sıfırlama bağlantısını gönderdik. ' +
+        'Gelen kutunu (ve spam klasörünü) kontrol et.',
+    },
+  };
+}
+
+/** Token'ı tüketip yeni şifreyi yazar. */
+export async function resetPasswordAction(formData: FormData): Promise<ActionResult> {
+  const { consumeResetToken, RESET_TOKEN_TTL_MS } = await import('@/lib/password-reset');
+
+  const token = String(formData.get('token') ?? '');
+  const password = String(formData.get('password') ?? '');
+  const passwordConfirm = String(formData.get('passwordConfirm') ?? '');
+
+  if (!token) return { success: false, error: 'Bağlantı geçersiz. Lütfen sıfırlamayı yeniden başlat.' };
+
+  if (password !== passwordConfirm) {
+    return { success: false, error: 'Şifreler eşleşmiyor', fieldErrors: { passwordConfirm: 'Şifreler eşleşmiyor' } };
+  }
+
+  const policy = validatePassword(password);
+  if (!policy.ok) return { success: false, error: policy.reason, fieldErrors: { password: policy.reason } };
+
+  const res = await consumeResetToken({ token, newPassword: password });
+  if (!res.ok) {
+    const dk = Math.round(RESET_TOKEN_TTL_MS / 60000);
+    const mesaj =
+      res.sebep === 'suresi_doldu'
+        ? `Bu bağlantının süresi dolmuş (${dk} dakika geçerliydi). Lütfen yeni bir bağlantı iste.`
+        : res.sebep === 'kullanilmis'
+          ? 'Bu bağlantı daha önce kullanılmış. Lütfen yeni bir bağlantı iste.'
+          : 'Bağlantı geçersiz. Lütfen yeni bir bağlantı iste.';
+    return { success: false, error: mesaj };
+  }
+  return { success: true, data: { email: res.email } };
+}

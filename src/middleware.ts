@@ -12,6 +12,9 @@ const PUBLIC_PATHS = new Set([
   '/auth/customer-sign-up',
   '/auth/verify',
   '/auth/error',
+  // Şifre sıfırlama — kullanıcı buraya giriş YAPMAMIŞ hâlde gelir.
+  '/auth/sifremi-unuttum',
+  '/auth/sifre-sifirla',
   // Google OAuth dönüş yolu — OTURUM ARANMAZ. Kullanıcı buraya henüz
   // giriş yapmamış hâlde döner; public olmazsa sign-in'e atılır ve
   // `code`/`state` kaybolur, giriş tamamlanamaz.

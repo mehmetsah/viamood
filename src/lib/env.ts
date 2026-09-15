@@ -32,6 +32,16 @@ const envSchema = z.object({
 
   // Email
   RESEND_API_KEY: z.string().optional(),
+
+  // ── SMTP (Resend yoksa yedek gönderim yolu) ──────────────────────────────
+  // 12 Ağu'dan beri "Şifremi Unuttum" tek bir sebeple blokedeydi: prod'da mail
+  // anahtarı yoktu. Resend hesabı beklenirken Gmail SMTP uygulama şifresiyle
+  // açıldı. Dördü de OPSİYONEL — yoksa gönderici stub'a düşer (ve artık
+  // {ok:false} döner, bkz. lib/email/sender.ts).
+  SMTP_HOST: z.string().optional(),
+  SMTP_PORT: z.coerce.number().default(587),
+  SMTP_USER: z.string().optional(),
+  SMTP_PASS: z.string().optional(),
   EMAIL_FROM: z.string().default('Via Mood <noreply@viamood.com>'),
 
   // Storefront — primary domain (custom checkout ödeme redirect'i + CORS default origin). Domain değişince TEK yer.

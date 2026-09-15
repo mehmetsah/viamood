@@ -81,6 +81,44 @@ function wrap(content: string): string {
 </body></html>`;
 }
 
+/**
+ * Şifre sıfırlama maili. Buton çalışmayan istemciler için ham adres de basılır.
+ */
+export function passwordResetEmail(p: {
+  name?: string;
+  resetUrl: string;
+  dakika: number;
+}): { subject: string; html: string; text: string } {
+  const hitap = p.name ? `Merhaba <strong>${p.name}</strong>,` : 'Merhaba,';
+  const sure = p.dakika >= 60 ? `${Math.round(p.dakika / 60)} saat` : `${p.dakika} dakika`;
+  return {
+    subject: `${BRAND_NAME}: Şifre sıfırlama`,
+    html: wrap(`
+      <p>${hitap}</p>
+      <p>${BRAND_NAME} hesabın için şifre sıfırlama talebi aldık. Yeni şifreni
+         belirlemek için aşağıdaki butona tıkla.</p>
+      ${button(p.resetUrl, 'Yeni şifre belirle')}
+      <p style="margin-top:24px;font-size:14px;color:#6b6660;">
+        Bu bağlantı <strong>${sure}</strong> geçerlidir ve yalnızca
+        <strong>bir kez</strong> kullanılabilir.
+      </p>
+      <p style="font-size:14px;color:#6b6660;">
+        Buton çalışmazsa bu adresi tarayıcına yapıştır:<br>
+        <span class="em-mono" style="font-size:13px;">${p.resetUrl}</span>
+      </p>
+      <p style="font-size:14px;color:#6b6660;">
+        Bu isteği <strong>siz yapmadıysanız</strong> bu maili yok sayabilirsiniz —
+        şifreniz değişmez.
+      </p>
+    `),
+    text:
+      `${BRAND_NAME} — şifre sıfırlama\n\n` +
+      `Yeni şifreni belirlemek için: ${p.resetUrl}\n\n` +
+      `Bağlantı ${sure} geçerlidir ve bir kez kullanılabilir.\n` +
+      `Bu isteği siz yapmadıysanız bu maili yok sayabilirsiniz — şifreniz değişmez.`,
+  };
+}
+
 export function vendorWelcomeEmail(vendorName: string): { subject: string; html: string; text: string } {
   return {
     subject: `${BRAND_NAME}: Tedarikçi başvurun alındı`,
