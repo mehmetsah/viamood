@@ -1,0 +1,379 @@
+{%- assign company_phone_intl = settings.company_phone | remove: ' ' | remove_first: '0' -%}
+<style>
+  #shopify-section-{{ section.id }} {
+    --vf-ink: #14201d;
+    --vf-ink-soft: #1f2c28;
+    --vf-muted: #a3aa9d;
+    --vf-line: rgba(255, 255, 255, 0.08);
+    --vf-cream: #faf6ec;
+    --vf-clay: #b66c55;
+    --vf-lemon: #f7d46a;
+  }
+
+  #shopify-section-{{ section.id }} .vf {
+    background: var(--vf-ink);
+    color: #fff;
+  }
+
+  #shopify-section-{{ section.id }} .vf-wrap {
+    width: min(1320px, calc(100% - 32px));
+    margin-inline: auto;
+  }
+
+  /* Newsletter band */
+  #shopify-section-{{ section.id }} .vf-news {
+    background: var(--vf-clay);
+    color: #fff;
+    padding-block: clamp(36px, 5vw, 56px);
+  }
+
+  #shopify-section-{{ section.id }} .vf-news__grid {
+    display: grid;
+    grid-template-columns: 1.2fr 1fr;
+    gap: 36px;
+    align-items: center;
+  }
+
+  #shopify-section-{{ section.id }} .vf-news__title {
+    margin: 0;
+    font-size: clamp(1.4rem, 2.6vw, 2.2rem);
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+  }
+
+  #shopify-section-{{ section.id }} .vf-news__lead {
+    margin: 8px 0 0;
+    opacity: 0.9;
+    font-size: 0.98rem;
+  }
+
+  #shopify-section-{{ section.id }} .vf-news__form {
+    display: flex;
+    gap: 8px;
+  }
+
+  #shopify-section-{{ section.id }} .vf-news__input {
+    flex: 1;
+    min-height: 50px;
+    padding: 0 20px;
+    border-radius: 100px;
+    border: 0;
+    font-size: 0.98rem;
+    background: #fff;
+    color: var(--vf-ink);
+  }
+
+  #shopify-section-{{ section.id }} .vf-news__btn {
+    padding: 0 26px;
+    min-height: 50px;
+    border: 0;
+    border-radius: 100px;
+    background: var(--vf-ink);
+    color: #fff;
+    font-weight: 800;
+    cursor: pointer;
+    font-size: 0.95rem;
+  }
+
+  /* Main footer */
+  #shopify-section-{{ section.id }} .vf-main {
+    padding-block: clamp(48px, 6vw, 72px);
+  }
+
+  #shopify-section-{{ section.id }} .vf-grid {
+    display: grid;
+    grid-template-columns: 1.5fr 1fr 1fr 1fr 1.2fr;
+    gap: 32px;
+  }
+
+  #shopify-section-{{ section.id }} .vf-brand-logo {
+    display: block;
+    margin-bottom: 18px;
+    color: #fff;
+    text-decoration: none;
+    width: 180px;
+    max-width: 70%;
+  }
+
+  #shopify-section-{{ section.id }} .vf-brand-logo svg {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+
+  #shopify-section-{{ section.id }} .vf-brand-desc {
+    margin: 0 0 20px;
+    color: var(--vf-muted);
+    font-size: 0.9rem;
+    line-height: 1.6;
+  }
+
+  #shopify-section-{{ section.id }} .vf-contact-row {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    font-size: 0.9rem;
+    color: var(--vf-muted);
+  }
+
+  #shopify-section-{{ section.id }} .vf-contact-row a {
+    color: #fff;
+    text-decoration: none;
+    font-weight: 600;
+  }
+
+  #shopify-section-{{ section.id }} .vf-contact-row a:hover {
+    color: var(--vf-lemon);
+  }
+
+  #shopify-section-{{ section.id }} .vf-col h4 {
+    margin: 0 0 18px;
+    font-size: 0.78rem;
+    font-weight: 800;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--vf-lemon);
+  }
+
+  #shopify-section-{{ section.id }} .vf-col ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  #shopify-section-{{ section.id }} .vf-col a {
+    color: #fff;
+    text-decoration: none;
+    font-size: 0.92rem;
+    line-height: 1.5;
+    transition: color 0.2s ease, padding-left 0.2s ease;
+  }
+
+  #shopify-section-{{ section.id }} .vf-col a:hover {
+    color: var(--vf-lemon);
+    padding-left: 4px;
+  }
+
+  /* Social */
+  #shopify-section-{{ section.id }} .vf-social {
+    display: flex;
+    gap: 10px;
+    margin-top: 12px;
+  }
+
+  #shopify-section-{{ section.id }} .vf-social a {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--vf-ink-soft);
+    color: #fff;
+    text-decoration: none;
+    font-weight: 700;
+    transition: background 0.2s ease, transform 0.2s ease;
+    font-size: 0.85rem;
+  }
+
+  #shopify-section-{{ section.id }} .vf-social a:hover {
+    background: var(--vf-clay);
+    transform: translateY(-2px);
+  }
+
+  /* Payment + bottom strip */
+  #shopify-section-{{ section.id }} .vf-bottom {
+    background: var(--vf-ink-soft);
+    padding-block: 22px;
+    border-top: 1px solid var(--vf-line);
+  }
+
+  #shopify-section-{{ section.id }} .vf-bottom__row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  #shopify-section-{{ section.id }} .vf-copy {
+    font-size: 0.82rem;
+    color: var(--vf-muted);
+  }
+
+  #shopify-section-{{ section.id }} .vf-pay {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  #shopify-section-{{ section.id }} .vf-pay__chip {
+    padding: 6px 12px;
+    background: var(--vf-ink);
+    color: #fff;
+    border-radius: 6px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    border: 1px solid var(--vf-line);
+  }
+
+  /* Responsive */
+  @media (max-width: 989px) {
+    #shopify-section-{{ section.id }} .vf-grid {
+      grid-template-columns: repeat(2, 1fr);
+      gap: 28px;
+    }
+
+    #shopify-section-{{ section.id }} .vf-news__grid {
+      grid-template-columns: 1fr;
+      gap: 18px;
+    }
+
+    #shopify-section-{{ section.id }} .vf-news__form {
+      flex-direction: column;
+    }
+  }
+
+  @media (max-width: 600px) {
+    #shopify-section-{{ section.id }} .vf-grid {
+      grid-template-columns: 1fr;
+    }
+
+    #shopify-section-{{ section.id }} .vf-bottom__row {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+  }
+</style>
+
+<footer class="vf">
+  {%- comment -%} NEWSLETTER — anasayfada gizli (Via Mood Club bölümü zaten var, mükerrer input); ayarla kapatılabilir {%- endcomment -%}
+  {%- if section.settings.bulten_goster != false and template.name != 'index' -%}
+  <div class="vf-news">
+    <div class="vf-wrap vf-news__grid">
+      <div>
+        <h3 class="vf-news__title">Yeni ürünleri ilk siz görün</h3>
+        <p class="vf-news__lead">Sezonluk koleksiyonlar, fırsatlar ve evimizden tarifler — e-postanıza.</p>
+      </div>
+      <div>
+        {% form 'customer', class: 'vf-news__form' %}
+          <input type="hidden" name="contact[tags]" value="newsletter">
+          <input type="email" name="contact[email]" class="vf-news__input" placeholder="E-posta adresiniz" required aria-label="E-posta adresiniz">
+          <button type="submit" class="vf-news__btn">Abone ol</button>
+        {% endform %}
+      </div>
+    </div>
+  </div>
+  {%- endif -%}
+
+  {%- comment -%} MAIN FOOTER {%- endcomment -%}
+  <div class="vf-main">
+    <div class="vf-wrap vf-grid">
+      {%- comment -%} BRAND {%- endcomment -%}
+      <div class="vf-col vf-brand">
+        <a class="vf-brand-logo" href="{{ routes.root_url }}" aria-label="Via Mood ana sayfa">
+          {{ 'via-mood-logo.svg' | inline_asset_content }}
+        </a>
+        <p class="vf-brand-desc">
+          Mutfak, banyo, dolap içi ve günlük yaşam alanlarınız için pratik düzenleyici ve saklama çözümleri.
+          İstanbul / Beylikdüzü'nden tüm Türkiye'ye.
+        </p>
+        <div class="vf-contact-row">
+          <span>📞 <a href="tel:+90{{ company_phone_intl }}">{{ settings.company_phone }}</a></span>
+          <span>✉️ <a href="mailto:{{ settings.company_email }}">{{ settings.company_email }}</a></span>
+          <span>📍 {{ settings.company_address }}</span>
+        </div>
+        <div class="vf-social">
+          <a href="https://wa.me/90{{ company_phone_intl }}" target="_blank" rel="noopener" aria-label="WhatsApp">WA</a>
+          <a href="https://instagram.com/viamood.store" target="_blank" rel="noopener" aria-label="Instagram">IG</a>
+          <a href="mailto:{{ settings.company_email }}" aria-label="E-posta">@</a>
+        </div>
+      </div>
+
+      {%- comment -%} CATEGORIES {%- endcomment -%}
+      <div class="vf-col">
+        <h4>Kategoriler</h4>
+        <ul>
+          <li><a href="{{ routes.collections_url }}/saklama-kabi">Saklama Kabı</a></li>
+          <li><a href="{{ routes.collections_url }}/dolap-ici-duzenleyici">Dolap İçi Düzenleyici</a></li>
+          <li><a href="{{ routes.collections_url }}/banyo-duzenleyici">Banyo Düzenleyici</a></li>
+          <li><a href="{{ routes.collections_url }}/ayakkabi-duzenleyici">Ayakkabı Düzenleyici</a></li>
+          <li><a href="{{ routes.collections_url }}/camasir-sepeti">Çamaşır Sepeti</a></li>
+          <li><a href="{{ routes.collections_url }}/temizlik-gerecleri">Temizlik Gereçleri</a></li>
+          <li><a href="{{ routes.collections_url }}">Tüm kategoriler</a></li>
+        </ul>
+      </div>
+
+      {%- comment -%} CORPORATE {%- endcomment -%}
+      <div class="vf-col">
+        <h4>Kurumsal</h4>
+        <ul>
+          <li><a href="{{ routes.root_url }}pages/hakkimizda">Hakkımızda</a></li>
+          <li><a href="{{ routes.root_url }}pages/contact">İletişim</a></li>
+          <li><a href="{{ routes.root_url }}blogs/news">Blog</a></li>
+          <li><a href="https://hesap.viamood.com.tr/hesabim">Hesabım</a></li>
+        </ul>
+      </div>
+
+      {%- comment -%} HELP {%- endcomment -%}
+      <div class="vf-col">
+        <h4>Yardım</h4>
+        <ul>
+          <li><a href="{{ routes.root_url }}pages/iade-ve-teslimat">İade ve Teslimat</a></li>
+          <li><a href="{{ routes.root_url }}pages/mesafeli-satis-sozlesmesi">Mesafeli Satış Sözleşmesi</a></li>
+          <li><a href="{{ routes.root_url }}pages/gizlilik-politikasi">Gizlilik Politikası</a></li>
+          <li><a href="{{ routes.root_url }}pages/kvkk-aydinlatma-metni">KVKK Aydınlatma Metni</a></li>
+          <li><a href="{{ routes.root_url }}pages/siparis-takip">Sipariş Takibi</a></li>
+        </ul>
+      </div>
+
+      {%- comment -%} CONTACT BOX {%- endcomment -%}
+      <div class="vf-col">
+        <h4>Bize Ulaşın</h4>
+        <ul>
+          <li><a href="https://wa.me/90{{ company_phone_intl }}" target="_blank" rel="noopener">📱 WhatsApp ile yaz</a></li>
+          <li><a href="tel:+90{{ company_phone_intl }}">☎️ {{ settings.company_phone }}</a></li>
+          <li><a href="mailto:{{ settings.company_email }}">✉️ {{ settings.company_email }}</a></li>
+          <li><a href="https://instagram.com/viamood.store" target="_blank" rel="noopener">📷 @viamood.store</a></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  {%- comment -%} BOTTOM {%- endcomment -%}
+  <div class="vf-bottom">
+    <div class="vf-wrap vf-bottom__row">
+      <div class="vf-copy">
+        © {{ 'now' | date: '%Y' }} Via Mood · {{ settings.company_title }} · Vergi No {{ settings.company_vkn }} · Tüm hakları saklıdır.
+      </div>
+      <div class="vf-pay" aria-label="Ödeme yöntemleri">
+        <span class="vf-pay__chip">VISA</span>
+        <span class="vf-pay__chip">MasterCard</span>
+        <span class="vf-pay__chip">Troy</span>
+        <span class="vf-pay__chip">PayTR</span>
+        <span class="vf-pay__chip">Kapıda Ödeme</span>
+        <span class="vf-pay__chip">Havale/EFT</span>
+      </div>
+    </div>
+  </div>
+</footer>
+
+{% schema %}
+{
+  "name": "Via footer",
+  "settings": [
+    {
+      "type": "checkbox",
+      "id": "bulten_goster",
+      "label": "Bülten şeridini göster (anasayfada her zaman gizli)",
+      "default": true
+    }
+  ]
+}
+{% endschema %}
