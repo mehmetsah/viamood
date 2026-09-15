@@ -1,0 +1,13 @@
+Bu dosyalar yaziciya HAM (raw) gonderilmelidir.
+
+  Zebra Setup Utilities  ->  Open Communication With Printer  ->  dosyayi yapistir
+  ya da Windows'ta:        COPY /B 01-dump-modundan-cik.zpl \\BILGISAYAR\YaziciAdi
+
+Not Defteri'nden "Yazdir" ile GONDERME - surucu metni sayfaya dizer, komut calismaz.
+
+01  ~JE          tanilama (dump) modundan cikar        ZARARSIZ
+02  ~HI          yazici model/firmware bilgisi ister   ZARARSIZ
+03  test etiketi ZPL gercekten calisiyor mu            ZARARSIZ
+04  ^SZ2 ^JUS    yazici dilini ZPL'e sabitler          AYAR YAZAR - bilincli kullan
+
+Ayrinti: ../zebra-zpl-teshis.md
