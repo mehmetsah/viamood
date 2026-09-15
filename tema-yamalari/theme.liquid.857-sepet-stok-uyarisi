@@ -1,0 +1,542 @@
+<!doctype html>
+<html
+  {% if request.design_mode %}
+    class="shopify-design-mode"
+  {% endif %}
+  lang="{{ request.locale.iso_code }}"
+>
+
+  <head>
+
+    <!-- Google Tag Manager -->
+<script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+})(window,document,'script','dataLayer','GTM-KCSZPGKV');</script>
+<!-- End Google Tag Manager -->
+
+
+
+    {%- if settings.favicon != blank -%}
+      <link
+        rel="icon"
+        type="image/png"
+        href="{{ settings.favicon | image_url: width: 32, height: 32 }}"
+      >
+    {%- else -%}
+      {%- comment -%}
+        Sekme ikonu = Via Mood LOGOSU (kemer + VIA MOOD). favicon.svg, via-mood-logo.svg'den
+        kare kanvasa türetildi. apple-touch-icon PNG olmak ZORUNDA — iOS Safari SVG'yi yok
+        sayıyor, eskiden buraya da fav.svg verildiği için iPhone ana ekranında ikon çıkmıyordu.
+      {%- endcomment -%}
+      <link rel="icon" type="image/svg+xml" href="{{ 'favicon.svg' | asset_url }}">
+      <link rel="apple-touch-icon" sizes="180x180" href="{{ 'apple-touch-icon.png' | asset_url }}">
+    {%- endif -%}
+
+    {% # theme-check-disable RemoteAsset %}
+    {% comment %} This a way to wait for main content to load when navigating to a new page so that the view transitions can work consistently {% endcomment %}
+    {% if settings.transition_to_main_product or settings.page_transition_enabled %}
+      <link
+        rel="expect"
+        href="#MainContent"
+        blocking="render"
+        id="view-transition-render-blocker"
+      >
+    {% endif %}
+
+    {%- render 'meta-tags' -%}
+    {%- render 'stylesheets' -%}
+    {%- render 'fonts' -%}
+    {%- render 'scripts' -%}
+    {%- render 'theme-styles-variables' -%}
+    {%- render 'color-schemes' -%}
+
+    {%- comment -%} Via Mood: global override CSS (sepet quantity vs.) tüm sayfalarda {%- endcomment -%}
+    <link rel="stylesheet" href="{{ 'via-product-overrides.css' | asset_url }}">
+
+    {%- comment -%} Via Mood: Mobile App-Like Responsive — tüm sayfalarda {%- endcomment -%}
+    <link rel="stylesheet" href="{{ 'via-mobile-app.css' | asset_url }}">
+
+    {%- comment -%} App-like viewport — meta tag güçlendir {%- endcomment -%}
+    <meta name="theme-color" content="#f25334">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Via Mood">
+    <meta name="mobile-web-app-capable" content="yes">
+
+    {%- comment -%}
+      Via Mood: Sepet-kritik modül zincirini YÜKSEK öncelikle öne çek.
+      Horizon teması ~189 JS modülünü fetchpriority="low" ile yükler → sepet
+      etkileşim element'leri (add-to-cart, cart-items, quantity, drawer) bu
+      düşük-öncelik kuyruğunda ~2.3sn bekler ve geç register olur → ilk tık kaçar.
+      Aşağıdaki 13 dosya TÜM sepet etkileşimlerinin tam bağımlılık zinciridir
+      (temel leaf modüller + element'ler). High priority ile register ~0.5sn'ye iner.
+      Tamamen EKLEMELİ — davranışı değiştirmez, yalnızca yükleme sırasını/önceliğini.
+    {%- endcomment -%}
+    {%- comment -%} Temel (leaf) modüller — tüm element'ler bunlara bağlı {%- endcomment -%}
+    <link rel="modulepreload" href="{{ 'utilities.js' | asset_url }}" fetchpriority="high">
+    <link rel="modulepreload" href="{{ 'events.js' | asset_url }}" fetchpriority="high">
+    <link rel="modulepreload" href="{{ 'performance.js' | asset_url }}" fetchpriority="high">
+    <link rel="modulepreload" href="{{ 'component.js' | asset_url }}" fetchpriority="high">
+    <link rel="modulepreload" href="{{ 'morph.js' | asset_url }}" fetchpriority="high">
+    <link rel="modulepreload" href="{{ 'section-renderer.js' | asset_url }}" fetchpriority="high">
+    <link rel="modulepreload" href="{{ 'dialog.js' | asset_url }}" fetchpriority="high">
+    <link rel="modulepreload" href="{{ 'component-quantity-selector.js' | asset_url }}" fetchpriority="high">
+    {%- comment -%} Sepet etkileşim element'leri {%- endcomment -%}
+    <link rel="modulepreload" href="{{ 'product-form.js' | asset_url }}" fetchpriority="high">
+    <link rel="modulepreload" href="{{ 'component-cart-items.js' | asset_url }}" fetchpriority="high">
+    <link rel="modulepreload" href="{{ 'component-cart-quantity-selector.js' | asset_url }}" fetchpriority="high">
+    <link rel="modulepreload" href="{{ 'cart-drawer.js' | asset_url }}" fetchpriority="high">
+    <link rel="modulepreload" href="{{ 'cart-icon.js' | asset_url }}" fetchpriority="high">
+
+    {%- comment -%}
+      Via Mood: SEPET TAM DEVRALMA (EKLE + SİL + ADET) — native'den BAĞIMSIZ.
+      Kök sebep (NATIVE Horizon bug, önizleme temasında da var): add-to-cart-component /
+      dialog-component / quantity-selector-component connectedCallback'leri DOM child'ları
+      (ref="addToCartButton", "dialog", "quantityInput") parse edilmeden çalışıp
+      MissingRefError ile çöküyor → handler bağlanmıyor → "ilk tık eklemiyor, drawer açılmıyor".
+      Çözüm: tüm sepet işlemlerini KENDİMİZ yapıyoruz:
+        • EKLE → /cart/add.js (+ Section Rendering) → sepet içeriği + sayaç yenilenir →
+          drawer doğrudan <dialog>.showModal() ile açılır. İlk tık DAİMA ekler + drawer DAİMA açılır.
+        • SİL / ADET → /cart/change.js (+ Section Rendering) → anında yenilenir (reload yok).
+      Bozuk custom element'lere HİÇ bağlı değil. Hata olursa /cart sayfasına düşer.
+    {%- endcomment -%}
+    <script>
+      (function(){
+        // Sepet içeriğini render eden section id'leri (Horizon cart-items-component[data-section-id])
+        function sectionIds(){
+          var ids = [];
+          document.querySelectorAll('cart-items-component[data-section-id]').forEach(function(c){
+            var s = c.dataset.sectionId; if (s && ids.indexOf(s) < 0) ids.push(s);
+          });
+          return ids;
+        }
+        // Dönen section HTML'leriyle sepet satırlarını + sayacı (cart-icon) yerinde yenile
+        function applySections(sections){
+          if (!sections) return;
+          Object.keys(sections).forEach(function(sid){
+            var tmp = document.createElement('div');
+            tmp.innerHTML = sections[sid];
+            ['cart-items-component', 'cart-icon', 'cart-icon-component'].forEach(function(sel){
+              var fresh = tmp.querySelector(sel);
+              if (!fresh) return;
+              document.querySelectorAll(sel).forEach(function(ex){ ex.innerHTML = fresh.innerHTML; });
+            });
+          });
+          clearCartBusy();
+        }
+        // Native cart-items-component update akışı element'e 'cart-items-disabled' (loading spinner) sınıfı ekleyip
+        // bizim custom AJAX'ta KALDIRMIYOR (native enable akışı MissingRefError'la çöküyor) → spinner takılı kalır. Temizle.
+        function clearCartBusy(){
+          document.querySelectorAll('cart-items-component.cart-items-disabled, .cart-items-disabled').forEach(function(ex){ ex.classList.remove('cart-items-disabled'); });
+          document.querySelectorAll('cart-quantity-selector-component[aria-busy], .cart-items__remove[aria-busy], [aria-busy="true"].quantity-selector').forEach(function(ex){ ex.removeAttribute('aria-busy'); });
+          document.querySelectorAll('cart-quantity-selector-component').forEach(function(c){ var inp=c.querySelector('input'); if(inp){ if(!inp.value){ var q=inp.getAttribute('data-cart-quantity')||inp.getAttribute('value'); if(q) inp.value=q; } inp.style.removeProperty('display'); inp.style.removeProperty('opacity'); inp.style.removeProperty('visibility'); } });
+        }
+        function openDrawer(){
+          var dlg = document.querySelector('cart-drawer-component dialog');
+          if (dlg && typeof dlg.showModal === 'function') {
+            try { if (typeof vmBindOutsideClose === 'function') vmBindOutsideClose(dlg); if (!dlg.dataset.vmDismiss) { dlg.dataset.vmDismiss = '1'; var vmCb = dlg.querySelector('button[aria-label*="kapat" i], button[aria-label*="close" i]'); if (vmCb) { vmCb.innerHTML = '<span aria-hidden="true" style="font-size:26px;line-height:1;color:#1a1a1a;display:block">×</span>'; vmCb.addEventListener('click', function(){ try { dlg.close(); } catch(_){ dlg.removeAttribute('open'); } }); } } if (!dlg.open) dlg.showModal(); return true; } catch(_){}
+          }
+          return false;
+        }
+        function variantId(scope){
+          var el = scope.querySelector('[name="id"]:not([disabled])') || scope.querySelector('[ref="variantId"]') || scope.querySelector('[name="id"]');
+          return el && el.value ? el.value : null;
+        }
+        function toast(msg, isErr){
+          var t = document.createElement('div');
+          t.textContent = msg;
+          var _tb = window.matchMedia('(max-width:749px)').matches ? '86px' : '24px'; /* mobilde alt menünün ÜSTÜNDE */
+          t.style.cssText = 'position:fixed;left:50%;bottom:'+_tb+';transform:translateX(-50%);z-index:99999;pointer-events:none;background:' +
+            (isErr ? '#c62828' : '#1a1a1a') + ';color:#fff;padding:12px 20px;border-radius:10px;font-size:14px;' +
+            'font-weight:600;box-shadow:0 6px 20px rgba(0,0,0,.25);max-width:90vw;text-align:center';
+          document.body.appendChild(t);
+          setTimeout(function(){ t.style.transition = 'opacity .4s'; t.style.opacity = '0'; setTimeout(function(){ t.remove(); }, 400); }, 2800);
+        }
+
+        // ---------- EKLE ----------
+        function doAdd(scope, btn){
+          var id = variantId(scope); if (!id) return;
+          var qEl = scope.querySelector('[name="quantity"]');
+          var qty = (qEl && parseInt(qEl.value, 10)) || 1; if (qty < 1) qty = 1;
+          var fd = new FormData();
+          fd.append('id', id); fd.append('quantity', qty);
+          var ids = sectionIds();
+          if (ids.length) { fd.append('sections', ids.join(',')); fd.append('sections_url', location.pathname); }
+          if (btn) btn.setAttribute('aria-busy', 'true');
+          fetch('/cart/add.js', { method: 'POST', body: fd })
+            .then(function(r){ return r.json().then(function(d){ return { ok: r.ok, d: d }; }); })
+            .then(function(res){
+              if (btn) btn.removeAttribute('aria-busy');
+              if (!res.ok) { toast((res.d && (res.d.description || res.d.message)) || 'Ürün şu an eklenemiyor.', true); return; }
+              applySections(res.d.sections);
+              {%- comment -%} detail VER: native Horizon bileşenleri detail.resource/data okuyup null'da patlıyordu {%- endcomment -%}
+              document.dispatchEvent(new CustomEvent('cart:add', { detail: { resource: {}, data: {} } }));
+              document.dispatchEvent(new CustomEvent('cart:update', { detail: { resource: {}, data: {} } }));
+              setTimeout(clearCartBusy, 90);
+              // MOBİL: modal drawer AÇMA — backdrop fixed alt menüyü (sepet/hesap) kilitliyordu (Yunus bug). Toast + badge yeter; sepeti alt menü "Sepet"ten görür.
+              if (window.matchMedia('(max-width: 749px)').matches) { toast('✓ Ürün sepete eklendi'); }
+              else if (!openDrawer()) { window.location = {{ routes.cart_url | json }}; }
+            })
+            .catch(function(){ if (btn) btn.removeAttribute('aria-busy'); window.location = {{ routes.cart_url | json }}; });
+        }
+
+        // ---------- SİL / ADET ----------
+        // Overlapping /cart/change.js → eşzamanlı applySections + observer fırtınası → renderer DONUYOR (stuck-spinner kök neden).
+        // Serialize: tek seferde bir istek; tıklama in-flight ise input'u optimistic güncelle + SON değeri kuyrukla.
+        // #857 yardımcıları — stok aşımı uyarısı + sunucu durumuna geri dönüş.
+        // NOT: component-cart-items.js'teki #573-1 düzeltmesi BU yolda çalışmıyor;
+        // sepet tıklamalarını capture-phase'te biz devralıyoruz, o kod hiç koşmuyor
+        // (15 Eyl 2026 tarayıcı ölçümü: cart-items-disabled sınıfı hiç eklenmiyor).
+        function vmStokUyarisi(line, mesaj){
+          try {
+            var kap = document.querySelector('[ref="cartItemErrorContainer-' + line + '"]');
+            var alan = document.querySelector('[ref="cartItemError-' + line + '"]');
+            if (kap && alan) { alan.textContent = mesaj; kap.classList.remove('hidden'); return true; }
+          } catch(_){}
+          return false;
+        }
+        function vmSepetGeriYukle(){
+          // İyimser güncelleme yanlış kalmasın: sunucudaki GERÇEK adetleri geri yaz.
+          return fetch('/cart.js', { headers: { 'Accept': 'application/json' } })
+            .then(function(r){ return r.json(); })
+            .then(function(c){
+              (c.items || []).forEach(function(it, i){
+                var inp = document.querySelector('cart-quantity-selector-component input[data-cart-line="' + (i + 1) + '"]');
+                if (inp) { inp.value = it.quantity; inp.setAttribute('data-cart-quantity', it.quantity); }
+              });
+            })
+            .catch(function(){});
+        }
+        var vmCartLock = false, vmCartPending = null;
+        function cartChange(line, qty){
+          try { var i0 = document.querySelector('cart-quantity-selector-component input[data-cart-line="' + line + '"]'); if (i0) i0.value = qty; } catch(_){}
+          if (vmCartLock) { vmCartPending = { line: line, qty: qty }; return; }
+          vmCartLock = true;
+          var fd = new FormData();
+          fd.append('line', line); fd.append('quantity', qty);
+          var ids = sectionIds();
+          if (ids.length) { fd.append('sections', ids.join(',')); fd.append('sections_url', location.pathname); }
+          fetch('/cart/change.js', { method: 'POST', body: fd })
+            .then(function(r){ return r.json().then(function(d){ return { ok: r.ok, d: d || {} }; }); })
+            .then(function(res){
+              var d = res.d;
+              // #857: stok aşımında Shopify 422 döner ve gövdede `sections` YOKTUR.
+              // Eski kod doğrudan applySections(undefined) çağırıp sessizce hiçbir şey
+              // yapmıyordu → müşteri "+" basıyor, bir şey olmuyor, uyarı da çıkmıyor.
+              if (!res.ok || !d.sections) {
+                var mesaj = d.message || d.description || 'Bu adet için yeterli stok yok.';
+                if (!vmStokUyarisi(line, mesaj)) { try { console.warn('[sepet] uyarı gösterilemedi:', mesaj); } catch(_){} }
+                vmSepetGeriYukle();
+                setTimeout(clearCartBusy, 90);
+                // Kuyruğu da temizle: aynı geçersiz adet tekrar denenmesin.
+                vmCartLock = false; vmCartPending = null;
+                return;
+              }
+              applySections(d.sections);
+              document.dispatchEvent(new CustomEvent('cart:update', { detail: { resource: {}, data: {} } }));
+              setTimeout(clearCartBusy, 90);
+              vmCartLock = false;
+              if (vmCartPending) { var p = vmCartPending; vmCartPending = null; cartChange(p.line, p.qty); }
+            })
+            .catch(function(){ vmCartLock = false; location.reload(); });
+        }
+
+        // Capture-phase: tüm sepet butonlarını yakala, KENDİMİZ uygula
+        document.addEventListener('click', function(e){
+          var t = e.target; if (!t || !t.closest) return;
+
+          // Sepet ikonu → drawer ANINDA açılsın (native on:click="/open" ~1sn gecikmesini atla)
+          var cartBtn = t.closest('button.header-actions__action[aria-label="Sepet"]');
+          if (cartBtn) {
+            var dlgC = document.querySelector('cart-drawer-component dialog');
+            if (dlgC && !dlgC.open) { e.preventDefault(); e.stopImmediatePropagation(); try { dlgC.showModal(); } catch(_){} if (typeof vmDecorateDrawer === 'function') vmDecorateDrawer(); }
+            return;
+          }
+
+          // EKLE
+          var addBtn = t.closest('button[name="add"]');
+          if (addBtn) {
+            if (addBtn.disabled || addBtn.getAttribute('aria-busy') === 'true') { e.preventDefault(); return; }
+            var scope = addBtn.closest('product-form-component') || addBtn.closest('form');
+            if (scope) {
+              if (variantId(scope)) { e.preventDefault(); e.stopImmediatePropagation(); doAdd(scope, addBtn); }
+              else { e.preventDefault(); setTimeout(function(){ if (variantId(scope)) doAdd(scope, addBtn); }, 90); }
+            }
+            return;
+          }
+          // SİL
+          var rem = t.closest('.cart-items__remove');
+          if (rem) {
+            var oc = rem.getAttribute('on:click') || '';
+            var m = oc.match(/onLineItemRemove\/(\d+)/);
+            if (m) { e.preventDefault(); e.stopImmediatePropagation(); rem.setAttribute('aria-busy','true'); cartChange(parseInt(m[1], 10), 0); }
+            return;
+          }
+          // ADET +/−
+          var qb = t.closest('cart-quantity-selector-component button[name="plus"], cart-quantity-selector-component button[name="minus"]');
+          if (qb) {
+            var comp = qb.closest('cart-quantity-selector-component');
+            var inp = comp && comp.querySelector('input[data-cart-line]');
+            if (inp) {
+              var line = parseInt(inp.getAttribute('data-cart-line'), 10);
+              var cur = parseInt(inp.value, 10) || 0;
+              var min = parseInt(inp.getAttribute('data-min'), 10) || 0;
+              var nq = qb.getAttribute('name') === 'plus' ? cur + 1 : Math.max(min, cur - 1);
+              if (nq !== cur) { e.preventDefault(); e.stopImmediatePropagation(); comp.setAttribute('aria-busy','true'); cartChange(line, nq); }
+            }
+            return;
+          }
+        }, true);
+
+        // Sepet ikonu → drawer ANINDA açılsın (Yunus: "1sn geç açılıyor"). showModal idempotent; native fetch/render devam eder.
+        document.addEventListener('click', function(e){
+          var t = e.target; if (!t || !t.closest) return;
+          if (/\/pages\/odeme/.test(location.pathname)) return;
+          var trig = t.closest('button[aria-label*="epet" i], button[aria-label*="cart" i]');
+          if (!trig) return;
+          var dlg = document.querySelector('cart-drawer-component dialog');
+          if (dlg && !dlg.open && typeof dlg.showModal === 'function') { try { dlg.showModal(); vmDecorateDrawer(); } catch(_){} }
+        }, true);
+
+        // Sepet drawer kapatma X butonu görünür (Yunus 16b). Native Esc zaten kapatır. (16c dışarı-tıkla: modal open-race nedeniyle ertelendi.)
+        function vmInjectX(dlg){
+          var cb = dlg.querySelector('button[aria-label*="kapat" i], button[aria-label*="close" i]');
+          if (cb && !cb.dataset.vmX) { cb.dataset.vmX = '1'; cb.innerHTML = '<span aria-hidden="true" style="font-size:26px;line-height:1;color:#1a1a1a;display:block">×</span>'; cb.addEventListener('click', function(){ try { dlg.close(); } catch(_){ dlg.removeAttribute('open'); } }); }
+        }
+        // Drawer içi: indirim "kaldır" + ücretsiz kargo çubuğu (Yunus geri bildirim)
+        var VM_FREE_SHIP = 1500;
+        function vmDrawerEnhance(dlg){
+          if (!dlg) return;
+          dlg.querySelectorAll('.cart-discounts__item').forEach(function(li){
+            if (li.querySelector('.vm-disc-rm')) return;
+            var rm = document.createElement('button'); rm.type='button'; rm.className='vm-disc-rm'; rm.textContent='kaldır';
+            rm.style.cssText='margin-left:8px;color:#c0392b;background:none;border:0;cursor:pointer;font-size:11px;font-weight:700;text-decoration:underline;padding:0';
+            rm.addEventListener('click', function(e){ e.preventDefault(); e.stopPropagation(); rm.textContent='…'; fetch('/cart/update.js',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({discount:''})}).then(function(){ location.reload(); }).catch(function(){ location.reload(); }); });
+            li.appendChild(rm);
+          });
+          var summary = dlg.querySelector('.cart-drawer__summary');
+          if (summary && VM_FREE_SHIP > 0 && !summary.dataset.vmFs) {
+            summary.dataset.vmFs = '1';
+            fetch('/cart.js').then(function(r){ return r.json(); }).then(function(cart){
+              if (summary.querySelector('.vm-freeship')) return;
+              var subTl = cart.items_subtotal_price/100; var reached = subTl >= VM_FREE_SHIP;
+              var bar = document.createElement('div'); bar.className='vm-freeship';
+              bar.style.cssText='display:block;text-align:center;font-size:12.5px;font-weight:700;padding:6px 8px 12px;line-height:1.45;color:'+(reached?'#1f7a4d':'#c0392b');
+              bar.innerHTML = reached ? ('🎁 Ücretsiz kargo kazandın!<span style="display:block;opacity:.65;font-weight:600;font-size:.9em;margin-top:1px">('+VM_FREE_SHIP+' TL ve üzeri)</span>') : ('🚚 Ücretsiz kargoya <b style="white-space:nowrap">'+Math.ceil(VM_FREE_SHIP-subTl)+' TL</b> kaldı<span style="display:block;opacity:.75;font-weight:600;font-size:.9em;margin-top:1px">('+VM_FREE_SHIP+' TL ve üzeri ücretsiz)</span>');
+              summary.insertBefore(bar, summary.firstChild);
+            }).catch(function(){ summary.dataset.vmFs=''; });
+          }
+        }
+        // 16c dışarı-tıkla kapat — GÜVENİLİR: mousedown koordinatını dialog'un
+        // gerçek içerik kutusuyla (getBoundingClientRect) karşılaştır. Native drawer içeriği
+        // dialog'u kaplayıp backdrop'a denk gelen alan tıklanamaz olabildiği için 'e.target===dlg'
+        // güvenilmez; ayrıca press ve release içerik↔backdrop'a dağılırsa 'click' hiç ateşlemez.
+        // mousedown backdrop'ta başladıysa (koordinat rect DIŞINDA) → kapat. X/ESC bozulmaz.
+        function vmBindOutsideClose(dlg){
+          if (!dlg) return;
+          // (A) Native ::backdrop tiklamasi: click event'te target === dialog olur -> kapat.
+          if (!dlg.dataset.vmOutside) {
+            dlg.dataset.vmOutside = '1';
+            dlg.addEventListener('click', function(e){ if (dlg.open && e.target === dlg) { try{dlg.close();}catch(_){dlg.removeAttribute('open');} } });
+          }
+          // (B) Custom backdrop div (native ::backdrop degilse mousedown dlg'ye ateslemiyor): belge-seviyesi
+          // mousedown (capture, TEK sefer) -> panel rect DISINA denk gelen sol-tik -> kapat. X/ESC/panel-ici bozulmaz.
+          if (!window.__vmOutsideBound) {
+            window.__vmOutsideBound = 1;
+            document.addEventListener('pointerdown', function(e){
+              var d = document.querySelector('cart-drawer-component dialog');
+              if (!d || !d.open || e.button !== 0) return;
+              var r = d.getBoundingClientRect();
+              if (r.width < 5) return;
+              var inside = e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom;
+              if (!inside) { try { d.close(); } catch(_){ d.removeAttribute('open'); } }
+            }, true);
+          }
+        }
+        function vmDecorateDrawer(){
+          var dlg = document.querySelector('cart-drawer-component dialog');
+          if (!dlg) return;
+          vmBindOutsideClose(dlg);
+          if (!dlg.dataset.vmDismiss) { dlg.dataset.vmDismiss = '1'; var vmObsT = null; try { new MutationObserver(function(){ if (vmObsT) return; vmObsT = setTimeout(function(){ vmObsT = null; vmInjectX(dlg); clearCartBusy(); vmDrawerEnhance(dlg); }, 60); }).observe(dlg, { childList: true, subtree: true }); } catch(_){} }
+          vmInjectX(dlg); clearCartBusy(); vmDrawerEnhance(dlg);
+        }
+        if (document.readyState !== 'loading') vmDecorateDrawer(); else document.addEventListener('DOMContentLoaded', vmDecorateDrawer);
+
+        // Ödeme sayfasında (/pages/odeme) sepet zaten görünüyor → sepet ikonu drawer'ı AÇMASIN (Yunus geri bildirim).
+        if (/\/pages\/odeme/.test(location.pathname)) {
+          var vmNoDrawer = function(){
+            var d = document.querySelector('cart-drawer-component dialog');
+            if (d && !d.dataset.vmNoOpen) { d.dataset.vmNoOpen = '1'; d.showModal = function(){}; d.show = function(){}; }
+            document.querySelectorAll('cart-drawer-component dialog[open]').forEach(function(x){ try { x.close(); } catch(_){ x.removeAttribute('open'); } });
+          };
+          vmNoDrawer();
+          document.addEventListener('DOMContentLoaded', vmNoDrawer);
+          try { new MutationObserver(vmNoDrawer).observe(document.documentElement, { subtree: true, attributes: true, attributeFilter: ['open'] }); } catch(_){}
+        }
+      })();
+    </script>
+
+    {%- comment -%}
+      Via Mood: Cart update event listener — Shopify native event'ini dinleyip
+      cart icon bubble'ı senkronize et (Horizon theme'in bazen kayıt etmediği bir bug).
+      Bu sadece event listener, hiçbir akışı bozmaz / preventDefault yok.
+    {%- endcomment -%}
+    <script>
+      (function(){
+        function syncBubble() {
+          fetch('/cart.js', { credentials: 'same-origin' })
+            .then(function(r){ return r.json(); })
+            .then(function(cart){
+              var count = cart.item_count || 0;
+              document.querySelectorAll('[data-cart-count], .cart-count, cart-icon-component .cart-count, cart-icon .cart-count').forEach(function(el){
+                el.textContent = String(count);
+                if (count > 0) { el.classList.remove('hidden'); el.removeAttribute('hidden'); }
+              });
+            }).catch(function(){});
+        }
+        // Native Shopify event'leri
+        document.addEventListener('cart:update', syncBubble);
+        document.addEventListener('cart:add', syncBubble);
+        document.addEventListener('cart:change', syncBubble);
+        // Sayfa yüklenince bir kez senkronize et
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', syncBubble);
+        } else {
+          syncBubble();
+        }
+      })();
+    </script>
+
+    {% if request.design_mode %}
+      {%- render 'theme-editor' -%}
+    {% endif %}
+
+    {{ content_for_header }}
+    {% # theme-check-enable RemoteAsset %}
+    <style id="vm-freeship-hide-20260729">/* Yunus 29 Tem: kargo herkese ücretsizken sepet "X kaldı" çubuğunu gizle */ .vm-freeship{display:none !important}</style>
+</head>
+
+  <body class="page-width-{{ settings.page_width }} card-hover-effect-{{ settings.card_hover_effect }}">
+    <!-- Google Tag Manager (noscript) -->
+<noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-KCSZPGKV"
+height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+<!-- End Google Tag Manager (noscript) -->
+    {% render 'skip-to-content-link', href: '#MainContent', text: 'accessibility.skip_to_text' %}
+    <div id="header-group">
+      {% sections 'header-group' %}
+    </div>
+
+    <script>
+      // Inline header height and menu style calculations to prevent layout shift
+      // Note: Updates in calculateHeaderGroupHeight(), updateTransparentHeaderOffset() and setHeaderMenuStyle() utilities.js should be kept in sync with this function
+      (function setHeaderHeighCustomProperties() {
+        /*
+         * Header calculation functions for maintaining CSS variables
+         * Mimic calculateHeaderGroupHeight() in utilities.js
+         */
+        const header = document.querySelector('header-component');
+        const headerGroup = document.querySelector('#header-group');
+        const hasHeaderSection = headerGroup?.querySelector('.header-section');
+
+        if (!header || !headerGroup) return;
+
+        const headerTopRow = header.querySelector('.header__row--top');
+        const headerHeight = header.offsetHeight;
+
+        // Calculate the total height of the header group
+        let headerGroupHeight = 0;
+        const children = headerGroup.children;
+        for (let i = 0; i < children.length; i++) {
+          const element = children[i];
+          if (element === header || !(element instanceof HTMLElement)) continue;
+          headerGroupHeight += element.offsetHeight;
+        }
+
+        // Check for transparent header special case
+        if (header.hasAttribute('transparent') && header.parentElement?.nextElementSibling) {
+          headerGroupHeight += headerHeight;
+        }
+
+        // Set CSS variables
+        document.body.style.setProperty('--header-height', `${headerHeight}px`);
+        document.body.style.setProperty('--header-group-height', `${headerGroupHeight}px`);
+
+        if (headerTopRow) {
+          window.requestAnimationFrame(function () {
+            document.body.style.setProperty('--top-row-height', `${headerTopRow.offsetHeight}px`);
+          });
+        }
+
+        /**
+         * Updates CSS custom properties for transparent header offset calculation
+         * Mimic updateTransparentHeaderOffset() in utilities.js
+         */
+
+        if (!hasHeaderSection || !header?.hasAttribute('transparent')) {
+          document.body.style.setProperty('--transparent-header-offset-boolean', '0');
+          return;
+        }
+
+        const hasImmediateSection = hasHeaderSection.nextElementSibling?.classList.contains('shopify-section');
+
+        const shouldApplyOffset = !hasImmediateSection ? '1' : '0';
+        document.body.style.setProperty('--transparent-header-offset-boolean', shouldApplyOffset);
+      })();
+
+      (function setHeaderMenuStyle() {
+        const headerComponent = document.querySelector('#header-component');
+        if (headerComponent) {
+          const isTouchDevice = 'ontouchstart' in window && navigator.maxTouchPoints > 0;
+          const overflowList = headerComponent?.querySelector('overflow-list');
+          const hasReachedMinimum = overflowList && overflowList.hasAttribute('minimum-reached');
+          headerComponent.dataset.menuStyle = isTouchDevice || hasReachedMinimum ? 'drawer' : 'menu';
+        }
+      })();
+    </script>
+
+    <main
+      id="MainContent"
+      class="content-for-layout"
+      role="main"
+      data-page-transition-enabled="{{ settings.page_transition_enabled }}"
+      data-product-transition="{{ settings.transition_to_main_product }}"
+      data-template="{{ template }}"
+    >
+      {{ content_for_layout }}
+    </main>
+
+    <footer>
+      {% sections 'footer-group' %}
+    </footer>
+
+    {% render 'search-modal' %}
+
+    {% if settings.quick_add or settings.mobile_quick_add %}
+      {% render 'quick-add-modal' %}
+    {% endif %}
+
+    {% comment %} Via Mood: Mobile App-Like Bottom Navigation {% endcomment %}
+    {% render 'via-cookie-consent' %}
+    {% render 'via-mobile-bottom-nav' %}
+    {% comment %} Via Mood: sipariş sonrası sepet güvencesi — temizleme başarısız kaldıysa tamamla {% endcomment %}
+    <script>
+    (function(){
+      try{
+        if(localStorage.getItem('vm_clear_cart')==='1'){
+          document.querySelectorAll('.cart-bubble, [data-vm-cart-count], [data-cart-count], .cart-count, .cart-count-bubble').forEach(function(e){ e.setAttribute('hidden',''); e.style.display='none'; });
+          fetch('/cart.js').then(function(r){return r.json();}).then(function(c){
+            if(c && c.item_count>0){ return fetch('/cart/clear.js',{method:'POST'}); }
+          }).then(function(){ localStorage.removeItem('vm_clear_cart'); })
+          .catch(function(){ localStorage.removeItem('vm_clear_cart'); });
+        }
+      }catch(e){}
+    })();
+    </script>
+  
+<script id="vm-hesap-portal">/* Hesabım → müşteri portalı */
+(function(){var P='https://hesap.viamood.com.tr/hesabim';function fix(){document.querySelectorAll('a[href="/account"],a[href^="/account?"],a[href^="/account/"],a[href*="customer_login"]').forEach(function(a){a.href=P;a.removeAttribute('data-no-instant')});}document.addEventListener('DOMContentLoaded',fix);setTimeout(fix,1200);setTimeout(fix,3000);})();
+</script>
+</body>
+</html>
