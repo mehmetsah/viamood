@@ -83,6 +83,47 @@ function wrap(content: string): string {
 
 /**
  * Şifre sıfırlama maili. Buton çalışmayan istemciler için ham adres de basılır.
+ * "Hoş geldin" indirim kodu maili (Defter #974).
+ *
+ * ⚠️ Kod parametre olarak GELİR — bu dosyaya sabit yazma. Çağıran taraf
+ * (lib/welcome-signup.ts) değeri sunucu ortam değişkeninden okur; kod hiçbir
+ * zaman istemciye gönderilmez.
+ */
+export function welcomeDiscountEmail(p: {
+  name?: string;
+  code: string;
+}): { subject: string; html: string; text: string } {
+  const hitap = p.name ? `Merhaba <strong>${p.name}</strong>,` : 'Merhaba,';
+  return {
+    subject: `${BRAND_NAME}: %10 hoş geldin indirim kodunuz`,
+    html: wrap(`
+      <p>${hitap}</p>
+      <p>Aramıza hoş geldiniz. İlk siparişinizde kullanabileceğiniz <strong>%10 indirim kodunuz</strong> hazır:</p>
+      <div class="em-card" style="margin:24px 0;padding:20px;border:1px dashed #d9cfc0;border-radius:12px;background:#fffdf9;text-align:center;">
+        <span class="em-mono" style="font-size:26px;font-weight:700;letter-spacing:2px;color:#14201d;">${p.code}</span>
+      </div>
+      <p style="font-size:14px;color:#6b6660;">
+        Kod <strong>1000₺ ve üzeri ilk siparişinizde</strong> geçerlidir. Ödeme adımında
+        indirim kodu alanına yazmanız yeterli.
+      </p>
+      ${button(`${env.STOREFRONT_URL}`, 'Alışverişe başla')}
+      <p style="margin-top:24px;font-size:14px;color:#6b6660;">
+        Evinizi düzenleyen ürünlerde size iyi alışverişler dileriz.
+      </p>
+    `),
+    text:
+      `${BRAND_NAME} — %10 hoş geldin indiriminiz\n\n` +
+      `İndirim kodunuz: ${p.code}\n` +
+      `1000₺ ve üzeri ilk siparişinizde geçerlidir.\n\n` +
+      `${env.STOREFRONT_URL}`,
+  };
+}
+
+/**
+ * Şifre sıfırlama maili.
+ * Linki tıklayamayan istemciler için ham adres de metin olarak basılır.
+ * "Bu isteği sen yapmadıysan..." satırı bilinçli: kullanıcı hesabının hedef
+ * alındığını fark edebilsin, ama panik yaratmadan.
  */
 export function passwordResetEmail(p: {
   name?: string;

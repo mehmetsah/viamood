@@ -59,6 +59,13 @@ const envSchema = z.object({
   SMTP_PORT: z.coerce.number().default(587),
   SMTP_USER: z.string().optional(),
   SMTP_PASS: z.string().optional(),
+
+  // ── "Hoş geldin" pop-up (Defter #974) — MAİL AKIŞININ TEK YAPILANDIRMA NOKTASI ──
+  // WELCOME_DISCOUNT_CODE: Shopify'daki indirim kodunun aynısı. Kod YALNIZ sunucuda
+  //   durur, mail gövdesine buradan yazılır; istemciye/HTML'e/JS'e ASLA gönderilmez.
+  //   Bu yüzden bilinçli olarak DEFAULT YOK — kaynağa gömülmesin.
+  // Mail gönderimi RESEND_API_KEY ile birlikte aktifleşir; ikisi de doluysa mail gider.
+  WELCOME_DISCOUNT_CODE: z.string().optional(),
   EMAIL_FROM: z.string().default('Via Mood <noreply@viamood.com>'),
 
   // Storefront — primary domain (custom checkout ödeme redirect'i + CORS default origin). Domain değişince TEK yer.
