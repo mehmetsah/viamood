@@ -1,0 +1,46 @@
+{
+  "kaynak": {
+    "varyant": 698,
+    "marka_dagilimi": {
+      "Nandy Home": 674,
+      "We House": 21,
+      "GİNZAMAİSON": 1,
+      "Paşabahçe": 1,
+      "simplicity": 1
+    },
+    "kapsam_varyant": 674,
+    "kapsam_urun": 469,
+    "kapsam_disi_varyant": 24
+  },
+  "fiyat": {
+    "carpan": 1.4,
+    "yuvarlama": "5 TL yukarı",
+    "fiyatsiz_urun": 29
+  },
+  "gorsel": {
+    "gorselsiz_varyant": 0,
+    "ortalama": 4.24
+  },
+  "varyant": {
+    "tek": 342,
+    "coklu": 127,
+    "toplam_stok": 415498
+  },
+  "idempotens": {
+    "sku_map": 400,
+    "eslesen": 400,
+    "yeni": 69,
+    "sku_min": 1100,
+    "sku_max": 1499
+  },
+  "canli": {
+    "urun": 402,
+    "durum": {
+      "draft": 400,
+      "active": 2
+    },
+    "benzersiz_sku": 393,
+    "mapte_olup_canlida_yok": 9,
+    "canlida_olup_mapte_yok": 2
+  }
+}
