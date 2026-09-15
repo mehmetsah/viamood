@@ -15,7 +15,16 @@ const envSchema = z.object({
 
   // Auth
   AUTH_SECRET: z.string().min(32, 'AUTH_SECRET must be at least 32 chars'),
-  AUTH_URL: z.string().url().default('http://localhost:3000'),
+  /**
+   * Auth.js taban adresi. OPSİYONEL — bilinçli olarak varsayılansız.
+   *
+   * Auth.js v5'te AÇIKÇA verilmiş AUTH_URL, `trustHost` ayarını EZER: host
+   * başlıklardan türetilmez, bu değer kullanılır. Prod'da bu değer yanlıştı
+   * (`https://localhost:4001`) ve /api/auth/providers onu gösteriyordu →
+   * OAuth callback'i localhost'a kaçıyordu. Sunucuya SSH kapalı olduğu için
+   * .env düzeltilemiyor; aşağıdaki temizleme bu yüzden var (bkz. temizleAuthUrl).
+   */
+  AUTH_URL: z.string().url().optional(),
   AUTH_GOOGLE_ID: z.string().optional(),
   AUTH_GOOGLE_SECRET: z.string().optional(),
   AUTH_APPLE_ID: z.string().optional(),
@@ -207,6 +216,37 @@ const envSchema = z.object({
   APP_NAME: z.string().default('Via Mood Vendor Platform'),
   APP_URL: z.string().url().default('http://localhost:3000'),
 });
+
+/**
+ * AUTH_URL "localhost" içeriyorsa process.env'den SİLER.
+ *
+ * NEDEN: Auth.js v5 bu değişkeni doğrudan `process.env`'den okur — bizim zod
+ * nesnemizden değil. Değişken tanımlı kaldığı sürece `trustHost: true` etkisiz
+ * kalır. Prod'da yanlış bir localhost adresi ayarlı; onu burada düşürüyoruz ki
+ * host gerçek istekten (X-Forwarded-Host) türetilsin.
+ *
+ * GERÇEK bir AUTH_URL ayarlıysa (localhost içermiyorsa) DOKUNULMAZ — bilinçli
+ * kurulumlar bozulmaz.
+ */
+function temizleAuthUrl(): string | null {
+  const ham = (process.env.AUTH_URL ?? '').trim();
+  if (!ham) return null;
+  if (!/localhost|127\.0\.0\.1/i.test(ham)) return null;
+  delete process.env.AUTH_URL;
+  // NEXTAUTH_URL eski adıdır; aynı işi görür, o da temizlenmeli.
+  if (/localhost|127\.0\.0\.1/i.test(process.env.NEXTAUTH_URL ?? '')) {
+    delete process.env.NEXTAUTH_URL;
+  }
+  return ham;
+}
+
+const dusurulenAuthUrl = temizleAuthUrl();
+if (dusurulenAuthUrl) {
+  console.warn(
+    `[env] AUTH_URL "${dusurulenAuthUrl}" localhost adresi — düşürüldü. ` +
+      'Host artık gelen istekten türetilecek (trustHost).',
+  );
+}
 
 const parsed = envSchema.safeParse(process.env);
 

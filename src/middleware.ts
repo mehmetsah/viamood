@@ -12,6 +12,10 @@ const PUBLIC_PATHS = new Set([
   '/auth/customer-sign-up',
   '/auth/verify',
   '/auth/error',
+  // Google OAuth dönüş yolu — OTURUM ARANMAZ. Kullanıcı buraya henüz
+  // giriş yapmamış hâlde döner; public olmazsa sign-in'e atılır ve
+  // `code`/`state` kaybolur, giriş tamamlanamaz.
+  '/auth/google/callback',
 ]);
 
 const ADMIN_PREFIX = '/admin';

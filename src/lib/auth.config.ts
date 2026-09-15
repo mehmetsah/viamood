@@ -41,6 +41,10 @@ export const authConfig: NextAuthConfig = {
         '/auth/sign-up',
         '/auth/verify',
         '/auth/error',
+        // Google OAuth dönüş yolu — OTURUM ARANMAZ. Kullanıcı buraya henüz
+        // giriş yapmamış hâlde döner; public olmazsa sign-in'e atılır ve
+        // `code`/`state` kaybolur, giriş tamamlanamaz.
+        '/auth/google/callback',
       ]);
       if (PUBLIC_PATHS.has(pathname)) return true;
       if (pathname.startsWith('/api/auth') || pathname.startsWith('/api/health')) return true;
