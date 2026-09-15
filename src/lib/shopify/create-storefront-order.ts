@@ -9,7 +9,7 @@
  *
  * Gerçek sipariş = Orders API (draft değil) ki webhook + müşteri hesabı + routing çalışsın.
  */
-import { provinceCode } from './tr-provinces';
+import { provinceCode, provinceName } from './tr-provinces';
 import { env } from '../env';
 import { upsertCustomerAddress } from './customer-address';
 import { ensureTrCustomer } from './customer-locale';
@@ -133,7 +133,10 @@ export async function createStorefrontOrder(
   // Shopify phone E.164 ister — normalize edilemiyorsa alanı HİÇ gönderme (422 'is invalid' önlenir;
   // telefon zaten note + Mikro EvrakDokum'da taşınıyor, sipariş telefonsuz da oluşabilmeli)
   const phone = normalizeTrPhone(b.phone);
-  const pcode = provinceCode(b.province);
+  // #615: form il alanında bazen ADI değil KODU ('TR-34') gönderiyor —
+  // normalleştirmezsek Shopify'a kod yazılıyor ve PTT etiketine "TR-34" basılıyor.
+  const il = provinceName(b.province);
+  const pcode = provinceCode(il);
   const addr: Record<string, unknown> = {
     first_name: b.first_name,
     last_name: b.last_name,
@@ -141,7 +144,7 @@ export async function createStorefrontOrder(
     address1: b.address1,
     address2: b.address2 || '',
     city: b.city, // ilçe
-    province: b.province, // il
+    province: il, // il
     zip: b.zip || '',
     country: 'Turkey',
     country_code: 'TR',
@@ -244,7 +247,7 @@ export async function createStorefrontOrder(
         address1: b.address1,
         address2: b.address2,
         city: b.city,
-        province: b.province,
+        province: il,
         zip: b.zip,
       });
     }

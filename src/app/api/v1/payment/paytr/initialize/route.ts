@@ -12,7 +12,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { getAllowedOrigins } from '@/lib/cors';
 import { env } from '@/lib/env';
-import { provinceCode } from '@/lib/shopify/tr-provinces';
+import { provinceCode, provinceName } from '@/lib/shopify/tr-provinces';
 import { normalizeTrPhone } from '@/lib/shopify/tr-format';
 import { upsertCustomerAddress } from '@/lib/shopify/customer-address';
 import { ensureTrCustomer } from '@/lib/shopify/customer-locale';
@@ -84,7 +84,10 @@ async function createDraftOrder(b: PaytrInitBody): Promise<number | null> {
   const token = env.SHOPIFY_ADMIN_ACCESS_TOKEN;
   if (!token) return null;
   const phone = normalizeTrPhone(b.phone) ?? '';
-  const pcode = provinceCode(b.province);
+  // #615: form il alanında bazen ADI değil KODU ('TR-34') gönderiyor —
+  // normalleştirmezsek Shopify'a kod yazılıyor ve PTT etiketine "TR-34" basılıyor.
+  const il = provinceName(b.province);
+  const pcode = provinceCode(il);
   const addr: Record<string, unknown> = {
     first_name: b.first_name,
     last_name: b.last_name,
@@ -92,7 +95,7 @@ async function createDraftOrder(b: PaytrInitBody): Promise<number | null> {
     address1: b.address1,
     address2: b.address2 || '',
     city: b.city,
-    province: b.province,
+    province: il,
     zip: b.zip || '',
     country: 'Turkey',
     country_code: 'TR',
@@ -151,7 +154,7 @@ async function createDraftOrder(b: PaytrInitBody): Promise<number | null> {
           address1: b.address1,
           address2: b.address2,
           city: b.city,
-          province: b.province,
+          province: il,
           zip: b.zip,
         });
       }
