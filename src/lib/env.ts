@@ -4,6 +4,23 @@ import { z } from 'zod';
  * Zod-validated environment variables.
  * Hata veriyorsa boot'ta erken patlar (silent prod sürprizi yok).
  */
+/**
+ * Ortam bayrağı: YALNIZ 'true' / '1' açar; 'false', '0', boş ve tanınmayan her şey kapatır.
+ *
+ * NEDEN VAR: `z.coerce.boolean()` içeride `Boolean(v)` çağırır — `Boolean('false') === true`.
+ * Yani `MIKRO_AUTO_PUSH=false` yazmak bayrağı KAPATMIYOR, açık bırakıyordu; varsayılanı
+ * `true` olan kill switch'ler env'den kapatılamıyordu (15 Eyl 2026 ölçümü:
+ * 'false' → true, '0' → true). Dosyada üç yerde "z.coerce.boolean KULLANMA" uyarısı
+ * vardı ama dört bayrak hâlâ onu kullanıyordu.
+ *
+ * Davranış korunur: değişken TANIMSIZ ise `varsayilan` neyse o geçerli kalır.
+ */
+const bayrak = (varsayilan: boolean) =>
+  z
+    .string()
+    .transform((v) => v === 'true' || v === '1')
+    .default(varsayilan ? 'true' : 'false');
+
 const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
 
@@ -143,15 +160,15 @@ const envSchema = z.object({
   /** Kargo KDV oranı (%). Kargo TR'de %20; muafiyet için 0. */
   MIKRO_KARGO_KDV: z.coerce.number().default(20),
   /** Otomatik Mikro push aktif mi? (false → sadece DB'ye yazılır, manuel push gerek) */
-  MIKRO_AUTO_PUSH: z.coerce.boolean().default(true),
+  MIKRO_AUTO_PUSH: bayrak(true),
   /** true → Mikro push SİPARİŞ ANINDA (eski davranış, takip no'suz).
    *  false (default) → push KARGO ETİKETİ SONRASI, takip no ile
    *  (Yunus akışı: el terminali sipariş kağıdını kargo etiketiyle birlikte bassın). */
-  MIKRO_PUSH_ON_ORDER: z.coerce.boolean().default(false),
+  MIKRO_PUSH_ON_ORDER: bayrak(false),
   /** Sipariş düşünce KargoLab etiketi OTOMATİK oluşsun mu? (müşterinin checkout'ta
    *  seçtiği kurye + kapıda ödeme ile; havale-pending paid olana dek bekler).
    *  false → sadece tedarikçi panelindeki manuel buton. */
-  KARGOLAB_AUTO_LABEL: z.coerce.boolean().default(true),
+  KARGOLAB_AUTO_LABEL: bayrak(true),
 
   /** KargoLab durum webhook'u imza secret'ı. KargoLab bu secret'ı `?key=` veya
    *  `x-kargolab-secret` header'ında gönderir → /api/kargolab/webhook doğrular.
@@ -189,7 +206,7 @@ const envSchema = z.object({
   /** ANA FİRMA (fatura) DB API'si — port 7782; boş bırakılırsa firma push atlanır */
   MIKRO_FIRMA_API_URL: z.string().default('http://85.111.96.204:7782/api'),
   /** Ana firma DB'ye de sipariş push edilsin mi (fatura kesimi için, müşteri carili) */
-  MIKRO_FIRMA_PUSH: z.coerce.boolean().default(true),
+  MIKRO_FIRMA_PUSH: bayrak(true),
   /** Ana firma DB depo no (Yunus örneği: 1) */
   MIKRO_FIRMA_DEPO: z.coerce.number().default(1),
   /** Via müşteri numarası — aradepo evrak seri öneki (Yunus kuralı: '001S25976') */
