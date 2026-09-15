@@ -238,22 +238,34 @@ const envSchema = z.object({
  * GERÇEK bir AUTH_URL ayarlıysa (localhost içermiyorsa) DOKUNULMAZ — bilinçli
  * kurulumlar bozulmaz.
  */
-function temizleAuthUrl(): string | null {
-  const ham = (process.env.AUTH_URL ?? '').trim();
-  if (!ham) return null;
-  if (!/localhost|127\.0\.0\.1/i.test(ham)) return null;
-  delete process.env.AUTH_URL;
-  // NEXTAUTH_URL eski adıdır; aynı işi görür, o da temizlenmeli.
-  if (/localhost|127\.0\.0\.1/i.test(process.env.NEXTAUTH_URL ?? '')) {
-    delete process.env.NEXTAUTH_URL;
+/** İki değişken de aynı işi görür; next-auth `AUTH_URL ?? NEXTAUTH_URL` sırasıyla okur. */
+const AUTH_URL_ADLARI = ['AUTH_URL', 'NEXTAUTH_URL'] as const;
+
+export function temizleAuthUrl(): string[] {
+  const yerelMi = (v: string) => /localhost|127\.0\.0\.1/i.test(v);
+  const dusurulen: string[] = [];
+
+  // Her iki ad BAĞIMSIZ değerlendirilir. Önceki sürüm `AUTH_URL` boşsa hemen
+  // dönüyordu ve eski adı hiç temizlemiyordu; prod'da yalnız NEXTAUTH_URL
+  // tanımlı olduğu için düzeltme orada ETKİSİZ kalmıştı (15 Eyl 2026 ölçümü:
+  // /api/auth/providers → "https://localhost:4001", uyarı log'u hiç basılmadı).
+  for (const ad of AUTH_URL_ADLARI) {
+    const ham = (process.env[ad] ?? '').trim();
+    if (!ham || !yerelMi(ham)) continue;
+    delete process.env[ad];
+    dusurulen.push(`${ad}="${ham}"`);
   }
-  return ham;
+  return dusurulen;
 }
 
-const dusurulenAuthUrl = temizleAuthUrl();
-if (dusurulenAuthUrl) {
+/**
+ * Modül yüklenirken düşürülen değişkenler (teşhis + test içindir).
+ * Boş dizi = düşürülecek bir şey yoktu.
+ */
+export const dusurulenAuthUrl = temizleAuthUrl();
+if (dusurulenAuthUrl.length > 0) {
   console.warn(
-    `[env] AUTH_URL "${dusurulenAuthUrl}" localhost adresi — düşürüldü. ` +
+    `[env] ${dusurulenAuthUrl.join(', ')} localhost adresi — düşürüldü. ` +
       'Host artık gelen istekten türetilecek (trustHost).',
   );
 }
