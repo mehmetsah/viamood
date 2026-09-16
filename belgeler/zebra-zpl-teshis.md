@@ -70,3 +70,54 @@ Sadece düz komut metni varsa ve hex yoksa → büyük olasılıkla (b) sürüc�
 Günlük kargo etiketi basımı **ZPL kullanmıyor** — PDF basılıyor. Yani bu arıza
 etiket üretimini durdurmaz; yalnız yazıcıya doğrudan ZPL ile tanı koymayı engeller.
 Etiket basımında ayrı bir sorun varsa o **başka bir arızadır**, bu belge onu kapsamaz.
+
+
+---
+
+## Ek ölçüm — 16 Eylül 2026: entegrasyon tarafında ZPL kaldıracı VAR ama PTT'de YOK
+
+Önceki bölüm "biz ZPL üretmiyoruz" diyordu; doğru ama eksikti. KargoLab
+**sevkiyat oluşturma** yanıtında hazır ZPL etiketi dönüyor ve biz bunu hiç
+kullanmıyoruz. Prod veritabanındaki kayıtlı ham yanıtlardan ölçüldü:
+
+```
+metadata->'kargolabResponse'->'courrier_api'->>'zpl'
+  → "^XA\r\n^MMT\r\n^PW799\r\n^LL0799\r\n^LS0\r\n^FT360,49^A0N,32,45..."
+  uzunluk ~1.9 KB — gerçek, basılabilir Zebra etiketi
+```
+
+### KAPSAM — kritik nokta
+```
+kurye   sevkiyat   zpl var
+PTT       101         0      ← canlıda müşteriye sunulan TEK kurye
+SÜRAT      11        10
+toplam    112        10
+```
+
+**ZPL yalnız SÜRAT'ta geliyor, PTT'de hiç yok.** SÜRAT müşteriye kapatıldığı
+için bugünkü operasyonun tamamı PTT. Dolayısıyla "depodaki ZPL'i yazıcıya ham
+gönderelim" çözümü **şu an hiçbir siparişi kurtarmaz** — dead code olurdu.
+(Bu ölçüm yapılmasa o yönde bir yama yazılacaktı; kapsam bakmak kurtardı.)
+
+### İkinci bulgu — kendi etiket yolumuz hiç kullanılmamış
+```
+fulfillments: 112 kayıt
+  metadata ? 'kargolabLabelPdf'  →   0
+  label_url IS NOT NULL          →   0
+```
+Panelde "Etiket linkini al" düğmesi var (`FulfillmentClient.tsx`) ve
+`getShipmentLabel`'a bağlı, ama **112 sevkiyatın hiçbirinde etiket saklanmamış**.
+Yani bu yol ya hiç kullanılmıyor ya da hep düşüyor. Etiketler büyük olasılıkla
+KargoLab'ın kendi panelinden basılıyor — bu doğruysa **bizim kodumuz Zebra
+arızasının akışında hiç yok**.
+
+> Bunu doğrulamak için `getShipmentLabel`'ı çağırmadım: KargoLab'da etiket
+> üretmek yan etkili olabilir (barkod tüketimi / "basıldı" damgası). Teyit
+> Yunus'a tek soruyla yapılır: *"Etiketi KargoLab panelinden mi basıyorsun,
+> yoksa bizim panelden 'Etiket linkini al' ile mi?"*
+
+### Hüküm (değişmedi, ama artık daha dar)
+PTT etiketi ZPL olarak gelmediğine göre Zebra'ya giden şey PDF'tir; `~HI` ve
+`getvar`'ın düz metin basılması hâlâ **yazıcı/sürücü tarafı** bir durumdur —
+en olası neden tanılama (dump) modu. `zebra/` klasöründeki sıralı onarım
+dosyaları geçerliliğini koruyor.
