@@ -6,6 +6,7 @@ import { z } from 'zod';
 import { db } from '@/db/client';
 import { users } from '@/db/schema';
 import { signIn } from '@/lib/auth';
+import { SUPPORT_EMAIL } from '@/lib/brand';
 import { env } from '@/lib/env';
 import { upsertCustomerByEmail } from '@/lib/customers/service';
 import { hashPassword, validatePassword } from '@/lib/password';
@@ -211,7 +212,31 @@ export async function requestPasswordResetAction(formData: FormData): Promise<Ac
     return { success: false, error: 'Az önce bir bağlantı gönderdik. Lütfen 5 dakika sonra tekrar dene.' };
   }
 
+  // ── KANAL KAPALI → DÜRÜST MESAJ ────────────────────────────────────────
+  // Mail sağlayıcısı hiç tanımlı değil; kimseye gönderilemiyor. Bunu söylemek
+  // hesap varlığını SIZDIRMAZ çünkü yanıt girilen adrese hiç bakmadan üretildi:
+  // kayıtlı da kayıtsız da aynı uyarıyı görür.
+  //
+  // Neden yeşil onay gösterilmiyor: 16 Eyl 2026'da canlıda ölçüldü — müşteri
+  // "gönderdik, gelen kutunu kontrol et" yazısını görüyor, mail hiç gitmiyordu.
+  // Gitmeyen bir mail için başarı ekranı basmak, özelliğin hiç olmamasından
+  // kötü: kullanıcı bekliyor, spam klasörünü arıyor, kimseye haber vermiyor.
+  if (res.kanalKapali) {
+    return {
+      success: true,
+      data: {
+        kanalKapali: true,
+        message:
+          'Şu an şifre sıfırlama e-postası gönderemiyoruz — e-posta servisimizde ' +
+          `geçici bir aksaklık var. Lütfen birazdan tekrar dene; sürerse ${SUPPORT_EMAIL} ` +
+          'adresine yazabilirsin.',
+      },
+    };
+  }
+
   // DİKKAT: res.mailGitti'ye göre FARKLI mesaj döndürme — hesap varlığını ele verir.
+  // (kanalKapali'nin aksine mailGitti KULLANICIYA ÖZGÜDÜR: gönderim yalnız KAYITLI
+  //  adres için denenir, yani "gönderilemedi" demek "bu hesap var" demektir.)
   return {
     success: true,
     data: {

@@ -104,12 +104,34 @@ async function smtpIle(p: EmailParams): Promise<EmailSonuc> {
   }
 }
 
+/** (a) yolu açık mı — Resend anahtarı tanımlı mı. */
+const resendVar = () => Boolean(env.RESEND_API_KEY?.trim());
+
+/** (b) yolu açık mı — SMTP kullanıcı+şifre tanımlı mı. */
+const smtpVar = () => Boolean(env.SMTP_USER?.trim() && sifreTemizle(env.SMTP_PASS));
+
+/**
+ * Yapılandırılmış bir sağlayıcı var mı — HİÇBİR ŞEY GÖNDERMEDEN söyler.
+ *
+ * Çağıran taraf "bu istek gönderilebilir mi" sorusunu mail denemesi YAPMADAN
+ * sorabilsin diye ayrıldı: `requestPasswordReset` buna bakıp, gönderilemeyecek
+ * bir bağlantı için DB'ye token yazmaktan ve kullanıcıyı oran sınırına
+ * takmaktan vazgeçiyor.
+ *
+ * ⚠️ KOŞUL sendEmail ile AYNI İKİ YÜKLEMDEN okunur (resendVar/smtpVar). İki ayrı
+ * kopya yazılsaydı biri değişip diğeri kalabilir ve "hazır" deyip gönderemeyen
+ * bir hâl doğardı — burada o ayrışma yapısal olarak mümkün değil.
+ */
+export function mailKanaliHazir(): boolean {
+  return resendVar() || smtpVar();
+}
+
 export async function sendEmail(params: EmailParams): Promise<EmailSonuc> {
   const alicilar = Array.isArray(params.to) ? params.to.join(', ') : params.to;
 
-  if (env.RESEND_API_KEY?.trim()) return resendIle(params);
+  if (resendVar()) return resendIle(params);
 
-  if (env.SMTP_USER?.trim() && sifreTemizle(env.SMTP_PASS)) return smtpIle(params);
+  if (smtpVar()) return smtpIle(params);
 
   // (c) Sağlayıcı yok — AÇIKÇA başarısız dön.
   console.error(
