@@ -36,3 +36,17 @@ kart yüksekliği  tek değer (363) · fiyat satırı tek değer (44)
 1280px           taşma 0 · başlık 3 satır · hiza tek
 ```
 Yedek: `~/Desktop/viamood/yedekler/via-product-overrides.css.fiyat-oncesi-20260916`
+
+## ⚠️ Ölçüm tuzağı — bayat CSS önbelleği
+
+Tema CSS'i güncellendikten hemen sonra alınan tarayıcı ölçümü **eski CSS'i**
+gösterebiliyor. 16 Eyl gecesi bu iki kez yanlış sonuca götürdü:
+
+1. `min-height:44px` eklendi → ölçüm "uygulanmadı" dedi; birkaç dakika sonra
+   aynı ölçüm `min-height: 44px` okudu (kural baştan beri doğruydu).
+2. Sadece `flex-wrap` varken ölçüm "kart yükseklikleri 363 ve 344.2, tekdüzelik
+   bozuldu" dedi; taze önbellekle tekrarlanınca **tek değer** çıktı.
+
+**Kural:** tema asset'i yazdıktan sonra ölçümü en az bir kez TEKRARLA; iki ölçüm
+aynı değeri vermeden hüküm verme. Doğrulama için asset'in `updated_at` damgası
+`themes/<id>/assets.json?asset[key]=...` ile okunabilir.
