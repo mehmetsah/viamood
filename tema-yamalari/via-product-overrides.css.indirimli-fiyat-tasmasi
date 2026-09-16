@@ -1,0 +1,112 @@
+shopify-accelerated-checkout,shopify-accelerated-checkout-cart,.shopify-payment-button,.shopify-payment-button__button,.additional-checkout-buttons,.cart__dynamic-checkout-buttons,.product-form__buttons .shopify-payment-button,[data-shopify=dynamic-checkout-cart],[data-shopify=payment-button],.dynamic-checkout__content,.cart__checkout-buttons .additional-checkout-buttons{display:none!important;visibility:hidden!important;height:0!important;overflow:hidden!important}.product-information__media,.product-media-gallery,media-gallery{max-width:540px!important;margin-inline:auto!important;display:block!important}.product-information__media{text-align:center!important}.product-information__media .product-media__image{object-fit:contain!important}@media(max-width:760px){.product-information__media,.product-media-gallery,media-gallery{max-width:100%!important}}.price,.product-price,[class*=product-price__regular],[class*=price__regular],[class*=price-item--regular],product-price .price__sale,product-price .price__regular{font-size:clamp(1.6rem,3vw,2.4rem)!important;font-weight:800!important;color:#f25334!important;letter-spacing:-.01em!important;line-height:1.1!important}[class*=price__sale] s,[class*=price-item--sale]+s,.price__compare,.price s,del.price-item--regular,s.price-item--regular{font-size:.7em!important;color:#999!important;font-weight:500!important;margin-right:8px}.product-card__badge,.product-badge,[class*=badge][class*=discount]{background:#f25334!important;color:#fff!important;font-weight:700!important;padding:4px 10px!important;border-radius:4px!important;font-size:12px!important;letter-spacing:.05em!important}.via-wa-bulk-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;width:100%;margin-top:10px;padding:14px 18px;background:#25d366;color:#fff!important;border:0;border-radius:6px;font-size:14px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;text-decoration:none!important;cursor:pointer;transition:background .15s,transform .15s,box-shadow .15s;box-shadow:0 2px 8px #25d36640}.via-wa-bulk-btn:hover{background:#1eb858;transform:translateY(-1px);box-shadow:0 4px 14px #25d36659}.via-wa-bulk-btn svg{width:20px;height:20px}.via-wa-bulk-btn small{display:block;font-size:10px;opacity:.9;font-weight:500;letter-spacing:.02em;margin-top:2px}@media(min-width:750px){#shopify-section-template--27920106029188__via_product_whatsapp,[id*=via_product_whatsapp]{position:fixed!important;bottom:24px;right:24px;z-index:998;width:auto!important;max-width:320px}#shopify-section-template--27920106029188__via_product_whatsapp .via-wa-bulk-btn,[id*=via_product_whatsapp] .via-wa-bulk-btn{width:auto!important;margin-top:0;box-shadow:0 6px 24px #25d36673;padding:14px 22px;border-radius:32px;animation:viaWaPulse 2.5s ease-in-out infinite}}@media(max-width:749px){#shopify-section-template--27920106029188__via_product_whatsapp,[id*=via_product_whatsapp]{position:fixed!important;bottom:0;left:0;right:0;z-index:998;padding:8px 12px calc(8px + env(safe-area-inset-bottom,0px));background:#fffffff2;-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);border-top:1px solid rgba(0,0,0,.08)}#shopify-section-template--27920106029188__via_product_whatsapp .via-wa-bulk-btn,[id*=via_product_whatsapp] .via-wa-bulk-btn{width:100%;margin-top:0}main,.main-content{padding-bottom:96px}}@keyframes viaWaPulse{0%,to{transform:translateY(0);box-shadow:0 6px 24px #25d36673}50%{transform:translateY(-3px);box-shadow:0 10px 30px #25d36699}}.cart-items__remove,button.cart-items__remove,[class*=cart-items__remove]{opacity:1!important;visibility:visible!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;color:#c62828!important;cursor:pointer!important;min-width:40px!important;min-height:40px!important}.cart-items__remove svg,.cart-items__remove .svg-wrapper svg{--icon-stroke-width: 1.6px !important;stroke:currentColor!important;fill:none!important;flex:0 0 22px!important;width:22px!important;min-width:22px!important;height:22px!important;display:block!important;opacity:1!important;visibility:visible!important}.cart-items__remove svg path{stroke:currentColor!important;stroke-width:1.6px!important;fill:none!important}.cart-items__remove:hover{color:#fff!important;background:#c62828!important;border-radius:6px}quantity-selector-component svg,cart-quantity-selector-component svg,.quantity-selector svg,.quantity-minus svg,.quantity-plus svg{--icon-stroke-width: 2px !important;width:14px!important;height:14px!important;display:block!important;stroke:currentColor!important}quantity-selector-component svg path,cart-quantity-selector-component svg path,.quantity-selector svg path{stroke:currentColor!important;stroke-width:2px!important;stroke-linecap:round!important;fill:none!important}quantity-selector-component,cart-quantity-selector-component,.quantity-selector,.quantity-selector-wrapper>quantity-selector-component,.quantity-selector-wrapper>cart-quantity-selector-component{display:inline-flex!important;align-items:stretch!important;visibility:visible!important;opacity:1!important;border:1.5px solid #1a1a1a!important;border-radius:8px!important;overflow:hidden!important;background:#fff!important;height:44px!important;width:max-content!important;max-width:140px!important;flex:0 0 auto!important;justify-content:center!important;gap:0!important;box-shadow:0 1px 2px #0000000a}.quantity-selector .quantity-minus,.quantity-selector .quantity-plus,.quantity-selector button[name=minus],.quantity-selector button[name=plus],.quantity-minus,.quantity-plus{display:inline-flex!important;visibility:visible!important;opacity:1!important;width:42px!important;height:100%!important;min-width:42px!important;align-items:center!important;justify-content:center!important;background:transparent!important;border:0!important;border-radius:0!important;cursor:pointer!important;padding:0!important;margin:0!important;color:#1a1a1a!important;font-size:18px!important;font-weight:700!important;transition:background .15s,color .15s!important}.quantity-minus:hover,.quantity-plus:hover,.quantity-selector button:hover{background:#f25334!important;color:#fff!important}.quantity-minus:active,.quantity-plus:active{background:#d8431f!important}.quantity-minus:disabled,.quantity-plus:disabled{opacity:.35!important;cursor:not-allowed!important}.quantity-selector input[type=number],quantity-selector-component input,cart-quantity-selector-component input{width:44px!important;min-width:44px!important;flex:0 0 auto!important;height:100%!important;text-align:center!important;border:0!important;border-left:1.5px solid #ececec!important;border-right:1.5px solid #ececec!important;border-radius:0!important;background:#fff!important;color:#1a1a1a!important;font-size:15px!important;font-weight:700!important;padding:0 4px!important;margin:0!important;-moz-appearance:textfield}.quantity-selector input[type=number]::-webkit-outer-spin-button,.quantity-selector input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none!important;margin:0!important}.quantity-selector input:focus,quantity-selector-component input:focus{outline:0!important;background:#fff8f5!important}cart-drawer-component quantity-selector-component,cart-drawer-component cart-quantity-selector-component,.cart-items .quantity-selector{height:36px!important;max-width:120px!important}cart-drawer-component .quantity-minus,cart-drawer-component .quantity-plus,.cart-items .quantity-minus,.cart-items .quantity-plus{width:36px!important;min-width:36px!important;font-size:16px!important}cart-drawer-component .quantity-selector input,.cart-items .quantity-selector input{width:36px!important;min-width:36px!important;font-size:13px!important}.quantity-selector-wrapper{display:inline-flex!important;align-items:center!important}.header-actions__action[href*=account],.header-actions__action[href*="/account"],[href="/account"],[href*="/account/login"],a.header__account-link{color:#f25334!important;font-weight:700!important;transition:color .15s,transform .15s!important}.header-actions__action[href*=account]:hover,[href*="/account"]:hover,a.header__account-link:hover{color:#d8431f!important;transform:scale(1.05)}.header-actions__action[href*=account] svg,[href*="/account"] svg{stroke:#f25334!important;fill:transparent!important}.shopify-section iframe[src*="shopify.com"][src*=account]{border:1px solid #f25334!important;border-radius:8px;box-shadow:0 4px 16px #f2533414}#shopify-section-template--27920106029188__product_list_zR9Cym .price,#shopify-section-template--27920106029188__product_list_zR9Cym [class*=price__regular],#shopify-section-template--27920106029188__product_list_zR9Cym [class*=price-item--regular],#shopify-section-template--27920106029188__product_list_zR9Cym product-price .price__sale,#shopify-section-template--27920106029188__product_list_zR9Cym product-price .price__regular{font-size:clamp(.75rem,1.5vw,1.25rem)!important}cart-drawer-component dialog button[aria-label*=kapat i] svg,cart-drawer-component dialog button[aria-label*=close i] svg,cart-drawer-component dialog .button-close svg{width:20px!important;height:20px!important;display:block!important;stroke:currentColor!important;stroke-width:2px!important;fill:none!important}cart-drawer-component dialog button[aria-label*=kapat i] svg path,cart-drawer-component dialog button[aria-label*=kapat i] svg line,cart-drawer-component dialog button[aria-label*=close i] svg path,cart-drawer-component dialog button[aria-label*=close i] svg line{stroke:currentColor!important;stroke-width:2px!important;fill:none!important}.resource-card__vendor{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--color-foreground, #14201d);opacity:.62;margin:0 0 3px;line-height:1.2}.resource-card__title{display:-webkit-box!important;-webkit-line-clamp:3!important;-webkit-box-orient:vertical!important;overflow:hidden!important;line-height:1.3!important;min-height:calc(1.3em * 3)}.resource-card__content .price{font-size:1.05em!important;font-weight:700}button[name=add][aria-busy=true],.cart-items__remove[aria-busy=true],cart-quantity-selector-component[aria-busy=true]{position:relative!important;pointer-events:none!important}button[name=add][aria-busy=true]>*,.cart-items__remove[aria-busy=true]>*,cart-quantity-selector-component[aria-busy=true]>*{opacity:.2!important;transition:opacity .1s}button[name=add][aria-busy=true]:after,.cart-items__remove[aria-busy=true]:after,cart-quantity-selector-component[aria-busy=true]:after{content:""!important;position:absolute!important;top:50%!important;left:50%!important;width:16px!important;height:16px!important;margin:-8px 0 0 -8px!important;border:2px solid currentColor!important;border-top-color:transparent!important;border-radius:50%!important;animation:vm-spin .6s linear infinite!important;opacity:.85!important;box-sizing:border-box!important}@keyframes vm-spin{to{transform:rotate(360deg)}}cart-quantity-selector-component{display:inline-flex!important;align-items:center!important;gap:0!important;border:1px solid #e7ddcf!important;border-radius:999px!important;background:#fff!important;overflow:hidden!important;box-shadow:none!important;padding:0!important}cart-quantity-selector-component button{width:40px!important;height:40px!important;min-width:40px!important;padding:0!important;margin:0!important;border:0!important;background:none!important;border-radius:999px!important;cursor:pointer!important;display:grid!important;place-items:center!important;color:#2a2a2a!important}cart-quantity-selector-component button:hover{background:#f6f3ee!important}cart-quantity-selector-component button svg,cart-quantity-selector-component .svg-wrapper{width:14px!important;height:14px!important}cart-quantity-selector-component input{width:42px!important;min-width:42px!important;max-width:42px!important;text-align:center!important;border:0!important;background:none!important;font-size:15px!important;font-weight:700!important;color:#2a2a2a!important;padding:0!important;box-shadow:none!important;-moz-appearance:textfield!important}cart-quantity-selector-component input::-webkit-outer-spin-button,cart-quantity-selector-component input::-webkit-inner-spin-button{-webkit-appearance:none!important;margin:0!important}cart-quantity-selector-component.quantity-selector.quantity-selector{border-radius:999px!important;border:1px solid #e7ddcf!important}cart-quantity-selector-component.quantity-selector.quantity-selector>button{width:40px!important;height:40px!important;border-radius:999px!important}cart-quantity-selector-component.quantity-selector.quantity-selector>input{width:44px!important;min-width:44px!important;max-width:44px!important}@media(max-width:768px){html,body{overflow-x:clip;max-width:100%}}.product-information__media slideshow-controls .slideshow-controls__thumbnail{flex:0 0 clamp(56px,7vw,72px)!important;width:clamp(56px,7vw,72px)!important;height:auto!important;aspect-ratio:1!important;padding:0!important;background:var(--color-background, #fff)!important;border:1px solid rgba(0,0,0,.1)!important;box-sizing:border-box!important;transition:border-color .15s ease!important}.product-information__media slideshow-controls .slideshow-controls__thumbnail:hover{border-color:#0006!important}.product-information__media slideshow-controls .slideshow-controls__thumbnail[aria-selected=true]{border-color:#0000008c!important}.product-information__media slideshow-controls .slideshow-controls__thumbnail img{width:100%!important;height:100%!important;max-width:none!important;object-fit:contain!important;display:block!important}.emp-sli__media{aspect-ratio:2/3!important;overflow:hidden!important;display:block!important}.emp-sli__media img,.emp-sli__media picture,.emp-sli__media picture img,.emp-sli__media>*:not(.emp-sli__badge){width:100%!important;height:100%!important;object-fit:cover!important}.product-card .product-media,.product-card [class*=product-media]:not([class*=__image]){aspect-ratio:2 / 3!important;overflow:hidden!important}.product-card .product-media__image,.product-card .product-media img{width:100%!important;height:100%!important;object-fit:cover!important}.vf-news__input{background:#fff!important;color:#1a1a1a!important;border:1px solid rgba(0,0,0,.12)!important;border-radius:8px!important}.vf-news__input::placeholder{color:#9a8f82!important;opacity:1!important}.vf-news__form .vf-news__input,footer .vf-news__form input.vf-news__input{background:#fff!important;color:#1a1a1a!important}.vf-news__form .vf-news__input::placeholder,footer .vf-news__form input.vf-news__input::placeholder{color:#9a8f82!important;opacity:1!important}cart-quantity-selector-component:not(:defined){background:none!important}cart-quantity-selector-component:not(:defined):before,cart-quantity-selector-component:not(:defined):after{display:none!important;content:none!important}cart-quantity-selector-component input{background-image:none!important}cart-quantity-selector-component:not(:defined) input{display:block!important;opacity:1!important;visibility:visible!important}
+/*# sourceMappingURL=/cdn/shop/t/3/assets/via-product-overrides.css.map?v=39035923667249491421783506984 */
+
+/* ===== ZOOM DIALOG DUZELTMESI v2 (27 Agu 2026, Yunus "hala ayni sorun" bildirimi) =====
+   24 Agu'daki v1 HIC DEVREYE GIRMEDI: hedef alinan ".dialog-zoomed-gallery" aslinda
+   dialog'un kendisi degil, ICINDEKI <ul>. media-gallery ve kucuk gorsel seridi o <ul>'un
+   DISINDA (kardes) duruyor -> ".dialog-zoomed-gallery media-gallery" ve
+   ".dialog-zoomed-gallery .dialog-thumbnails-list" secicileri hicbir seyle eslesmedi.
+   (Canli DOM'da olculdu: thumbsInsideUl=false, mediaGalleryInsideUl=false.)
+
+   GERCEK KOK NEDEN - native temanin kendi eksigi:
+   1) Lightbox duzeni yalniz "max-width:749px" icin tanimlanmis. Desktop'ta <ul> block
+      kaliyor -> 9 gorsel alt alta diziliyor (olculen yukseklik 16073px), gorsel dogal
+      boyutunda tasiyor (1280x1919 = "asiri yakinlasma") ve sola yapisiyor.
+   2) ".dialog-thumbnails-list__thumbnail" genisligi var(--thumbnail-width) okuyor ama bu
+      degisken SADECE mobil scope'ta tanimli -> desktop'ta buton cokuyor, kucuk gorsel
+      seridi bos gorunuyor ("diger resimler gozukmuyor").
+
+   COZUM: yeni davranis icat etmeden, native'in KENDI mobil lightbox kural setini
+   desktop'a genislet + eksik --thumbnail-width'i tanimla. Canli sayfada dogrulandi:
+   gorsel 1280x720 ortali+contain, <ul> flex, serit sagda gorunur. */
+@media screen and (min-width:750px){
+  .dialog-zoomed-gallery{
+    display:flex!important;
+    height:100%!important;
+    overflow-x:hidden!important;
+    overscroll-behavior:none;
+    scroll-snap-type:x mandatory;
+    scroll-behavior:smooth;
+    scrollbar-width:none;
+  }
+  .dialog-zoomed-gallery::-webkit-scrollbar{display:none}
+  .dialog-zoomed-gallery .product-media-container{
+    flex:0 0 100%!important;
+    scroll-snap-align:start;
+    position:relative;
+  }
+  .dialog-zoomed-gallery .product-media-container--image .product-media{
+    aspect-ratio:auto!important;
+    height:100%!important;
+    width:100%!important;
+    overflow:hidden!important;
+  }
+  .dialog-zoomed-gallery .product-media__drag-zoom-wrapper{
+    display:flex!important;
+    aspect-ratio:auto!important;
+    height:100%!important;
+    width:100%!important;
+    overflow:scroll;
+    scrollbar-width:none;
+    justify-content:center!important;
+    align-items:center!important;
+  }
+  .dialog-zoomed-gallery .product-media__drag-zoom-wrapper::-webkit-scrollbar{display:none}
+  .dialog-zoomed-gallery .product-media__drag-zoom-wrapper .product-media__image{
+    --product-media-fit:contain;
+    object-fit:contain!important;
+    width:100%!important;
+    height:100%!important;
+    max-width:none!important;
+    max-height:none!important;
+  }
+  /* native'in desktop'ta tanimlamayi unuttugu degisken */
+  .dialog-thumbnails-list{--thumbnail-width:72px}
+  .dialog-thumbnails-list__thumbnail{
+    width:var(--thumbnail-width)!important;
+    height:auto!important;
+  }
+}
+
+/* #855 — ürün kartı başlıkları kırpılmıyordu, fiyat satırı kayıyordu.
+   ÖLÇÜM (16 Eyl 2026, gerçek tarayıcı, /collections/cok-satanlar-1):
+     .vkol2-title → line-clamp: none, min-height 36px(mobil)/44px(masaüstü)
+     başlık 2–6 satır arasında değişiyor → fiyat ofseti
+       390px : 289.3 → 358.6  (69px kayma)
+       768px : 373.0 → 437.8  (65px kayma)
+       1280px: 499.3 → 520.5  (21px kayma)
+   İki sütunlu ızgarada komşu kartların fiyatları farklı hizada duruyordu.
+   Çözüm: başlık SABİT 3 satıra kırpılır (tema zaten .resource-card__title'da
+   aynı deseni kullanıyor), min-height 3 satıra eşitlenir → fiyat hep aynı yerde. */
+.vkol2-card .vkol2-title{
+  display:-webkit-box!important;
+  -webkit-line-clamp:3!important;
+  -webkit-box-orient:vertical!important;
+  overflow:hidden!important;
+  line-height:1.3!important;
+  min-height:calc(1.3em * 3)!important;
+}
+
+/* İndirimli kartta üzeri çizili eski fiyat kart DIŞINA taşıyordu.
+   ÖLÇÜM (16 Eyl 2026, gerçek tarayıcı, 390px):
+     yeni fiyat 95.4px + margin 6px + eski fiyat 64.5px = 165.9px
+     kap genişliği 136px  →  karttan 16.8px, kaptan 29.8px taşma
+     4 koleksiyondaki 13 indirimli kartın 4'ünde görüldü
+   NEDEN SARMIYORDU: iki span arasında BOŞLUK KARAKTERİ yok (ayırıcı margin-left),
+   yani satır kırma fırsatı yok; .vkol2-card overflow:hidden olduğu için taşan
+   kısım kırpılıyordu ("3.000,0…" gibi).
+   ÇÖZÜM: fiyat satırı flex + wrap → yalnız SIĞMADIĞINDA alt satıra iner.
+   :has() desteklenmezse kural uygulanmaz, bugünkü davranış aynen kalır (regresyon yok). */
+.vkol2-info > div:has(> .vkol2-price){
+  display:flex!important;
+  flex-wrap:wrap!important;
+  align-items:baseline!important;
+  column-gap:6px!important;
+  row-gap:2px!important;
+}
+.vkol2-info > div:has(> .vkol2-price) > .vkol2-old{ margin-left:0!important; }
+
+/* Yer AYIRMA: sarma yalnız uzun fiyatlarda oluyor; yer ayrılmazsa indirimli kartlar
+   ~19px uzuyor ve #855'te sağlanan tek-yükseklik bozuluyordu (ölçüldü: 363 vs 344.2).
+   Fiyat satırına iki satırlık sabit yer ayrılır → hem taşma biter hem ızgara tekdüze kalır. */
+.vkol2-info > div:has(> .vkol2-price){ min-height:44px!important; }
