@@ -8,13 +8,15 @@
  *  2. Ham token DB'de DURMAZ — linkte ham, DB'de SHA-256 özeti.
  *  3. Token TEK KULLANIMLIK ve 60 dk süreli. Tüketilince `usedAt` damgalanır;
  *     aynı kullanıcının bekleyen diğer tokenları da iptal edilir.
- *  4. Oran sınırı: aynı e-posta için 5 dakikada 1 istek.
+ *  4. Oran sınırı: aynı e-posta için 5 dakikada 1 istek. TEK İSTİSNA: mail
+ *     kanalı hiç yapılandırılmamışsa istek sınırı TÜKETMEZ ve token da yazmaz
+ *     (gönderilmeyen bir mail için kullanıcıyı kilitlemek koruma değil, arıza).
  */
 import { createHash, randomBytes } from 'node:crypto';
 import { and, eq, gt, isNull, sql } from 'drizzle-orm';
 import { db } from '@/db/client';
 import { passwordResetTokens, sessions, users } from '@/db/schema';
-import { sendEmail } from '@/lib/email/sender';
+import { mailKanaliHazir, sendEmail } from '@/lib/email/sender';
 import { passwordResetEmail } from '@/lib/email/templates';
 import { env } from '@/lib/env';
 import { hashPassword } from '@/lib/password';
@@ -32,8 +34,14 @@ export function buildResetUrl(token: string): string {
 }
 
 export type TalepSonuc =
+  /**
+   * Sağlayıcı hiç tanımlı değil → HİÇ KİMSEYE mail gidemez.
+   * `mailGitti`nin aksine bu SİSTEM durumudur, kullanıcıya gösterilebilir
+   * (bkz. requestPasswordReset içindeki gerekçe).
+   */
+  | { ok: true; kanalKapali: true }
   /** `mailGitti` yalnız TEŞHİS içindir — kullanıcıya gösterme, sızdırır. */
-  | { ok: true; mailGitti: boolean; mailHatasi?: string }
+  | { ok: true; kanalKapali?: false; mailGitti: boolean; mailHatasi?: string }
   | { ok: false; sebep: 'oran_siniri' };
 
 export async function requestPasswordReset(params: {
@@ -42,6 +50,23 @@ export async function requestPasswordReset(params: {
 }): Promise<TalepSonuc> {
   const email = params.email.toLowerCase().trim();
   const ip = params.ip?.trim() || null;
+
+  // ── (0) KANAL KONTROLÜ — e-posta adresine BAKMADAN ─────────────────────
+  // Sağlayıcı tanımsızsa kayıtlı/kayıtsız HİÇBİR adrese mail gidemez. Karar
+  // yalnız ortam değişkenlerine bakar, girdiye değil: her adres AYNI yanıtı
+  // alır, dolayısıyla hesap varlığı SIZMAZ (değişmez 1 korunur).
+  //
+  // ERKEN DÖNÜŞ BİLİNÇLİ — iki şeyi kasten atlıyor:
+  //  • token satırı YAZILMAZ: gönderilemeyecek bir bağlantı için DB'ye kayıt
+  //    bırakmanın faydası yok, üstelik her deneme bir satır daha biriktirirdi.
+  //  • oran sınırı TÜKETİLMEZ: 16 Eyl 2026'da canlıda ölçülen arıza tam buydu —
+  //    kullanıcı hiç gitmemiş bir mail yüzünden 5 dakika kilitleniyordu. Mail
+  //    yoksa "posta kutusunu bombalama" riski de yok; sınırın koruduğu şey
+  //    burada zaten oluşmuyor.
+  if (!mailKanaliHazir()) {
+    console.error('[sifre-sifirlama] KANAL KAPALI · mail sağlayıcı tanımsız — istek karşılanamadı');
+    return { ok: true, kanalKapali: true };
+  }
 
   // ── Oran sınırı: 5 dakikada 1 ──────────────────────────────────────────
   const [sayim] = await db

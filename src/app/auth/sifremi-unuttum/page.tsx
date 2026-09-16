@@ -14,8 +14,18 @@ export default function SifremiUnuttumPage() {
   );
 
   const fieldErrors = state && !state.success ? (state.fieldErrors ?? {}) : {};
-  const basarili = state?.success === true;
-  const mesaj = basarili ? (state.data as { message?: string } | undefined)?.message : undefined;
+
+  // ⚠️ success === true "mail gitti" DEMEK DEĞİL. Sunucu isteği kabul ettiğinde de
+  // true döner; mail kanalı hiç yapılandırılmamışsa `kanalKapali` ile işaretler.
+  // 16 Eyl 2026'ya kadar burada yalnız success'e bakılıyordu ve canlıda müşteriye
+  // hiç gönderilmemiş mail için yeşil onay basılıyordu — bu ayrım o yüzden var.
+  const veri =
+    state?.success === true
+      ? (state.data as { message?: string; kanalKapali?: boolean } | undefined)
+      : undefined;
+  const kanalKapali = veri?.kanalKapali === true;
+  const basarili = state?.success === true && !kanalKapali;
+  const mesaj = veri?.message;
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4 py-12 bg-[var(--color-brand-cream)]">
@@ -46,6 +56,21 @@ export default function SifremiUnuttumPage() {
           </div>
         ) : (
           <form action={formAction} className="bg-white rounded-2xl shadow-sm border p-8 flex flex-col gap-4">
+            {/* Kanal kapalı: form AÇIK kalır — sunucu bu durumda oran sınırını
+                tüketmediği için kullanıcı beklemeden tekrar deneyebilir. */}
+            {kanalKapali && (
+              <div role="status"
+                   className="flex gap-3 text-sm text-amber-900 bg-amber-50 border border-amber-200 rounded-lg px-3 py-3">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"
+                     className="shrink-0 mt-0.5 text-amber-700" aria-hidden="true">
+                  <circle cx="12" cy="12" r="9" />
+                  <path d="M12 7.5v5.25" />
+                  <path d="M12 16.5h.01" />
+                </svg>
+                <p className="leading-relaxed">{mesaj}</p>
+              </div>
+            )}
             <Input name="email" type="email" label="E-posta" placeholder="ornek@eposta.com"
                    required autoComplete="email" error={fieldErrors.email} />
             {state && !state.success && !state.fieldErrors && (
