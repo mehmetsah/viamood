@@ -24,10 +24,11 @@ export const TEST_TUTAR_TL = 10.0;
  * ortamına gidebiliyor. O yüzden koda gömülü olması güvenlik açığı değil;
  * env'e bağlansaydı linki değiştirmek için deploy gerekirdi.
  */
-export const TEST_ANAHTAR = process.env.HALKODE_TEST_ANAHTAR || 'vm-3k9qx7';
+export { HALKODE_TEST_ANAHTAR as TEST_ANAHTAR } from './preview-cookie';
+import { HALKODE_TEST_ANAHTAR } from './preview-cookie';
 
 export function testYolu(): string {
-  return `/odeme/halkode-test/${TEST_ANAHTAR}`;
+  return `/odeme/halkode-test/${HALKODE_TEST_ANAHTAR}`;
 }
 
 /**

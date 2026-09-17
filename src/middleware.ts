@@ -1,9 +1,7 @@
 import NextAuth from 'next-auth';
 import { NextResponse, type NextRequest } from 'next/server';
 import { authConfig } from '@/lib/auth.config';
-import { HALKODE_PREVIEW_COOKIE, HALKODE_PREVIEW_MAX_AGE } from '@/lib/halkode/preview-cookie';
-// Edge güvenli: test-page.ts hiçbir şey import etmez, yalnız sabit taşır.
-import { TEST_ANAHTAR as HALKODE_TEST_ANAHTAR } from '@/lib/halkode/test-page';
+import { HALKODE_PREVIEW_COOKIE, HALKODE_PREVIEW_MAX_AGE, HALKODE_TEST_ANAHTAR } from '@/lib/halkode/preview-cookie';
 
 const { auth } = NextAuth(authConfig);
 

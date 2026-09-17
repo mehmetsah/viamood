@@ -156,28 +156,31 @@ export default function TestOdemeFormu({
           <input inputMode="numeric" autoComplete="off" value={kartNo} maxLength={19}
                  onChange={(e) => setKartNo(rakam(e.target.value))}
                  placeholder="4155 6501 0041 6111"
-                 className="rounded-lg border border-neutral-300 px-3 py-2 font-mono" />
+                 className="w-full min-w-0 rounded-lg border border-neutral-300 px-3 py-2 font-mono" />
         </label>
         <label className="grid gap-1">
           <span className="text-xs text-neutral-500">Kart üzerindeki isim</span>
           <input value={sahip} onChange={(e) => setSahip(e.target.value)} autoComplete="off"
                  className="rounded-lg border border-neutral-300 px-3 py-2" />
         </label>
+        {/* min-w-0: grid sutunlari varsayilan olarak min-content genisliginde
+            kalmiyor; input'un kendi min genisligi sutunu tasiriyordu (420px'de
+            ekran goruntusuyle gorulmustu). */}
         <div className="grid grid-cols-3 gap-3">
-          <label className="grid gap-1">
+          <label className="grid min-w-0 gap-1">
             <span className="text-xs text-neutral-500">Ay</span>
             <input inputMode="numeric" maxLength={2} value={ay} onChange={(e) => setAy(rakam(e.target.value))}
-                   placeholder="12" className="rounded-lg border border-neutral-300 px-3 py-2 font-mono" />
+                   placeholder="12" className="w-full min-w-0 rounded-lg border border-neutral-300 px-3 py-2 font-mono" />
           </label>
-          <label className="grid gap-1">
+          <label className="grid min-w-0 gap-1">
             <span className="text-xs text-neutral-500">Yıl</span>
             <input inputMode="numeric" maxLength={4} value={yil} onChange={(e) => setYil(rakam(e.target.value))}
-                   placeholder="2028" className="rounded-lg border border-neutral-300 px-3 py-2 font-mono" />
+                   placeholder="2028" className="w-full min-w-0 rounded-lg border border-neutral-300 px-3 py-2 font-mono" />
           </label>
-          <label className="grid gap-1">
+          <label className="grid min-w-0 gap-1">
             <span className="text-xs text-neutral-500">CVV</span>
             <input inputMode="numeric" maxLength={4} value={cvv} onChange={(e) => setCvv(rakam(e.target.value))}
-                   placeholder="555" className="rounded-lg border border-neutral-300 px-3 py-2 font-mono" />
+                   placeholder="555" className="w-full min-w-0 rounded-lg border border-neutral-300 px-3 py-2 font-mono" />
           </label>
         </div>
       </div>
