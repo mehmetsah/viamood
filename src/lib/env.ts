@@ -111,6 +111,22 @@ const envSchema = z.object({
   HALKODE_APP_ID: z.string().optional(),
   HALKODE_APP_SECRET: z.string().optional(),
   HALKODE_MERCHANT_KEY: z.string().optional(),
+  /**
+   * CANLI ortam kimlikleri — TEST olanlardan AYRI tutulur ki iki ortam aynı
+   * kurulumda yan yana yaşayabilsin. Öncelik: admin ayarları > bu env'ler
+   * (bkz. lib/halkode/client.ts cfg()).
+   */
+  HALKODE_LIVE_APP_ID: z.string().optional(),
+  HALKODE_LIVE_APP_SECRET: z.string().optional(),
+  HALKODE_LIVE_MERCHANT_KEY: z.string().optional(),
+  /** Gizli 10 TL TEST sayfasının adres anahtarı (yoksa koddaki varsayılan). */
+  HALKODE_TEST_ANAHTAR: z.string().optional(),
+  /**
+   * Gizli 10 TL CANLI deneme sayfasının adres anahtarı.
+   * ⚠️ VARSAYILANI YOK ve olmamalı — tanımsızken sayfa hiç var olmaz (404).
+   * Gerçek para çeken tek kapının kilidi bu; koda gömülemez.
+   */
+  HALKODE_CANLI_ANAHTAR: z.string().optional(),
   /** Gateway açık mı? Kimlik bilgileri dolu olsa bile bu 'true' olmadan ödeme başlatılmaz.
    *  DİKKAT: z.coerce.boolean() KULLANMA — Boolean('false')===true (kill switch bozulur). */
   HALKODE_ENABLED: z

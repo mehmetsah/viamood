@@ -1,16 +1,17 @@
 'use client';
 
 /**
- * 10 TL test ödeme formu + taksit tablosu.
+ * 10 TL deneme ödeme formu + taksit tablosu. TEST ve CANLI sayfa AYNI bileşeni
+ * kullanır — tek fark `ortam` ve test kartı düğmesinin olup olmaması.
  *
  * AKIŞ:
- *   kart no ≥6 hane  → /test-installments (BIN ile) → taksit tablosu çizilir
+ *   kart no ≥6 hane  → /installments (BIN ile) → taksit tablosu çizilir
  *   "Öde" → /test-initialize → Halköde'nin BANKA formu HTML'i → belgeye yazılır
  *   banka 3D'den sonra → /test-callback → sayfaya ?sonuc=… ile döner
  *
  * ⚠️ TUTAR SUNUCUDAN: burada gösterilen tutar yalnız ekran içindir; imzayı
  * sunucu kendi sabitinden üretir. İstemcide tutar değiştirilse bile ödeme
- * yine 10 TL olur.
+ * yine 10 TL olur. Canlı ortamda bu tek başına en önemli koruma.
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
 
@@ -26,15 +27,19 @@ interface Taksit {
 const tl = (n: number) =>
   n.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' TL';
 
-export default function TestOdemeFormu({
+export default function DenemeFormu({
   anahtar,
   tutar,
+  ortam,
   testKarti,
 }: {
   anahtar: string;
   tutar: number;
-  testKarti: { no: string; sahip: string; ay: string; yil: string; cvv: string };
+  ortam: 'test' | 'canli';
+  /** Yalnız TEST sayfasında verilir — canlı POS test kartını tanımaz. */
+  testKarti?: { no: string; sahip: string; ay: string; yil: string; cvv: string };
 }) {
+  const canli = ortam === 'canli';
   const [kartNo, setKartNo] = useState('');
   const [sahip, setSahip] = useState('');
   const [ay, setAy] = useState('');
@@ -68,7 +73,7 @@ export default function TestOdemeFormu({
           setTaksitler(null);
           setTaksitHata(
             j.error === 'Halköde kapalı.'
-              ? 'Halköde kapalı görünüyor — sayfayı test linkinden tekrar aç.'
+              ? 'Halköde kapalı görünüyor — sayfayı linkten tekrar aç.'
               : `Taksit tablosu alınamadı: ${j.error ?? 'bilinmeyen hata'}`,
           );
           return;
@@ -93,6 +98,7 @@ export default function TestOdemeFormu({
   }, [kartNo, taksitGetir]);
 
   function testKartiniDoldur() {
+    if (!testKarti) return;
     setKartNo(testKarti.no);
     setSahip(testKarti.sahip);
     setAy(testKarti.ay);
@@ -102,6 +108,11 @@ export default function TestOdemeFormu({
 
   async function ode(e: React.FormEvent) {
     e.preventDefault();
+    // CANLI ortamda kazara tıklamaya karşı tek adımlık onay. Tutar zaten
+    // sunucuda sabit ve küçük; buradaki amaç "ne yaptığını bil" uyarısı.
+    if (canli && !window.confirm(`Bu CANLI bir ödemedir. Kartından ${tl(tutar)} gerçekten çekilecek. Devam edilsin mi?`)) {
+      return;
+    }
     setHata(null);
     setGonderiliyor(true);
     try {
@@ -144,10 +155,12 @@ export default function TestOdemeFormu({
     <form onSubmit={ode} className="mt-4 rounded-xl border border-neutral-200 bg-white p-4">
       <div className="flex items-center justify-between">
         <h2 className="text-sm font-bold text-neutral-800">Kart bilgileri</h2>
-        <button type="button" onClick={testKartiniDoldur}
-                className="text-xs font-semibold text-[var(--color-brand-orange,#f25334)] hover:underline">
-          Test kartını doldur
-        </button>
+        {testKarti && (
+          <button type="button" onClick={testKartiniDoldur}
+                  className="text-xs font-semibold text-[var(--color-brand-orange,#f25334)] hover:underline">
+            Test kartını doldur
+          </button>
+        )}
       </div>
 
       <div className="mt-3 grid gap-3">
@@ -155,7 +168,7 @@ export default function TestOdemeFormu({
           <span className="text-xs text-neutral-500">Kart numarası</span>
           <input inputMode="numeric" autoComplete="off" value={kartNo} maxLength={19}
                  onChange={(e) => setKartNo(rakam(e.target.value))}
-                 placeholder="4155 6501 0041 6111"
+                 placeholder={canli ? 'Kendi kartının numarası' : '4155 6501 0041 6111'}
                  className="w-full min-w-0 rounded-lg border border-neutral-300 px-3 py-2 font-mono" />
         </label>
         <label className="grid gap-1">
@@ -234,8 +247,14 @@ export default function TestOdemeFormu({
       )}
 
       <button type="submit" disabled={!hazir || gonderiliyor}
-              className="mt-5 w-full rounded-full bg-neutral-900 px-6 py-3 font-semibold text-white disabled:opacity-40">
-        {gonderiliyor ? 'Bankaya yönlendiriliyor…' : `${tl(tutar)} öde (3D doğrulama)`}
+              className={`mt-5 w-full rounded-full px-6 py-3 font-semibold text-white disabled:opacity-40 ${
+                canli ? 'bg-red-700' : 'bg-neutral-900'
+              }`}>
+        {gonderiliyor
+          ? 'Bankaya yönlendiriliyor…'
+          : canli
+            ? `${tl(tutar)} GERÇEKTEN öde (3D doğrulama)`
+            : `${tl(tutar)} öde (3D doğrulama)`}
       </button>
       <p className="mt-2 text-center text-xs text-neutral-400">
         Tutar sunucuda sabittir; bu ekranda değiştirilemez.

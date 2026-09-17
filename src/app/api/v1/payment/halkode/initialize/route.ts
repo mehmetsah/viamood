@@ -32,6 +32,7 @@ import {
   halkodeEnabled,
   type HalkodeItem,
 } from '@/lib/halkode/client';
+import { halkodeOnizlemeOrtami } from '@/lib/halkode/preview';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -169,6 +170,17 @@ async function createDraftOrder(b: HalkodeInitBody, totalTl: number): Promise<nu
 export async function POST(req: NextRequest) {
   const headers = { 'Content-Type': 'application/json', ...cors(req.headers.get('origin')) };
 
+  // ⚠️ CANLI DENEME OTURUMU BU UCU KULLANAMAZ. Canlı önizleme çerezi cfg()'de
+  // gateway'i açıyor (gizli 10 TL sayfası çalışsın diye) — ama burası GERÇEK
+  // sipariş yolu: Shopify draft'ı ve RDS kaydı üretir. Deneme linkini açmış
+  // biri buraya düşerse ortada canlı POS'tan çekilmiş, "test" sanılan gerçek
+  // bir sipariş kalırdı. İki yol birbirine karışmasın diye açıkça ayrıldı.
+  if ((await halkodeOnizlemeOrtami()) === 'canli') {
+    return NextResponse.json(
+      { ok: false, error: 'Canlı deneme oturumu açık — normal ödeme bu oturumda kullanılamaz.' },
+      { status: 403, headers },
+    );
+  }
   if (!(await halkodeEnabled())) {
     return NextResponse.json({ ok: false, error: 'Halköde kapalı (HALKODE_ENABLED).' }, { status: 503, headers });
   }

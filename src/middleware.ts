@@ -1,7 +1,14 @@
 import NextAuth from 'next-auth';
 import { NextResponse, type NextRequest } from 'next/server';
 import { authConfig } from '@/lib/auth.config';
-import { HALKODE_PREVIEW_COOKIE, HALKODE_PREVIEW_MAX_AGE, HALKODE_TEST_ANAHTAR } from '@/lib/halkode/preview-cookie';
+import {
+  HALKODE_PREVIEW_COOKIE,
+  HALKODE_PREVIEW_MAX_AGE,
+  HALKODE_TEST_ANAHTAR,
+  HALKODE_CANLI_ANAHTAR,
+  HALKODE_ORTAM_TEST,
+  HALKODE_ORTAM_CANLI,
+} from '@/lib/halkode/preview-cookie';
 
 const { auth } = NextAuth(authConfig);
 
@@ -59,10 +66,26 @@ export default auth((req) => {
   //
   // Yönlendirme YAPILMIYOR, istek olduğu gibi devam ediyor: redirect etseydik
   // 3D dönüşündeki ?sonuc=… parametreleri turlarda kaybolabilirdi.
-  if (pathname.startsWith(`/odeme/halkode-test/${HALKODE_TEST_ANAHTAR}`)) {
+  //
+  // CANLI sayfanın da kendi yolu ve KENDİ çerez değeri var: '1' test ortamını,
+  // 'canli' canlı ortamı açar. İki yol birbirinin çerezini EZER (aynı çerez adı)
+  // — bu kasıtlı: iki ortam aynı tarayıcıda aynı anda açık kalmamalı, yoksa
+  // hangi ortamda olunduğu belirsizleşir ve canlı sayfada test sanılabilir.
+  //
+  // ⚠️ CANLI yol yalnız HALKODE_CANLI_ANAHTAR ORTAMDA TANIMLIYSA vardır.
+  // Tanımsızken sabit '' olur; guard olmasaydı `/odeme/halkode-canli/` adresi
+  // boş anahtarla eşleşip kapıyı herkese açardı.
+  const halkodeSayfaOrtami =
+    pathname.startsWith(`/odeme/halkode-test/${HALKODE_TEST_ANAHTAR}`)
+      ? HALKODE_ORTAM_TEST
+      : HALKODE_CANLI_ANAHTAR && pathname.startsWith(`/odeme/halkode-canli/${HALKODE_CANLI_ANAHTAR}`)
+        ? HALKODE_ORTAM_CANLI
+        : null;
+
+  if (halkodeSayfaOrtami) {
     const res = NextResponse.next();
-    if (req.cookies.get(HALKODE_PREVIEW_COOKIE)?.value !== '1') {
-      res.cookies.set(HALKODE_PREVIEW_COOKIE, '1', {
+    if (req.cookies.get(HALKODE_PREVIEW_COOKIE)?.value !== halkodeSayfaOrtami) {
+      res.cookies.set(HALKODE_PREVIEW_COOKIE, halkodeSayfaOrtami, {
         httpOnly: true,
         sameSite: 'lax',
         secure: process.env.NODE_ENV === 'production',
@@ -85,7 +108,9 @@ export default auth((req) => {
       if (k !== 'halkode') clean.searchParams.set(k, v);
     }
     const res = NextResponse.redirect(clean);
-    res.cookies.set(HALKODE_PREVIEW_COOKIE, halkodeFlag === '1' ? '1' : '', {
+    // Bu kapı HER ZAMAN test ortamını açar — canlıya yalnız canlı sayfanın
+    // kendi ayrı anahtarından girilir.
+    res.cookies.set(HALKODE_PREVIEW_COOKIE, halkodeFlag === '1' ? HALKODE_ORTAM_TEST : '', {
       httpOnly: true,
       sameSite: 'lax',
       secure: process.env.NODE_ENV === 'production',

@@ -22,6 +22,20 @@ export interface PaymentSettings {
   halkode_app_secret?: string;
   halkode_merchant_key?: string;
   halkode_test_mode?: number;
+  // ── Halköde CANLI kimlikleri — TEST yuvalarından AYRI ────────────────────
+  // Tek yuva olsaydı canlı anahtarları girmek test sayfasını sessizce bozardı
+  // (test sayfası testapp'e gider, elinde canlı kimlik olurdu → status 30).
+  // Ayrı yuva sayesinde test ve canlı deneme sayfaları yan yana yaşar.
+  halkode_live_app_id?: string;
+  halkode_live_app_secret?: string;
+  halkode_live_merchant_key?: string;
+  /**
+   * CANLI deneme sayfasının (gizli link) kill switch'i. KAPALIYKEN canlı
+   * önizleme çerezi hiçbir şey açmaz — elde kalan link o an ölür, deploy
+   * gerekmez. Müşteri akışını açan `halkode_enabled` ile KARIŞTIRILMAMALI:
+   * bu yalnız gizli linki yönetir, vitrinde hiçbir şey göstermez.
+   */
+  halkode_canli_deneme?: boolean;
 }
 
 /**

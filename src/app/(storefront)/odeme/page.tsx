@@ -1,5 +1,5 @@
 import { getStoreSettings } from '@/lib/settings/store';
-import { isHalkodePreview } from '@/lib/halkode/preview';
+import { halkodeOnizlemeOrtami } from '@/lib/halkode/preview';
 import { CheckoutForm } from './CheckoutForm';
 
 export const dynamic = 'force-dynamic';
@@ -10,7 +10,13 @@ export default async function CheckoutPage() {
   // Gizli önizleme (yalnız ?halkode=1 çerezi olan kişi): kart gateway'i BU İSTEK için
   // Halköde kabul edilir. DB'deki ayarlar DEĞİŞMEZ — normal müşteri bugünkü akışı görür.
   // Test modu zorlanır; bu yoldan canlı POS'a gidilmesi mümkün değildir (client.ts cfg()).
-  const preview = await isHalkodePreview();
+  //
+  // ⚠️ YALNIZ 'test' ÖNİZLEMESİ — 'canli' çerezi buraya BİLEREK geçmez. Geçseydi
+  // canlı deneme linkini açan kişi sonra /odeme'ye uğradığında GERÇEK sipariş
+  // akışını (draft + RDS kaydı) canlı POS'a bağlamış olurdu: küçük bir deneme
+  // linki, farkında olmadan gerçek bir satış hattına dönüşürdü. Canlı deneme
+  // kendi ayrı sayfasında kalır.
+  const preview = (await halkodeOnizlemeOrtami()) === 'test';
   const payment = preview
     ? { ...settings.payment, card_gateway: 'halkode' as const, halkode_enabled: true, halkode_test_mode: 1 }
     : settings.payment;

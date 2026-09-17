@@ -111,6 +111,29 @@ export default async function AdminSettingsPage({ searchParams }: PageProps) {
             </div>
             <label className="flex items-center gap-2 text-sm cursor-pointer mt-3"><input type="checkbox" name="halkode_test_mode" defaultChecked={(s.payment.halkode_test_mode ?? 1) === 1} className="w-4 h-4 accent-[var(--color-brand-orange)]" />Test modu — testapp.halkode.com.tr’ye gider, gerçek para çekilmez</label>
           </div>
+
+          {/* Canlı kimlikler TEST kimliklerinden AYRI yuvada durur: tek yuva olsaydı
+              canlı anahtarları girmek test sayfasını sessizce bozardı (test sayfası
+              testapp'e gider, elinde canlı kimlik olurdu → status 30). */}
+          <div className="mt-4 pt-4 border-t">
+            <p className="text-sm font-semibold mb-1">Halköde CANLI ortam bilgileri</p>
+            <p className="text-xs text-neutral-500 mb-3">app.halkode.com.tr için — yukarıdaki test bilgilerinden ayrıdır, birbirini ezmez.</p>
+            <div className="grid grid-cols-3 gap-3">
+              <div><label className="text-xs font-medium block mb-1">Canlı App ID</label><input name="halkode_live_app_id" autoComplete="off" placeholder={s.payment.halkode_live_app_id ? '•••• kayıtlı' : 'App ID'} className={inputCls} /></div>
+              <div><label className="text-xs font-medium block mb-1">Canlı App Secret</label><input name="halkode_live_app_secret" type="password" autoComplete="off" placeholder={s.payment.halkode_live_app_secret ? '•••• kayıtlı' : 'App Secret'} className={inputCls} /></div>
+              <div><label className="text-xs font-medium block mb-1">Canlı Merchant Key</label><input name="halkode_live_merchant_key" type="password" autoComplete="off" placeholder={s.payment.halkode_live_merchant_key ? '•••• kayıtlı' : 'Merchant Key'} className={inputCls} /></div>
+            </div>
+            <label className="flex items-center gap-2 text-sm cursor-pointer mt-3">
+              <input type="checkbox" name="halkode_canli_deneme" defaultChecked={s.payment.halkode_canli_deneme === true} className="w-4 h-4 accent-red-600" />
+              <span>
+                <span className="font-semibold text-red-700">Canlı deneme sayfası açık</span>
+                <span className="block text-xs text-neutral-500">
+                  Gizli link (/odeme/halkode-canli/…) çalışsın. GERÇEK PARA çeker. Müşteri akışını
+                  AÇMAZ — vitrinde hiçbir şey değişmez. Deneme bitince kapat.
+                </span>
+              </span>
+            </label>
+          </div>
         </section>
 
         <section className="bg-white rounded-xl border p-6">

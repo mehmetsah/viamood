@@ -31,6 +31,7 @@
     "scripts/halkode-probe.ts",
     "scripts/halkode-3d-flow.ts",
     "scripts/halkode-cards.ts",
-    "scripts/halkode-refund.ts"
+    "scripts/halkode-refund.ts",
+    "scripts/halkode-taksit-olc.ts"
   ]
 }

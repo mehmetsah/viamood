@@ -111,49 +111,86 @@ async function paymentSettings(): Promise<Partial<import('@/db/schema').PaymentS
 }
 
 /**
- * Gizli önizleme çerezi var mı? (bkz. lib/halkode/preview.ts)
+ * Gizli önizleme çerezi hangi ortamı açıyor? (bkz. lib/halkode/preview.ts)
  *
  * `next/headers` yalnız istek bağlamında çalışır; betikler/cron bu modülü hiç
  * yükleyemeyebilir. Bu yüzden DİNAMİK import + try/catch — paymentSettings() ile aynı kalıp.
  */
-async function previewActive(): Promise<boolean> {
+async function previewOrtami(): Promise<'test' | 'canli' | null> {
   try {
     const m = await import('./preview');
-    return await m.isHalkodePreview();
+    return await m.halkodeOnizlemeOrtami();
   } catch {
-    return false;
+    return null;
   }
 }
 
+interface Kimlik {
+  appId: string;
+  appSecret: string;
+  merchantKey: string;
+}
+
+const kimlikDolu = (k: Kimlik) => !!(k.appId && k.appSecret && k.merchantKey);
+
 async function cfg(): Promise<HalkodeCfg> {
   const ps = await paymentSettings();
-  const preview = await previewActive();
+  const onizleme = await previewOrtami();
+
+  // CANLI önizleme YALNIZ paneldeki "canlı deneme sayfası" anahtarı açıkken geçerli.
+  // Bu, gerçek para çeken tek yolun tek tıkla kapatılabilen kill switch'i: deneme
+  // bitince panelden kapatılır, elde kalan link o an ölür (deploy gerekmez).
+  // Anahtar kapalıysa çerez HİÇ YOKMUŞ gibi davranırız — sessizce test ortamına
+  // düşmeyiz, çünkü o da yanlış olurdu (kullanıcı canlı sandığı yerde test görürdü).
+  const canliOnizleme = onizleme === 'canli' && ps.halkode_canli_deneme === true;
+  const testOnizleme = onizleme === 'test';
 
   // Taban adres önceliği:
-  //  1) HALKODE_BASE_URL açıkça verilmişse o (operasyonel override / betikler)
-  //  2) yoksa admin'deki "Test modu" seçimi: 1 → testapp, 0 → app
+  //  1) önizleme çerezi ne diyorsa O (test → testapp, canlı → app) — env override'ı
+  //     bile bu yolda geçersizdir; önizleme hangi ortamda olduğunu kesin bilmeli.
+  //  2) HALKODE_BASE_URL açıkça verilmişse o (operasyonel override / betikler)
+  //  3) yoksa admin'deki "Test modu" seçimi: 1 → testapp, 0 → app
   //
   // Yedek değer TESTAPP olmalı: staging.halkode.com.tr istekleri kabul eder (token verir,
   // 3D formu üretir) ama üye işyeri POS tanımı orada YOK → banka V004 ile düşer. Doğru
   // test adresi testapp.halkode.com.tr (bkz. src/lib/env.ts). Bu dosya process.env'i
   // DOĞRUDAN okuduğu için env.ts'deki zod default'u buraya uygulanmaz — yedek burada da
   // doğru olmalı, yoksa HALKODE_BASE_URL tanımsızken sessizce staging'e düşeriz.
-  // ÖNİZLEME: test modu ZORLANIR ve taban adres HER KOŞULDA testapp olur —
-  // HALKODE_BASE_URL override'ı bile bu yolda geçersizdir. Amaç: gizli önizleme
-  // linkinden canlı POS'a düşülüp gerçek para çekilmesinin İMKÂNSIZ olması.
-  const testMode = preview ? 1 : (ps.halkode_test_mode ?? 1);
-  const baseUrl = preview
-    ? BASE_TEST
-    : (process.env.HALKODE_BASE_URL || (testMode === 0 ? BASE_LIVE : BASE_TEST)).replace(/\/+$/, '');
+  const baseUrl = canliOnizleme
+    ? BASE_LIVE
+    : testOnizleme
+      ? BASE_TEST
+      : (process.env.HALKODE_BASE_URL || ((ps.halkode_test_mode ?? 1) === 0 ? BASE_LIVE : BASE_TEST)).replace(/\/+$/, '');
 
-  return {
-    baseUrl,
+  const canliMi = /(^|\/\/)app\.halkode\./i.test(baseUrl);
+
+  // ⚠️ CANLI ve TEST kimlikleri AYRI YUVALARDA durur — biri diğerini EZMEZ.
+  // Tek yuva olsaydı canlı anahtarları girmek test sayfasını sessizce bozardı:
+  // test sayfası testapp'e gider ama elinde canlı kimlik olurdu → status 30.
+  // İki sayfa yan yana yaşayabilsin diye ayrıldı.
+  const canliKimlik: Kimlik = {
+    appId: ps.halkode_live_app_id || process.env.HALKODE_LIVE_APP_ID || '',
+    appSecret: ps.halkode_live_app_secret || process.env.HALKODE_LIVE_APP_SECRET || '',
+    merchantKey: ps.halkode_live_merchant_key || process.env.HALKODE_LIVE_MERCHANT_KEY || '',
+  };
+  const testKimlik: Kimlik = {
     appId: ps.halkode_app_id || process.env.HALKODE_APP_ID || '',
     appSecret: ps.halkode_app_secret || process.env.HALKODE_APP_SECRET || '',
     merchantKey: ps.halkode_merchant_key || process.env.HALKODE_MERCHANT_KEY || '',
-    // Önizleme kill switch'i AÇAR (yalnız çerezi olan kişi için, yalnız test ortamında).
+  };
+
+  // Geri uyum: canlı yuvalar boşken canlı ortamda eski tek-yuva davranışı sürer.
+  // `scripts/halkode-*.ts` HALKODE_BASE_URL + HALKODE_APP_ID ile canlıya bağlanıyor;
+  // bu dal olmasaydı betikler bir anda kimliksiz kalırdı.
+  const k = canliMi && kimlikDolu(canliKimlik) ? canliKimlik : testKimlik;
+
+  return {
+    baseUrl,
+    ...k,
+    // Önizleme kill switch'i AÇAR — yalnız çerezi olan kişi için, yalnız o ortamda.
     enabled:
-      preview ||
+      canliOnizleme ||
+      testOnizleme ||
       ps.halkode_enabled === true ||
       process.env.HALKODE_ENABLED === 'true' ||
       process.env.HALKODE_ENABLED === '1',

@@ -70,6 +70,14 @@ export async function updateStoreSettingsAction(formData: FormData): Promise<voi
     halkode_app_secret: str('halkode_app_secret') ?? exPay.halkode_app_secret,
     halkode_merchant_key: str('halkode_merchant_key') ?? exPay.halkode_merchant_key,
     halkode_test_mode: bool('halkode_test_mode') ? 1 : 0,
+    // ⚠️ CANLI kimlikler AYRI yuvada. Bu satırlar formda karşılığı olmasa bile
+    // BURADA DURMAK ZORUNDA: `payment` her kayıtta sıfırdan kuruluyor, listede
+    // olmayan alan sessizce SİLİNİR. Canlı anahtarların bir "Kaydet" tıklamasıyla
+    // yok olması, ödemeyi çalışır hâlden çıkarırdı.
+    halkode_live_app_id: str('halkode_live_app_id') ?? exPay.halkode_live_app_id,
+    halkode_live_app_secret: str('halkode_live_app_secret') ?? exPay.halkode_live_app_secret,
+    halkode_live_merchant_key: str('halkode_live_merchant_key') ?? exPay.halkode_live_merchant_key,
+    halkode_canli_deneme: bool('halkode_canli_deneme'),
   };
   const shipping: ShippingSettings = {
     free_shipping_all: bool('free_shipping_all'),
