@@ -115,6 +115,13 @@ const envSchema = z.object({
    * CANLI ortam kimlikleri — TEST olanlardan AYRI tutulur ki iki ortam aynı
    * kurulumda yan yana yaşayabilsin. Öncelik: admin ayarları > bu env'ler
    * (bkz. lib/halkode/client.ts cfg()).
+   *
+   * ⛔ HALKODE_LIVE_MERCHANT_KEY'i .env DOSYASINA YAZMAYIN. Üye işyeri anahtarı
+   * bcrypt biçimindedir ($2y$10$…) ve hem bash `source` hem Next'in
+   * dotenv-expand'i içindeki `$2y`/`$10`'u değişken sanıp genişletir: 60
+   * karakterlik anahtar sessizce 22 karaktere düşer, Halköde de buna
+   * "merchant not found" der. Doğru yer: admin → Ayarlar → Halköde CANLI.
+   * (17 Eyl 2026'da ölçülerek bulundu; client.ts cfg() artık uyarı basar.)
    */
   HALKODE_LIVE_APP_ID: z.string().optional(),
   HALKODE_LIVE_APP_SECRET: z.string().optional(),

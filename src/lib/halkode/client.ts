@@ -184,6 +184,25 @@ async function cfg(): Promise<HalkodeCfg> {
   // bu dal olmasaydı betikler bir anda kimliksiz kalırdı.
   const k = canliMi && kimlikDolu(canliKimlik) ? canliKimlik : testKimlik;
 
+  // ⚠️ MERCHANT KEY ŞEKİL DENETİMİ — sessiz bozulmayı yüksek sesle söyler.
+  // Üye işyeri anahtarı bcrypt biçimindedir ($2y$10$…) ve içindeki '$'
+  // karakterleri onu .env dosyalarında TEHLİKELİ yapar: hem bash `source` hem
+  // Next'in dotenv-expand'i `$2y`/`$10`'u değişken sanıp genişletir ve 60
+  // karakterlik anahtar sessizce 22 karaktere düşer. Halköde buna
+  // "status 14 · merchant not found" der — yani hata mesajı sizi anahtarın
+  // YANLIŞ olduğuna değil, üye işyerinin YOK olduğuna inandırır (17 Eyl 2026'da
+  // tam olarak bu yaşandı, teşhis yarım saat aldı).
+  //
+  // Bu yüzden canlı anahtarlar .env'de DEĞİL, admin ayarlarında (DB) durur.
+  // Yine de biri env'e koyarsa log'da tek satırlık uyarı görünsün — DEĞER YOK.
+  if (k.merchantKey && !k.merchantKey.startsWith('$2y$')) {
+    console.warn(
+      `[halkode] merchant_key beklenen bcrypt biçiminde değil (uzunluk ${k.merchantKey.length}). ` +
+        `.env içinde tırnaksız duruyorsa '$' genişletmesiyle bozulmuş olabilir; ` +
+        `doğru yer admin → Ayarlar → Halköde CANLI alanlarıdır.`,
+    );
+  }
+
   return {
     baseUrl,
     ...k,
@@ -403,9 +422,35 @@ export async function paySmart3D(
     });
     const text = await resp.text();
 
-    // Başarı = HTML form; hata = JSON
+    // Başarı = Halköde'nin BANKAYA auto-submit eden HTML formu; hata = JSON.
+    //
+    // ⚠️ "HTML geldi = başarı" YETMEZ. Halköde işlemi reddettiğinde bazen JSON
+    // değil, `cancel_url`'e bir YÖNLENDİRME döndürüyor; `fetch` yönlendirmeyi
+    // kendiliğinden takip ettiği için elimize KENDİ deneme sayfamızın HTML'i
+    // geçiyor ve bu "ok: true" sayılıyordu. Ölçüldü (17 Eyl 2026): merchant key
+    // bozukken 89 KB'lık "banka formu" döndü — içeriği bizim kendi sayfamızdı,
+    // kullanıcı 3D ekranı yerine boş bir sayfaya düşecekti.
+    //
+    // Gerçek form Halköde'nin kendi alan adına POST eder; ölçüt bu.
     const trimmed = text.trimStart();
-    if (trimmed.startsWith('<')) return { ok: true, html: text };
+    if (trimmed.startsWith('<')) {
+      let halkodeHost = '';
+      try {
+        halkodeHost = new URL(c.baseUrl).host;
+      } catch {
+        /* baseUrl bozuksa aşağıdaki kontrol zaten elemeyi yapar */
+      }
+      if (halkodeHost && text.includes(halkodeHost)) return { ok: true, html: text };
+      const nereye = resp.redirected ? ` (istek ${resp.url.slice(0, 120)} adresine yönlendi)` : '';
+      return {
+        ok: false,
+        statusCode: -1,
+        error:
+          `Halköde banka formu yerine beklenmeyen bir sayfa döndürdü${nereye}. ` +
+          `Bu genellikle isteğin reddedilip iptal adresine yönlendirildiği anlamına gelir ` +
+          `(sık sebep: merchant_key bozuk → "merchant not found").`,
+      };
+    }
 
     let json: Json = {};
     try {
