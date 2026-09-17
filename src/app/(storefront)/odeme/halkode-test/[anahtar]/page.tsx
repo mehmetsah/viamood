@@ -4,10 +4,8 @@
  * Sunucu bileşeni: anahtarı doğrular, önizleme çerezini kurar, noindex verir.
  * Form ve taksit tablosu istemci bileşeninde (etkileşim gerekiyor).
  */
-import { cookies } from 'next/headers';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
-import { HALKODE_PREVIEW_COOKIE, HALKODE_PREVIEW_MAX_AGE } from '@/lib/halkode/preview-cookie';
 import { TEST_ANAHTAR, TEST_TUTAR_TL, TEST_KARTI, SONUC_METNI } from '@/lib/halkode/test-page';
 import TestOdemeFormu from './TestOdemeFormu';
 
@@ -32,19 +30,10 @@ export default async function Sayfa({
   // Yanlış anahtar → 404. "Yetkisiz" demek bile sayfanın VAR olduğunu ele verir.
   if (anahtar !== TEST_ANAHTAR) notFound();
 
-  // ÖNİZLEME ÇEREZİNİ BURADA KURUYORUZ: Yunus'a verilecek link TEK olmalı.
-  // Çerez olmadan halkodeEnabled() false döner ve taksit/ödeme uçları 503 verir.
-  // Çerez aynı zamanda taban adresi testapp'e çiviler (client.ts cfg()).
-  const jar = await cookies();
-  if (jar.get(HALKODE_PREVIEW_COOKIE)?.value !== '1') {
-    jar.set(HALKODE_PREVIEW_COOKIE, '1', {
-      httpOnly: true,
-      sameSite: 'lax',
-      secure: process.env.NODE_ENV === 'production',
-      path: '/',
-      maxAge: HALKODE_PREVIEW_MAX_AGE,
-    });
-  }
+  // ÇEREZ BURADA KURULMAZ — middleware'de kurulur (src/middleware.ts).
+  // Sunucu bileşeni çerez YAZAMIYOR: Next "Cookies can only be modified in a
+  // Server Action or Route Handler" ile 500 veriyor. İlk deneme canlıda tam bu
+  // hatayla düştü; varsayımla değil hata günlüğüyle bulundu.
 
   const sonucAnahtari = typeof sp.sonuc === 'string' ? sp.sonuc : null;
   const sonuc = sonucAnahtari ? (SONUC_METNI[sonucAnahtari] ?? null) : null;

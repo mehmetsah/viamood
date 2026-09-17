@@ -2,6 +2,8 @@ import NextAuth from 'next-auth';
 import { NextResponse, type NextRequest } from 'next/server';
 import { authConfig } from '@/lib/auth.config';
 import { HALKODE_PREVIEW_COOKIE, HALKODE_PREVIEW_MAX_AGE } from '@/lib/halkode/preview-cookie';
+// Edge güvenli: test-page.ts hiçbir şey import etmez, yalnız sabit taşır.
+import { TEST_ANAHTAR as HALKODE_TEST_ANAHTAR } from '@/lib/halkode/test-page';
 
 const { auth } = NextAuth(authConfig);
 
@@ -49,6 +51,29 @@ function buildRedirectUrl(req: NextRequest, pathname: string, params?: Record<st
 export default auth((req) => {
   const { pathname } = req.nextUrl;
   const session = req.auth;
+
+  // ── Halköde 10 TL TEST SAYFASI: çerez BURADA kurulur ───────────────────────
+  // Sayfa (sunucu bileşeni) çerezi KENDİSİ kuramıyor: Next "Cookies can only be
+  // modified in a Server Action or Route Handler" ile 500 veriyor — ölçüldü,
+  // ilk deneme canlıda tam bu hatayla düştü. Middleware çerez yazabildiği için
+  // kapı buraya taşındı; böylece Yunus'a verilen link TEK parça kalıyor
+  // (?halkode=1 eklemesi gerekmiyor).
+  //
+  // Yönlendirme YAPILMIYOR, istek olduğu gibi devam ediyor: redirect etseydik
+  // 3D dönüşündeki ?sonuc=… parametreleri turlarda kaybolabilirdi.
+  if (pathname.startsWith(`/odeme/halkode-test/${HALKODE_TEST_ANAHTAR}`)) {
+    const res = NextResponse.next();
+    if (req.cookies.get(HALKODE_PREVIEW_COOKIE)?.value !== '1') {
+      res.cookies.set(HALKODE_PREVIEW_COOKIE, '1', {
+        httpOnly: true,
+        sameSite: 'lax',
+        secure: process.env.NODE_ENV === 'production',
+        path: '/',
+        maxAge: HALKODE_PREVIEW_MAX_AGE,
+      });
+    }
+    return res;
+  }
 
   // ── Halköde gizli önizleme kapısı ──────────────────────────────────────────
   // ?halkode=1 → çerezi kur, parametresiz adrese yönlendir (Yunus'un test linki).
