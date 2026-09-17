@@ -134,9 +134,27 @@ export function sonucMetni(
       aciklama: 'İmzadaki tutar ile bankadan sorulan tutar aynı değil; sonuç reddedildi.',
       iyi: false,
     },
+    // ⚠️ BU METİN 17 EYL 2026'DA DEĞİŞTİRİLDİ — eskisi tehlikeliydi.
+    //
+    // Eski hâli: "Halköde kapalı — Önizleme çerezi düşmüş olabilir. Sayfayı linke
+    // tekrar tıklayarak aç." İki ayrı şekilde yanlıştı:
+    //  1) TEŞHİSİ YANLIŞ SÖYLÜYORDU. Çerez "düşmemişti"; banka dönüşü farklı bir
+    //     orijine (çıplak IP, düz HTTP) düştüğü için çerez TAŞINAMIYORDU. Bu ayrım
+    //     arıza avını saatlerce yanlış yöne çevirdi.
+    //  2) DAHA KÖTÜSÜ: kullanıcıya "tekrar dene" diyordu. Oysa bu ekran, bankanın
+    //     parayı ÇEKMİŞ olabileceği bir anda çıkıyor (biz doğrulayamadığımız için
+    //     "kapalı" diyoruz). "Tekrar dene" demek ikinci bir çekim davet etmektir —
+    //     canlı denemede tam olarak bu oldu.
+    //
+    // Yeni metnin tek işi: "başarısız" değil "DOĞRULANAMADI" demek, işlem
+    // numarasını sakla dedirtmek ve tekrar denemeyi ÖNERMEMEK.
     kapali: {
-      baslik: 'Halköde kapalı',
-      aciklama: 'Önizleme çerezi düşmüş olabilir. Sayfayı linke tekrar tıklayarak aç.',
+      baslik: 'İşlem doğrulanamadı',
+      aciklama:
+        'Bankadan dönüş alındı ama işlem sunucu tarafında DOĞRULANAMADI. ' +
+        'Bu "ödeme başarısız" demek DEĞİLDİR — kartınızdan çekim yapılmış olabilir. ' +
+        'Lütfen TEKRAR DENEMEYİN; aşağıdaki işlem numarasını bize iletin. ' +
+        'Durumu bankadan sorgulayıp çekim yapıldıysa iade ediyoruz.',
       iyi: false,
     },
   };

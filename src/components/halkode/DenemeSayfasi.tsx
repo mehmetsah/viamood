@@ -88,6 +88,10 @@ export default function DenemeSayfasi({
               {tek('tutar') && (<><dt className="font-semibold">Tutar</dt><dd>{tek('tutar')} TL</dd></>)}
               {tek('kod') && (<><dt className="font-semibold">Halköde kodu</dt><dd>{tek('kod')}</dd></>)}
               {tek('aciklama') && (<><dt className="font-semibold">Banka mesajı</dt><dd>{tek('aciklama')}</dd></>)}
+              {/* Teşhis etiketi: "doğrulanamadı" ekranında neden doğrulanamadığını
+                  gösterir (yapilandirma / anahtar / jeton). Olmadığında arıza avı
+                  ekran görüntüsünden tahmin yürütmeye dönüyordu. */}
+              {tek('detay') && (<><dt className="font-semibold">Teşhis</dt><dd className="font-mono">{tek('detay')}</dd></>)}
             </dl>
           </div>
         )}

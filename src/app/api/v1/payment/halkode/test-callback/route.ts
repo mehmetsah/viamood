@@ -55,23 +55,68 @@ async function parametreler(req: NextRequest): Promise<Record<string, string>> {
 
 async function handle(req: NextRequest): Promise<NextResponse> {
   const p = await parametreler(req);
+  const invoiceId = p.invoice_id || '';
+
+  // ⚠️ HER DÖNÜŞ, HER KOŞULDA LOGLANIR — ÖNCE, hiçbir erken çıkıştan SONRA değil.
+  //
+  // NEDEN (17 Eyl 2026'da yaşandı): canlı denemede banka 10 TL'yi çekti ve
+  // `status_code=100 Payment Successfully Completed` ile geri döndü. Ama dönüş
+  // yanlış orijine düştüğü için önizleme çerezi taşınamadı, `halkodeConfigured()`
+  // false oldu ve uç AŞAĞIDAKİ satıra hiç gelmeden çıktı. Sonuç: para çekildi,
+  // sistemde TEK SATIR iz kalmadı. İşlem ancak nginx erişim kaydındaki ham query
+  // string'ten bulunabildi.
+  //
+  // Bu satır o sessiz kaybı imkânsız kılar: ne olursa olsun invoice_id ve bankanın
+  // status_code'u günlüğe düşer. KART ALANI YOK — yalnız işlem kimliği ve banka
+  // kodları (`credit_card_no` gibi alanlar bilerek dışarıda bırakıldı).
+  console.info('[halkode/callback-giris] dönüş alındı', {
+    ortam: anahtardanOrtam(p.a) ?? 'bilinmiyor',
+    invoiceId: invoiceId || '(yok)',
+    statusCode: p.status_code ?? '-',
+    mdStatus: p.md_status ?? '-',
+    orderNo: p.order_no ?? '-',
+    bankaHata: p.original_bank_error_code || '-',
+    yontem: req.method,
+  });
 
   // Ortam ADRESTEKİ anahtardan okunur; tanınmayan anahtarda test sayfasına
   // "kapalı" ile dönülür (canlı sayfanın varlığını ele vermemek için).
   const ortam = anahtardanOrtam(p.a);
-  if (!ortam) return don('test', 'kapali', { detay: 'anahtar' });
-  if (!(await halkodeConfigured())) return don(ortam, 'kapali', { detay: 'yapilandirma' });
+  if (!ortam) {
+    console.error('[halkode/callback] REDDEDİLDİ · sebep=anahtar', { invoiceId: invoiceId || '(yok)', statusCode: p.status_code ?? '-' });
+    return don('test', 'kapali', { detay: 'anahtar', ...(invoiceId ? { ref: invoiceId } : {}) });
+  }
+  if (!(await halkodeConfigured())) {
+    // ⛔ EN TEHLİKELİ DAL: banka "ödendi" demiş olabilir ama biz doğrulayamıyoruz.
+    console.error(
+      '[halkode/callback] DOĞRULANAMADI · sebep=yapilandirma · ÖDEME ÇEKİLMİŞ OLABİLİR — ' +
+        'bu invoice_id checkstatus ile ELLE sorgulanmalı',
+      { invoiceId: invoiceId || '(yok)', statusCode: p.status_code ?? '-', mdStatus: p.md_status ?? '-' },
+    );
+    return don(ortam, 'kapali', { detay: 'yapilandirma', ...(invoiceId ? { ref: invoiceId } : {}) });
+  }
 
-  const invoiceId = p.invoice_id || '';
   const hashKey = p.hash_key || '';
-  if (!invoiceId || !hashKey) return don(ortam, 'iptal', { detay: 'eksik_parametre' });
+  if (!invoiceId || !hashKey) {
+    console.error('[halkode/callback] eksik parametre', { invoiceIdVar: !!invoiceId, hashVar: !!hashKey, statusCode: p.status_code ?? '-' });
+    return don(ortam, 'iptal', { detay: 'eksik_parametre', ...(invoiceId ? { ref: invoiceId } : {}) });
+  }
 
   const parts = decodeHashKey(hashKey, await halkodeAppSecret());
-  if (!parts) return don(ortam, 'hash_cozulmedi', { ref: invoiceId });
-  if (parts.invoiceId !== invoiceId) return don(ortam, 'invoice_uyusmuyor', { ref: invoiceId });
+  if (!parts) {
+    console.error('[halkode/callback] imza çözülemedi · ÖDEME ÇEKİLMİŞ OLABİLİR', { invoiceId, statusCode: p.status_code ?? '-' });
+    return don(ortam, 'hash_cozulmedi', { ref: invoiceId });
+  }
+  if (parts.invoiceId !== invoiceId) {
+    console.error('[halkode/callback] invoice uyuşmuyor · ÖDEME ÇEKİLMİŞ OLABİLİR', { invoiceId, statusCode: p.status_code ?? '-' });
+    return don(ortam, 'invoice_uyusmuyor', { ref: invoiceId });
+  }
 
   const t = await getToken();
-  if (!t.ok) return don(ortam, 'kapali', { detay: 'jeton' });
+  if (!t.ok) {
+    console.error('[halkode/callback] jeton alınamadı · ÖDEME ÇEKİLMİŞ OLABİLİR — elle checkstatus gerekir', { invoiceId, hata: t.error });
+    return don(ortam, 'kapali', { detay: 'jeton', ref: invoiceId });
+  }
 
   const st = await checkStatus(invoiceId, t.token);
   if (!st.ok) {

@@ -78,11 +78,38 @@ async function collectParams(req: NextRequest): Promise<Record<string, string>> 
 }
 
 async function handle(req: NextRequest): Promise<NextResponse> {
-  if (!(await halkodeConfigured())) return failPage('not_configured');
-
+  // ⚠️ PARAMETRELER ÖNCE OKUNUR, yapılandırma kontrolü SONRA.
+  //
+  // Eskiden sıra tersti: `halkodeConfigured()` false olduğunda uç, invoice_id'yi
+  // OKUMADAN çıkıyordu. 17 Eyl 2026'da tam bu dal yüzünden bir ödeme sessizce
+  // kayboldu (deneme akışında): banka 10 TL çekip `status_code=100` ile döndü,
+  // yapılandırma okunamadı, uç erken çıktı ve geriye TEK SATIR iz kalmadı —
+  // işlem ancak nginx erişim kaydından bulunabildi.
+  //
+  // Artık hangi dala girilirse girilsin invoice_id ve bankanın status_code'u
+  // günlüğe düşer. KART ALANI LOGLANMAZ (`credit_card_no` vb. bilerek yok).
   const p = await collectParams(req);
   const invoiceId = p.invoice_id || '';
   const hashKey = p.hash_key || '';
+
+  console.info('[halkode/callback-giris] dönüş alındı', {
+    invoiceId: invoiceId || '(yok)',
+    statusCode: p.status_code ?? '-',
+    mdStatus: p.md_status ?? '-',
+    orderNo: p.order_no ?? '-',
+    bankaHata: p.original_bank_error_code || '-',
+    yontem: req.method,
+  });
+
+  if (!(await halkodeConfigured())) {
+    // ⛔ EN TEHLİKELİ DAL: banka "ödendi" demiş olabilir ama doğrulayamıyoruz.
+    console.error(
+      '[halkode/callback] DOĞRULANAMADI · sebep=not_configured · ÖDEME ÇEKİLMİŞ OLABİLİR — ' +
+        'bu invoice_id checkstatus ile ELLE sorgulanmalı',
+      { invoiceId: invoiceId || '(yok)', statusCode: p.status_code ?? '-', mdStatus: p.md_status ?? '-' },
+    );
+    return failPage('not_configured', invoiceId);
+  }
 
   if (!invoiceId || !hashKey) {
     console.error('[halkode/callback] eksik parametre', { hasInvoice: !!invoiceId, hasHash: !!hashKey });
