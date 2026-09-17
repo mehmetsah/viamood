@@ -3,7 +3,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { ILLER, getIlceler } from '@/lib/tr-addresses';
-import type { PaymentSettings } from '@/db/schema';
+// ⚠️ PaymentSettings DEĞİL: bu bileşen istemcide çalışıyor ve prop'u RSC yüküyle
+// HTML'e gömülüyor. Tip daraltıldı ki sır içeren bir alan buraya kazara geçmesin
+// (bkz. lib/settings/store.ts → vitrinOdemeAyarlari).
+import type { VitrinOdemeAyarlari } from '@/lib/settings/store';
 
 interface CartView {
   token: string;
@@ -32,7 +35,7 @@ const CARD_GATEWAY_LABEL: Record<string, string> = {
   paytr: 'PayTR',
 };
 
-export function CheckoutForm({ payment }: { payment: PaymentSettings }) {
+export function CheckoutForm({ payment }: { payment: VitrinOdemeAyarlari }) {
   const [cart, setCart] = useState<CartView | null>(null);
   const [f, setF] = useState({
     first_name: '', last_name: '', phone: '', email: '', address1: '', postal_code: '',

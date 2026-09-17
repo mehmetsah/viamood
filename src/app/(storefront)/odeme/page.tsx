@@ -1,4 +1,4 @@
-import { getStoreSettings } from '@/lib/settings/store';
+import { getStoreSettings, vitrinOdemeAyarlari } from '@/lib/settings/store';
 import { halkodeOnizlemeOrtami } from '@/lib/halkode/preview';
 import { CheckoutForm } from './CheckoutForm';
 
@@ -16,10 +16,17 @@ export default async function CheckoutPage() {
   // akışını (draft + RDS kaydı) canlı POS'a bağlamış olurdu: küçük bir deneme
   // linki, farkında olmadan gerçek bir satış hattına dönüşürdü. Canlı deneme
   // kendi ayrı sayfasında kalır.
+  //
+  // ⚠️ İSTEMCİYE YALNIZ BEYAZ LİSTE GİDER (vitrinOdemeAyarlari). Buraya
+  // `settings.payment` olduğu gibi verilirse PayTR/İyzico/Halköde SIRLARI
+  // sayfanın RSC yüküyle birlikte herkese açık HTML'e gömülür — 17 Eyl 2026'da
+  // tam olarak bu oluyordu ve `curl https://…/odeme` ile okunabiliyordu.
   const preview = (await halkodeOnizlemeOrtami()) === 'test';
-  const payment = preview
-    ? { ...settings.payment, card_gateway: 'halkode' as const, halkode_enabled: true, halkode_test_mode: 1 }
-    : settings.payment;
+  const payment = vitrinOdemeAyarlari(
+    preview
+      ? { ...settings.payment, card_gateway: 'halkode' as const, halkode_enabled: true, halkode_test_mode: 1 }
+      : settings.payment,
+  );
 
   return (
     <div className="emp">

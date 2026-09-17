@@ -36,6 +36,36 @@ const DEFAULTS: StoreSettings = {
   theme: {},
 };
 
+/**
+ * Vitrine (TARAYICIYA) gönderilmesi güvenli ödeme alanları — sır İÇERMEZ.
+ *
+ * ⚠️ NEDEN VAR (17 Eyl 2026, ölçülerek bulundu): /odeme sayfası `settings.payment`
+ * nesnesini olduğu gibi istemci bileşenine prop olarak veriyordu. React Server
+ * Components prop'ları RSC yüküyle HTML'e gömer — yani PayTR mağaza parolası ve
+ * salt'ı, iyzico secret'ı ve Halköde CANLI kimlikleri giriş gerektirmeyen bir
+ * sayfanın kaynağında düz metin olarak herkese görünüyordu. `curl https://…/odeme`
+ * yeterliydi.
+ *
+ * Bu yüzden vitrine giden alanlar artık BEYAZ LİSTE. Yeni bir ödeme alanı
+ * eklenince buraya EKLENMEZ — aksine, buraya eklemek için "bu değer herkese
+ * açık olabilir mi?" sorusuna evet demek gerekir.
+ */
+export type VitrinOdemeAyarlari = Pick<
+  PaymentSettings,
+  'card_gateway' | 'halkode_enabled' | 'havale_enabled' | 'cod_enabled' | 'iyzico_enabled' | 'paytr_enabled'
+>;
+
+export function vitrinOdemeAyarlari(p: PaymentSettings): VitrinOdemeAyarlari {
+  return {
+    card_gateway: p.card_gateway,
+    halkode_enabled: p.halkode_enabled,
+    havale_enabled: p.havale_enabled,
+    cod_enabled: p.cod_enabled,
+    iyzico_enabled: p.iyzico_enabled,
+    paytr_enabled: p.paytr_enabled,
+  };
+}
+
 /** Tekil mağaza ayarlarını döndürür (yoksa varsayılan). Storefront/checkout/tema besler. */
 export async function getStoreSettings(): Promise<StoreSettings> {
   try {
