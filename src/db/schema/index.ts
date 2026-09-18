@@ -21,3 +21,4 @@ export * from './bundles';
 export * from './shipping';
 export * from './settings';
 export * from './reviews';
+export * from './ads';
