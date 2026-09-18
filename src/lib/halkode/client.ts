@@ -133,17 +133,44 @@ interface Kimlik {
 
 const kimlikDolu = (k: Kimlik) => !!(k.appId && k.appSecret && k.merchantKey);
 
-async function cfg(): Promise<HalkodeCfg> {
+/**
+ * Ortam nasıl belirlenir?
+ *
+ * 🔴 17 Eyl 2026 arızasının kök sebebi: ortam YALNIZ önizleme çerezinden
+ * okunuyordu. Banka 3D dönüşü BAŞKA origin'den (app.halkode.com.tr → bizim uç)
+ * geldiği için çerez taşınmaz; `onizleme` null olur, baseUrl test adresine
+ * düşer, `canliMi=false` olur ve TEST kimlik yuvası seçilir. Prod'da test yuvası
+ * BOŞ olduğu için `halkodeConfigured()` false döner ve callback ödemeyi
+ * "sebep=yapilandirma" diyerek reddeder — para çekilmiş, sipariş açılmamış olur.
+ *
+ * Çözüm: ortam artık ÇAĞIRANDAN gelir. Banka dönüşünü işleyen uçlar ortamı
+ * istekten bilir (gerçek ödeme ucu daima canlı; deneme ucu adresteki anahtardan
+ * — `anahtardanOrtam()`), çereze hiç bakmaz. Çerez yalnız SAYFA gösteriminde,
+ * yani `ortamZorla` verilmediği yolda, eskisi gibi çalışmaya devam eder.
+ */
+export type HalkodeOrtamSecimi = 'test' | 'canli' | null | undefined;
+
+async function cfg(ortamZorla?: HalkodeOrtamSecimi): Promise<HalkodeCfg> {
   const ps = await paymentSettings();
-  const onizleme = await previewOrtami();
+  // Ortam açıkça verildiyse çerez HİÇ OKUNMAZ — istek bağlamı olmayabilir bile.
+  const onizleme = ortamZorla ?? (await previewOrtami());
 
   // CANLI önizleme YALNIZ paneldeki "canlı deneme sayfası" anahtarı açıkken geçerli.
   // Bu, gerçek para çeken tek yolun tek tıkla kapatılabilen kill switch'i: deneme
   // bitince panelden kapatılır, elde kalan link o an ölür (deploy gerekmez).
   // Anahtar kapalıysa çerez HİÇ YOKMUŞ gibi davranırız — sessizce test ortamına
   // düşmeyiz, çünkü o da yanlış olurdu (kullanıcı canlı sandığı yerde test görürdü).
-  const canliOnizleme = onizleme === 'canli' && ps.halkode_canli_deneme === true;
-  const testOnizleme = onizleme === 'test';
+  //
+  // ⚠️ ÖNEMLİ AYRIM: çerezle gelen önizleme kill switch'i AÇAR (aşağıdaki
+  // `enabled`), ama ÇAĞIRANIN zorladığı ortam AÇMAZ. Yoksa `cfg('canli')`
+  // demek kill switch'i baypas etmek olurdu; gerçek müşteri ödemesi
+  // `halkode_enabled` ile yönetilir, deneme anahtarıyla değil.
+  const cerezCanli = onizleme === 'canli' && ps.halkode_canli_deneme === true;
+  const cerezTest = onizleme === 'test' && !ortamZorla;
+
+  // Adres/kimlik seçimi için ortam: zorlanan ortam da sayılır.
+  const canliOnizleme = ortamZorla === 'canli' || cerezCanli;
+  const testOnizleme = ortamZorla === 'test' || cerezTest;
 
   // Taban adres önceliği:
   //  1) önizleme çerezi ne diyorsa O (test → testapp, canlı → app) — env override'ı
@@ -208,32 +235,68 @@ async function cfg(): Promise<HalkodeCfg> {
     ...k,
     // Önizleme kill switch'i AÇAR — yalnız çerezi olan kişi için, yalnız o ortamda.
     enabled:
-      canliOnizleme ||
-      testOnizleme ||
+      cerezCanli ||
+      cerezTest ||
       ps.halkode_enabled === true ||
       process.env.HALKODE_ENABLED === 'true' ||
       process.env.HALKODE_ENABLED === '1',
   };
 }
 
-/** Kill switch — kimlik bilgileri dolu olsa bile bu açık değilse ödeme başlatılmaz. */
-export async function halkodeEnabled(): Promise<boolean> {
-  return (await cfg()).enabled;
+/**
+ * GERÇEK müşteri ödemesinin ortamı — çerezden BAĞIMSIZ.
+ *
+ * `/initialize` ve `/callback` bunu kullanır; ikisi de aynı cevabı almak
+ * ZORUNDA, yoksa ödeme bir ortamda başlatılıp diğerinde doğrulanır (17 Eyl
+ * arızası tam olarak buydu: başlatma canlıda, doğrulama testte).
+ *
+ * Sıra:
+ *   1) `halkode_test_mode` AÇIKÇA verilmişse ona uy (0 → canlı, 1 → test).
+ *      Operatörün test niyeti sessizce ezilmemeli.
+ *   2) Verilmemişse DOLU kimlik yuvası karar verir. Prod'da yalnız canlı yuva
+ *      dolu olduğu için doğru cevap 'canli' olur — eskiden burada `?? 1`
+ *      yüzünden test'e düşülüyor, test yuvası boş olduğundan
+ *      `halkodeConfigured()` false dönüyordu.
+ *   3) İkisi de boşsa null → çağıran "yapılandırma eksik" diyebilir.
+ */
+export async function odemeOrtami(): Promise<'test' | 'canli' | null> {
+  const ps = await paymentSettings();
+  if (ps.halkode_test_mode === 0) return 'canli';
+  if (ps.halkode_test_mode === 1) return 'test';
+
+  const canliDolu = kimlikDolu({
+    appId: ps.halkode_live_app_id || process.env.HALKODE_LIVE_APP_ID || '',
+    appSecret: ps.halkode_live_app_secret || process.env.HALKODE_LIVE_APP_SECRET || '',
+    merchantKey: ps.halkode_live_merchant_key || process.env.HALKODE_LIVE_MERCHANT_KEY || '',
+  });
+  if (canliDolu) return 'canli';
+
+  const testDolu = kimlikDolu({
+    appId: ps.halkode_app_id || process.env.HALKODE_APP_ID || '',
+    appSecret: ps.halkode_app_secret || process.env.HALKODE_APP_SECRET || '',
+    merchantKey: ps.halkode_merchant_key || process.env.HALKODE_MERCHANT_KEY || '',
+  });
+  return testDolu ? 'test' : null;
 }
 
-export async function halkodeConfigured(): Promise<boolean> {
-  const c = await cfg();
+/** Kill switch — kimlik bilgileri dolu olsa bile bu açık değilse ödeme başlatılmaz. */
+export async function halkodeEnabled(ortam?: HalkodeOrtamSecimi): Promise<boolean> {
+  return (await cfg(ortam)).enabled;
+}
+
+export async function halkodeConfigured(ortam?: HalkodeOrtamSecimi): Promise<boolean> {
+  const c = await cfg(ortam);
   return !!(c.baseUrl && c.appId && c.appSecret && c.merchantKey);
 }
 
 /** Halköde CANLI ortamda mı? (app.halkode.com.tr = canlı, testapp.halkode.com.tr = test) */
-export async function halkodeIsLive(): Promise<boolean> {
-  return /(^|\/\/)app\.halkode\./i.test((await cfg()).baseUrl);
+export async function halkodeIsLive(ortam?: HalkodeOrtamSecimi): Promise<boolean> {
+  return /(^|\/\/)app\.halkode\./i.test((await cfg(ortam)).baseUrl);
 }
 
 /** Dönüş imzasını çözmek için gereken app_secret (ayar → env). */
-export async function halkodeAppSecret(): Promise<string> {
-  return (await cfg()).appSecret;
+export async function halkodeAppSecret(ortam?: HalkodeOrtamSecimi): Promise<string> {
+  return (await cfg(ortam)).appSecret;
 }
 
 // ── Hash ────────────────────────────────────────────────────────────────────
@@ -327,8 +390,13 @@ export function verifyReturnHash(
 
 type Json = Record<string, unknown>;
 
-async function postJson(path: string, body: Json, token?: string): Promise<{ httpStatus: number; json: Json }> {
-  const resp = await fetch(`${(await cfg()).baseUrl}${path}`, {
+async function postJson(
+  path: string,
+  body: Json,
+  token?: string,
+  ortam?: HalkodeOrtamSecimi,
+): Promise<{ httpStatus: number; json: Json }> {
+  const resp = await fetch(`${(await cfg(ortam)).baseUrl}${path}`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -348,11 +416,13 @@ async function postJson(path: string, body: Json, token?: string): Promise<{ htt
 }
 
 /** Token servisi. Token kısa ömürlü; çağrı başına alınır (cache yok — basit ve güvenli). */
-export async function getToken(): Promise<{ ok: true; token: string; is3d: number } | { ok: false; error: string }> {
-  const c = await cfg();
+export async function getToken(
+  ortam?: HalkodeOrtamSecimi,
+): Promise<{ ok: true; token: string; is3d: number } | { ok: false; error: string }> {
+  const c = await cfg(ortam);
   if (!c.appId || !c.appSecret) return { ok: false, error: 'HALKODE kimlik bilgileri eksik' };
   try {
-    const { json } = await postJson('/api/token', { app_id: c.appId, app_secret: c.appSecret });
+    const { json } = await postJson('/api/token', { app_id: c.appId, app_secret: c.appSecret }, undefined, ortam);
     const data = (json.data ?? {}) as Json;
     if (json.status_code === HALKODE_STATUS.SUCCESS && typeof data.token === 'string') {
       return { ok: true, token: data.token, is3d: Number(data.is_3d ?? 0) };
@@ -371,8 +441,9 @@ export async function getToken(): Promise<{ ok: true; token: string; is3d: numbe
 export async function paySmart3D(
   p: Halkode3DParams,
   token: string,
+  ortam?: HalkodeOrtamSecimi,
 ): Promise<{ ok: true; html: string } | { ok: false; statusCode: number; error: string; raw?: Json }> {
-  const c = await cfg();
+  const c = await cfg(ortam);
   const currency = p.currencyCode ?? 'TRY';
   const total = p.total.toFixed(2);
 
@@ -501,6 +572,7 @@ export async function getPos(
   amount: number,
   token: string,
   currencyCode = 'TRY',
+  ortam?: HalkodeOrtamSecimi,
 ): Promise<
   | { ok: true; installments: HalkodeInstallment[] }
   | { ok: false; statusCode: number; error: string }
@@ -511,9 +583,10 @@ export async function getPos(
       credit_card: creditCardBin.replace(/\s/g, '').slice(0, 6),
       amount,
       currency_code: currencyCode,
-      merchant_key: (await cfg()).merchantKey,
+      merchant_key: (await cfg(ortam)).merchantKey,
     },
     token,
+    ortam,
   );
   const code = Number(json.status_code ?? -1);
   if (code === HALKODE_STATUS.SUCCESS && Array.isArray(json.data)) {
@@ -533,8 +606,14 @@ export async function getPos(
 export async function checkStatus(
   invoiceId: string,
   token: string,
+  ortam?: HalkodeOrtamSecimi,
 ): Promise<{ ok: boolean; statusCode: number; description: string; data: Json }> {
-  const { json } = await postJson('/api/checkstatus', { invoice_id: invoiceId, merchant_key: (await cfg()).merchantKey }, token);
+  const { json } = await postJson(
+    '/api/checkstatus',
+    { invoice_id: invoiceId, merchant_key: (await cfg(ortam)).merchantKey },
+    token,
+    ortam,
+  );
   const nested = json.data;
   const data: Json = nested && typeof nested === 'object' && Object.keys(nested as Json).length ? (nested as Json) : json;
   const code = Number(json.status_code ?? -1);
@@ -559,8 +638,9 @@ export async function refund(
   invoiceId: string,
   amount: number,
   token: string,
+  ortam?: HalkodeOrtamSecimi,
 ): Promise<{ ok: boolean; statusCode: number; description: string; data: Json }> {
-  const c = await cfg();
+  const c = await cfg(ortam);
   const hashKey = encryptBundle([amount.toFixed(2), invoiceId, c.merchantKey].join('|'), c.appSecret);
   const { json } = await postJson(
     '/api/refund',

@@ -27,6 +27,7 @@ import {
   parseDraftIdFromInvoiceId,
   halkodeConfigured,
   halkodeAppSecret,
+  odemeOrtami,
   HALKODE_STATUS,
 } from '@/lib/halkode/client';
 
@@ -101,7 +102,11 @@ async function handle(req: NextRequest): Promise<NextResponse> {
     yontem: req.method,
   });
 
-  if (!(await halkodeConfigured())) {
+  // ⚠️ Ortam ÇEREZDEN DEĞİL ayar/kimlikten belirlenir: banka dönüşü farklı
+  // origin'den geldiği için çerez taşınmaz (17 Eyl kök sebebi).
+  const ortam = await odemeOrtami();
+
+  if (!(await halkodeConfigured(ortam))) {
     // ⛔ EN TEHLİKELİ DAL: banka "ödendi" demiş olabilir ama doğrulayamıyoruz.
     console.error(
       '[halkode/callback] DOĞRULANAMADI · sebep=not_configured · ÖDEME ÇEKİLMİŞ OLABİLİR — ' +
@@ -119,7 +124,7 @@ async function handle(req: NextRequest): Promise<NextResponse> {
   // 1+2) İMZA — çözülüyor mu, invoice tutuyor mu
   // app_secret ayarlardan (yoksa env) — initialize ile AYNI kaynak olmalı, yoksa
   // imza hiçbir zaman tutmaz ve her ödeme 'bad_signature' ile düşer.
-  const parts = decodeHashKey(hashKey, await halkodeAppSecret());
+  const parts = decodeHashKey(hashKey, await halkodeAppSecret(ortam));
   if (!parts) {
     console.error('[halkode/callback] hash ÇÖZÜLEMEDİ — işlenmedi', { invoiceId });
     return failPage('bad_signature', invoiceId);
@@ -133,12 +138,12 @@ async function handle(req: NextRequest): Promise<NextResponse> {
   }
 
   // 3) SUNUCU-SUNUCU doğrulama — tek güven kaynağı
-  const t = await getToken();
+  const t = await getToken(ortam);
   if (!t.ok) {
     console.error('[halkode/callback] token alınamadı, sipariş TAMAMLANMADI', { invoiceId, error: t.error });
     return failPage('token_failed', invoiceId);
   }
-  const st = await checkStatus(invoiceId, t.token);
+  const st = await checkStatus(invoiceId, t.token, ortam);
 
   if (!st.ok) {
     console.log('[halkode/callback] ödeme başarısız', {

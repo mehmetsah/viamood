@@ -15,7 +15,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { getAllowedOrigins } from '@/lib/cors';
 import { env } from '@/lib/env';
-import { getToken, getPos, halkodeConfigured, halkodeEnabled } from '@/lib/halkode/client';
+import { getToken, getPos, halkodeConfigured, halkodeEnabled, odemeOrtami } from '@/lib/halkode/client';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -37,7 +37,8 @@ export async function OPTIONS(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const headers = { 'Content-Type': 'application/json', ...cors(req.headers.get('origin')) };
 
-  if (!(await halkodeEnabled()) || !(await halkodeConfigured())) {
+  const ortam = await odemeOrtami();
+  if (!(await halkodeEnabled(ortam)) || !(await halkodeConfigured(ortam))) {
     return NextResponse.json({ ok: false, error: 'Halköde kapalı.' }, { status: 503, headers });
   }
 
@@ -58,12 +59,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, error: 'amount_required' }, { status: 422, headers });
   }
 
-  const t = await getToken();
+  const t = await getToken(ortam);
   if (!t.ok) {
     return NextResponse.json({ ok: false, error: 'halkode_token_failed' }, { status: 502, headers });
   }
 
-  const pos = await getPos(bin, amount, t.token);
+  const pos = await getPos(bin, amount, t.token, 'TRY', ortam);
   if (!pos.ok) {
     console.error('[halkode/installments] getpos başarısız', { bin, statusCode: pos.statusCode, error: pos.error });
     return NextResponse.json(

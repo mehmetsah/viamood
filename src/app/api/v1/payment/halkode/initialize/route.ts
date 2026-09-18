@@ -31,6 +31,7 @@ import {
   halkodeConfigured,
   halkodeEnabled,
   type HalkodeItem,
+  odemeOrtami,
 } from '@/lib/halkode/client';
 import { halkodeOnizlemeOrtami } from '@/lib/halkode/preview';
 
@@ -181,10 +182,14 @@ export async function POST(req: NextRequest) {
       { status: 403, headers },
     );
   }
-  if (!(await halkodeEnabled())) {
+  // Ortam, callback ile AYNI kaynaktan gelir: başlatma canlıda yapılıp
+  // doğrulama testte aranırsa ödeme sipariş yazmaz (17 Eyl arızası).
+  const ortam = await odemeOrtami();
+
+  if (!(await halkodeEnabled(ortam))) {
     return NextResponse.json({ ok: false, error: 'Halköde kapalı (HALKODE_ENABLED).' }, { status: 503, headers });
   }
-  if (!(await halkodeConfigured())) {
+  if (!(await halkodeConfigured(ortam))) {
     return NextResponse.json({ ok: false, error: 'Halköde yapılandırılmadı (env eksik).' }, { status: 503, headers });
   }
 
@@ -255,7 +260,7 @@ export async function POST(req: NextRequest) {
       : await createDraftOrder(body, totalTl);
   const invoiceId = buildInvoiceId(draftId, Date.now().toString(36));
 
-  const t = await getToken();
+  const t = await getToken(ortam);
   if (!t.ok) {
     console.error('[halkode/initialize] token alınamadı', { invoiceId, error: t.error });
     return NextResponse.json({ ok: false, error: 'halkode_token_failed', detail: t.error }, { status: 502, headers });
@@ -279,6 +284,7 @@ export async function POST(req: NextRequest) {
       cancelUrl: `${env.APP_URL}/api/v1/payment/halkode/callback`,
     },
     t.token,
+    ortam,
   );
 
   if (!pay.ok) {
