@@ -13,6 +13,7 @@ import { db } from '@/db/client';
 import { carts, productVariants, vendors, type CartItem } from '@/db/schema';
 import { env } from '@/lib/env';
 import { getStore } from '@/lib/store';
+import { ilceIlBul } from '@/lib/tr-addresses';
 import type {
   StorefrontOrderBody,
   StorefrontPaymentMethod,
@@ -186,7 +187,19 @@ export function cartToStorefrontBody(cart: CartRow): StorefrontOrderBody {
     address1: a.address1 ?? '',
     address2: a.mahalle ?? a.address2,
     city: a.ilce ?? '', // ilçe
-    province: a.il ?? '', // il
+    // #1519: Shopify native TR adres formunda İL alanı YOK → a.il çoğu siparişte
+    // boş geliyordu (ölçüm: son 30 günde 25/57, %44) ve Shopify'a boş province
+    // gidiyordu; PTT etiketinde il boş kalıyordu. İlçe HER ZAMAN dolu olduğu için
+    // il ondan türetiliyor. Türetilemezse eskisi gibi boş bırakılır (uydurma il
+    // YAZILMAZ) ama sessiz kalmaz — loglanır.
+    province: (() => {
+      const acik = a.il?.trim();
+      if (acik) return acik;
+      const turetilen = ilceIlBul(a.ilce);
+      if (turetilen) return turetilen;
+      if (a.ilce) console.warn(`[adres] il türetilemedi — ilçe: ${a.ilce}`);
+      return '';
+    })(),
     zip: a.postal_code,
     customer_id: cart.customerId ? num(cart.customerId) : undefined,
     customer_email: a.email,
