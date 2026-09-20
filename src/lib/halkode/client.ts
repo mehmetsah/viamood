@@ -98,16 +98,43 @@ interface HalkodeCfg {
  *
  * ⚠️ `import()` DİNAMİK ve try/catch içinde: `scripts/halkode-*.ts` bu modülü Node'un
  * yerel TS desteğiyle, Next/webpack olmadan çalıştırıyor; orada `@/db/client` alias'ı
- * çözülmez. İçe aktarma başarısız olursa sessizce env'e düşülür — betikler .env.local
- * ile çalışmaya devam eder, sunucuda ise ayarlar okunur.
+ * çözülmez. İki yol sırayla denenir (alias → göreli); İKİSİ DE başarısız olursa env'e
+ * düşülür ama artık SESSİZCE DEĞİL, log'a sebep yazılarak (aşağıdaki console.warn).
  */
 async function paymentSettings(): Promise<Partial<import('@/db/schema').PaymentSettings>> {
-  try {
-    const m = await import('../settings/store');
-    return (await m.getStoreSettings()).payment ?? {};
-  } catch {
-    return {};
+  // 🔴 20 Eyl 2026 — CANLI POS'U ÜÇ GÜN KAPALI TUTAN ARIZA BURADAYDI.
+  // Göreli yol (`'../settings/store'`) Next'in sunucu paketinde çözülemiyordu;
+  // catch SESSİZ olduğu için ayarlar `{}` dönüyor, DB'de DOLU olan canlı Halköde
+  // kimlikleri koda HİÇ ulaşmıyordu → halkodeConfigured() false → banka dönüşü
+  // "sebep=not_configured" ile reddediliyor → para çekiliyor, sipariş açılmıyor.
+  // Kanıt: aynı ayarları STATİK import'la okuyan kardeş uç çalışıyordu
+  // (src/app/api/v1/shipping/quote/route.ts:13 → margin_tl=20 canlıda ölçüldü).
+  //
+  // Çözüm: önce alias'lı yol denenir — Next onu derleme anında çözer, yani
+  // uygulamada statik import kadar güvenilirdir. Göreli yol YEDEKTE kalır çünkü
+  // `scripts/halkode-*.ts` bu modülü Next olmadan koşuyor ve orada alias çözülmez;
+  // tam statik import'a geçmek o betikleri tümden kırardı.
+  const yollar: Array<() => Promise<typeof import('../settings/store')>> = [
+    () => import('@/lib/settings/store'),
+    () => import('../settings/store'),
+  ];
+  const hatalar: string[] = [];
+  for (const yukle of yollar) {
+    try {
+      const m = await yukle();
+      return (await m.getStoreSettings()).payment ?? {};
+    } catch (e) {
+      hatalar.push(e instanceof Error ? e.message : String(e));
+    }
   }
+  // ⚠️ ARTIK SESSİZ DEĞİL: bu satır olmadığı için arıza günlerce görünmedi.
+  // Ayarlar okunamadığında kimlikler boş kalır ve ödeme sessizce reddedilir;
+  // o yüzden sebebi yüksek sesle söylüyoruz (DEĞER YOK, yalnız hata metni).
+  console.warn(
+    '[halkode] store_settings OKUNAMADI — kimlikler BOŞ kalacak, ödeme reddedilir. ' +
+      `Denenen yollar başarısız: ${hatalar.join(' | ')}`,
+  );
+  return {};
 }
 
 /**
