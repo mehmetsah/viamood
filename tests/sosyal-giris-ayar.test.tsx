@@ -9,6 +9,7 @@
  *     aynı denetim dizisi, formda tek düğme (Kaydet). Fazladan öğe eklenirse kırılır.
  * Ayrıca: yönetim ekranının "açık" kuralı giriş ekranının okuyucusuyla
  * (getGoogleCreds / getFacebookCreds) aynı; Facebook yalnız açık + kimlik tamken görünür.
+ * Yönetim notunun giriş ekranı hakkındaki cümleleri ÇİZİLEN giriş ekranıyla ölçülür.
  */
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
@@ -36,7 +37,13 @@ vi.mock('@/lib/actions/social-auth', () => ({
   sosyalAyarlariKaydet: vi.fn(),
 }));
 vi.mock('@/lib/auth', () => ({ auth: vi.fn(async () => ({ user: { role: 'admin' } })) }));
-vi.mock('next/navigation', () => ({ redirect: vi.fn() }));
+vi.mock('next/navigation', () => ({
+  redirect: vi.fn(),
+  // Giriş ekranı da bu dosyada çizilir (ekran metni testi) — istemci kancaları:
+  useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
+  useSearchParams: () => new URLSearchParams(),
+}));
+vi.mock('next-auth/react', () => ({ signIn: vi.fn() }));
 
 const {
   sosyalAyarBirlestir,
@@ -47,6 +54,7 @@ const {
 const { getGoogleCreds, getFacebookCreds, getEnabledSocialProviders } = await import('@/lib/auth/social');
 const { SosyalGirisForm } = await import('@/app/admin/ayarlar/sosyal-giris/Form');
 const { default: SosyalGirisAyarPage } = await import('@/app/admin/ayarlar/sosyal-giris/page');
+const { default: SignInPage } = await import('@/app/auth/sign-in/page');
 
 const G_SECRET = 'GOCSPX-cok-gizli-google-A1B2';
 const F_SECRET = 'fb0123456789abcdefgizliF9E8';
@@ -262,12 +270,39 @@ describe('yönetim ekranı ↔ giriş ekranı aynı kuralı okur', () => {
 });
 
 describe('ekran metni gerçeği söylüyor', () => {
-  it('giriş ekranı Facebook\'a bağlanınca "henüz bağlı değil" notu da kalkmalı', () => {
-    const kok = path.resolve(__dirname, '..');
-    const girisIstemci = readFileSync(path.join(kok, 'src/app/auth/sign-in/SignInClient.tsx'), 'utf8');
-    const girisSayfa = readFileSync(path.join(kok, 'src/app/auth/sign-in/page.tsx'), 'utf8');
-    const yonetim = readFileSync(path.join(kok, 'src/app/admin/ayarlar/sosyal-giris/page.tsx'), 'utf8');
-    const bagli = /signIn\(\s*['"]facebook['"]/.test(girisIstemci) || /facebook:\s*sosyal\.facebook/.test(girisSayfa);
+  /**
+   * Yönetim notu giriş ekranı hakkında İKİ şey söylüyor: (a) kimlik tamken
+   * "Facebook ile devam et" düğmesi görünür, (b) kimlik eksikse gizli kalır.
+   * İkisi de KAYNAK metinde değil, ÇİZİLEN giriş ekranında ölçülür — düğme
+   * bağlantısı koptuğu gün not yalan söylemeye başlar ve bu test kırılır.
+   */
+  const metin = (html: string) => html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
+
+  async function ekranlar(auth: AuthSettings) {
+    store.auth = auth;
+    const giris = renderToStaticMarkup(await SignInPage());
+    oku.mockResolvedValue(sosyalAyarOzeti(auth, {}));
+    const yonetim = metin(renderToStaticMarkup(await SosyalGirisAyarPage()));
+    return { giris, yonetim };
+  }
+
+  it('kimlik tamken giriş ekranında Facebook düğmesi VAR ve not bunu söylüyor', async () => {
+    const { giris, yonetim } = await ekranlar(KAYITLI);
+    const bagli = giris.includes('Facebook ile devam et');
+    expect(bagli).toBe(true);
     expect(yonetim.includes('henüz bağlı değil')).toBe(!bagli);
+    expect(yonetim).toContain('Facebook ile devam et düğmesi görünür');
+  });
+
+  it('kimlik eksikken giriş ekranında düğme YOK ve not "gizli kalır" diyor', async () => {
+    const { giris, yonetim } = await ekranlar({ ...KAYITLI, facebook_client_secret: '' });
+    expect(giris).not.toContain('Facebook ile devam et');
+    expect(yonetim).toContain('kimlik eksikse düğme gizli kalır');
+  });
+
+  it('"Apple sonraya bırakıldı" — giriş ekranında Apple düğmesi YOK', async () => {
+    const { giris, yonetim } = await ekranlar(KAYITLI);
+    expect(yonetim).toContain('Apple sonraya bırakıldı');
+    expect(giris).not.toContain('Apple');
   });
 });

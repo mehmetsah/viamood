@@ -40,7 +40,11 @@ export default async function SosyalGirisAyarPage() {
 
       <div className="mt-8 text-sm text-neutral-600 border-t pt-4">
         <p className="font-semibold mb-1">Facebook</p>
-        <p>Kimlikler buradan kaydedilir; giriş ekranındaki Facebook düğmesi henüz bağlı değil. Apple sonraya bırakıldı.</p>
+        <p>
+          Kimlikler buradan kaydedilir. Facebook ile giriş açık ve App ID ile App Secret kayıtlıyken giriş
+          ekranında <strong>Facebook ile devam et</strong> düğmesi görünür; kimlik eksikse düğme gizli kalır.
+          Apple sonraya bırakıldı.
+        </p>
       </div>
     </div>
   );
