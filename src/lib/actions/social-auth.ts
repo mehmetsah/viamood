@@ -31,7 +31,7 @@ async function adminSart(): Promise<void> {
 
 /**
  * Ekranda gösterilecek GÜVENLİ özet (Google + Facebook). Secret asla düz
- * dönmez — kural ve testi: lib/auth/sosyal-ayar.ts · tests/sosyal-giris-ayar.test.ts
+ * dönmez — kural ve testi: lib/auth/sosyal-ayar.ts · tests/sosyal-giris-ayar.test.tsx
  */
 export async function sosyalAyarlariOku(): Promise<SosyalAyarOzeti> {
   await adminSart();

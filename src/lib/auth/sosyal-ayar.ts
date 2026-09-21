@@ -66,7 +66,7 @@ function temiz(v: unknown): string {
 /**
  * Sağlayıcı açık mı? `lib/auth/social.ts` okuyucularıyla AYNI kural:
  * Google varsayılan AÇIK (`!== false`), Facebook varsayılan KAPALI (`=== true`).
- * (Uyum testle çivili: tests/sosyal-giris-ayar.test.ts)
+ * (Uyum testle çivili: tests/sosyal-giris-ayar.test.tsx)
  */
 export function saglayiciAcik(p: SosyalSaglayici, a: AuthSettings): boolean {
   return p === 'google' ? a.google_enabled !== false : a.facebook_enabled === true;
