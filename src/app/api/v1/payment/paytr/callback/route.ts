@@ -13,6 +13,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { env } from '@/lib/env';
 import { verifyPaytrCallback, parseDraftIdFromOid } from '@/lib/paytr/client';
 import { getStore } from '@/lib/store';
+import { taslakTamamlanincaIlDenetle } from '@/lib/shopify/adres-uyusmaz';
 import { completeNativeCardOrder } from '@/lib/store/native-create-order';
 
 export const dynamic = 'force-dynamic';
@@ -28,6 +29,14 @@ async function completeDraftOrder(draftId: string): Promise<boolean> {
       headers: { 'X-Shopify-Access-Token': token, 'Content-Type': 'application/json' },
       body: JSON.stringify({ payment_pending: false }), // ödendi (paid)
     });
+    // Tamamlanırken Shopify ili posta kodundan yeniden yazabiliyor (#1164/#1169) — değiştiyse
+    // logla + 'adres-uyusmaz' etiketi. Beklenmez, hata fırlatmaz: geri dönüşü geciktirmez.
+    if (resp.ok) {
+      resp
+        .json()
+        .then((j) => taslakTamamlanincaIlDenetle(j, 'paytr'))
+        .catch(() => {});
+    }
     return resp.ok;
   } catch {
     return false;
