@@ -137,8 +137,13 @@ describe('2) dört yol da ortak yardımcıyı kullanır — kopya geri dönmesin
     it(`${p}`, () => {
       const s = kod(p);
       expect(s).toMatch(/shopifyAdresiKur\(/);
-      // ham posta kodu Shopify'a (sipariş/taslak adresi ya da adres defteri) gitmesin
-      expect(s).not.toMatch(/zip:\s*(b|body)\.zip/);
+      // Ham posta kodu Shopify'a (sipariş/taslak adresi ya da adres defteri) HİÇBİR biçimde
+      // gitmesin: `zip: b.zip` de, `addr.zip = b.zip` de. Tek istisna iyzico'nun KENDİ alıcı
+      // alanı (`zipCode: body.zip`) — o Shopify'a gitmiyor, ili yeniden yazdırmaz.
+      const hamKullanim = [...s.matchAll(/\b(?:b|body)\.zip\b/g)].filter(
+        (m) => !/zipCode:\s*$/.test(s.slice(Math.max(0, m.index - 20), m.index)),
+      );
+      expect(hamKullanim.map((m) => s.slice(Math.max(0, m.index - 30), m.index + 10))).toEqual([]);
       // il kodu adres için elle kurulmasın
       expect(s).not.toMatch(/provinceCode\(/);
       expect(s).not.toMatch(/country_code:\s*'TR'/);
