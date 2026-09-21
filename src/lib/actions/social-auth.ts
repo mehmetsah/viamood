@@ -13,10 +13,10 @@
 import { revalidatePath } from 'next/cache';
 import { eq } from 'drizzle-orm';
 import { db } from '@/db/client';
-import { storeSettings, type AuthSettings } from '@/db/schema';
+import { storeSettings } from '@/db/schema';
 import { auth } from '@/lib/auth';
 import { getStoreSettings } from '@/lib/settings/store';
-import { maskele } from '@/lib/auth/social';
+import { sosyalAyarBirlestir, sosyalAyarOzeti, type SosyalAyarOzeti } from '@/lib/auth/sosyal-ayar';
 
 export type ActionSonuc = { ok: true } | { ok: false; hata: string };
 
@@ -29,26 +29,14 @@ async function adminSart(): Promise<void> {
   }
 }
 
-/** Ekranda gösterilecek GÜVENLİ özet. Secret asla düz dönmez. */
-export async function sosyalAyarlariOku(): Promise<{
-  google_enabled: boolean;
-  google_client_id: string;
-  google_secret_maskeli: string;
-  google_secret_var: boolean;
-  env_ile_geliyor: boolean;
-}> {
+/**
+ * Ekranda gösterilecek GÜVENLİ özet (Google + Facebook). Secret asla düz
+ * dönmez — kural ve testi: lib/auth/sosyal-ayar.ts · tests/sosyal-giris-ayar.test.ts
+ */
+export async function sosyalAyarlariOku(): Promise<SosyalAyarOzeti> {
   await adminSart();
   const { auth: a } = await getStoreSettings();
-  const envVar = Boolean(
-    (process.env.AUTH_GOOGLE_ID ?? '').trim() && (process.env.AUTH_GOOGLE_SECRET ?? '').trim(),
-  );
-  return {
-    google_enabled: a.google_enabled !== false,
-    google_client_id: a.google_client_id ?? '',
-    google_secret_maskeli: maskele(a.google_client_secret),
-    google_secret_var: Boolean((a.google_client_secret ?? '').trim()),
-    env_ile_geliyor: envVar,
-  };
+  return sosyalAyarOzeti(a, process.env);
 }
 
 export async function sosyalAyarlariKaydet(formData: FormData): Promise<ActionSonuc> {
@@ -58,28 +46,11 @@ export async function sosyalAyarlariKaydet(formData: FormData): Promise<ActionSo
     return { ok: false, hata: e instanceof Error ? e.message : 'Yetkin yok' };
   }
 
-  const clientId = String(formData.get('google_client_id') ?? '').trim();
-  const yeniSecret = String(formData.get('google_client_secret') ?? '').trim();
-  const acik = formData.get('google_enabled') === 'on';
-
-  if (acik && !clientId) {
-    return { ok: false, hata: 'Google açıkken Client ID zorunlu' };
-  }
-
   const mevcut = (await getStoreSettings()).auth;
-  // Secret boş bırakıldıysa MEVCUDU KORU — "kaydet"e basınca silinmesin.
-  const secret = yeniSecret || mevcut.google_client_secret || '';
-
-  if (acik && !secret) {
-    return { ok: false, hata: 'Google açıkken Client Secret zorunlu' };
-  }
-
-  const yeni: AuthSettings = {
-    ...mevcut,
-    google_enabled: acik,
-    google_client_id: clientId,
-    google_client_secret: secret,
-  };
+  // Boş secret mevcudu korur; hata varsa hiçbir sağlayıcı yazılmaz.
+  const sonuc = sosyalAyarBirlestir(mevcut, formData);
+  if (!sonuc.ok) return sonuc;
+  const yeni = sonuc.yeni;
 
   await db
     .insert(storeSettings)
