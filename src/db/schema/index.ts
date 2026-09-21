@@ -9,6 +9,7 @@ export * from './inventory';
 export * from './orders';
 export * from './carts';
 export * from './customers';
+export * from './payment-refunds';
 export * from './returns';
 export * from './events';
 export * from './routing';
