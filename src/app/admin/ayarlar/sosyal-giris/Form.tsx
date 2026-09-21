@@ -2,17 +2,46 @@
 
 import { useActionState } from 'react';
 import { sosyalAyarlariKaydet, type ActionSonuc } from '@/lib/actions/social-auth';
+import {
+  SAGLAYICI_ETIKET,
+  SOSYAL_SAGLAYICILAR,
+  type SaglayiciOzeti,
+  type SosyalAyarOzeti,
+  type SosyalSaglayici,
+} from '@/lib/auth/sosyal-ayar';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 
-type Ayar = {
-  google_enabled: boolean;
-  google_client_id: string;
-  google_secret_maskeli: string;
-  google_secret_var: boolean;
-};
+/**
+ * Bir sağlayıcının alanları. Google ve Facebook AYNI bileşenden çizilir —
+ * iki bölüm birbirinden kaymaz. Secret alanına değer BASILMAZ (yalnız maskeli
+ * placeholder); boş bırakılırsa sunucu mevcut değeri korur.
+ */
+function SaglayiciAlanlari({ p, o }: { p: SosyalSaglayici; o: SaglayiciOzeti }) {
+  const e = SAGLAYICI_ETIKET[p];
+  return (
+    <>
+      <label className="flex items-center gap-3">
+        <input type="checkbox" name={`${p}_enabled`} defaultChecked={o.acik}
+               className="w-4 h-4" />
+        <span className="font-medium text-sm">{e.ad} ile giriş açık</span>
+      </label>
 
-export function SosyalGirisForm({ ayar }: { ayar: Ayar }) {
+      <Input name={`${p}_client_id`} label={`${e.ad} ${e.kimlik}`}
+             defaultValue={o.kimlik}
+             placeholder={e.kimlikOrnek} autoComplete="off" />
+
+      <Input name={`${p}_client_secret`} type="password" label={`${e.ad} ${e.anahtar}`}
+             placeholder={o.secret_var ? o.secret_maskeli : e.anahtarOrnek}
+             hint={o.secret_var
+               ? 'Kayıtlı. Değiştirmek istemiyorsan BOŞ bırak — mevcut değer korunur.'
+               : e.anahtarKaynak}
+             autoComplete="new-password" />
+    </>
+  );
+}
+
+export function SosyalGirisForm({ ayar }: { ayar: SosyalAyarOzeti }) {
   const [state, formAction, pending] = useActionState(
     async (_p: ActionSonuc | null, fd: FormData) => sosyalAyarlariKaydet(fd),
     null as ActionSonuc | null,
@@ -20,22 +49,11 @@ export function SosyalGirisForm({ ayar }: { ayar: Ayar }) {
 
   return (
     <form action={formAction} className="bg-white rounded-2xl border p-6 flex flex-col gap-4">
-      <label className="flex items-center gap-3">
-        <input type="checkbox" name="google_enabled" defaultChecked={ayar.google_enabled}
-               className="w-4 h-4" />
-        <span className="font-medium text-sm">Google ile giriş açık</span>
-      </label>
-
-      <Input name="google_client_id" label="Google Client ID"
-             defaultValue={ayar.google_client_id}
-             placeholder="…apps.googleusercontent.com" autoComplete="off" />
-
-      <Input name="google_client_secret" type="password" label="Google Client Secret"
-             placeholder={ayar.google_secret_var ? ayar.google_secret_maskeli : 'GOCSPX-…'}
-             hint={ayar.google_secret_var
-               ? 'Kayıtlı. Değiştirmek istemiyorsan BOŞ bırak — mevcut değer korunur.'
-               : 'Google Cloud Console → Credentials ekranından alınır.'}
-             autoComplete="new-password" />
+      {SOSYAL_SAGLAYICILAR.map((p, i) => (
+        <div key={p} className={`flex flex-col gap-4${i > 0 ? ' border-t pt-4' : ''}`}>
+          <SaglayiciAlanlari p={p} o={ayar[p]} />
+        </div>
+      ))}
 
       {state && !state.ok && (
         <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
