@@ -1,24 +1,25 @@
 /**
  * viamood.com.tr/pages/odeme — Halköde GİZLİ KAPI bekçisi (21 Eyl 2026).
  *
- * Ölçülen dosya: tema-yamalari/via-checkout.liquid.halkode-gizli-kapi — canlı temaya
- * (sections/via-checkout.liquid) basılan içeriğin birebir kopyası.
+ * Ölçülen dosya: tema-yamalari/via-checkout.liquid.halkode-form-b — canlı temaya
+ * (sections/via-checkout.liquid) basılan içeriğin birebir kopyası. (21 Eyl 16:xx'ten önce
+ * canlıdaki hâl: .halkode-gizli-kapi — Seçenek B formu yalnız GÖRÜNÜMÜ değiştirdi; 1-3
+ * aynı iddialarla yeni kopyada da geçmeli, akışın değişmediğinin kanıtı budur.)
  *
  * Dört şey çivilenir:
  *  1) KAPI: parametresiz ziyaretçi section ayarındaki sağlayıcıda kalır (bugün PayTR);
  *     yalnız ?halkode=1 oturumu Halköde'ye döner, ?halkode=0 kapatır.
  *  2) YÖNLENDİRME: startKart'ın paytr/iyzico dalları değişmedi.
  *  3) SÖZLEŞME: initialize'ın zorunlu tuttuğu her alan temanın gönderdiği gövdede var.
- *  4) BÖLGE KİLİDİ: kart formunda yalnız onaylanan alanlar var (Ad Soyad, Kart Numarası,
- *     Son Kullanma, CVV, Taksit, Ödeme Yap). Fazladan bir denetim eklenirse test kırılır.
- *     Kart alanları console/localStorage/sepet özniteliğine yazılmaz.
+ *  4) Kart alanları console/localStorage/sepet özniteliğine yazılmaz. Formun BÖLGE KİLİDİ
+ *     (onaylı Seçenek B maketi ↔ ürün) ayrı dosyada: tests/halkode-form-b.test.ts.
  */
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 
 const KOK = path.resolve(__dirname, '..');
-const TEMA = readFileSync(path.join(KOK, 'tema-yamalari/via-checkout.liquid.halkode-gizli-kapi'), 'utf8');
+const TEMA = readFileSync(path.join(KOK, 'tema-yamalari/via-checkout.liquid.halkode-form-b'), 'utf8');
 const ROUTE = readFileSync(path.join(KOK, 'src/app/api/v1/payment/halkode/initialize/route.ts'), 'utf8');
 
 /** Çapanın tam 1 kez geçtiğini iddia ederek dilim alır (CLAUDE.md §3c: sınır yapıyla çizilir). */
@@ -132,20 +133,15 @@ describe('3) initialize sözleşmesi', () => {
   });
 });
 
-describe('4) bölge kilidi — kart formu', () => {
+describe('4) kart verisi — kart formu', () => {
   const FORM = islev(TEMA, 'renderHalkodeForm');
-  const MARKUP = FORM.slice(tekIndex(FORM, 'w.innerHTML ='), tekIndex(FORM, 'c.appendChild(w);'));
+  // Formun iskeleti saf bir işlevde: çalıştırıp ÜRETİLEN HTML ölçülür (kaynak metni değil).
+  const MARKUP: string = new Function(`${islev(TEMA, 'hkIc')}\n${islev(TEMA, 'hkFormHtml')}\nreturn hkFormHtml();`)();
 
-  it('yalnız onaylı alanlar: 4 input + 1 select + 1 düğme', () => {
-    expect((MARKUP.match(/<input\b/g) ?? []).length).toBe(4);
-    expect((MARKUP.match(/<select\b/g) ?? []).length).toBe(1);
-    expect((MARKUP.match(/<button\b/g) ?? []).length).toBe(1);
-    expect((MARKUP.match(/<(a|textarea|iframe|img|svg)\b/g) ?? []).length).toBe(0);
+  it('iskelet üretildi ve kart alanlarının rolleri yerinde', () => {
+    expect(MARKUP.length).toBeGreaterThan(1500);
     const roller = [...MARKUP.matchAll(/data-hk="([a-z-]+)"/g)].map((m) => m[1]).sort();
-    expect(roller).toEqual(['ad', 'cvv', 'no', 'ode', 'skt', 'taksit', 'taksit-satir'].sort());
-    const etiketler = [...MARKUP.matchAll(/class="vco-lbl"[^>]*>([^<]+)</g)].map((m) => (m[1] ?? '').trim());
-    expect(etiketler).toEqual(['Ad Soyad *', 'Kart Numarası *', 'Son Kullanma *', 'CVV *', 'Taksit']);
-    expect(MARKUP).toContain('>Ödeme Yap</button>');
+    expect(roller).toEqual(['ad', 'cvv', 'no', 'ode', 'skt', 'taksit', 'taksit-liste', 'taksit-satir', 'tur', 'tutar', 'tutar-not'].sort());
   });
 
   it('emoji yok', () => {
