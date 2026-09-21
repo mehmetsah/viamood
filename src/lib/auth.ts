@@ -8,10 +8,11 @@ import { eq } from 'drizzle-orm';
 import NextAuth, { type DefaultSession, type NextAuthConfig } from 'next-auth';
 import Credentials from 'next-auth/providers/credentials';
 import Google from 'next-auth/providers/google';
+import Facebook from 'next-auth/providers/facebook';
 import { db } from '@/db/client';
 import * as schema from '@/db/schema';
 import { authConfig } from './auth.config';
-import { getGoogleCreds } from './auth/social';
+import { getGoogleCreds, getFacebookCreds } from './auth/social';
 import { verifyPassword } from './password';
 
 declare module 'next-auth' {
@@ -31,6 +32,11 @@ declare module 'next-auth' {
  */
 export const { handlers, auth, signIn, signOut } = NextAuth(async () => {
   const google = await getGoogleCreds();
+  // Facebook — Google ile BİREBİR aynı kalıp: kimlik yoksa getFacebookCreds()
+  // null döner, provider hiç yüklenmez ve giriş ekranında görünmez. Kimlik
+  // `/admin/ayarlar/sosyal-giris` ekranından girilince kendiliğinden açılır
+  // (SSH kapalı olduğu için env yolu zaten kullanılamıyor).
+  const facebook = await getFacebookCreds();
   return {
   ...authConfig,
   adapter: DrizzleAdapter(db, {
@@ -46,6 +52,17 @@ export const { handlers, auth, signIn, signOut } = NextAuth(async () => {
           Google({
             clientId: google.clientId,
             clientSecret: google.clientSecret,
+            allowDangerousEmailAccountLinking: true,
+          }),
+        ]
+      : []),
+    ...(facebook
+      ? [
+          Facebook({
+            clientId: facebook.clientId,
+            clientSecret: facebook.clientSecret,
+            // Google ile aynı: aynı e-postayla gelen kişi mevcut hesabına
+            // bağlanır, ikinci bir kullanıcı kaydı açılmaz.
             allowDangerousEmailAccountLinking: true,
           }),
         ]
@@ -92,7 +109,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth(async () => {
      *    hiç kimse admin olamaz.
      */
     async signIn({ account, profile }) {
-      if (account?.provider !== 'google') return true;
+      // ⚠️ Facebook da BU KONTROLE dahil: `allowDangerousEmailAccountLinking`
+      // açıkken doğrulanmamış bir e-postayla gelen sosyal hesap, mevcut
+      // kullanıcının hesabına bağlanabilirdi. Sosyal sağlayıcıların hepsi
+      // aynı kapıdan geçer.
+      if (account?.provider !== 'google' && account?.provider !== 'facebook') return true;
       if (profile && profile.email_verified === false) return false;
       const email = (profile?.email ?? '').toLowerCase().trim();
       if (!email) return false;
