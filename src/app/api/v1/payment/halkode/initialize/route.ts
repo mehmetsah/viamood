@@ -21,9 +21,11 @@ import { env } from '@/lib/env';
 import { provinceCode, provinceName } from '@/lib/shopify/tr-provinces';
 import { normalizeTrPhone } from '@/lib/shopify/tr-format';
 import { ensureTrCustomer } from '@/lib/shopify/customer-locale';
+import { upsertCustomerAddress } from '@/lib/shopify/customer-address';
 import { getStore, type StorefrontOrderBody } from '@/lib/store';
 import { createNativeCardPendingOrder } from '@/lib/store/native-create-order';
-import { trustedDiscountTl } from '@/lib/shopify/discount-resolve';
+import { trustedDiscountDetailed } from '@/lib/shopify/discount-resolve';
+import { kartDenetle } from '@/lib/halkode/kart-dogrula';
 import {
   getToken,
   paySmart3D,
@@ -66,6 +68,7 @@ interface HalkodeInitBody {
   address2?: string;
   city: string;
   province: string;
+  saved_address?: string; // '1' → kayıtlı adres seçildi, tekrar kaydetme (PayTR ile aynı)
   zip?: string;
   customer_id?: number;
   customer_email?: string;
@@ -162,7 +165,23 @@ async function createDraftOrder(b: HalkodeInitBody, totalTl: number): Promise<nu
     );
     if (!resp.ok) return null;
     const j = (await resp.json()) as { draft_order?: { id?: number } };
-    return j.draft_order?.id ?? null;
+    const did = j.draft_order?.id ?? null;
+    // Tema sözleşmesi PayTR ile AYNI (21 Eyl 2026): giriş yapmış müşteri yeni adres
+    // yazdıysa adres defterine eklenir; kayıtlı adres seçtiyse tekrar yazılmaz.
+    if (did && b.customer_id && b.saved_address !== '1') {
+      await upsertCustomerAddress({
+        customerId: b.customer_id,
+        first_name: b.first_name,
+        last_name: b.last_name,
+        phone: b.phone,
+        address1: b.address1,
+        address2: b.address2,
+        city: b.city,
+        province: il,
+        zip: b.zip,
+      });
+    }
+    return did;
   } catch {
     return null;
   }
@@ -217,13 +236,32 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, error: 'missing_fields', missing }, { status: 422, headers });
   }
 
+  // Kart ŞEKLİ taslak açılmadan denetlenir: yazım hatalı her deneme Shopify'da bir
+  // halkode-pending taslağı bırakmasın. Mesaj kart verisi içermez.
+  const kart = kartDenetle(body);
+  if (!kart.ok) {
+    return NextResponse.json(
+      { ok: false, error: 'card_invalid', field: kart.alan, message: kart.mesaj },
+      { status: 422, headers },
+    );
+  }
+
   // İndirim SUNUCUDA yeniden hesaplanır — istemciden gelen tutara güvenilmez
   // (PayTR/İyzico yollarındaki aynı savunma; 11 Ağu 2026 açığı).
-  body.discount_amount = await trustedDiscountTl(body.discount_code, body.line_items ?? [], {
+  // Kupon reddedilirse SESSİZCE düşürülmez (PayTR ile aynı sözleşme, Yunus 27 Ağu 2026 —
+  // OZEL10): tema `discount_rejected`i tanır, kuponu kaldırıp tutarı günceller.
+  const disc = await trustedDiscountDetailed(body.discount_code, body.line_items ?? [], {
     email: body.customer_email || body.email,
     phone: body.phone,
     customerId: body.customer_id,
   });
+  if (disc.rejected) {
+    return NextResponse.json(
+      { ok: false, error: 'discount_rejected', message: `Kupon uygulanamadı: ${disc.rejected}` },
+      { status: 422, headers },
+    );
+  }
+  body.discount_amount = disc.amountTl;
 
   const itemsKurus = body.line_items.reduce((s, li) => s + Math.round(li.price ?? 0) * li.quantity, 0);
   const shipKurus = Math.round((body.shipping_cost || 0) * 100);
@@ -269,10 +307,10 @@ export async function POST(req: NextRequest) {
   const pay = await paySmart3D(
     {
       ccHolderName: body.cc_holder_name || `${body.first_name} ${body.last_name}`,
-      ccNo: body.cc_no.replace(/\s/g, ''),
-      expiryMonth: body.expiry_month,
-      expiryYear: body.expiry_year,
-      cvv: body.cvv,
+      ccNo: kart.ccNo,
+      expiryMonth: kart.ay,
+      expiryYear: kart.yil,
+      cvv: kart.cvv,
       total: totalTl,
       installmentsNumber: body.installments_number || 1,
       invoiceId,

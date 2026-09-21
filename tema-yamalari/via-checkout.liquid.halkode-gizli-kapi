@@ -1,0 +1,1595 @@
+{%- comment -%}
+  Via Mood — 3 ADIMLI TEK SAYFA CHECKOUT
+  1) Sepet Özeti (düzenlenebilir: adet +/-, kaldır)
+  2) Teslimat ve Ödeme (adres + kargo + 3 ödeme yöntemi)
+  3) Sipariş Sonucu
+  Ödeme yöntemleri: Kredi/Banka Kartı (İyzico) · Havale/EFT (per-vendor IBAN) · Kapıda Ödeme (COD tahsilatlı kargo)
+  page.odeme(-yeni).json template'ine eklenir.
+{%- endcomment -%}
+
+{%- comment -%} Premium ikon seti (Lucide — tek renk, currentColor; markup + JS tek kaynaktan) {%- endcomment -%}
+{%- capture ic_card -%}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="5" rx="2"/><path d="M2 10h20"/></svg>{%- endcapture -%}
+{%- capture ic_bank -%}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 22h18"/><path d="M6 18v-7"/><path d="M10 18v-7"/><path d="M14 18v-7"/><path d="M18 18v-7"/><path d="m12 2 8 5H4Z"/></svg>{%- endcapture -%}
+{%- capture ic_box -%}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>{%- endcapture -%}
+{%- capture ic_cash -%}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="12" x="2" y="6" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/></svg>{%- endcapture -%}
+{%- capture ic_truck -%}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.62l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><circle cx="17" cy="18" r="2"/><circle cx="7" cy="18" r="2"/></svg>{%- endcapture -%}
+{%- capture ic_gift -%}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13"/><path d="M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7"/><path d="M7.5 8a2.5 2.5 0 0 1 0-5A4.8 8 0 0 1 12 8a4.8 8 0 0 1 4.5-5 2.5 2.5 0 0 1 0 5"/></svg>{%- endcapture -%}
+
+<div class="vco" data-step="1">
+  {%- comment -%} Stepper {%- endcomment -%}
+  <div class="vco-steps">
+    <button type="button" class="vco-step is-active" data-go="1"><span class="vco-step__n">1</span> Sepet Özeti <span class="vco-step__c" data-vco-count></span></button>
+    <span class="vco-steps__sep"></span>
+    <button type="button" class="vco-step" data-go="2"><span class="vco-step__n">2</span> Teslimat ve Ödeme</button>
+    <span class="vco-steps__sep"></span>
+    <div class="vco-step" data-go="3"><span class="vco-step__n">3</span> Sipariş Sonucu</div>
+  </div>
+
+  <div class="vco-grid">
+    <div class="vco-main">
+
+      {%- comment -%} ============ STEP 1 — SEPET ============ {%- endcomment -%}
+      <div class="vco-panel vco-panel--1">
+        <section class="vco-card">
+          <h2 class="vco-card__title"><span class="vco-card__no">1</span> Sepet Özeti</h2>
+          <div class="vco-cart" data-vco-cart>
+            <div class="vco-cart__loading">Sepet yükleniyor…</div>
+          </div>
+        </section>
+        <section class="vco-card vco-xsell" data-vco-xsell style="display:none">
+          <h2 class="vco-card__title">Birlikte sık alınanlar</h2>
+          <div class="vco-xsell__row" data-vco-xsell-list></div>
+        </section>
+      </div>
+
+      {%- comment -%} ============ STEP 2 — TESLİMAT VE ÖDEME ============ {%- endcomment -%}
+      <div class="vco-panel vco-panel--2">
+        {%- comment -%} ----- Adres ----- {%- endcomment -%}
+        <section class="vco-card" data-vco-address>
+          <h2 class="vco-card__title"><span class="vco-card__no">2</span> Teslimat Adresi</h2>
+
+          {%- if customer -%}
+            {%- comment -%} Portal (hesap.viamood.com.tr) adresleri JS ile yüklenir (HMAC köprüsü);
+                başarısız olursa aşağıdaki Shopify adresleri fallback kalır {%- endcomment -%}
+            <div class="vco-saved" data-vco-saved-wrap{% if customer.addresses_count == 0 %} style="display:none"{% endif %}>
+              <label class="vco-lbl">Kayıtlı adreslerim</label>
+              <div class="vco-adres-kartlar" data-vco-kartlar style="display:none"></div>
+              <select class="vco-input" data-vco-saved
+                data-email="{{ customer.email | escape }}"
+                data-sig="{{ customer.email | hmac_sha256: '15e66ee567ae0186394a79588f077a84ba483c8f341508f237bd5f7500524734' }}">
+                <option value="">— Yeni adres gir —</option>
+                {%- for ad in customer.addresses -%}
+                  <option value="{{ forloop.index0 }}"
+                    data-first="{{ ad.first_name | escape }}" data-last="{{ ad.last_name | escape }}"
+                    data-phone="{{ ad.phone | escape }}" data-il="{{ ad.province | escape }}"
+                    data-ilce="{{ ad.city | escape }}" data-mahalle="{{ ad.address2 | escape }}" data-addr="{{ ad.address1 | escape }}"
+                    data-zip="{{ ad.zip | escape }}">
+                    {{ ad.address1 | truncate: 40 }} — {{ ad.city }}/{{ ad.province }}
+                  </option>
+                {%- endfor -%}
+              </select>
+            </div>
+          {%- endif -%}
+
+          {%- comment -%} Adres form alanları — kayıtlı adres kartı seçiliyken GİZLİ
+              (değerler dolu kalır, payload buradan okunmaya devam eder);
+              "+ Yeni adres gir" seçilince görünür {%- endcomment -%}
+          <div data-vco-adres-form>
+          <div class="vco-row vco-row--2">
+            <div><label class="vco-lbl">Ad *</label><input class="vco-input" data-f="first_name" autocomplete="given-name"></div>
+            <div><label class="vco-lbl">Soyad *</label><input class="vco-input" data-f="last_name" autocomplete="family-name"></div>
+          </div>
+          <div class="vco-row vco-row--2">
+            <div><label class="vco-lbl">Telefon *</label><input class="vco-input" data-f="phone" inputmode="tel" autocomplete="tel" placeholder="5xx xxx xx xx"></div>
+            <div><label class="vco-lbl">E-posta *</label><input class="vco-input" data-f="email" type="email" autocomplete="email"{% if customer %} value="{{ customer.email | escape }}"{% endif %}></div>
+          </div>
+
+          {%- comment -%} İl / İlçe / Mahalle cascade (snippet — DOKUNMA) {%- endcomment -%}
+          {% render 'tr-address-cascade',
+              province_name: 'co_il', district_name: 'co_ilce', neighborhood_name: 'co_mahalle',
+              id_prefix: 'vco', required: true %}
+
+          <div class="vco-row vco-row--2" style="margin-top:10px">
+            <div style="grid-column:1/-1">
+              <label class="vco-lbl">Sokak / Cadde *</label>
+              <input class="vco-input" data-f="addr_sokak" autocomplete="address-line1" placeholder="Örn: Atatürk Caddesi">
+            </div>
+            <div>
+              <label class="vco-lbl">Bina No *</label>
+              <input class="vco-input" data-f="addr_bina" placeholder="Örn: 42">
+            </div>
+            <div>
+              <label class="vco-lbl">Daire No</label>
+              <input class="vco-input" data-f="addr_daire" placeholder="Örn: 7">
+            </div>
+            <div style="grid-column:1/-1">
+              <input type="hidden" data-f="address1">
+              <p class="vco-hint vco-addr-hint" data-vco-addr-hint>Sokak/cadde ve <b>bina no</b> zorunlu. İl ve ilçeyi tekrar yazmanıza gerek yok.</p>
+            </div>
+          </div>
+          <div class="vco-row vco-row--2">
+            <div><label class="vco-lbl">Posta Kodu</label><input class="vco-input" data-f="postal_code" inputmode="numeric" autocomplete="postal-code"></div>
+          </div>
+          </div>{%- comment -%} /data-vco-adres-form {%- endcomment -%}
+
+          {%- comment -%} Fatura tipi {%- endcomment -%}
+          <div class="vco-inv">
+            <label class="vco-lbl">Fatura Tipi</label>
+            <div class="vco-seg">
+              <label class="vco-seg__o"><input type="radio" name="vco_invoice" value="bireysel" checked> Bireysel</label>
+              <label class="vco-seg__o"><input type="radio" name="vco_invoice" value="kurumsal"> Kurumsal</label>
+            </div>
+            <div class="vco-row vco-row--2" data-vco-bireysel style="margin-top:8px">
+              <div style="grid-column:1/-1">
+                <label class="vco-lbl">TC Kimlik No</label>
+                <input class="vco-input" data-f="tc_no" inputmode="numeric" maxlength="11">
+                <label class="vco-chk" style="margin-top:6px"><input type="checkbox" data-vco-tc-yok> TC Kimlik numaramı paylaşmak istemiyorum</label>
+                <p class="vco-hint">İşaretlerseniz fatura nihai tüketici adına düzenlenir, alan <b>11111111111</b> olarak gönderilir.</p>
+              </div>
+            </div>
+            <div class="vco-row vco-row--2" data-vco-kurumsal style="display:none;margin-top:8px">
+              <div style="grid-column:1/-1"><label class="vco-lbl">Firma Adı</label><input class="vco-input" data-f="firma_adi"></div>
+              <div><label class="vco-lbl">Vergi No</label><input class="vco-input" data-f="vergi_no" inputmode="numeric"></div>
+              <div><label class="vco-lbl">Vergi Dairesi</label><input class="vco-input" data-f="vergi_dairesi"></div>
+            </div>
+          </div>
+
+          {%- comment -%} Sevk ≠ Fatura {%- endcomment -%}
+          <label class="vco-chk"><input type="checkbox" data-vco-billing-diff> Fatura adresim farklı</label>
+          <div data-vco-billing style="display:none;margin-top:8px">
+            <div class="vco-row vco-row--2">
+              <div><label class="vco-lbl">Ad Soyad</label><input class="vco-input" data-f="billing_name" autocomplete="name"></div>
+              <div><label class="vco-lbl">Telefon</label><input class="vco-input" data-f="billing_phone" inputmode="tel" autocomplete="tel"></div>
+              <div style="grid-column:1/-1"><label class="vco-lbl">E-posta</label><input class="vco-input" data-f="billing_email" type="email" autocomplete="email"></div>
+              <div style="grid-column:1/-1"><label class="vco-lbl">Fatura Açık Adres</label><input class="vco-input" data-f="billing_address1"></div>
+            </div>
+            {% render 'tr-address-cascade',
+                province_name: 'co_bill_il', district_name: 'co_bill_ilce', neighborhood_name: 'co_bill_mahalle',
+                id_prefix: 'vco-bill' %}
+          </div>
+        </section>
+
+        {%- comment -%} ----- Kargo ----- {%- endcomment -%}
+        <section class="vco-card" data-vco-shipping>
+          <h2 class="vco-card__title">Kargo Firması</h2>
+          <p class="vco-hint" data-vco-ship-hint>Önce il/ilçe seçin — uygun kargo firmaları listelenecek.</p>
+          <div class="vco-carriers" data-vco-carriers></div>
+        </section>
+
+        {%- comment -%} ----- Ödeme Yöntemi ----- {%- endcomment -%}
+        <section class="vco-card" data-vco-payment>
+          <h2 class="vco-card__title">Ödeme Yöntemi</h2>
+
+          {%- comment -%} Yöntem seçiciler — ÜSTTE YAN YANA, her zaman görünür {%- endcomment -%}
+          <div class="vco-pm-row">
+            <label class="vco-pm is-sel" data-pm="kart">
+              <span class="vco-pm__dot"></span>
+              <span class="vco-pm__ic">{{ ic_card }}</span>
+              <span class="vco-pm__t"><b>Kredi / Banka Kartı</b><small>Tek çekim / taksit</small></span>
+              <input type="radio" name="vco_pm" value="kart" checked hidden>
+            </label>
+            <label class="vco-pm" data-pm="havale">
+              <span class="vco-pm__dot"></span>
+              <span class="vco-pm__ic">{{ ic_bank }}</span>
+              <span class="vco-pm__t"><b>Havale / EFT</b><small>1 iş günü onay</small></span>
+              <input type="radio" name="vco_pm" value="havale" hidden>
+            </label>
+            {%- comment -%}
+              Kapıda Ödeme (COD) — Mehmet talimatıyla KAPATILDI (10 Ağu 2026).
+              Yeniden açmak için: Theme Editor > bu bölüm > "Kapıda Ödeme açık" kutusunu işaretle.
+              Sunucu tarafında da ayrı bir kapı var (COD_ENABLED env, /api/v1/payment/cod/create)
+              — ikisi birlikte açılmalı.
+            {%- endcomment -%}
+            {%- if section.settings.cod_enabled -%}
+              <label class="vco-pm" data-pm="cod">
+                <span class="vco-pm__dot"></span>
+                <span class="vco-pm__ic">{{ ic_box }}</span>
+                <span class="vco-pm__t"><b>Kapıda Ödeme</b><small>Teslimde nakit/kart</small></span>
+                <input type="radio" name="vco_pm" value="cod" hidden>
+              </label>
+            {%- endif -%}
+          </div>
+
+          {%- comment -%} Seçilen yöntemin içeriği — ALTTA tek alanda açılır {%- endcomment -%}
+          <div class="vco-pm__body" data-pm-body="kart">
+            <div id="iyzico-container" class="vco-iyzico" data-vco-iyzico style="display:none">
+              <div class="vco-loading" data-vco-loading><div class="vco-spin"></div><p>Güvenli ödeme formu hazırlanıyor…</p></div>
+              <div class="vco-err" data-vco-err style="display:none"></div>
+            </div>
+            <p class="vco-hint" data-vco-kart-gate>Adres ve kargo seçimini tamamlayın — kart formu otomatik açılacak.</p>
+          </div>
+          <div class="vco-pm__body" data-pm-body="havale" style="display:none">
+            <p class="vco-hint">“Siparişi Tamamla”ya bastığında sana bir <b>sipariş kodu</b> ve <b>banka bilgilerimizi</b> vereceğiz. Havale/EFT açıklamasına sipariş kodunu mutlaka yaz. Ödemeni en geç 3 iş günü içinde yapmazsan sipariş otomatik iptal olur.</p>
+          </div>
+          {%- if section.settings.cod_enabled -%}
+            <div class="vco-pm__body" data-pm-body="cod" style="display:none">
+              <div class="vco-cod" data-vco-cod-opts></div>
+            </div>
+          {%- endif -%}
+        </section>
+      </div>
+
+      {%- comment -%} ============ STEP 3 — SONUÇ ============ {%- endcomment -%}
+      <div class="vco-panel vco-panel--3">
+        <section class="vco-card vco-result" data-vco-result></section>
+      </div>
+
+    </div>
+
+    {%- comment -%} ============ ÖZET (sticky) ============ {%- endcomment -%}
+    <aside class="vco-sum">
+      <div class="vco-free" data-vco-free style="display:none"></div>
+      <h2 class="vco-sum__title">Sipariş Özeti</h2>
+      <div class="vco-sum__items" data-vco-items></div>
+      <div class="vco-promo" data-vco-promo>
+        <input type="text" class="vco-promo__inp" data-vco-promo-input placeholder="İndirim kodu" autocomplete="off" spellcheck="false">
+        <button type="button" class="vco-promo__btn" data-vco-promo-apply>Uygula</button>
+      </div>
+      <div class="vco-promo__msg" data-vco-promo-msg></div>
+      <div class="vco-sum__row"><span>Ara Toplam</span><span data-vco-subtotal>—</span></div>
+      <div class="vco-sum__row vco-sum__row--disc" data-vco-disc-row style="display:none"><span data-vco-disc-label>İndirim</span><span data-vco-disc>—</span></div>
+      <div class="vco-sum__row"><span>Kargo</span><span data-vco-ship-cost>Seçilmedi</span></div>
+      <div class="vco-sum__row" data-vco-codfee-row style="display:none"><span>Kapıda kart komisyonu (%4)</span><span data-vco-codfee>—</span></div>
+      <div class="vco-sum__row vco-sum__row--total"><span>Toplam</span><span data-vco-total>—</span></div>
+      <button type="button" class="vco-cta" data-vco-cta>Sepeti Onayla</button>
+      <p class="vco-sum__status" data-vco-status></p>
+      <a href="{{ routes.all_products_collection_url }}" class="vco-back">← Alışverişe Devam Et</a>
+    </aside>
+  </div>
+</div>
+
+<style>
+  .vco { max-width: 1180px; margin: 24px auto 60px; padding: 0 16px; --o:#f25334; --ink:#1a1a1a; --line:#e7e3dc; --muted:#7a7268; --ok:#1f7a4d; --ic:#f25334; }
+  .vco svg { display:block; }
+  .vco * { box-sizing: border-box; }
+  /* Tema body'sinde overflow-x:hidden → overflow-y'yi auto'ya zorlayıp özet sticky'sini kırıyordu. clip yatayı keser ama scroll-container YARATMAZ → sticky korunur. */
+  body { overflow-x: clip !important; overflow-y: visible !important; }
+  /* Stepper */
+  .vco-steps { display:flex; align-items:center; gap:6px; justify-content:center; margin:8px 0 28px; flex-wrap:wrap; }
+  .vco-step { display:flex; align-items:center; gap:8px; font-size:14px; font-weight:600; color:#b3a89c; background:none; border:0; cursor:default; padding:4px 6px; font-family:inherit; }
+  .vco-step[data-go="1"], .vco-step[data-go="2"] { cursor:pointer; }
+  .vco-step__n { width:26px;height:26px;border-radius:50%;background:#ece7df;color:#b3a89c;display:grid;place-items:center;font-size:13px;flex:0 0 auto; }
+  .vco-step__c { font-size:12px;color:var(--muted);font-weight:700; }
+  .vco-steps__sep { width:34px;height:2px;background:#ece7df;border-radius:2px; }
+  .vco-step.is-active { color:var(--ink); } .vco-step.is-active .vco-step__n { background:var(--o); color:#fff; }
+  .vco-step.is-done { color:var(--ink); } .vco-step.is-done .vco-step__n { background:var(--ok); color:#fff; }
+  /* Layout */
+  .vco-grid { display:grid; grid-template-columns: 1fr 360px; gap:24px; align-items:start; }
+  .vco-card { background:#fff; border:1px solid var(--line); border-radius:14px; padding:20px; margin-bottom:18px; }
+  .vco-card__title { font-size:1.05rem; font-weight:800; color:var(--ink); margin:0 0 16px; display:flex; align-items:center; gap:10px; }
+  .vco-card__no { width:26px;height:26px;border-radius:50%;background:var(--o);color:#fff;display:grid;place-items:center;font-size:14px;flex:0 0 auto; }
+  /* Panel switching */
+  .vco[data-step="1"] .vco-panel--2, .vco[data-step="1"] .vco-panel--3,
+  .vco[data-step="2"] .vco-panel--1, .vco[data-step="2"] .vco-panel--3,
+  .vco[data-step="3"] .vco-panel--1, .vco[data-step="3"] .vco-panel--2 { display:none; }
+  /* ----- STEP 1: Sepet (ferah, sıkışmasız) ----- */
+  .vco-cart__loading { padding:30px; text-align:center; color:var(--muted); }
+  .vco-li { display:flex; align-items:center; gap:16px; padding:18px 0; border-bottom:1px solid #efe9e0; }
+  .vco-li:last-child { border-bottom:0; }
+  .vco-li__img { width:72px; height:72px; border-radius:10px; background:#f6f3ee; flex:0 0 auto; overflow:hidden; display:grid; place-items:center; }
+  .vco-li__img img { width:100%; height:100%; object-fit:cover; }
+  .vco-li__info { flex:1 1 auto; min-width:0; }
+  .vco-li__title { font-size:15px; font-weight:700; color:var(--ink); line-height:1.3; overflow-wrap:anywhere; word-break:break-word; }
+  .vco-li__opt { font-size:12.5px; color:var(--muted); margin-top:3px; }
+  .vco-qty { display:inline-flex; align-items:center; border:1px solid var(--line); border-radius:999px; flex:0 0 auto; background:#fff; }
+  .vco-qty button { width:40px; height:40px; border:0; background:none; font-size:20px; color:var(--ink); cursor:pointer; display:grid; place-items:center; border-radius:999px; }
+  .vco-qty button:hover { background:#f6f3ee; }
+  .vco-qty span { min-width:42px; text-align:center; font-size:15px; font-weight:700; }
+  .vco-li--busy .vco-qty { pointer-events:none; opacity:.5; position:relative; }
+  .vco-li--busy .vco-qty::after { content:''; position:absolute; top:50%; left:50%; width:18px; height:18px; margin:-9px 0 0 -9px; border:2px solid var(--o); border-top-color:transparent; border-radius:50%; animation:vco-spin .6s linear infinite; }
+  @keyframes vco-spin { to { transform:rotate(360deg); } }
+  .vco-li__rm { width:40px; height:40px; flex:0 0 auto; border:1px solid var(--line); background:#fff; border-radius:10px; cursor:pointer; display:grid; place-items:center; color:#c0392b; margin-left:4px; }
+  .vco-li__rm:hover { background:#fdecea; border-color:#f5b7b1; }
+  .vco-li__rm svg { width:19px; height:19px; }
+  .vco-li__price { font-size:15px; font-weight:800; color:var(--ink); min-width:84px; text-align:right; flex:0 0 auto; }
+  /* ----- STEP 2: Form ----- */
+  .vco-lbl { display:block; font-size:12px; font-weight:600; color:var(--muted); margin:0 0 4px; }
+  .vco-input, .vco select { width:100%; padding:11px 12px; border:1px solid var(--line); border-radius:8px; font-size:14px; background:#fff; color:var(--ink); }
+  .vco-input:focus, .vco select:focus { outline:none; border-color:var(--o); }
+  .vco-input::placeholder, .vco-promo__inp::placeholder, .vco select::placeholder { color:#b3a89c; opacity:1; }
+  .vco-row { display:grid; gap:10px; margin-bottom:10px; }
+  .vco-row--2 { grid-template-columns: 1fr 1fr; }
+  .vco-saved { margin-bottom:14px; }
+  .vco-adres-kartlar { display:grid; grid-template-columns:repeat(auto-fill,minmax(215px,1fr)); gap:10px; margin-bottom:6px; }
+  .vco-adres-kart { text-align:left; border:1.5px solid var(--line); border-radius:12px; padding:12px 14px; background:#fff; cursor:pointer; font:inherit; font-size:13px; position:relative; display:flex; flex-direction:column; gap:3px; color:var(--ink); }
+  .vco-adres-kart:hover { border-color:#cbd2ce; }
+  .vco-adres-kart.secili { border-color:var(--o); box-shadow:0 0 0 2px rgba(227,84,39,.14); }
+  .vco-adres-kart .vak-baslik { font-weight:700; font-size:13.5px; padding-right:76px; }
+  .vco-adres-kart .vak-vars { position:absolute; top:11px; right:11px; background:#e3f4e8; color:#1d7a3d; font-size:10px; font-weight:700; padding:2px 7px; border-radius:999px; letter-spacing:.04em; }
+  .vco-adres-kart .vak-satir { color:#5a645f; }
+  .vco-adres-kart.vak-yeni { align-items:center; justify-content:center; border-style:dashed; color:#6b7570; font-weight:600; min-height:74px; }
+  .vco-inv { margin-top:8px; padding-top:12px; border-top:1px dashed var(--line); }
+  .vco-seg { display:inline-flex; border:1px solid var(--line); border-radius:8px; overflow:hidden; }
+  .vco-seg__o { padding:8px 16px; font-size:13px; font-weight:600; cursor:pointer; display:flex; align-items:center; gap:6px; }
+  .vco-seg__o:first-child { border-right:1px solid var(--line); }
+  .vco-chk { display:flex; align-items:center; gap:8px; font-size:13px; color:var(--ink); margin-top:14px; cursor:pointer; }
+  .vco-hint { font-size:13px; color:var(--muted); margin:0; line-height:1.55; }
+  .vco-addr-hint { margin-top:5px; font-size:12.5px; }
+  .vco-addr-hint--hata { color:#c0392b; font-weight:600; }
+  /* Kargo */
+  .vco-carriers { display:flex; flex-direction:column; gap:10px; }
+  .vco-carrier { display:flex; align-items:center; justify-content:space-between; gap:12px; border:2px solid var(--line); border-radius:10px; padding:12px 14px; cursor:pointer; transition:border-color .15s, background .15s; }
+  .vco-carrier:hover { border-color:#d9b3a8; }
+  .vco-carrier.is-sel { border-color:var(--o); background:#fff6f3; }
+  .vco-carrier__l { display:flex; align-items:center; gap:10px; font-weight:700; color:var(--ink); }
+  .vco-carrier__l svg { width:20px; height:20px; color:var(--ic); flex:0 0 auto; }
+  .vco-carrier__price { font-weight:800; color:var(--o); }
+  .vco-carrier input { accent-color:var(--o); width:18px; height:18px; }
+  /* Ödeme yöntemi */
+  .vco-pm-row { display:grid; grid-template-columns:repeat(3, 1fr); gap:10px; margin-bottom:14px; }
+  .vco-pm { display:flex; flex-direction:column; align-items:center; text-align:center; gap:7px; border:2px solid var(--line); border-radius:10px; padding:14px 8px; cursor:pointer; position:relative; transition:border-color .15s, background .15s; }
+  .vco-pm:hover { border-color:#d9b3a8; }
+  .vco-pm.is-sel { border-color:var(--o); background:#fff6f3; }
+  .vco-pm__dot { position:absolute; top:8px; left:8px; width:16px;height:16px;border-radius:50%;border:2px solid #cfc7ba;display:grid;place-items:center; }
+  .vco-pm.is-sel .vco-pm__dot { border-color:var(--o); }
+  .vco-pm.is-sel .vco-pm__dot::after { content:""; width:8px;height:8px;border-radius:50%;background:var(--o); }
+  .vco-pm__ic { color:var(--ic); margin-top:2px; display:inline-flex; }
+  .vco-pm__ic svg { width:26px; height:26px; }
+  .vco-pm__t { display:flex; flex-direction:column; gap:2px; align-items:center; } .vco-pm__t b { font-size:13px; color:var(--ink); line-height:1.2; } .vco-pm__t small { font-size:11px; color:var(--muted); }
+  .vco-pm__body { padding:6px 2px 4px; }
+  .vco-cod { padding-top:2px; }
+  .vco-cod-opt { display:flex !important; align-items:center; gap:10px; width:100%; border:2px solid var(--line); border-radius:9px; padding:10px 12px; cursor:pointer; margin-bottom:8px; transition:border-color .15s, background .15s; }
+  .vco-cod-opt:hover { border-color:#d9b3a8; }
+  .vco-cod-opt.is-sel { border-color:var(--o); background:#fff6f3; }
+  .vco-cod-opt__dot { width:18px;height:18px;border-radius:50%;border:2px solid #cfc7ba;flex:0 0 auto;display:grid;place-items:center; }
+  .vco-cod-opt.is-sel .vco-cod-opt__dot { border-color:var(--o); }
+  .vco-cod-opt.is-sel .vco-cod-opt__dot::after { content:"";width:9px;height:9px;border-radius:50%;background:var(--o); }
+  .vco-cod-opt__ic { color:var(--ic); flex:0 0 auto; display:inline-flex; }
+  .vco-cod-opt__ic svg { width:22px; height:22px; }
+  .vco-cod-opt__t { display:flex; flex-direction:column; gap:1px; } .vco-cod-opt__t b { font-size:13.5px; color:var(--ink); } .vco-cod-opt__t small { font-size:11.5px; color:var(--muted); }
+  .vco-pm input[type="radio"], .vco-cod-opt input[type="radio"] { display:none !important; }
+  @media (max-width:480px){ .vco-pm-row { gap:6px; } .vco-pm { padding:10px 4px; } .vco-pm__t b { font-size:11px; } .vco-pm__t small { display:none; } .vco-pm__ic svg { width:22px; height:22px; } }
+  /* Havale sonuç IBAN kartları */
+  .vco-iban { border:1px solid var(--line); border-radius:10px; padding:14px; margin-bottom:12px; background:#faf8f4; }
+  .vco-iban__bank { font-size:12px; font-weight:800; letter-spacing:.04em; color:var(--o); margin-bottom:6px; }
+  .vco-iban__row { font-size:13.5px; color:var(--ink); line-height:1.7; }
+  .vco-iban__no { font-family:ui-monospace,Menlo,monospace; font-weight:700; }
+  .vco-copy { margin-top:8px; background:none; border:1px solid var(--o); color:var(--o); border-radius:7px; padding:6px 12px; font-size:12.5px; font-weight:700; cursor:pointer; }
+  .vco-copy:hover { background:#fff1ec; }
+  /* Sonuç */
+  .vco-result { text-align:center; padding:36px 24px; }
+  .vco-result__ic { width:64px;height:64px;border-radius:50%;display:grid;place-items:center;margin:0 auto 16px; }
+  .vco-result__ic svg { width:34px; height:34px; }
+  .vco-result__ic--ok { background:#e8f6ee; color:var(--ok); }
+  .vco-result__ic--wait { background:#fff4e6; color:#d98012; }
+  .vco-result h3 { font-size:1.25rem; font-weight:800; margin:0 0 8px; color:var(--ink); }
+  .vco-result p { font-size:14px; color:#555; margin:0 0 6px; line-height:1.6; }
+  .vco-result__code { display:inline-block; margin:10px 0; padding:8px 18px; background:#1a1a1a; color:#fff; border-radius:8px; font-family:ui-monospace,monospace; font-weight:700; font-size:18px; letter-spacing:.05em; }
+  /* Özet */
+  .vco-sum { background:#faf8f4; border:1px solid var(--line); border-radius:14px; padding:20px; position:sticky; top:16px; }
+  .vco-free { font-size:12.5px; font-weight:700; color:var(--ok); padding-bottom:12px; margin-bottom:12px; border-bottom:1px solid #efe9e0; display:flex; align-items:center; gap:6px; }
+  .vco-free svg { width:17px; height:17px; flex:0 0 auto; }
+  .vco-sum__title { font-size:1.05rem; font-weight:800; margin:0 0 14px; color:var(--ink); }
+  .vco-sum__items { margin-bottom:14px; max-height:260px; overflow:auto; }
+  .vco-sum__it { display:flex; justify-content:space-between; gap:8px; font-size:13px; padding:6px 0; border-bottom:1px solid #efe9e0; color:#444; }
+  .vco-sum__it small { color:#999; }
+  .vco-sum__row { display:flex; justify-content:space-between; font-size:14px; padding:5px 0; color:#555; }
+  .vco-sum__row--total { font-size:18px; font-weight:800; color:var(--ink); border-top:1px solid var(--line); padding-top:10px; margin-top:6px; }
+  .vco-sum__row--disc { color:var(--ok); font-weight:700; }
+  .vco-promo { display:flex; gap:8px; margin:14px 0 4px; }
+  .vco-promo__inp { flex:1; min-width:0; border:1px solid var(--line); border-radius:9px; padding:10px 12px; font-size:13.5px; font-family:inherit; background:#fff; }
+  .vco-promo__inp:focus { outline:none; border-color:var(--o); }
+  .vco-promo__inp:disabled { background:#f3f0ea; color:var(--muted); }
+  .vco-promo__btn { flex:0 0 auto; border:0; background:var(--ink); color:#fff; border-radius:9px; padding:0 16px; font-size:13px; font-weight:700; cursor:pointer; font-family:inherit; }
+  .vco-promo__btn:hover { background:#000; } .vco-promo__btn:disabled { opacity:.5; cursor:default; }
+  .vco-promo__msg { font-size:12px; margin:0 0 6px; }
+  .vco-promo__msg.ok { color:var(--ok); } .vco-promo__msg.err { color:#c0392b; }
+  .vco-promo__rm { color:var(--o); cursor:pointer; text-decoration:underline; margin-left:6px; font-weight:700; }
+  .vco-xsell__row { display:flex; gap:12px; overflow-x:auto; padding:2px 2px 8px; -webkit-overflow-scrolling:touch; min-width:0; max-width:100%; }
+  .vco-xs { flex:0 0 132px; border:1px solid var(--line); border-radius:10px; padding:8px; display:flex; flex-direction:column; gap:5px; background:#fff; }
+  .vco-xs__img { display:block; aspect-ratio:1; border-radius:7px; overflow:hidden; background:#f6f3ee; }
+  .vco-xs__img img { width:100%; height:100%; object-fit:cover; display:block; }
+  .vco-xs__t { font-size:12px; line-height:1.25; color:var(--ink); font-weight:600; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; min-height:30px; }
+  .vco-xs__p { font-size:13px; font-weight:800; color:var(--o); }
+  .vco-xs__add { margin-top:auto; border:1.5px solid var(--o); background:#fff; color:var(--o); border-radius:7px; padding:6px 0; font-size:12px; font-weight:700; cursor:pointer; font-family:inherit; }
+  .vco-xs__add:hover { background:var(--o); color:#fff; } .vco-xs__add:disabled { opacity:.6; cursor:default; }
+  .vco-cta { width:100%; margin-top:14px; padding:14px; background:var(--o); color:#fff; border:0; border-radius:10px; font-size:15px; font-weight:700; cursor:pointer; transition:opacity .15s, background .15s; }
+  .vco-cta:hover { background:#d84526; } .vco-cta:disabled { opacity:.5; cursor:not-allowed; }
+  .vco-back { display:inline-block; margin-top:12px; color:var(--o); text-decoration:none; font-size:13px; font-weight:600; }
+  .vco-sum__status { font-size:12px; color:#c62828; margin:8px 0 0; min-height:14px; }
+  .vco-iyzico { min-height:420px; }
+  .vco-iyzico.is-hk { min-height:0; }
+  .vco-hk { margin-top:4px; }
+  .vco-iyzico.is-hk .vco-err { margin-bottom:10px; }
+  .vco-loading { text-align:center; padding:60px 20px; color:var(--muted); }
+  .vco-spin { width:38px;height:38px;border:3px solid #f0ece4;border-top-color:var(--o);border-radius:50%;margin:0 auto 14px;animation:vcoS .8s linear infinite; }
+  @keyframes vcoS { to { transform:rotate(360deg); } }
+  .vco-err { padding:18px; background:#fff3f3; border:1px solid #ffcdd2; color:#c62828; border-radius:8px; font-size:14px; }
+  @media (max-width:880px){
+    .vco-grid { grid-template-columns:1fr; }
+    .vco-main, .vco-panel, .vco-card { min-width:0; }
+    .vco-sum { position:static; order:2; min-width:0; }
+    .vco-row--2 { grid-template-columns:1fr; }
+    .vco-li__img { width:60px; height:60px; }
+    .vco-li { gap:10px; }
+    .vco-qty button { width:34px; height:34px; }
+    .vco-qty span { min-width:34px; }
+    .vco-li__price { min-width:0; font-size:14px; }
+  }
+  /* Telefon: sepet özeti satırında başlık harf-harf alt alta sarıyordu (resim+adet+sil+fiyat info'yu ~0px'e sıkıştırıyor). Satırı sarmalı yap → başlık üstte tam genişlik, kontroller altta. */
+  @media (max-width:600px){
+    .vco-li { flex-wrap:wrap; row-gap:10px; }
+    .vco-li__info { flex:1 1 calc(100% - 76px); }
+    .vco-qty { order:2; }
+    .vco-li__rm { order:3; }
+    .vco-li__price { order:4; margin-left:auto; }
+    /* #34/#35 kargo firma adı + IBAN taşma güvenliği */
+    .vco-carrier__l { min-width:0; }
+    .vco-iban__no { overflow-wrap:anywhere; word-break:break-all; }
+  }
+</style>
+
+<script>
+(function(){
+  var API = {{ section.settings.api_base | default: 'https://mctpt0va3m.execute-api.eu-north-1.amazonaws.com/prod' | json }};
+  var FREE_SHIP = {{ section.settings.free_shipping_threshold | default: 0 }}; // 0 = kapalı
+  var FREE_ALL = {{ section.settings.free_shipping_all | default: false | json }}; // true = TÜM kargolar ücretsiz (eşik yok sayılır)
+  var KART_GATEWAY = {{ section.settings.kart_gateway | default: 'iyzico' | json }}; // 'iyzico' | 'paytr' | 'halkode' (kart sağlayıcısı)
+  /* Halköde GİZLİ KAPI (21 Eyl 2026). Yalnız ?halkode=1 ile gelen oturumda kart yolu
+     Halköde'ye döner; işaret sessionStorage'da durur (sekme kapanınca biter, ?halkode=0
+     kapatır). Parametresiz her ziyaretçi section ayarındaki sağlayıcıyı görmeye devam eder.
+     Herkese açmak için bu kapıya gerek yok: section ayarı kart_gateway = 'halkode'. */
+  var HALKODE_KAPI = (function(){
+    var q = null;
+    try { q = new URLSearchParams(window.location.search).get('halkode'); } catch(e){}
+    try {
+      if(q==='1') sessionStorage.setItem('vm_halkode_kapi','1');
+      else if(q==='0') sessionStorage.removeItem('vm_halkode_kapi');
+      return sessionStorage.getItem('vm_halkode_kapi')==='1';
+    } catch(e){ return q==='1'; }
+  })();
+  if(HALKODE_KAPI) KART_GATEWAY = 'halkode';
+  var root = document.querySelector('.vco') || document;
+  var $ = function(s){ return root.querySelector(s); };
+  var f = function(name){ return root.querySelector('[data-f="'+name+'"]'); };
+  var state = { cart:null, carrier:null, shipping:0, carriersLoadedFor:'', initInFlight:false, loadedSig:'', autoTimer:null, step:1, payMethod:'kart', orderBusy:false, carrierCOD:false, carrierCODCard:false, codMethod:'', discount:null };
+
+  function money(kurus){ return (kurus/100).toLocaleString('tr-TR',{minimumFractionDigits:2}) + ' TL'; }
+  function moneyTl(tl){ return tl.toLocaleString('tr-TR',{minimumFractionDigits:2}) + ' TL'; }
+  function status(msg){ var s=$('[data-vco-status]'); if(s) s.textContent = msg||''; }
+  function thumb(url){ if(!url) return ''; return url + (url.indexOf('?')>-1?'&':'?') + 'width=160'; }
+  var TRASH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>';
+  var IC = { card: {{ ic_card | json }}, bank: {{ ic_bank | json }}, box: {{ ic_box | json }}, cash: {{ ic_cash | json }}, truck: {{ ic_truck | json }}, gift: {{ ic_gift | json }} };
+
+  /* ============ Cross-sell (birlikte alınanlar — Shopify Recommendations API) ============ */
+  function toKurus(v){ if(v==null) return 0; if(typeof v==='string'){ return v.indexOf('.')>-1 ? Math.round(parseFloat(v)*100) : (parseInt(v,10)||0); } return v; }
+  function loadCrossSell(){
+    var box=$('[data-vco-xsell]'), list=$('[data-vco-xsell-list]'); if(!box||!list) return;
+    if(!state.cart || !state.cart.items || !state.cart.items.length){ box.style.display='none'; return; }
+    var pid = state.cart.items[0].product_id; if(!pid){ box.style.display='none'; return; }
+    if(box.dataset.loadedFor === String(pid) && list.children.length){ box.style.display='block'; return; }
+    box.dataset.loadedFor = String(pid);
+    var inCart={}; state.cart.items.forEach(function(it){ inCart[it.product_id]=1; });
+    function pick(d){ return (d&&d.products)?d.products.filter(function(p){ return !inCart[p.id] && p.available!==false; }):[]; }
+    fetch('/recommendations/products.json?product_id='+pid+'&limit=10&intent=complementary')
+      .then(function(r){return r.json();}).then(function(d){
+        var ps=pick(d); if(ps.length) return ps;
+        return fetch('/recommendations/products.json?product_id='+pid+'&limit=10&intent=related').then(function(r){return r.json();}).then(pick);
+      }).then(function(ps){
+        if(!ps || !ps.length){ box.style.display='none'; return; }
+        list.innerHTML = ps.slice(0,5).map(function(p){
+          var img=p.featured_image||(p.images&&p.images[0])||''; if(img && img.indexOf('//')===0) img='https:'+img; if(img) img=img+(img.indexOf('?')>-1?'&':'?')+'width=200';
+          var v=p.variants&&p.variants[0]; var vid=v?v.id:''; var price=toKurus(v?v.price:p.price);
+          return '<div class="vco-xs" data-xs-vid="'+vid+'">'+
+            '<a class="vco-xs__img" href="'+(p.url||'#')+'">'+(img?'<img src="'+img+'" alt="" loading="lazy">':'')+'</a>'+
+            '<div class="vco-xs__t">'+(p.title||'')+'</div>'+
+            '<div class="vco-xs__p">'+money(price)+'</div>'+
+            '<button type="button" class="vco-xs__add" data-xs-add'+(vid?'':' disabled')+'>+ Ekle</button>'+
+          '</div>';
+        }).join('');
+        box.style.display='block';
+      }).catch(function(){ box.style.display='none'; });
+  }
+
+  /* ============ STEP 1 — Sepet render + düzenle ============ */
+  function renderCart(){
+    var c = state.cart; var box = $('[data-vco-cart]'); if(!box) return;
+    if(!c || !c.items || !c.items.length){
+      box.innerHTML = '<div class="vco-cart__loading">Sepetiniz boş. <a href="{{ routes.all_products_collection_url }}" style="color:#f25334;font-weight:700">Alışverişe başla →</a></div>';
+      loadCrossSell(); return;
+    }
+    box.innerHTML = c.items.map(function(it, i){
+      var img = thumb(it.image);
+      return '<div class="vco-li" data-line="'+(i+1)+'">'+
+        '<div class="vco-li__img">'+(img?'<img src="'+img+'" alt="" loading="lazy">':'')+'</div>'+
+        '<div class="vco-li__info"><div class="vco-li__title">'+(it.product_title||it.title)+'</div>'+
+          (it.variant_title && it.variant_title!=='Default Title' ? '<div class="vco-li__opt">'+it.variant_title+'</div>' : '')+'</div>'+
+        '<div class="vco-qty"><button type="button" data-qa="dec" aria-label="azalt">−</button>'+
+          '<span>'+it.quantity+'</span>'+
+          '<button type="button" data-qa="inc" aria-label="arttır">+</button></div>'+
+        '<button type="button" class="vco-li__rm" data-qa="rm" aria-label="kaldır">'+TRASH+'</button>'+
+        '<div class="vco-li__price">'+money(it.final_line_price)+'</div>'+
+      '</div>';
+    }).join('');
+    loadCrossSell();
+  }
+  /* ===== MADDE 5 (Yunus, 17 Eyl 2026) — "stoğu 1 olan ürünü sepette artırınca
+     sepet boşmuş gibi görünüyor" =====
+     ÖLÇÜLDÜ: Shopify /cart/change.js stok aşımında 422 döner ve gövdede `items` YOKTUR:
+       {"status":422,"message":"Stok durumu nedeniyle sepetinize yalnızca 1 ürün eklendi."}
+     Eski kod `r.ok`a BAKMADAN `state.cart = cart` yazıyordu → gerçek sepet istemci
+     durumundan siliniyordu. Ekran görüntüsündeki tablo birebir bundan çıkıyor:
+       • renderCart()    → c.items yok → "Sepetiniz boş" basar
+       • renderSummary() → c.items.map TypeError atar, fonksiyon YARIDA kalır →
+         sağdaki Sipariş Özeti ESKİ değerlerde DONAR
+     Yani sunucuda sepet yerinde duruyor; yalnızca ekran yalan söylüyordu.
+     (Not: /cart sayfasındaki tema AJAX'ı bu dalı zaten doğru işliyordu — arıza
+      SADECE bu özel ödeme sayfasındaydı, o yüzden /cart testleri temiz çıkıyordu.) */
+  function vcoSepetUyari(mesaj){
+    var box = $('[data-vco-cart]'); if(!box) return;
+    var u = document.createElement('div');
+    u.setAttribute('data-vco-stok-uyari','');
+    u.style.cssText = 'margin:0 0 12px;padding:10px 12px;border:1px solid #f0c36d;background:#fff8e6;border-radius:8px;font-size:13px;color:#7a5b00';
+    u.textContent = mesaj;
+    box.insertBefore(u, box.firstChild);
+    setTimeout(function(){ if(u && u.parentNode) u.parentNode.removeChild(u); }, 6000);
+  }
+  /* Ekranı SUNUCUYLA eşitler. Hata dalında iyimser/bozuk durumu düzeltmenin tek
+     güvenilir yolu: neyin doğru olduğunu sunucuya sormak. */
+  function vcoSepetTazele(){
+    return fetch('/cart.js', { headers:{ 'Accept':'application/json' } })
+      .then(function(r){ return r.json(); })
+      .then(function(c){ state.cart = c; renderCart(); renderSummary(); updateCount(); updateCta(); });
+  }
+  function changeLine(line, qty){
+    if(state.orderBusy) return; state.orderBusy = true;
+    fetch('/cart/change.js', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ line:line, quantity:qty }) })
+      .then(function(r){ return r.json().then(function(d){ return { ok:r.ok, d:d||{} }; }); })
+      .then(function(res){
+        state.orderBusy = false;
+        document.querySelectorAll('.vco-li--busy').forEach(function(x){ x.classList.remove('vco-li--busy'); });
+        if(!res.ok || !res.d.items){
+          var mesaj = res.d.message || res.d.description || 'Bu adet için yeterli stok yok.';
+          /* Önce tazele (renderCart innerHTML'i siler), SONRA uyarıyı bas — sıra ters
+             olursa uyarı kendi render'ımızda siliniyor. */
+          return vcoSepetTazele().then(function(){ vcoSepetUyari(mesaj); });
+        }
+        var cart = res.d;
+        state.cart = cart;
+        renderCart(); renderSummary(); updateCount(); updateCta();
+        // ÜRÜN KALDIRMA / ADET DEĞİŞTİRME de kuponu geçersizleştirebilir: kupona hak
+        // kazandıran ürün sepetten çıkınca indirim DÜŞMELİ. Bu çağrı eksikti — indirim
+        // ekranda kalmaya devam ediyordu (Yunus, 11 Ağu).
+        revalidatePromo();
+      }).catch(function(){ state.orderBusy = false; document.querySelectorAll('.vco-li--busy').forEach(function(x){ x.classList.remove('vco-li--busy'); }); });
+  }
+
+  /* ============ Özet ============ */
+  function renderSummary(){
+    var c = state.cart; if(!c) return;
+    var itemsEl = $('[data-vco-items]');
+    if(itemsEl) itemsEl.innerHTML = c.items.map(function(it){
+      return '<div class="vco-sum__it"><span>'+(it.product_title||it.title)+' <small>x'+it.quantity+'</small></span><span>'+money(it.final_line_price)+'</span></div>';
+    }).join('');
+    var sub = grossKurus(c); // indirimden ÖNCEki ara toplam — bkz. grossKurus()
+    var ship = effShip(); // serbest kargo eşiği aşıldıysa 0
+    var disc = Math.min(discountKurus(sub), sub); // indirim ara toplamı ASLA aşamaz
+    var codFee = codFeeKurus(sub, ship); // kapıda kart komisyonu (kuruş)
+    $('[data-vco-subtotal]').textContent = money(sub);
+    var discRow = $('[data-vco-disc-row]');
+    if(discRow){ discRow.style.display = disc>0 ? 'flex':'none'; var de=$('[data-vco-disc]'); if(de) de.textContent='−'+money(disc); var dl=$('[data-vco-disc-label]'); if(dl){ var dcode = state.discount ? state.discount.code : cartDiscountCode(c); var isCartDisc = !state.discount && c.total_discount > 0; dl.innerHTML = (dcode ? ('İndirim ('+dcode+')') : 'İndirim') + (isCartDisc ? ' <span data-vco-cartdisc-rm role="button" tabindex="0" style="color:#c0392b;cursor:pointer;font-weight:700;font-size:11px;text-decoration:underline;margin-left:5px">kaldır</span>' : ''); } }
+    (function(){ var shipEl=$('[data-vco-ship-cost]'); if(!state.carrier){ shipEl.textContent='Seçilmedi'; } else if(ship===0){ var raw=state.shipping||0; shipEl.innerHTML=(raw>0?'<s style="color:#b3a89c;font-weight:400;margin-right:6px">'+moneyTl(raw)+'</s>':'')+'<b style="color:var(--ok)">Ücretsiz</b>'; } else { shipEl.textContent=moneyTl(ship); } })();
+    var feeRow = $('[data-vco-codfee-row]');
+    if(feeRow){ feeRow.style.display = codFee>0 ? 'flex':'none'; var fc=$('[data-vco-codfee]'); if(fc) fc.textContent = '+'+money(codFee); }
+    $('[data-vco-total]').textContent = money(Math.max(0, sub - disc) + ship*100 + codFee);
+    // ücretsiz kargo çubuğu
+    var fb = $('[data-vco-free]');
+    if(fb && FREE_ALL){ fb.style.display='block'; fb.style.textAlign='center'; fb.style.color='var(--ok)'; fb.innerHTML = IC.gift + ' Tüm siparişlerde ücretsiz kargo!'; }
+    else if(fb && FREE_SHIP > 0){
+      var subTl = (sub - disc)/100; // eşik indirim SONRASI nete bakar (bkz. effShip)
+      if(subTl >= FREE_SHIP){ fb.style.display='block'; fb.style.textAlign='center'; fb.style.color='var(--ok)'; fb.innerHTML = IC.gift + ' Ücretsiz kargo kazandın!<span style="display:block;opacity:.7;font-weight:600;font-size:.9em;margin-top:1px">('+moneyTl(FREE_SHIP)+' ve üzeri)</span>'; }
+      else { fb.style.display='block'; fb.style.textAlign='center'; fb.style.color='#c0392b'; fb.innerHTML = '🚚 Ücretsiz kargoya <b style="white-space:nowrap">'+moneyTl(FREE_SHIP-subTl)+'</b> kaldı<span style="display:block;opacity:.8;font-weight:600;font-size:.9em;margin-top:1px">('+moneyTl(FREE_SHIP)+' ve üzeri ücretsiz)</span>'; }
+    }
+  }
+  function updateCount(){
+    var n = state.cart ? state.cart.item_count : 0;
+    var c = $('[data-vco-count]'); if(c) c.textContent = n ? '('+n+')' : '';
+  }
+
+  /* ============ Açık adres içerik kontrolü ============
+     Müşteriler bu alana yalnızca il/ilçe yazıp geçiyordu; kargo firmaları sokak +
+     bina no olmadan teslim edemeyip gönderiyi geri döndürüyordu (Yunus, 17 Ağu 2026). */
+  var ADDR_HINT_VARSAYILAN = 'Sokak/cadde ve <b>bina no</b> zorunlu. İl ve ilçeyi tekrar yazmanıza gerek yok.';
+
+  /* ===== Sokak / Bina / Daire ayrı kutular (Yunus 17 Ağu talebi — 27 Ağu 2026'da uygulandı)
+     Tek "Açık Adres" kutusuna yalnız il yazanlar vardı; uyarı eklemek yetmedi, alan 3'e bölündü.
+     Birleşik değer GİZLİ data-f="address1" alanında tutulur -> address1'i okuyan mevcut ~12 yer
+     (kaydetme, payload, kayıtlı adres, localStorage) hiç değişmeden çalışmaya devam eder. */
+  function addrParcaBirlestir(){
+    var s=(f('addr_sokak')&&f('addr_sokak').value.trim())||'';
+    var b=(f('addr_bina')&&f('addr_bina').value.trim())||'';
+    var d=(f('addr_daire')&&f('addr_daire').value.trim())||'';
+    var out=s;
+    if(b) out += (out?' ':'')+'No:'+b;
+    if(d) out += (out?' ':'')+'Daire:'+d;
+    var h=f('address1'); if(h) h.value=out;
+    return out;
+  }
+  function addrParcaAyikla(deger){
+    var v=(deger||'').trim(); if(!v) return;
+    var daire='', bina='', sokak=v;
+    var md=v.match(/(?:daire|dai?re\s*no|d)\s*[:.]?\s*([0-9a-zA-Z\/-]+)\s*$/i);
+    if(md){ daire=md[1]; sokak=v.slice(0,md.index).trim(); }
+    var mb=sokak.match(/(?:bina\s*no|kapı\s*no|no)\s*[:.]?\s*([0-9a-zA-Z\/-]+)\s*$/i);
+    if(mb){ bina=mb[1]; sokak=sokak.slice(0,mb.index).trim(); }
+    sokak=sokak.replace(/[,\s]+$/,'');
+    if(f('addr_sokak')) f('addr_sokak').value=sokak;
+    if(f('addr_bina')) f('addr_bina').value=bina;
+    if(f('addr_daire')) f('addr_daire').value=daire;
+    addrParcaBirlestir();
+  }
+
+  function address1Sorun(){
+    var sk=(f('addr_sokak')&&f('addr_sokak').value.trim())||'';
+    var bn=(f('addr_bina')&&f('addr_bina').value.trim())||'';
+    if(!sk) return 'Sokak / cadde adı zorunlu.';
+    if(!bn) return 'Bina numarası zorunlu — örn. 42.';
+    if(sk.replace(/\s+/g,'').length < 4) return 'Sokak / cadde adı çok kısa.';
+    var v = sk;
+    var sade = v.toLocaleLowerCase('tr').replace(/[.,\/]/g,' ').replace(/\s+/g,' ').trim();
+    var il = (getIl()||'').toLocaleLowerCase('tr').trim();
+    var ilce = (getIlce()||'').toLocaleLowerCase('tr').trim();
+    var mah = (getMahalle()||'').toLocaleLowerCase('tr').trim();
+    if(sade === il || sade === ilce || (mah && sade === mah)) return 'Buraya il/ilçe değil, sokak / cadde adı yazın.';
+    return '';
+  }
+  function addrHintGuncelle(){
+    var el = root.querySelector('[data-vco-addr-hint]'); if(!el) return;
+    var inp = f('addr_sokak'); var deger = inp ? inp.value.trim() : '';
+    var sorun = deger ? address1Sorun() : '';
+    if(sorun){ el.textContent = sorun; el.classList.add('vco-addr-hint--hata'); }
+    else { el.innerHTML = ADDR_HINT_VARSAYILAN; el.classList.remove('vco-addr-hint--hata'); }
+  }
+
+  /* ============ Adres geçerli mi ============ */
+  function addrValid(){
+    var need = ['first_name','last_name','phone','email','addr_sokak','addr_bina'];
+    for(var i=0;i<need.length;i++){ if(!(f(need[i]) && f(need[i]).value.trim())) return false; }
+    if(!f('email').value.includes('@')) return false;
+    if(address1Sorun()) return false;
+    var il = root.querySelector('#vco-province'); var ilce = root.querySelector('#vco-district');
+    if(!(il && il.value) || !(ilce && ilce.value)) return false;
+    return true;
+  }
+  function getIl(){ var il=root.querySelector('#vco-province'); return il?il.value:''; }
+  function getIlce(){ var d=root.querySelector('#vco-district'); return d?d.value:''; }
+  function getMahalle(){ var m=root.querySelector('#vco-neighborhood'); return m && m.value ? m.value : (root.querySelector('#vco-neighborhood-free')?root.querySelector('#vco-neighborhood-free').value:''); }
+  function cartWeightKg(){ var g=0; (state.cart.items||[]).forEach(function(it){ g+=(it.grams||0)*it.quantity; }); return Math.max(0.5, g/1000); }
+
+  /* ============ Kargo firmaları ============ */
+  function loadCarriers(){
+    var il = getIl(); if(!il) return;
+    if(state.carriersLoadedFor === il) return;
+    state.carriersLoadedFor = il;
+    var box = $('[data-vco-carriers]'); var hint = $('[data-vco-ship-hint]');
+    hint.textContent = 'Kargo firmaları yükleniyor…'; hint.style.display='block';
+    fetch(API + '/api/v1/shipping/quote', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ province: il, weight: cartWeightKg() })
+    }).then(function(r){ return r.json(); }).then(function(d){
+      var rates = (d && d.all_rates && d.all_rates.length) ? d.all_rates
+                : (d && d.courier ? [{courier:d.courier, price_tl:d.shipping_tl}] : []);
+      if(!rates.length){ hint.textContent = 'Bu il için kargo bulunamadı, standart ücret uygulanacak.'; rates=[{courier:'Standart Kargo', price_tl:(d&&d.shipping_tl)||95}]; }
+      hint.style.display='none';
+      var _isFree = FREE_ALL || (FREE_SHIP > 0 && state.cart && (state.cart.items_subtotal_price/100) >= FREE_SHIP);
+      box.innerHTML = rates.map(function(rt,i){
+        return '<label class="vco-carrier" data-price="'+rt.price_tl+'" data-courier="'+rt.courier+'" data-cod="'+(rt.accepts_cod?1:0)+'" data-cod-card="'+(rt.accepts_cod_card?1:0)+'">'+
+          '<span class="vco-carrier__l"><input type="radio" name="vco_carrier"'+(i===0?' checked':'')+'> '+IC.truck+' '+rt.courier+'</span>'+
+          '<span class="vco-carrier__price">'+(_isFree?'<s style="color:#b3a89c;font-weight:400;margin-right:6px">'+moneyTl(rt.price_tl)+'</s><b style="color:var(--ok)">Ücretsiz</b>':moneyTl(rt.price_tl))+'</span></label>';
+      }).join('');
+      var first = box.querySelector('.vco-carrier');
+      if(first) selectCarrier(first);
+      box.querySelectorAll('.vco-carrier').forEach(function(el){
+        el.addEventListener('click', function(){ el.querySelector('input').checked=true; selectCarrier(el); });
+      });
+    }).catch(function(){ hint.textContent='Kargo bilgisi alınamadı.'; });
+  }
+  function selectCarrier(el){
+    root.querySelectorAll('.vco-carrier').forEach(function(x){ x.classList.remove('is-sel'); });
+    el.classList.add('is-sel');
+    state.carrier = el.dataset.courier;
+    state.shipping = parseFloat(el.dataset.price) || 0;
+    state.carrierCOD = el.dataset.cod === '1';
+    state.carrierCODCard = el.dataset.codCard === '1';
+    if(state.payMethod==='cod') renderCodOptions();
+    renderSummary(); updateCta(); autoTrigger();
+  }
+
+  /* ============ Ödeme yöntemi seçimi ============ */
+  function selectPm(method){
+    state.payMethod = method;
+    root.querySelectorAll('.vco-pm').forEach(function(el){ el.classList.toggle('is-sel', el.dataset.pm===method); });
+    root.querySelectorAll('.vco-pm__body').forEach(function(el){ el.style.display = el.dataset.pmBody===method ? 'block':'none'; });
+    var radio = root.querySelector('input[name="vco_pm"][value="'+method+'"]'); if(radio) radio.checked = true;
+    if(method==='cod') renderCodOptions();
+    renderSummary(); updateCta();
+    if(method==='kart') autoTrigger();
+  }
+
+  /* ============ Kapıda Ödeme alt-seçenekleri (kargo firmasına göre — KargoLab acceptsCOD/acceptsCODCard) ============ */
+  /* Ücretsiz kargo eşiği İNDİRİM SONRASI net tutara bakar. (11 Ağu 2026) Eskiden
+     items_subtotal_price okunuyordu: Shopify kupon linkinde bu değer net, promosyon
+     kutusuyla girilen kuponda ise brüt → aynı eşik iki kupon yolunda farklı davranıyor,
+     ayrıca özetteki "ücretsiz kargo kazandın" çubuğu (brüt) ile çelişiyordu.
+     FREE_ALL açıkken (bugünkü ayar) bu dal zaten hiç çalışmaz. */
+  function netKurus(){ var g = grossKurus(); return Math.max(0, g - Math.min(discountKurus(g), g)); }
+  function effShip(){ if(FREE_ALL) return 0; return (FREE_SHIP>0 && (netKurus()/100)>=FREE_SHIP) ? 0 : state.shipping; }
+  function codFeeKurus(subKurus, shipTl){
+    if(state.payMethod!=='cod' || state.codMethod!=='kart') return 0;
+    if(subKurus==null){ if(!state.cart) return 0; subKurus = state.cart.items_subtotal_price; }
+    if(shipTl==null) shipTl = effShip();
+    return Math.round((subKurus - discountKurus(subKurus) + shipTl*100) * 0.04);
+  }
+  function codOpt(val,ic,title,desc){
+    return '<label class="vco-cod-opt" data-cod-opt="'+val+'"><span class="vco-cod-opt__dot"></span>'+
+      '<span class="vco-cod-opt__ic">'+ic+'</span>'+
+      '<span class="vco-cod-opt__t"><b>'+title+'</b><small>'+desc+'</small></span>'+
+      '<input type="radio" name="vco_cod" value="'+val+'" hidden></label>';
+  }
+  function markCodSel(box){ box.querySelectorAll('.vco-cod-opt').forEach(function(o){ o.classList.toggle('is-sel', o.dataset.codOpt===state.codMethod); }); }
+  function renderCodOptions(){
+    var box = $('[data-vco-cod-opts]'); if(!box) return;
+    if(!state.carrier){ box.innerHTML='<p class="vco-hint">Önce kargo firması seçin — kapıda ödeme seçenekleri firmaya göre değişir.</p>'; state.codMethod=''; return; }
+    if(state.codMethod==='nakit' && !state.carrierCOD) state.codMethod='';
+    if(state.codMethod==='kart' && !state.carrierCODCard) state.codMethod='';
+    var html='';
+    if(state.carrierCOD) html += codOpt('nakit',IC.cash,'Nakit','Teslimatta kuryeye nakit öde');
+    if(state.carrierCODCard) html += codOpt('kart',IC.card,'Kredi / Banka Kartı','Kuryenin POS cihazıyla öde · +%4 işlem komisyonu');
+    if(!html){
+      box.innerHTML='<p class="vco-hint" style="color:#c0392b"><b>'+state.carrier+'</b> kapıda ödeme kabul etmiyor. Lütfen başka bir kargo firması ya da ödeme yöntemi seç.</p>';
+      state.codMethod=''; return;
+    }
+    if(!state.codMethod){ state.codMethod = state.carrierCOD ? 'nakit' : 'kart'; }
+    box.innerHTML = '<p class="vco-hint" style="margin-bottom:8px"><b>'+state.carrier+'</b> ile kapıda nasıl ödeyeceksin?</p>' + html;
+    box.querySelectorAll('input[name="vco_cod"]').forEach(function(r){ r.checked = (r.value===state.codMethod); });
+    box.querySelectorAll('.vco-cod-opt').forEach(function(o){
+      o.addEventListener('click', function(){ var inp=o.querySelector('input'); inp.checked=true; state.codMethod=inp.value; markCodSel(box); renderSummary(); updateCta(); });
+    });
+    markCodSel(box);
+  }
+
+  /* ============ İndirim kuponu ============ */
+  /* İNDİRİM TABANI — ÇİFT SAYIM KORUMASI (11 Ağu 2026, Yunus bildirimi).
+     Shopify kupon linki (/discount/KOD) indirimi SATIR BAZINDA uygular:
+       original_total_price = 350  (indirimden önce)
+       items_subtotal_price = 150  (ZATEN net)
+       total_discount       = 200  (aynı indirim, ayrıca raporlanıyor)
+     Özet "items_subtotal_price − total_discount" hesaplıyordu → 150 − 200 → Toplam 0,00 TL
+     ve Ara Toplam ürün sayfasındaki 350 yerine 150 görünüyordu (ürün #132 / 18SETFIRSAT).
+     Doğru taban indirimden ÖNCEki tutar; backend de ödemeyi ham line_item fiyatları
+     üzerinden hesapladığı için (iyzico/paytr initialize) ikisi böylece aynı tabanı kullanır. */
+  function grossKurus(c){
+    c = c || state.cart; if(!c) return 0;
+    return (c.total_discount > 0 && c.original_total_price) ? c.original_total_price : c.items_subtotal_price;
+  }
+  /* Sepetteki Shopify kuponunun KOD ADI. Kampanya linkiyle (/discount/KOD) gelen kuponlar
+     SATIR bazında uygulanır → cart_level_discount_applications BOŞ olur; kod adı yalnızca
+     line_level_discount_allocations içinde bulunur. Sadece cart-level'a bakmak kodu
+     kaybediyordu (özet etiketi "İndirim" kalıyor, siparişe kupon adı yazılamıyordu). */
+  function cartDiscountCode(c){
+    c = c || state.cart; if(!c) return '';
+    var cl = c.cart_level_discount_applications && c.cart_level_discount_applications[0];
+    if(cl && cl.title) return cl.title;
+    var code = '';
+    (c.items||[]).forEach(function(it){
+      (it.line_level_discount_allocations||[]).forEach(function(a){
+        if(!code && a.discount_application && a.discount_application.title) code = a.discount_application.title;
+      });
+    });
+    return code;
+  }
+  /* Kupon doğrulama isteğinde sepeti de yollarız — sunucu kapsamı (hangi ürünlere
+     tanımlı) bilerek indirimi HESAPLAR. Fiyat cart.js `item.price` = indirim ÖNCESİ ham
+     birim fiyat (kuruş); backend ödeme tutarını da aynı tabandan hesaplıyor. */
+  function promoLineItems(){
+    var c = state.cart; if(!c || !c.items) return [];
+    return c.items.map(function(it){ return { variant_id: it.variant_id, quantity: it.quantity, price: it.price }; });
+  }
+  function discountKurus(subKurus){
+    if(!state.discount){ if(state.cart && state.cart.total_discount > 0) return state.cart.total_discount; return 0; }
+    if(subKurus==null){ if(!state.cart) return 0; subKurus = grossKurus(); }
+    var d = state.discount;
+    /* SUNUCU HESABI (tek doğruluk kaynağı): ürün-bazlı kuponlarda indirim yalnız HAK EDEN
+       satırlara, o satırların tutarıyla sınırlı uygulanır. Tema kendi hesabını yapmaz —
+       kapsamı bilmediği için yapamaz da (18SETFIRSAT açığının kökeni buydu). */
+    if(d.amountKurus != null) return Math.min(d.amountKurus, subKurus);
+    if(d.min_subtotal && (subKurus/100) < d.min_subtotal) return 0;
+    var amt = d.type==='percentage' ? Math.round(subKurus * d.value/100) : Math.round(d.value*100);
+    return Math.min(amt, subKurus);
+  }
+  function applyPromo(){
+    var inp=$('[data-vco-promo-input]'), btn=$('[data-vco-promo-apply]'), msg=$('[data-vco-promo-msg]');
+    var code=(inp.value||'').trim(); if(!code){ inp.focus(); return; }
+    btn.disabled=true; btn.textContent='…'; msg.className='vco-promo__msg'; msg.textContent='Kontrol ediliyor…';
+    fetch(API + '/api/v1/discount/validate', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ code:code, line_items: promoLineItems() }) })
+      .then(function(r){ return r.json(); }).then(function(d){
+        btn.disabled=false; btn.textContent='Uygula';
+        if(!d.ok){ state.discount=null; msg.className='vco-promo__msg err'; msg.textContent='⛔ '+(d.error||'Kupon geçersiz.'); renderSummary(); updateCta(); return; }
+        // Sunucu tutarı hesapladıysa (amount) onu kullan — min_subtotal/kapsam kontrolleri
+        // orada zaten yapıldı. Eski sürümle uyum için amount yoksa yerel hesaba düşülür.
+        var amtK = (typeof d.amount === 'number') ? Math.round(d.amount*100) : null;
+        if(amtK === 0){ state.discount=null; msg.className='vco-promo__msg err'; msg.textContent='⛔ Bu kupon sepetindeki ürünlerde geçerli değil.'; renderSummary(); updateCta(); return; }
+        state.discount = { code:d.code, type:d.type, value:d.value, min_subtotal:d.min_subtotal||0, amountKurus: amtK };
+        showPromoApplied(); renderSummary(); updateCta(); autoTrigger();
+      }).catch(function(){ btn.disabled=false; btn.textContent='Uygula'; msg.className='vco-promo__msg err'; msg.textContent='Bağlantı hatası.'; });
+  }
+  /* Kupon uygulandıktan SONRA sepet değişirse (ürün ekle/çıkar/adet) sunucunun hesapladığı
+     tutar bayatlar — kapsam dışı ürün eklenip indirim olduğu gibi kalabilirdi. Sepet her
+     yenilendiğinde kuponu sessizce yeniden doğrula; geçersizleşirse düşür ve kullanıcıya söyle.
+     (Ödeme anında backend zaten yeniden hesaplıyor; bu, ekranın da doğru kalması için.) */
+  function revalidatePromo(){
+    if(!state.discount || !state.cart) return;
+    var code = state.discount.code;
+    fetch(API + '/api/v1/discount/validate', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ code:code, line_items: promoLineItems() }) })
+      .then(function(r){ return r.json(); }).then(function(d){
+        if(!state.discount || state.discount.code !== code) return; // arada değişmiş
+        var amtK = (d.ok && typeof d.amount === 'number') ? Math.round(d.amount*100) : 0;
+        if(!d.ok || amtK === 0){
+          state.discount = null;
+          var inp=$('[data-vco-promo-input]'), msg=$('[data-vco-promo-msg]');
+          if(inp){ inp.disabled=false; inp.value=''; }
+          if(msg){ msg.className='vco-promo__msg err'; msg.textContent='⛔ '+((d && d.error) || 'Kupon sepetindeki ürünlerde geçerli değil.'); }
+        } else {
+          state.discount.amountKurus = amtK;
+        }
+        renderSummary(); updateCta();
+      }).catch(function(){ /* ağ hatası → mevcut tutar korunur, backend son sözü söyler */ });
+  }
+  function showPromoApplied(){
+    var msg=$('[data-vco-promo-msg]'), inp=$('[data-vco-promo-input]');
+    if(!state.discount){ msg.textContent=''; msg.className='vco-promo__msg'; return; }
+    inp.value=state.discount.code; inp.disabled=true;
+    msg.className='vco-promo__msg ok';
+    msg.innerHTML='✓ “'+state.discount.code+'” uygulandı.<span class="vco-promo__rm" data-vco-promo-rm>kaldır</span>';
+    var rm=msg.querySelector('[data-vco-promo-rm]'); if(rm) rm.addEventListener('click', removePromo);
+  }
+  /* Sunucu ÖDEME ANINDA kuponu reddettiyse: sessizce indirimsiz devam ETME.
+     Kuponu düşür, tutarı güncelle ve müşteriye SEBEBİ göster.
+     Kök neden (Yunus, 27 Ağu 2026 — OZEL10 "sepette yansıdı, PayTR'de yansımadı"):
+     sepette müşterinin e-postası/telefonu henüz bilinmiyor, bu yüzden "tek müşteri bir kez"
+     kontrolü orada çalışmıyor; kimlik ödeme adımında öğreniliyor ve kupon orada düşüyor. */
+  function kuponReddedildi(d){
+    if(!d || d.error !== 'discount_rejected') return false;
+    state.discount = null;
+    var i=$('[data-vco-promo-input]'); if(i){ i.disabled=false; i.value=''; }
+    var m=$('[data-vco-promo-msg]');
+    if(m){ m.className='vco-promo__msg err'; m.textContent='⛔ '+(d.message||'Kupon uygulanamadı.')+' Tutar güncellendi.'; }
+    renderSummary(); updateCta();
+    status('⛔ '+(d.message||'Kupon uygulanamadı.')+' Tutar güncellendi, tekrar deneyebilirsiniz.');
+    return true;
+  }
+
+  function removePromo(){
+    state.discount=null; var inp=$('[data-vco-promo-input]'); if(inp){ inp.disabled=false; inp.value=''; }
+    var msg=$('[data-vco-promo-msg]'); if(msg){ msg.textContent=''; msg.className='vco-promo__msg'; }
+    renderSummary(); updateCta(); autoTrigger();
+  }
+
+  /* ============ Step navigasyonu ============ */
+  function goStep(n){
+    state.step = n; root.setAttribute('data-step', n);
+    status('');
+    root.querySelectorAll('.vco-step').forEach(function(s){
+      var sn = parseInt(s.dataset.go,10);
+      s.classList.toggle('is-active', sn===n);
+      s.classList.toggle('is-done', sn<n);
+    });
+    updateCta();
+    var top = root.getBoundingClientRect().top + window.pageYOffset - 20;
+    window.scrollTo({ top: top<0?0:top, behavior:'smooth' });
+    if(n===2){ loadCarriers(); if(state.payMethod==='kart') autoTrigger(); }
+  }
+
+  /* ============ Sidebar CTA (step-aware) ============ */
+  function updateCta(){
+    var btn = $('[data-vco-cta]'); if(!btn) return;
+    if(state.step===1){
+      btn.disabled = !(state.cart && state.cart.items && state.cart.items.length);
+      btn.textContent = 'Sepeti Onayla';
+    } else if(state.step===2){
+      if(state.orderBusy) return;
+      var ok = addrValid() && state.carrier && state.payMethod;
+      if(state.payMethod==='cod') ok = ok && !!state.codMethod; // kapıda: nakit/kart seçilmeli
+      if(state.payMethod==='kart' && state.loadedSig && dataSig()===state.loadedSig){ btn.disabled=false; btn.textContent='✓ Ödeme formuna git'; return; }
+      btn.disabled = !ok;
+      var codCard = state.payMethod==='cod' && state.codMethod==='kart';
+      btn.textContent = ok ? (state.payMethod==='kart' ? 'Kart ile Güvenli Öde' : (codCard ? 'Kapıda Kart ile Sipariş Ver' : 'Siparişi Tamamla')) : 'Adres, kargo ve ödeme seçin';
+    } else { btn.disabled = true; btn.textContent = 'Tamamlandı'; }
+  }
+
+  function dataSig(){
+    if(!addrValid() || !state.carrier) return '';
+    var inv = (root.querySelector('input[name="vco_invoice"]:checked')||{}).value||'bireysel';
+    return [f('first_name').value.trim(), f('last_name').value.trim(), f('phone').value.trim(), f('email').value.trim(),
+      getIl(), getIlce(), getMahalle(), f('address1').value.trim(), f('postal_code').value.trim(),
+      state.carrier, state.shipping, inv, (f('tc_no').value||'').trim(),
+      (f('firma_adi').value||'').trim(), (f('vergi_no').value||'').trim(),
+      root.querySelector('[data-vco-billing-diff]').checked ? '1':'0',
+      state.discount?state.discount.code:'', discountKurus()].join('|');
+  }
+
+  function autoTrigger(){
+    if(state.step!==2 || state.payMethod!=='kart') return;
+    clearTimeout(state.autoTimer);
+    state.autoTimer = setTimeout(function(){
+      var sig = dataSig();
+      if(!sig || state.initInFlight || sig === state.loadedSig) return;
+      startKart({ auto:true });
+    }, 800);
+  }
+
+  /* ============ Son adresi hatırla (localStorage — cihaz bazlı, MAHALLE dahil) ============ */
+  var LS_ADDR='vm_last_addr', _saveAddrT;
+  function saveLastAddr(){
+    try{
+      var il=getIl(), ilce=getIlce(); if(!il||!ilce) return;
+      localStorage.setItem(LS_ADDR, JSON.stringify({ fn:(f('first_name').value||''), ln:(f('last_name').value||''), ph:(f('phone').value||''), em:(f('email').value||''), a1:(f('address1').value||''), zip:(f('postal_code').value||''), il:il, ilce:ilce, mah:getMahalle() }));
+    }catch(e){}
+  }
+  function prefillLastAddr(){
+    try{
+      var d=JSON.parse(localStorage.getItem(LS_ADDR)||'null'); if(!d||!d.il) return;
+      [['first_name','fn'],['last_name','ln'],['phone','ph'],['email','em'],['address1','a1'],['postal_code','zip']].forEach(function(p){ var el=f(p[0]); if(el && !el.value && d[p[1]]) el.value=d[p[1]]; });
+      if(f('addr_sokak') && !f('addr_sokak').value) addrParcaAyikla(f('address1')?f('address1').value:'');
+      var ilEl=root.querySelector('#vco-province');
+      if(ilEl && !ilEl.value){
+        document.dispatchEvent(new CustomEvent('tr-cascade-preselect',{detail:{idPrefix:'vco',province:d.il,district:d.ilce,neighborhood:d.mah}}));
+        var _t=0; var _iv=setInterval(function(){ _t++; if(ilEl.value||_t>=24){ clearInterval(_iv); state.carriersLoadedFor=''; loadCarriers(); updateCta(); } },150);
+      }
+    }catch(e){}
+  }
+
+  /* ============ Cart attribute'ları ============ */
+  function saveAttrs(){
+    saveLastAddr();
+    var inv = (root.querySelector('input[name="vco_invoice"]:checked')||{}).value || 'bireysel';
+    var billDiff = root.querySelector('[data-vco-billing-diff]').checked ? '1':'0';
+    var attrs = {
+      _tr_first_name:f('first_name').value.trim(), _tr_last_name:f('last_name').value.trim(),
+      _tr_phone:f('phone').value.trim(), _tr_email:f('email').value.trim(),
+      _tr_il:getIl(), _tr_ilce:getIlce(), _tr_mahalle:getMahalle(),
+      _tr_address1:f('address1').value.trim(), _tr_postal_code:f('postal_code').value.trim(),
+      _tr_shipping_cost:String(effShip()), _tr_shipping_courier:state.carrier||'',
+      _tr_invoice_type:inv, _tr_tc_no:(f('tc_no').value||'').trim(),
+      _tr_firma_adi:(f('firma_adi').value||'').trim(), _tr_vergi_no:(f('vergi_no').value||'').trim(),
+      _tr_vergi_dairesi:(f('vergi_dairesi').value||'').trim(), _tr_billing_diff:billDiff,
+      _tr_payment_method:state.payMethod,
+      _tr_billing_address1:(f('billing_address1').value||'').trim(),
+      _tr_billing_name: billDiff==='1' ? (f('billing_name').value||'').trim() : '',
+      _tr_billing_phone: billDiff==='1' ? (f('billing_phone').value||'').trim() : '',
+      _tr_billing_email: billDiff==='1' ? (f('billing_email').value||'').trim() : '',
+      _tr_billing_il: billDiff==='1' ? (root.querySelector('#vco-bill-province')||{}).value||'' : '',
+      _tr_billing_ilce: billDiff==='1' ? (root.querySelector('#vco-bill-district')||{}).value||'' : ''
+    };
+    return fetch('/cart/update.js', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({attributes:attrs}) });
+  }
+
+  /* ============ Ortak sipariş payload ============ */
+  function buildPayload(cart){
+    var inv = (root.querySelector('input[name="vco_invoice"]:checked')||{}).value || 'bireysel';
+    return {
+      line_items: cart.items.map(function(it){ return { variant_id:it.variant_id, quantity:it.quantity, title:it.product_title||it.title, price:it.price, product_type:it.product_type||'Genel', sku:it.sku||'' }; }),
+      shipping_cost: effShip(),
+      shipping_courier: state.carrier||'',
+      saved_address: state.savedAddress ? '1' : '',
+      payment_method: state.payMethod,
+      cod_method: state.payMethod==='cod' ? (state.codMethod||'nakit') : '',
+      cod_surcharge: (function(){ var fk=codFeeKurus(grossKurus(cart), effShip()); return fk>0 ? +(fk/100).toFixed(2) : 0; })(),
+      discount_code: state.discount ? state.discount.code : cartDiscountCode(cart),
+      discount_amount: (function(){ var g=grossKurus(cart); var dk=Math.min(discountKurus(g), g); return dk>0 ? +(dk/100).toFixed(2) : 0; })(),
+      first_name:f('first_name').value.trim(), last_name:f('last_name').value.trim(),
+      phone:f('phone').value.trim(), email:f('email').value.trim(),
+      {%- if customer -%}customer_id: {{ customer.id | json }}, customer_email: {{ customer.email | json }},{%- endif -%}
+      address1:f('address1').value.trim(), address2:getMahalle(),
+      city:getIlce(), province:getIl(), zip:f('postal_code').value.trim(),
+      identity_number:(f('tc_no').value||'11111111111').trim()||'11111111111',
+      invoice_type:inv, tc_no:(f('tc_no').value||'').trim(),
+      firma_adi:(f('firma_adi').value||'').trim(), vergi_no:(f('vergi_no').value||'').trim(), vergi_dairesi:(f('vergi_dairesi').value||'').trim(),
+      billing_diff: root.querySelector('[data-vco-billing-diff]').checked ? '1':'0',
+      billing_address1:(f('billing_address1').value||'').trim(),
+      billing_name:(f('billing_name').value||'').trim(), billing_phone:(f('billing_phone').value||'').trim(), billing_email:(f('billing_email').value||'').trim(),
+      billing_il:(root.querySelector('#vco-bill-province')||{}).value||'', billing_ilce:(root.querySelector('#vco-bill-district')||{}).value||''
+    };
+  }
+
+  /* ============ İyzico (Kredi Kartı) ============ */
+  function clearIyzico(){
+    var old = document.getElementById('iyzipay-checkout-form'); if(old) old.remove();
+    document.querySelectorAll('script[data-vco-iyzi], script[src*="iyzipay.com"]').forEach(function(s){ s.remove(); });
+    try { window.iyziInit = undefined; } catch(e){}
+    try { window.iyziWebpackJsonp = undefined; } catch(e){}
+  }
+  function injectIyzico(html){
+    var c = $('#iyzico-container');
+    $('[data-vco-loading]').style.display='none';
+    var temp = document.createElement('div'); temp.innerHTML = html;
+    if(!document.getElementById('iyzipay-checkout-form')){
+      var d=document.createElement('div'); d.id='iyzipay-checkout-form'; d.className='responsive'; c.appendChild(d);
+    }
+    temp.querySelectorAll('script').forEach(function(old){
+      var s=document.createElement('script'); if(old.src) s.src=old.src; else s.textContent=old.textContent; if(old.type) s.type=old.type;
+      s.setAttribute('data-vco-iyzi','1'); document.body.appendChild(s);
+    });
+  }
+  function scrollToPay(){ var p=$('[data-vco-payment]'); if(p) p.scrollIntoView({behavior:'smooth', block:'start'}); }
+  /* ============ PayTR (Kredi Kartı — gateway toggle; İyzico'ya paralel) ============ */
+  function startKart(opts){ if(KART_GATEWAY==='halkode') startPaymentHalkode(opts); else if(KART_GATEWAY==='paytr') startPaymentPaytr(opts); else startPayment(opts); }
+  function clearPaytr(){ var i=document.getElementById('paytriframe'); if(i) i.remove(); }
+  function injectPaytr(url){
+    $('[data-vco-loading]').style.display='none';
+    var c=$('#iyzico-container');
+    var ifr=document.createElement('iframe'); ifr.id='paytriframe'; ifr.src=url;
+    ifr.setAttribute('frameborder','0'); ifr.setAttribute('scrolling','no'); ifr.style.width='100%'; ifr.style.minHeight='620px'; ifr.style.border='0';
+    c.appendChild(ifr);
+    if(!document.getElementById('paytr-resizer')){
+      var s=document.createElement('script'); s.id='paytr-resizer'; s.src='https://www.paytr.com/js/iframeResizer.min.js';
+      s.onload=function(){ try{ window.iFrameResize({}, '#paytriframe'); }catch(e){} };
+      document.body.appendChild(s);
+    } else { try{ window.iFrameResize({}, '#paytriframe'); }catch(e){} }
+  }
+  function startPaymentPaytr(opts){
+    opts = opts || {};
+    if(!addrValid()){ if(!opts.auto) status(address1Sorun() || 'Lütfen adres bilgilerini eksiksiz doldurun.'); return; }
+    if(!state.carrier){ if(!opts.auto) status('Lütfen kargo firması seçin.'); return; }
+    var sig = dataSig();
+    if(state.initInFlight) return;
+    if(sig && sig === state.loadedSig){ if(!opts.auto) scrollToPay(); return; }
+    state.initInFlight = true;
+    var btn=$('[data-vco-cta]'); btn.disabled=true; btn.textContent = state.loadedSig ? 'Tutar güncelleniyor…' : 'Ödeme yükleniyor…';
+    status('');
+    var gate = $('[data-vco-kart-gate]'); if(gate) gate.style.display='none';
+    $('[data-vco-iyzico]').style.display='block';
+    clearIyzico(); clearPaytr();
+    $('[data-vco-loading]').style.display='block';
+    $('[data-vco-err]').style.display='none';
+    if(!opts.auto) scrollToPay();
+    saveAttrs().then(function(){ return fetch('/cart.js').then(function(r){return r.json();}); }).then(function(cart){
+      return fetch(API + '/api/v1/payment/paytr/initialize', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(buildPayload(cart)) });
+    }).then(function(r){ return r.json(); }).then(function(data){
+      state.initInFlight = false;
+      if(!data.ok || !(data.iframe_url || data.token)){
+        $('[data-vco-loading]').style.display='none';
+        if(kuponReddedildi(data)){ btn.disabled=false; btn.textContent='Ödemeyi tekrar dene'; return; }
+        $('[data-vco-err]').style.display='block';
+        $('[data-vco-err]').textContent = '⛔ ' + (data.message || data.detail || data.error || 'PayTR ödeme formu başlatılamadı.');
+        btn.disabled=false; btn.textContent='Ödemeyi tekrar dene';
+        return;
+      }
+      injectPaytr(data.iframe_url || ('https://www.paytr.com/odeme/guvenli/' + data.token));
+      state.loadedSig = sig;
+      btn.disabled=false; btn.textContent='✓ Ödeme formuna git';
+    }).catch(function(err){
+      state.initInFlight=false; $('[data-vco-loading]').style.display='none';
+      $('[data-vco-err]').style.display='block'; $('[data-vco-err]').textContent='⛔ Bağlantı hatası: '+(err.message||err);
+      btn.disabled=false; btn.textContent='Ödemeyi tekrar dene';
+    });
+  }
+
+  /* ============ Halköde (Kredi Kartı — kart formu + taksit + 3D Secure) ============
+     PayTR iframe'inden FARKI: kart bilgisi bizim API'miz üzerinden Halköde'ye iletilir.
+     Bu kodda kart alanları HİÇBİR yere yazılmaz (console, localStorage, sepet özniteliği
+     YOK; dataSig/saveAttrs data-f okur, bu alanlar data-hk). Kart yalnız "Ödeme Yap"
+     anında initialize gövdesine konur. Taslak sipariş form doldurulurken DEĞİL, o anda
+     açılır. Oturum kaydı (Clarity) için alanlar data-clarity-mask ile maskelenir. */
+  var hk = { amountKurus:0, bin:'', seq:0, busy:false };
+  function hkEl(n){ return root.querySelector('[data-hk="'+n+'"]'); }
+  function hkDigits(v){ return String(v==null?'':v).replace(/\D/g,''); }
+  function hkTotalKurus(){ var g=grossKurus(); return Math.max(0, g - Math.min(discountKurus(g), g)) + Math.round(effShip()*100); }
+  function hkLuhn(n){ var s=0, alt=false; for(var i=n.length-1;i>=0;i--){ var d=n.charCodeAt(i)-48; if(alt){ d*=2; if(d>9) d-=9; } s+=d; alt=!alt; } return s%10===0; }
+  function hkErr(msg){ var e=$('[data-vco-err]'); if(!e) return; if(msg){ e.textContent=msg; e.style.display='block'; } else { e.textContent=''; e.style.display='none'; } }
+  function renderHalkodeForm(){
+    if(hkEl('form')) return;
+    var c=$('#iyzico-container'); c.classList.add('is-hk');
+    var w=document.createElement('div'); w.className='vco-hk'; w.setAttribute('data-hk','form'); w.setAttribute('data-clarity-mask','True');
+    w.innerHTML =
+      '<div class="vco-row"><div><label class="vco-lbl" for="vco-hk-ad">Ad Soyad *</label>'
+      + '<input class="vco-input" id="vco-hk-ad" data-hk="ad" autocomplete="cc-name" placeholder="Kart üzerindeki ad soyad"></div></div>'
+      + '<div class="vco-row"><div><label class="vco-lbl" for="vco-hk-no">Kart Numarası *</label>'
+      + '<input class="vco-input" id="vco-hk-no" data-hk="no" inputmode="numeric" autocomplete="cc-number" maxlength="23" placeholder="0000 0000 0000 0000"></div></div>'
+      + '<div class="vco-row vco-row--2">'
+      + '<div><label class="vco-lbl" for="vco-hk-skt">Son Kullanma *</label><input class="vco-input" id="vco-hk-skt" data-hk="skt" inputmode="numeric" autocomplete="cc-exp" maxlength="5" placeholder="AA/YY"></div>'
+      + '<div><label class="vco-lbl" for="vco-hk-cvv">CVV *</label><input class="vco-input" id="vco-hk-cvv" data-hk="cvv" inputmode="numeric" autocomplete="cc-csc" maxlength="4" placeholder="000"></div>'
+      + '</div>'
+      + '<div class="vco-row" data-hk="taksit-satir" style="display:none"><div><label class="vco-lbl" for="vco-hk-taksit">Taksit</label>'
+      + '<select id="vco-hk-taksit" data-hk="taksit"><option value="1">Tek çekim</option></select></div></div>'
+      + '<button type="button" class="vco-cta" data-hk="ode">Ödeme Yap</button>';
+    c.appendChild(w);
+    var no=hkEl('no'), skt=hkEl('skt'), cvv=hkEl('cvv');
+    no.addEventListener('input', function(){
+      var d=hkDigits(no.value).slice(0,19);
+      no.value = d.replace(/(\d{4})(?=\d)/g,'$1 ');
+      var b=d.slice(0,6);
+      if(b.length<6){ hk.bin=''; hkTaksitGizle(); return; }
+      if(b!==hk.bin){ hk.bin=b; hkTaksitSorgu(); }
+    });
+    skt.addEventListener('input', function(){
+      var d=hkDigits(skt.value).slice(0,4);
+      skt.value = d.length>2 ? d.slice(0,2)+'/'+d.slice(2) : d;
+    });
+    cvv.addEventListener('input', function(){ cvv.value=hkDigits(cvv.value).slice(0,4); });
+    hkEl('ode').addEventListener('click', hkOde);
+  }
+  function hkTaksitGizle(){ var r=hkEl('taksit-satir'), s=hkEl('taksit'); if(s) s.innerHTML='<option value="1">Tek çekim</option>'; if(r) r.style.display='none'; }
+  /* Taksit tablosu yalnız BIN (ilk 6 hane) ile sorulur — tam kart numarası gönderilmez.
+     Yalnız müşterinin ödeyeceği TOPLAMI sepet tutarına EŞİT olan seçenekler listelenir:
+     vade farklı bir seçenek sipariş tutarından farklı çekim yapar ve dönüşte tutar
+     uyuşmazlığına düşer (ödeme alınır, sipariş tamamlanmaz). Bugün hepsi eşit (ölçüldü). */
+  function hkTaksitSorgu(){
+    var amount=hkTotalKurus(); hk.amountKurus=amount;
+    if(!hk.bin || amount<=0){ hkTaksitGizle(); return; }
+    var my=++hk.seq;
+    fetch(API + '/api/v1/payment/halkode/installments', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ bin: hk.bin, amount: +(amount/100).toFixed(2) }) })
+      .then(function(r){ return r.json(); })
+      .then(function(d){
+        if(my!==hk.seq) return;
+        var list = (d && d.ok && d.installments) ? d.installments.filter(function(i){ return Math.round(parseFloat(i.amount_to_be_paid)*100)===amount; }) : [];
+        if(!list.length){ hkTaksitGizle(); return; }
+        var s=hkEl('taksit'), secili=s ? s.value : '1';
+        s.innerHTML = list.map(function(i){
+          var n=Number(i.installments_number)||1;
+          return '<option value="'+n+'">'+(n===1 ? 'Tek çekim · '+money(amount) : n+' taksit · toplam '+money(amount))+'</option>';
+        }).join('');
+        if(s.querySelector('option[value="'+secili+'"]')) s.value=secili;
+        hkEl('taksit-satir').style.display='block';
+      })
+      .catch(function(){ if(my===hk.seq) hkTaksitGizle(); });
+  }
+  function startPaymentHalkode(opts){
+    opts = opts || {};
+    if(!addrValid()){ if(!opts.auto) status(address1Sorun() || 'Lütfen adres bilgilerini eksiksiz doldurun.'); return; }
+    if(!state.carrier){ if(!opts.auto) status('Lütfen kargo firması seçin.'); return; }
+    var sig = dataSig();
+    if(sig && sig === state.loadedSig){ if(!opts.auto) scrollToPay(); return; }
+    status('');
+    var gate = $('[data-vco-kart-gate]'); if(gate) gate.style.display='none';
+    $('[data-vco-iyzico]').style.display='block';
+    $('[data-vco-loading]').style.display='none';
+    hkErr('');
+    renderHalkodeForm();
+    if(hk.bin && hkTotalKurus()!==hk.amountKurus) hkTaksitSorgu(); // tutar değişti → taksit tablosu tazelenir
+    state.loadedSig = sig;
+    updateCta();
+    if(!opts.auto) scrollToPay();
+  }
+  function hkOde(){
+    if(hk.busy) return;
+    hkErr('');
+    if(!addrValid()){ hkErr(address1Sorun() || 'Lütfen adres bilgilerini eksiksiz doldurun.'); return; }
+    if(!state.carrier){ hkErr('Lütfen kargo firması seçin.'); return; }
+    var ad=(hkEl('ad').value||'').trim(), no=hkDigits(hkEl('no').value), skt=hkDigits(hkEl('skt').value), cvv=hkDigits(hkEl('cvv').value);
+    if(!ad){ hkErr('Kart üzerindeki ad soyadı yazın.'); return; }
+    if(no.length<15 || no.length>19 || !hkLuhn(no)){ hkErr('Kart numarasını kontrol edin.'); return; }
+    var ay=parseInt(skt.slice(0,2),10), yil=parseInt(skt.slice(2,4),10);
+    var simdi=new Date(), buYil=simdi.getFullYear()%100, buAy=simdi.getMonth()+1;
+    if(skt.length!==4 || !(ay>=1 && ay<=12) || yil<buYil || (yil===buYil && ay<buAy)){ hkErr('Son kullanma tarihini AA/YY biçiminde kontrol edin.'); return; }
+    if(cvv.length<3){ hkErr('CVV kodunu kontrol edin.'); return; }
+    var taksit=parseInt((hkEl('taksit')||{}).value,10)||1;
+    hk.busy=true;
+    var b=hkEl('ode'); b.disabled=true; b.textContent='Bankaya yönlendiriliyor…';
+    var geri=function(){ hk.busy=false; b.disabled=false; b.textContent='Ödeme Yap'; };
+    saveAttrs().then(function(){ return fetch('/cart.js').then(function(r){ return r.json(); }); }).then(function(cart){
+      var p = buildPayload(cart);
+      p.cc_holder_name = ad; p.cc_no = no; p.expiry_month = ('0'+ay).slice(-2); p.expiry_year = String(2000+yil); p.cvv = cvv;
+      p.installments_number = taksit;
+      return fetch(API + '/api/v1/payment/halkode/initialize', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(p) });
+    }).then(function(r){ return r.json(); }).then(function(data){
+      if(data && data.ok && data.form_html){
+        // 3D formu kendini bankaya POST eder; innerHTML içindeki script çalışmaz → belge yazılır.
+        document.open(); document.write(data.form_html); document.close();
+        return;
+      }
+      geri();
+      if(kuponReddedildi(data)){ hkErr((data && data.message) || 'Kupon uygulanamadı, tutar güncellendi.'); state.loadedSig=''; hkTaksitSorgu(); return; }
+      hkErr((data && (data.message || data.detail || data.error)) || 'Kart ödemesi başlatılamadı. Lütfen tekrar deneyin.');
+    }).catch(function(err){
+      geri();
+      hkErr('Bağlantı hatası: '+((err && err.message) || err));
+    });
+  }
+
+  function startPayment(opts){
+    opts = opts || {};
+    if(!addrValid()){ if(!opts.auto) status(address1Sorun() || 'Lütfen adres bilgilerini eksiksiz doldurun.'); return; }
+    if(!state.carrier){ if(!opts.auto) status('Lütfen kargo firması seçin.'); return; }
+    var sig = dataSig();
+    if(state.initInFlight) return;
+    if(sig && sig === state.loadedSig){ if(!opts.auto) scrollToPay(); return; }
+    state.initInFlight = true;
+    var reinit = !!state.loadedSig;
+    var btn=$('[data-vco-cta]'); btn.disabled=true; btn.textContent = reinit ? 'Tutar güncelleniyor…' : 'Kart formu yükleniyor…';
+    status('');
+    var gate = $('[data-vco-kart-gate]'); if(gate) gate.style.display='none';
+    $('[data-vco-iyzico]').style.display='block';
+    clearIyzico();
+    $('[data-vco-loading]').style.display='block';
+    $('[data-vco-err]').style.display='none';
+    if(!opts.auto) scrollToPay();
+
+    saveAttrs().then(function(){ return fetch('/cart.js').then(function(r){return r.json();}); }).then(function(cart){
+      return fetch(API + '/api/v1/payment/iyzico/initialize', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(buildPayload(cart)) });
+    }).then(function(r){ return r.json(); }).then(function(data){
+      state.initInFlight = false;
+      if(!data.ok || !data.checkoutFormContent){
+        $('[data-vco-loading]').style.display='none';
+        if(kuponReddedildi(data)){ btn.disabled=false; btn.textContent='Ödemeyi tekrar dene'; return; }
+        $('[data-vco-err]').style.display='block';
+        $('[data-vco-err]').textContent = '⛔ ' + (data.message || data.detail || data.error || 'Ödeme formu başlatılamadı.');
+        btn.disabled=false; btn.textContent='Ödemeyi tekrar dene';
+        return;
+      }
+      injectIyzico(data.checkoutFormContent);
+      state.loadedSig = sig;
+      btn.disabled=false; btn.textContent='✓ Ödeme formuna git';
+    }).catch(function(err){
+      state.initInFlight = false;
+      $('[data-vco-loading]').style.display='none';
+      $('[data-vco-err]').style.display='block'; $('[data-vco-err]').textContent='⛔ Bağlantı hatası: '+(err.message||err);
+      btn.disabled=false; btn.textContent='Ödemeyi tekrar dene';
+    });
+  }
+
+  /* ============ Havale / EFT ============ */
+  function submitHavale(){
+    if(state.orderBusy) return;
+    if(!addrValid()){ status(address1Sorun() || 'Lütfen adres bilgilerini eksiksiz doldurun.'); return; }
+    if(!state.carrier){ status('Lütfen kargo firması seçin.'); return; }
+    state.orderBusy = true; var btn=$('[data-vco-cta]'); btn.disabled=true; btn.textContent='Sipariş oluşturuluyor…'; status('');
+    saveAttrs().then(function(){ return fetch('/cart.js').then(function(r){return r.json();}); }).then(function(cart){
+      return fetch(API + '/api/v1/payment/havale/create', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(buildPayload(cart)) });
+    }).then(function(r){ return r.json(); }).then(function(d){
+      state.orderBusy = false;
+      if(!d.ok){ if(!kuponReddedildi(d)) status('⛔ '+(d.message||d.detail||d.error||'Sipariş oluşturulamadı.')); btn.disabled=false; updateCta(); return; }
+      renderHavaleResult(d); goStep(3);
+    }).catch(function(err){ state.orderBusy=false; status('⛔ Bağlantı hatası: '+(err.message||err)); btn.disabled=false; updateCta(); });
+  }
+  // Sipariş başarıyla oluştu → Shopify sepetini temizle + üstteki sayacı sıfırla
+  function clearCartAfterOrder(){
+    try{ localStorage.setItem('vm_clear_cart','1'); }catch(e){}
+    // ÖNCE indirim kuponunu kaldır, SONRA sepeti boşalt. /cart/clear.js yalnızca line item
+    // siler; uygulanmış kupon (ör. OZEL25) cart cookie'sinde kalıp sonraki alışverişte tekrar
+    // uygulanıyordu. {discount:''} kupon kodunu da temizler (checkout girişindeki #1 ile aynı).
+    fetch('/cart/update.js', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ discount:'' }) })
+      .then(function(){ return fetch('/cart/clear.js', { method:'POST' }); })
+      .catch(function(){});
+    document.querySelectorAll('.cart-bubble, [data-vm-cart-count], [data-cart-count], .cart-count, .cart-count-bubble').forEach(function(e){ e.setAttribute('hidden',''); e.style.display='none'; });
+    // --has-cart class'ı SVG'ye donut MASK basıyor (balonun oturduğu köşeyi deler);
+    // balon gizlenince delik kalıyor → çanta ikonu bozuk görünüyordu. Class'ı da kaldır.
+    document.querySelectorAll('cart-icon').forEach(function(e){ e.classList.remove('header-actions__cart-icon--has-cart'); });
+  }
+  function renderHavaleResult(d){
+    clearCartAfterOrder();
+    var banks = (d.vendors||[]).filter(function(v){ return v.iban; });
+    var ibanHtml = banks.length ? banks.map(function(v){
+      return '<div class="vco-iban"><div class="vco-iban__bank">'+(v.bank||v.name||'BANKA')+'</div>'+
+        '<div class="vco-iban__row">'+(v.account_holder||v.name||'')+'</div>'+
+        '<div class="vco-iban__row"><span class="vco-iban__no">'+v.iban+'</span></div>'+
+        (v.amount ? '<div class="vco-iban__row">Tutar: <b>'+moneyTl(v.amount)+'</b></div>' : '')+
+        '<button type="button" class="vco-copy" data-copy="'+v.iban.replace(/\s/g,'')+'">IBAN Kopyala</button></div>';
+    }).join('') : '<p class="vco-hint">Banka bilgileri e-posta ile gönderilecektir.</p>';
+    $('[data-vco-result]').innerHTML =
+      '<div class="vco-result__ic vco-result__ic--wait">'+IC.bank+'</div>'+
+      '<h3>Siparişin alındı — ödeme bekleniyor</h3>'+
+      '<p>Aşağıdaki hesaba havale/EFT yap. Açıklamaya <b>mutlaka</b> sipariş kodunu yaz:</p>'+
+      '<div class="vco-result__code">'+(d.order_code||d.order_name||'—')+'</div>'+
+      '<div style="text-align:left;max-width:420px;margin:18px auto 0">'+ibanHtml+'</div>'+
+      '<p style="margin-top:18px">Ödemen onaylanınca siparişin hazırlanır. <b>3 iş günü</b> içinde ödenmezse otomatik iptal olur.</p>'+
+      '<a href="/pages/siparis-takip?order='+encodeURIComponent((d.order_code||d.order_name||'').replace('#',''))+'&email='+encodeURIComponent((d.email||((f('email')||{}).value)||''))+'" class="vco-back" style="margin-top:16px">Siparişini Takip Et →</a>';
+  }
+
+  /* ============ Kapıda Ödeme (COD) ============ */
+  function submitCod(){
+    if(state.orderBusy) return;
+    if(!addrValid()){ status(address1Sorun() || 'Lütfen adres bilgilerini eksiksiz doldurun.'); return; }
+    if(!state.carrier){ status('Lütfen kargo firması seçin.'); return; }
+    state.orderBusy = true; var btn=$('[data-vco-cta]'); btn.disabled=true; btn.textContent='Sipariş oluşturuluyor…'; status('');
+    saveAttrs().then(function(){ return fetch('/cart.js').then(function(r){return r.json();}); }).then(function(cart){
+      return fetch(API + '/api/v1/payment/cod/create', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(buildPayload(cart)) });
+    }).then(function(r){ return r.json(); }).then(function(d){
+      state.orderBusy = false;
+      if(!d.ok){ if(!kuponReddedildi(d)) status('⛔ '+(d.message||d.detail||d.error||'Sipariş oluşturulamadı.')); btn.disabled=false; updateCta(); return; }
+      renderCodResult(d); goStep(3);
+    }).catch(function(err){ state.orderBusy=false; status('⛔ Bağlantı hatası: '+(err.message||err)); btn.disabled=false; updateCta(); });
+  }
+  function renderCodResult(d){
+    clearCartAfterOrder();
+    var total = d.total != null ? moneyTl(d.total) : '';
+    $('[data-vco-result]').innerHTML =
+      '<div class="vco-result__ic vco-result__ic--ok">'+IC.box+'</div>'+
+      '<h3>Siparişin alındı!</h3>'+
+      '<p>Sipariş kodun:</p>'+
+      '<div class="vco-result__code">'+(d.order_code||d.order_name||'—')+'</div>'+
+      '<p style="margin-top:14px">Ürünün <b>kapıda ödemeli</b> kargo ile gönderilecek.'+(total?' Teslimatta kuryeye ödeyeceğin tutar: <b>'+total+'</b>.':'')+'</p>'+
+      '<a href="/pages/siparis-takip?order='+encodeURIComponent((d.order_code||d.order_name||'').replace('#',''))+'&email='+encodeURIComponent((d.email||((f('email')||{}).value)||''))+'" class="vco-back" style="margin-top:16px">Siparişini Takip Et →</a>';
+  }
+
+  /* ============ Init ============ */
+  fetch('/cart.js').then(function(r){return r.json();}).then(function(cart){
+    state.cart = cart; renderCart(); renderSummary(); updateCount(); updateCta(); revalidatePromo();
+    var a = cart.attributes || {};
+    if(a._tr_first_name){ ['first_name','last_name','phone','email','address1','postal_code','tc_no'].forEach(function(k){ var el=f(k); if(el && a['_tr_'+k]) el.value=a['_tr_'+k]; }); addrParcaAyikla(f('address1')?f('address1').value:''); }
+    setTimeout(prefillLastAddr, 800); // son kullanılan adresi (mahalle dahil) cihazdan hatırla
+  });
+  // Herhangi bir adres alanı değişince son adresi güncelle (debounced)
+  root.addEventListener('change', function(e){ if(!(e && e.target && e.target===saved)) state.savedAddress=false; clearTimeout(_saveAddrT); _saveAddrT=setTimeout(saveLastAddr, 700); });
+
+  // Step 1 sepet düzenleme (event delegation)
+  var cartBox = $('[data-vco-cart]');
+  if(cartBox) cartBox.addEventListener('click', function(e){
+    var li = e.target.closest('.vco-li'); if(!li) return;
+    var line = parseInt(li.dataset.line,10); var it = state.cart.items[line-1]; if(!it) return;
+    if(e.target.closest('[data-qa="inc"]')){ li.classList.add('vco-li--busy'); changeLine(line, it.quantity+1); }
+    else if(e.target.closest('[data-qa="dec"]')){ li.classList.add('vco-li--busy'); changeLine(line, it.quantity-1); }
+    else if(e.target.closest('[data-qa="rm"]')){ li.classList.add('vco-li--busy'); changeLine(line, 0); }
+  });
+  // #1 Sepet (drawer) Shopify cart-indirimini checkout'tan kaldır — /cart/update.js {discount:''}
+  root.addEventListener('click', function(e){
+    if(!e.target.closest('[data-vco-cartdisc-rm]')) return;
+    e.preventDefault(); if(state.orderBusy) return; state.orderBusy = true;
+    var dl=$('[data-vco-disc-label]'); if(dl) dl.textContent = 'Kaldırılıyor…';
+    fetch('/cart/update.js', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ discount:'' }) })
+      .then(function(){ return fetch('/cart.js'); }).then(function(r){ return r.json(); }).then(function(cart){
+        state.cart = cart; state.orderBusy = false; renderCart(); renderSummary(); updateCount(); updateCta(); revalidatePromo();
+      }).catch(function(){ state.orderBusy = false; renderSummary(); });
+  });
+
+  // Cross-sell "+Ekle" → sepete ekle
+  var xsList = $('[data-vco-xsell-list]');
+  if(xsList) xsList.addEventListener('click', function(e){
+    var btn=e.target.closest('[data-xs-add]'); if(!btn) return;
+    var card=btn.closest('[data-xs-vid]'); var vid=card&&card.dataset.xsVid; if(!vid) return;
+    btn.disabled=true; btn.textContent='Ekleniyor…';
+    fetch('/cart/add.js',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:vid,quantity:1})})
+      .then(function(){ return fetch('/cart.js').then(function(r){return r.json();}); }).then(function(cart){
+        state.cart=cart; renderCart(); renderSummary(); updateCount(); updateCta(); revalidatePromo();
+        btn.textContent='✓ Eklendi';
+      }).catch(function(){ btn.disabled=false; btn.textContent='+ Ekle'; });
+  });
+
+  // Stepper tıklama (1 ve 2 ileri-geri)
+  root.querySelectorAll('.vco-step[data-go]').forEach(function(s){
+    var sn = parseInt(s.dataset.go,10);
+    if(sn===1 || sn===2) s.addEventListener('click', function(){
+      if(state.step===3) return; // sonuç ekranından geri dönülmez
+      if(sn===2 && !(state.cart && state.cart.items && state.cart.items.length)) return;
+      goStep(sn);
+    });
+  });
+
+  // Sidebar CTA
+  $('[data-vco-cta]').addEventListener('click', function(){
+    if(state.step===1){ if(state.cart && state.cart.items && state.cart.items.length) goStep(2); return; }
+    if(state.step===2){
+      if(state.payMethod==='kart'){
+        if(state.loadedSig && dataSig()===state.loadedSig) scrollToPay();
+        else startKart({ auto:false });
+      } else if(state.payMethod==='havale'){ submitHavale(); }
+      else if(state.payMethod==='cod'){ submitCod(); }
+    }
+  });
+
+  // Ödeme yöntemi seç
+  root.querySelectorAll('.vco-pm').forEach(function(el){
+    el.addEventListener('click', function(){ selectPm(el.dataset.pm); });
+  });
+
+  // İndirim kuponu
+  var _pb=$('[data-vco-promo-apply]'); if(_pb) _pb.addEventListener('click', applyPromo);
+  var _pi=$('[data-vco-promo-input]'); if(_pi) _pi.addEventListener('keydown', function(e){ if(e.key==='Enter'){ e.preventDefault(); applyPromo(); } });
+
+  // Kayıtlı adres seç — Shopify NATIVE adres formunda TR için İL/Mahalle alanı YOK (sadece Şehir=ilçe + address2).
+  // Bu yüzden ilçeden il'i kendimiz türetiriz (tr-il-ilce.json reverse-lookup).
+  var _ilIlce=null;
+  function loadIlIlce(){ if(_ilIlce) return Promise.resolve(_ilIlce); return fetch("{{ 'tr-il-ilce.json' | asset_url }}").then(function(r){return r.json();}).then(function(j){ _ilIlce=j; return j; }).catch(function(){return null;}); }
+  function _norm(s){ return (s||'').trim().toLocaleLowerCase('tr'); }
+  function deriveLoc(ilRaw, cityRaw){
+    var out={ province:'', district:'' }; var j=_ilIlce;
+    if(!j||!j.iller){ out.province=(ilRaw||'').trim(); out.district=(cityRaw||'').trim(); return out; }
+    var ilByName={}; Object.keys(j.iller).forEach(function(k){ ilByName[_norm(j.iller[k].ad)]=j.iller[k].ad; });
+    if(ilRaw && ilByName[_norm(ilRaw)]) out.province=ilByName[_norm(ilRaw)];                 // 1) province geçerli il mi
+    if(!out.province && cityRaw && ilByName[_norm(cityRaw)]){ out.province=ilByName[_norm(cityRaw)]; return out; } // 2) Şehir bir il mi
+    if(!out.province && cityRaw){                                                            // 3) Şehir bir ilçe mi → il'i bul
+      Object.keys(j.iller).some(function(k){
+        return j.iller[k].ilceler.some(function(d){ if(_norm(d)===_norm(cityRaw)){ out.province=j.iller[k].ad; out.district=d; return true; } return false; });
+      });
+    }
+    if(out.province && !out.district && cityRaw && _norm(cityRaw)!==_norm(out.province)) out.district=cityRaw.trim();
+    return out;
+  }
+  var saved = $('[data-vco-saved]');
+  var kartlarEl = $('[data-vco-kartlar]');
+  // ── Kayıtlı adresler: portal (hesap.viamood.com.tr / Adreslerim) TEK KAYNAK ──
+  // Kart UI select'i sarar: karta tıkla → select.value + change (mevcut doldurma
+  // mantığı aynen çalışır). Fetch başarısızsa Liquid'in Shopify listesi fallback
+  // (dedupe'lu). Sekmeye dönünce liste tazelenir (portalda silinen/eklenen adres
+  // checkout'ta bayat kalmasın).
+  function vakEsc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
+  function adresKartlariCiz(){
+    if(!kartlarEl || !saved) return;
+    var opts=[].slice.call(saved.options).slice(1);
+    if(!opts.length){ kartlarEl.style.display='none'; saved.hidden=false; return; }
+    var h='';
+    opts.forEach(function(o){
+      var d=o.dataset;
+      h+='<button type="button" class="vco-adres-kart'+(saved.value===o.value?' secili':'')+'" data-vak="'+o.value+'">'
+        +(d.vars?'<span class="vak-vars">VARSAYILAN</span>':'')
+        +'<span class="vak-baslik">'+vakEsc(d.etiket||'Adres')+'</span>'
+        +'<span class="vak-satir"><b>'+vakEsc(((d.first||'')+' '+(d.last||'')).trim())+'</b>'+(d.phone?' · '+vakEsc(d.phone):'')+'</span>'
+        +'<span class="vak-satir">'+vakEsc(d.addr||'')+'</span>'
+        +'<span class="vak-satir">'+vakEsc((d.mahalle?d.mahalle+' / ':'')+(d.ilce||'')+' / '+(d.il||''))+'</span>'
+        +'</button>';
+    });
+    h+='<button type="button" class="vco-adres-kart vak-yeni'+(saved.value===''?' secili':'')+'" data-vak="">+ Yeni adres gir</button>';
+    kartlarEl.innerHTML=h; kartlarEl.style.display='';
+    saved.hidden=true; // kartlar aktifken select gizli (JS yoksa select görünür kalır)
+  }
+  if(kartlarEl && saved){
+    kartlarEl.addEventListener('click', function(e){
+      var k=e.target.closest('[data-vak]'); if(!k) return;
+      saved.value=k.getAttribute('data-vak');
+      saved.dispatchEvent(new Event('change',{bubbles:true}));
+      adresKartlariCiz();
+    });
+  }
+  // Liquid fallback listesi sipariş artıklarıyla dolu olabilir → görünüm öncesi dedupe
+  if(saved){
+    var vakSeen={}, vi;
+    for(vi=saved.options.length-1; vi>=1; vi--){
+      var vo=saved.options[vi];
+      var vk=[vo.dataset.first,vo.dataset.addr,vo.dataset.ilce,vo.dataset.zip].join('|').toLocaleLowerCase('tr');
+      if(vakSeen[vk]) saved.remove(vi); else vakSeen[vk]=1;
+    }
+    // cascade dinleyicileri kurulduktan sonra varsayılanı seç (ilk yükleme)
+    setTimeout(vakVarsayilanSec, 350);
+  }
+  var vakSonImza='';
+  function vakListeUygula(adresler){
+    var imza=JSON.stringify(adresler);
+    if(imza===vakSonImza) return; // liste değişmedi — UI'a dokunma
+    vakSonImza=imza;
+    while(saved.options.length>1) saved.remove(1);
+    adresler.forEach(function(a,i){
+      var o=document.createElement('option'); o.value=String(i+1);
+      o.dataset.first=a.firstName||''; o.dataset.last=a.lastName||''; o.dataset.phone=a.phone||'';
+      o.dataset.il=a.province||''; o.dataset.ilce=a.district||''; o.dataset.mahalle=a.neighborhood||'';
+      o.dataset.addr=a.address1||''; o.dataset.zip=a.postalCode||'';
+      o.dataset.etiket=a.label||''; o.dataset.vars=a.isDefault?'1':'';
+      var kisa=(a.address1||''); if(kisa.length>34) kisa=kisa.slice(0,34)+'…';
+      o.textContent=(a.label||'Adres')+' — '+kisa+' — '+(a.district||'')+'/'+(a.province||'')+(a.isDefault?' ★':'');
+      saved.appendChild(o);
+    });
+    var wrap=saved.closest('[data-vco-saved-wrap]');
+    if(wrap) wrap.style.display = adresler.length ? '' : 'none';
+    vakVarsayilanSec(); // liste değişti → varsayılan adres otomatik seçilir
+  }
+  function vakVarsayilanSec(){
+    var def='', oi;
+    for(oi=1; oi<saved.options.length; oi++){ if(saved.options[oi].dataset.vars){ def=saved.options[oi].value; break; } }
+    if(!def && saved.options.length>1) def=saved.options[1].value;
+    saved.value=def;
+    if(def) saved.dispatchEvent(new Event('change',{bubbles:true}));
+    else adresFormGoster(true);
+    adresKartlariCiz();
+  }
+  // Katman 1: PORTAL OTURUMU (hesap.viamood.com.tr çerezi; aynı site → Lax çerez gider).
+  // hesap SSL alana kadar mixed-content nedeniyle başarısız olur → Katman 2'ye düşer.
+  // Katman 2: HMAC köprüsü (Shopify storefront oturumunun e-postası — portal hesabı
+  // farklı e-postadaysa yanlış hesabı bulabilir; SSL sonrası Katman 1 bunu çözer).
+  function hmacAdresleriYukle(){
+    if(!saved.dataset.email || !saved.dataset.sig) return;
+    fetch(API + '/api/v1/storefront/addresses?email=' + encodeURIComponent(saved.dataset.email) + '&sig=' + saved.dataset.sig)
+      .then(function(r){ return r.json(); })
+      .then(function(j){ if(j && j.ok && Array.isArray(j.adresler)) vakListeUygula(j.adresler); })
+      .catch(function(){});
+  }
+  function portalAdresleriYukle(){
+    if(!saved) return;
+    fetch('https://hesap.viamood.com.tr/api/v1/storefront/my-addresses', { credentials:'include' })
+      .then(function(r){ return r.json(); })
+      .then(function(j){
+        if(j && j.ok && Array.isArray(j.adresler)) vakListeUygula(j.adresler);
+        else hmacAdresleriYukle();
+      })
+      .catch(function(){ hmacAdresleriYukle(); });
+  }
+  portalAdresleriYukle();
+  document.addEventListener('visibilitychange', function(){ if(document.visibilityState==='visible') portalAdresleriYukle(); });
+  window.addEventListener('pageshow', function(e){ if(e && e.persisted) portalAdresleriYukle(); });
+  function adresFormGoster(goster){
+    var af=root.querySelector('[data-vco-adres-form]');
+    if(af) af.style.display = goster ? '' : 'none';
+  }
+  /* TC Kimlik paylaşmak istemeyenler (Yunus, 17 Ağu 2026 talebi).
+     Nihai tüketici e-arşiv faturasında TCKN yerine 11111111111 kullanılır. */
+  var TC_NIHAI_TUKETICI = '11111111111';
+  var tcYokKutu = root.querySelector('[data-vco-tc-yok]');
+  if(tcYokKutu){
+    tcYokKutu.addEventListener('change', function(){
+      var el = f('tc_no'); if(!el) return;
+      if(tcYokKutu.checked){
+        el.dataset.oncekiTc = el.value || '';
+        el.value = TC_NIHAI_TUKETICI;
+        el.readOnly = true;
+        el.style.background = '#f6f3ee';
+      } else {
+        el.value = el.dataset.oncekiTc || '';
+        el.readOnly = false;
+        el.style.background = '';
+      }
+    });
+  }
+
+  if(saved){ saved.addEventListener('change', function(){
+    var o = saved.options[saved.selectedIndex];
+    if(!o.value){
+      // "— Yeni adres gir —" → form açılır + boşalt, il kaskadını sıfırla
+      adresFormGoster(true);
+      ['first_name','last_name','phone','address1','postal_code','addr_sokak','addr_bina','addr_daire'].forEach(function(k){ var el=f(k); if(el) el.value=''; });
+      var ilEl=root.querySelector('#vco-province');
+      if(ilEl){ ilEl.value=''; ilEl.dispatchEvent(new Event('change',{bubbles:true})); }
+      state.savedAddress=false; updateCta();
+      return;
+    }
+    adresFormGoster(false); // kayıtlı adres seçili → form gizli (değerler dolu taşınır)
+    setTimeout(function(){ state.savedAddress = true; }, 0); // kayıtlı adres seçildi → tekrar KAYDETME
+    f('first_name').value=o.dataset.first||''; f('last_name').value=o.dataset.last||'';
+    f('phone').value=o.dataset.phone||''; f('address1').value=o.dataset.addr||''; f('postal_code').value=o.dataset.zip||'';
+    addrParcaAyikla(o.dataset.addr||'');
+    loadIlIlce().then(function(){
+      var loc=deriveLoc(o.dataset.il, o.dataset.ilce); // il boşsa ilçeden türet
+      var mah=o.dataset.mahalle||'';
+      if(!mah){ try{ var last=JSON.parse(localStorage.getItem(LS_ADDR)||'null'); if(last && _norm(last.il)===_norm(loc.province) && _norm(last.ilce)===_norm(loc.district)) mah=last.mah||''; }catch(e){} } // saved adreste mahalle yoksa son kullanılandan (aynı il/ilçe) hatırla
+      if(loc.province){ document.dispatchEvent(new CustomEvent('tr-cascade-preselect', { detail:{ idPrefix:'vco', province:loc.province, district:loc.district, neighborhood:mah } })); }
+      // Cascade async — il set olana kadar poll, sonra kargo+cta+İyzico tetikle
+      var _t=0; var _iv=setInterval(function(){
+        _t++; var ilEl=root.querySelector('#vco-province');
+        if((ilEl && ilEl.value) || _t>=24){ clearInterval(_iv); state.carriersLoadedFor=''; loadCarriers(); updateCta(); autoTrigger(); }
+      }, 150);
+    });
+  }); }
+
+  // Fatura tipi toggle
+  root.querySelectorAll('input[name="vco_invoice"]').forEach(function(r){
+    r.addEventListener('change', function(){
+      var k = root.querySelector('input[name="vco_invoice"]:checked').value;
+      root.querySelector('[data-vco-bireysel]').style.display = k==='bireysel'?'grid':'none';
+      root.querySelector('[data-vco-kurumsal]').style.display = k==='kurumsal'?'grid':'none';
+    });
+  });
+  // Sevk≠Fatura toggle
+  root.querySelector('[data-vco-billing-diff]').addEventListener('change', function(e){
+    root.querySelector('[data-vco-billing]').style.display = e.target.checked ? 'block':'none';
+  });
+
+  // Adres değişince: il seçilince kargo getir + cta + İyzico tazele
+  root.addEventListener('change', function(e){
+    if(e.target.id === 'vco-province' || e.target.closest('[data-role="province"]')){ state.carriersLoadedFor=''; loadCarriers(); }
+    updateCta(); autoTrigger();
+  });
+  root.addEventListener('input', function(e){
+    if(e.target && e.target.getAttribute && /^addr_(sokak|bina|daire)$/.test(e.target.getAttribute('data-f')||'')){ addrParcaBirlestir(); addrHintGuncelle(); }
+    if(state.step===2){ updateCta(); autoTrigger(); }
+  });
+
+  // IBAN kopyala
+  root.addEventListener('click', function(e){
+    var b = e.target.closest('[data-copy]'); if(!b) return;
+    var t = b.getAttribute('data-copy');
+    if(navigator.clipboard) navigator.clipboard.writeText(t).then(function(){ b.textContent='Kopyalandı ✓'; setTimeout(function(){ b.textContent='IBAN Kopyala'; },1500); });
+  });
+})();
+</script>
+
+{% schema %}
+{
+  "name": "Via Mood Checkout",
+  "tag": "section",
+  "settings": [
+    { "type": "text", "id": "api_base", "label": "Vendor API base URL", "default": "https://mctpt0va3m.execute-api.eu-north-1.amazonaws.com/prod" },
+    { "type": "checkbox", "id": "free_shipping_all", "label": "Tüm kargolar ücretsiz", "default": false, "info": "Açık → her siparişte kargo bedava (aşağıdaki eşik yok sayılır)." },
+    { "type": "number", "id": "free_shipping_threshold", "label": "Ücretsiz kargo eşiği (TL) — 0 = kapalı", "default": 0 },
+    { "type": "select", "id": "kart_gateway", "label": "Kredi Kartı sağlayıcısı", "options": [{ "value": "iyzico", "label": "İyzico" }, { "value": "paytr", "label": "PayTR" }, { "value": "halkode", "label": "Halköde (Halkbank)" }], "default": "iyzico", "info": "PayTR'a çevirmeden önce sunucuda PAYTR_* env + PayTR panelinde Bildirim URL ayarlı olmalı. Halköde: admin ayarlarında halkode_enabled + canlı kimlikler dolu olmalı; ?halkode=1 ile gizli denenebilir." },
+    { "type": "checkbox", "id": "cod_enabled", "label": "Kapıda Ödeme açık", "default": false, "info": "KAPALI (10 Ağu 2026 kararı). Açarsan sunucuda da COD_ENABLED=true olmalı, yoksa müşteri seçer ama sipariş oluşmaz." }
+  ],
+  "presets": [{ "name": "Via Mood Checkout" }]
+}
+{% endschema %}
