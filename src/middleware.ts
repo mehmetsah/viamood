@@ -26,6 +26,9 @@ const PUBLIC_PATHS = new Set([
   // giriş yapmamış hâlde döner; public olmazsa sign-in'e atılır ve
   // `code`/`state` kaybolur, giriş tamamlanamaz.
   '/auth/google/callback',
+  // Facebook veri silme durum sayfası (Meta protokolü) — kullanıcı bağlantıyı
+  // SİLDİĞİ için artık giriş yapamayabilir; sayfa girişsiz açılmak ZORUNDA.
+  '/veri-silme-durumu',
 ]);
 
 const ADMIN_PREFIX = '/admin';
