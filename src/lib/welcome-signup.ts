@@ -9,7 +9,7 @@
 import { and, eq, gt, sql } from 'drizzle-orm';
 import { db } from '@/db/client';
 import { welcomeSignups } from '@/db/schema';
-import { sendEmail } from '@/lib/email/sender';
+import { mailKanaliHazir, sendEmail } from '@/lib/email/sender';
 import { welcomeDiscountEmail } from '@/lib/email/templates';
 
 /** Onay kutusunun kanonik metni. Temadaki metinle BİREBİR aynı olmalı. */
@@ -136,10 +136,17 @@ export async function createSignup(input: SignupInput): Promise<SignupResult> {
 /**
  * MAİL AKIŞININ TEK YAPILANDIRMA NOKTASI.
  *
- * Çalışması için gereken iki değer de ortam değişkeni:
- *   WELCOME_DISCOUNT_CODE  → indirim kodu (Shopify'daki kodun aynısı)
- *   RESEND_API_KEY         → gönderim kanalı (bkz. lib/email/sender.ts)
- * İkisi de tanımlıysa mail gider; biri eksikse kayıt 'skipped' olarak damgalanır.
+ * Çalışması için iki koşul gerekir:
+ *   WELCOME_DISCOUNT_CODE  → indirim kodu (Shopify'daki kodun aynısı), ortam değişkeni
+ *   yapılandırılmış bir mail kanalı → `mailKanaliHazir()` (bkz. lib/email/sender.ts)
+ * İkisi de sağlanıyorsa mail gider; biri eksikse kayıt 'skipped' olarak damgalanır.
+ *
+ * ⚠ KANAL KOŞULU NEDEN `mailKanaliHazir()`: burada eskiden yalnız
+ * `RESEND_API_KEY` aranıyordu. Oysa sender.ts ÜÇ kademeli (Resend → SMTP →
+ * stub) ve prod bugün SMTP ile gönderiyor (RESEND_API_KEY tanımlı DEĞİL).
+ * Sonuç ölçüldü (22 Eyl 2026): 7 kaydın 7'si 'skipped' — çalışan bir SMTP
+ * kanalı dururken tek bir hoş geldin maili çıkmamıştı. Koşul artık sendEmail'in
+ * kendi yüklemleriyle AYNI yerden okunuyor, ikisi bir daha ayrışamaz.
  */
 export async function deliverDiscountEmail(
   signupId: string,
@@ -147,14 +154,16 @@ export async function deliverDiscountEmail(
   name: string,
 ): Promise<void> {
   const code = process.env.WELCOME_DISCOUNT_CODE?.trim();
-  const channelReady = Boolean(process.env.RESEND_API_KEY?.trim());
+  const channelReady = mailKanaliHazir();
 
   if (!code || !channelReady) {
     await db
       .update(welcomeSignups)
       .set({
         emailStatus: 'skipped',
-        emailError: !code ? 'WELCOME_DISCOUNT_CODE tanımsız' : 'Mail kanalı (RESEND_API_KEY) tanımsız',
+        emailError: !code
+          ? 'WELCOME_DISCOUNT_CODE tanımsız'
+          : 'Mail kanalı tanımsız (RESEND_API_KEY ya da SMTP_USER+SMTP_PASS gerekli)',
       })
       .where(eq(welcomeSignups.id, signupId));
     return;
