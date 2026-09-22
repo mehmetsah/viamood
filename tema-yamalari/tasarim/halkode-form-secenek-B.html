@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Halköde Seçenek B</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"><style>
+:root{--o:#f25334;--o-d:#d9431f;--o-soft:#fff6f3;--o-line:#f6c8b9;--ink:#1a1a1a;--ink2:#3d3833;--line:#e7e3dc;--line2:#efe9e0;--muted:#7a7268;--ok:#1f7a4d;--ok-soft:#edf6f0;--paper:#faf8f4;--canvas:#ebe7e0}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--canvas);font-family:'Inter',system-ui,-apple-system,sans-serif;color:var(--ink);-webkit-font-smoothing:antialiased;font-size:14px;line-height:1.45}
+.sar{max-width:1180px;margin:0 auto;padding:0 16px}
+/* --- maket notu (vitrinin DIŞI) --- */
+.not{margin:24px auto 16px;background:#fff;border:1px solid var(--line);border-radius:14px;padding:20px 22px}
+.not__ust{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+.not__etiket{font:600 11px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.08em;color:var(--o);text-transform:uppercase}
+.not__baslik{font-size:19px;font-weight:800;margin:0;letter-spacing:-.01em}
+.not__ozet{margin:8px 0 16px;color:var(--ink2);max-width:880px}
+.not__izgara{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.not__h{background:var(--paper);border:1px solid var(--line2);border-radius:10px;padding:11px 13px}
+.not__h b{display:block;font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);margin-bottom:4px;font-weight:700}
+.not__h span{font-size:13px;color:var(--ink)}
+.not__dip{margin:12px 0 0;font-size:12px;color:var(--muted)}
+/* --- vitrin çerçevesi --- */
+.vitrin{background:#fff;border:1px solid var(--line);border-radius:14px;overflow:hidden;box-shadow:0 1px 2px rgba(26,26,26,.04),0 8px 28px rgba(26,26,26,.05)}
+.bas{display:flex;align-items:center;gap:40px;height:76px;padding:0 28px;border-bottom:1px solid var(--line)}
+.logo{width:74px;height:44px;flex:0 0 auto}
+.nav{display:flex;gap:28px;font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;white-space:nowrap;overflow:hidden}
+.nav span:first-child{color:var(--o)}
+.bas__menu{display:none;margin-left:auto;color:var(--ink)}
+.sayfa{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:22px;padding:26px 28px 34px;align-items:start}
+.sayfa>*{min-width:0}
+.vco-card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:20px;margin-bottom:14px}
+.vco-card--kapali{display:flex;align-items:center;gap:12px;padding:14px 18px}
+.no{width:26px;height:26px;border-radius:50%;background:var(--o);color:#fff;display:grid;place-items:center;font-size:13px;font-weight:700;flex:0 0 auto}
+.no--tamam{background:var(--ok)}
+.kapali__m{flex:1;min-width:0}
+.kapali__m b{display:block;font-size:14.5px}
+.kapali__m small{color:var(--muted);font-size:12.5px;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.duzenle{font-size:12.5px;color:var(--muted);text-decoration:underline;text-underline-offset:3px}
+.baslik{font-size:1.05rem;font-weight:800;margin:0 0 16px;display:flex;align-items:center;gap:10px}
+.pm-row{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:18px}
+.pm{display:flex;flex-direction:column;align-items:center;text-align:center;gap:6px;border:2px solid var(--line);border-radius:10px;padding:14px 8px;position:relative}
+.pm.sec{border-color:var(--o);background:var(--o-soft)}
+.pm__dot{position:absolute;top:8px;left:8px;width:16px;height:16px;border-radius:50%;border:2px solid #cfc7ba;display:grid;place-items:center}
+.pm.sec .pm__dot{border-color:var(--o)}
+.pm.sec .pm__dot::after{content:"";width:8px;height:8px;border-radius:50%;background:var(--o)}
+.pm__ic{color:var(--o);display:inline-flex}
+.pm b{font-size:13.5px}
+.pm small{display:block;color:var(--muted);font-size:12px}
+/* alanlar */
+.lbl{display:block;font-size:12px;font-weight:600;color:var(--muted);margin:0 0 5px}
+.alan{margin-bottom:12px}
+.inp{width:100%;height:46px;padding:0 13px;border:1px solid var(--line);border-radius:8px;font:inherit;font-size:14.5px;background:#fff;color:var(--ink)}
+.inp::placeholder{color:#b3a89c}
+.inp:focus{outline:none;border-color:var(--o);box-shadow:0 0 0 3px rgba(242,83,52,.12)}
+.inp--dolu{border-color:var(--o);box-shadow:0 0 0 3px rgba(242,83,52,.10);font-variant-numeric:tabular-nums;letter-spacing:.04em}
+.ici{position:relative}
+.ici .inp{padding-left:42px}
+.ici .inp--dolu{padding-right:104px}
+.ici__sol{position:absolute;left:13px;top:50%;transform:translateY(-50%);color:var(--muted);display:inline-flex}
+.ici__sag{position:absolute;right:10px;top:50%;transform:translateY(-50%);display:inline-flex;align-items:center;gap:6px;color:var(--muted)}
+.cip{font-size:11.5px;font-weight:700;color:var(--ok);background:var(--ok-soft);border:1px solid #cfe6d8;border-radius:999px;padding:3px 9px;white-space:nowrap}
+.iki{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.rozet{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:700;color:var(--ok);background:var(--ok-soft);border:1px solid #cfe6d8;border-radius:999px;padding:4px 10px;white-space:nowrap}
+/* taksit listesi */
+.tk{border:1px solid var(--line);border-radius:10px;overflow:hidden;margin:4px 0 14px}
+.tk__bas{display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding:11px 14px;background:var(--paper);border-bottom:1px solid var(--line)}
+.tk__bas b{font-size:13.5px}
+.tk__bas small{font-size:12px;color:var(--muted)}
+.tk__s{display:grid;grid-template-columns:22px 1fr auto auto;align-items:center;gap:12px;padding:11px 14px;border-top:1px solid var(--line2);font-size:14px}
+.tk__s:first-of-type{border-top:0}
+.tk__s.sec{background:var(--o-soft)}
+.rd{width:18px;height:18px;border-radius:50%;border:2px solid #cfc7ba;display:grid;place-items:center}
+.sec .rd{border-color:var(--o)}
+.sec .rd::after{content:"";width:8px;height:8px;border-radius:50%;background:var(--o)}
+.tk__ay{color:var(--muted);font-variant-numeric:tabular-nums}
+.tk__top{font-weight:700;font-variant-numeric:tabular-nums;min-width:86px;text-align:right}
+/* tutar + düğme */
+.tutar{display:flex;justify-content:space-between;align-items:baseline;padding:14px 2px 12px;border-top:1px solid var(--line);margin-top:4px}
+.tutar span{font-size:14px;color:var(--ink2)}
+.tutar small{display:block;color:var(--muted);font-size:12px}
+.tutar b{font-size:20px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+.ode{width:100%;height:52px;border:0;border-radius:10px;background:var(--o);color:#fff;font:inherit;font-size:15.5px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:9px;cursor:pointer;box-shadow:0 1px 0 rgba(0,0,0,.04),0 6px 16px rgba(242,83,52,.22)}
+.ode:hover{background:var(--o-d)}
+.guven{list-style:none;margin:14px 0 0;padding:0;display:grid;gap:9px}
+.guven li{display:flex;gap:10px;align-items:flex-start;font-size:12.5px;color:var(--ink2);line-height:1.45}
+.guven li span:first-child{color:var(--ok);display:inline-flex;margin-top:1px;flex:0 0 auto}
+.guven b{font-weight:700;color:var(--ink)}
+/* özet */
+.sum{background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:20px;position:sticky;top:16px}
+.sum h2{font-size:1.05rem;font-weight:800;margin:0 0 14px}
+.sum__it{display:flex;justify-content:space-between;gap:10px;font-size:13px;padding:8px 0;border-bottom:1px solid var(--line2);color:#444}
+.sum__it small{display:block;color:#999;font-size:11.5px}
+.promo{display:flex;gap:8px;margin:14px 0 10px}
+.promo .inp{height:40px;font-size:13px}
+.promo button{height:40px;padding:0 14px;border:1px solid var(--ink);background:#fff;border-radius:8px;font:inherit;font-weight:700;font-size:13px}
+.sum__r{display:flex;justify-content:space-between;font-size:14px;padding:5px 0;color:#555}
+.sum__r--t{font-size:18px;font-weight:800;color:var(--ink);border-top:1px solid var(--line);padding-top:10px;margin-top:6px}
+.cta{width:100%;height:48px;margin-top:14px;border:0;border-radius:10px;background:var(--o);color:#fff;font:inherit;font-weight:700;font-size:15px}
+.geri{display:block;margin-top:12px;font-size:13px;color:var(--o);font-weight:600}
+/* ek bölüm */
+.ek{margin:18px auto 40px;background:#fff;border:1px solid var(--line);border-radius:14px;padding:20px 22px}
+.ek h3{margin:0 0 4px;font-size:15px;font-weight:800}
+.ek p{margin:0 0 14px;color:var(--ink2);font-size:13px;max-width:900px}
+.ek figure{margin:0}
+.ek img{display:block;width:100%;height:auto;border-radius:10px;border:1px solid var(--line)}
+.ek figcaption{margin-top:10px;font-size:12px;color:var(--muted);max-width:900px}
+.akis{display:grid;gap:14px}
+.akis__satir{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.akis__ad{width:120px;font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.dg{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line);background:var(--paper);border-radius:9px;padding:8px 11px;font-size:12.5px;font-weight:600}
+.dg--kart{border-color:var(--o-line);background:var(--o-soft);color:#b23b1d}
+.dg--temiz{border-color:#cfe6d8;background:var(--ok-soft);color:var(--ok)}
+.ok-ic{color:#b8afa4;display:inline-flex}
+.dg small{font-weight:500;color:var(--muted)}
+@media (max-width:860px){
+  .not__izgara{grid-template-columns:1fr 1fr}
+  .sayfa{grid-template-columns:minmax(0,1fr);padding:16px}
+  .sum{position:static}
+}
+@media (max-width:560px){
+  .not{padding:16px}
+  .not__izgara{grid-template-columns:1fr}
+  .bas{height:62px;padding:0 16px;gap:16px}
+  .nav{display:none}
+  .bas__menu{display:inline-flex}
+  .logo{width:62px;height:37px}
+  .sayfa{padding:14px 12px 22px}
+  .vco-card{padding:16px 14px}
+  .pm-row{gap:7px}
+  .pm{padding:12px 4px 10px}
+  .pm b{font-size:12px}
+  .pm small{font-size:10.5px}
+  .tk__s{grid-template-columns:20px 1fr auto;gap:10px}
+  .tk__ay{grid-column:2/3;grid-row:2;margin-top:-6px;font-size:12.5px}
+  .tk__top{min-width:0}
+  .ek{padding:16px}
+  .akis__ad{width:100%}
+}
+</style></head>
+<body>
+<div class="sar"><section class="not"><div class="not__ust"><span class="not__etiket">Maket · Seçenek B</span><h1 class="not__baslik">Bizim form, vitrin diliyle yeniden tasarım</h1></div>
+  <p class="not__ozet">Kart formu sayfada kalır, arka taraf bugünküyle aynıdır. Değişen görünüş ve güven bilgisidir: etiketli alanlar, kart türü işareti, taksitlerin aylık tutarla listelenmesi, net “Ödenecek Tutar”, 3D Secure ve ödeme altyapısının adı. Yalnız bugün doğru olan cümleler kullanıldı.</p>
+  <div class="not__izgara"><div class="not__h"><b>Kart nereden geçer</b><span>Bugünkü gibi: tarayıcı → Viamood sunucusu (kaydedilmez, loglanmaz) → Halköde → banka. PCI kapsamı değişmez.</span></div><div class="not__h"><b>Müşteri ne görür</b><span>Vitrinle aynı turuncu/beyaz dil; ayrı sayfaya geçiş yok. 3D ekranı yine bankanın ekranıdır.</span></div><div class="not__h"><b>İş büyüklüğü</b><span>Küçük: yalnız tema (CSS + taksit listesini çizen JS). installments ve initialize uçları aynı kalır.</span></div><div class="not__h"><b>Halköde’den istenecek</b><span>Hiçbir şey.</span></div></div>
+  <p class="not__dip">“Kart bilgileriniz Viamood’da kaydedilmez” cümlesi bugünkü koda dayanır (initialize/route.ts yorumu: kart yazılmıyor, loglanmıyor). Bu seçenekte “sunucumuza hiç uğramaz” DENEMEZ. Taksit satırları örnektir; ürün bugün yalnız vade farksız taksitleri gösteriyor. Kart markası logosu bilerek konmadı. Maket; gerçek kart verisi yok.</p></section></div>
+<div class="sar"><div class="vitrin">
+<header class="bas"><svg class="logo" viewBox="0 0 88 52" aria-label="Via Mood">
+  <path d="M8 21 44 4l36 17" fill="none" stroke="#e8672f" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="44" y="33" text-anchor="middle" font-family="Inter,sans-serif" font-weight="800" font-size="13.5" fill="#e8672f" letter-spacing=".5">VIA</text>
+  <text x="44" y="49" text-anchor="middle" font-family="Inter,sans-serif" font-weight="800" font-size="13.5" fill="#e8672f" letter-spacing=".5">MOOD</text>
+</svg><nav class="nav"><span>Yeni Gelenler</span><span>Çok Satanlar</span><span>Ev ve Yaşam</span><span>Hobi</span><span>Çocuk</span><span>Giyim</span><span>Kampanya Setleri</span></nav><span class="bas__menu"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></span></header>
+<main class="sayfa">
+  <div>
+    
+<div class="vco-card vco-card--kapali"><span class="no no--tamam"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg></span><div class="kapali__m"><b>Teslimat Bilgileri</b><small>Örnek Müşteri · Örnek Mah. 1. Sok. No:1 · Kadıköy / İstanbul</small></div><span class="duzenle">Düzenle</span></div>
+<div class="vco-card vco-card--kapali"><span class="no no--tamam"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg></span><div class="kapali__m"><b>Kargo</b><small>Seçili kargo firması · 1–3 iş günü</small></div><span class="duzenle">Düzenle</span></div>
+    <section class="vco-card"><h2 class="baslik"><span class="no">3</span>Ödeme Yöntemi</h2>
+      
+<div class="pm-row">
+  <div class="pm sec"><span class="pm__dot"></span><span class="pm__ic"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="5" width="19" height="14" rx="2.5"/><path d="M2.5 10h19M6.5 15h4"/></svg></span><span><b>Kredi / Banka Kartı</b><small>Tek çekim / taksit</small></span></div>
+  <div class="pm"><span class="pm__dot"></span><span class="pm__ic"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 9.5 12 4l9 5.5M4.5 9.5h15M6 10v7M10 10v7M14 10v7M18 10v7M3.5 20h17"/></svg></span><span><b>Havale / EFT</b><small>1 iş günü onay</small></span></div>
+  <div class="pm"><span class="pm__dot"></span><span class="pm__ic"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 3 8 4.5v9L12 21l-8-4.5v-9L12 3Z"/><path d="m4 7.5 8 4.5 8-4.5M12 12v9"/></svg></span><span><b>Kapıda Ödeme</b><small>Teslimde nakit/kart</small></span></div>
+</div>
+      
+  <div style="display:flex;justify-content:space-between;align-items:center;margin:0 0 12px"><b style="font-size:14.5px">Kart Bilgileri</b><span class="rozet"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 5 6v5.5c0 4.3 3 7.9 7 9.5 4-1.6 7-5.2 7-9.5V6l-7-3Z"/><path d="m9 12 2.2 2.2L15.5 10"/></svg> 3D Secure</span></div>
+  <div class="alan"><label class="lbl">Kart Üzerindeki Ad Soyad</label><input class="inp" placeholder="Ad Soyad" readonly></div><div class="alan"><label class="lbl">Kart Numarası</label><div class="ici"><span class="ici__sol"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="5" width="19" height="14" rx="2.5"/><path d="M2.5 10h19M6.5 15h4"/></svg></span><input class="inp inp--dolu" value="1234 56•• •••• ••••" readonly aria-label="Kart numarası (maket)"><span class="ici__sag"><span class="cip">Kredi kartı</span></span></div></div><div class="iki"><div class="alan"><label class="lbl">Son Kullanma</label><input class="inp" placeholder="AA / YY" readonly></div><div class="alan"><label class="lbl">Güvenlik Kodu (CVV)</label><div class="ici"><input class="inp" style="padding-left:13px" placeholder="•••" readonly><span class="ici__sag" title="Kartın arka yüzündeki 3 hane"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg></span></div></div></div>
+  
+<div class="tk">
+  <div class="tk__bas"><b>Taksit Seçenekleri</b><small>Kartınızın ilk 6 hanesine göre bankanızdan gelir</small></div>
+  <div class="tk__s"><span class="rd"></span><span>Tek çekim</span><span class="tk__ay"></span><span class="tk__top">500,00 TL</span></div>
+  <div class="tk__s"><span class="rd"></span><span>2 taksit</span><span class="tk__ay">2 × 250,00 TL</span><span class="tk__top">500,00 TL</span></div>
+  <div class="tk__s sec"><span class="rd"></span><span>3 taksit</span><span class="tk__ay">3 × 166,67 TL</span><span class="tk__top">500,00 TL</span></div>
+  <div class="tk__s"><span class="rd"></span><span>6 taksit</span><span class="tk__ay">6 × 83,33 TL</span><span class="tk__top">500,00 TL</span></div>
+</div>
+  <div class="tutar"><div><span>Ödenecek Tutar</span><small>3 taksit × 166,67 TL</small></div><b>500,00 TL</b></div>
+  <button class="ode" type="button"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="10.5" width="14" height="10" rx="2"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5"/></svg> 500,00 TL Öde</button>
+  <ul class="guven">
+    <li><span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6" y="2.5" width="12" height="19" rx="2.5"/><path d="M10.5 18.5h3"/></svg></span><span><b>3D Secure:</b> ödemeyi bankanızın doğrulama ekranında SMS şifresiyle onaylarsınız.</span></li>
+    <li><span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="10.5" width="14" height="10" rx="2"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5"/></svg></span><span><b>Kart bilgileriniz Viamood’da kaydedilmez;</b> bağlantı SSL ile şifrelidir.</span></li>
+    <li><span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20.5V8l8-4.5L20 8v12.5M4 20.5h16M9 20.5v-5h6v5M8 11h.01M12 11h.01M16 11h.01"/></svg></span><span><b>Ödeme altyapısı:</b> HalkÖde (Halk Elektronik Para ve Ödeme Hizmetleri A.Ş.)</span></li>
+  </ul>
+    </section>
+  </div>
+  
+<aside class="sum">
+  <h2>Sipariş Özeti</h2>
+  <div class="sum__it"><span>1 × Örnek ürün<small>Maket verisi</small></span><span>500,00 TL</span></div>
+  <div class="promo"><input class="inp" placeholder="İndirim kodu" readonly><button type="button">Uygula</button></div>
+  <div class="sum__r"><span>Ara Toplam</span><span>500,00 TL</span></div>
+  <div class="sum__r"><span>Kargo</span><span>0,00 TL</span></div>
+  <div class="sum__r sum__r--t"><span>Toplam</span><span>500,00 TL</span></div>
+  <button class="cta" type="button">Sepeti Onayla</button>
+  <a class="geri">← Alışverişe Devam Et</a>
+</aside>
+</main>
+</div></div>
+<div class="sar"><section class="ek"><h3>Kart verisinin yolu (bugün ve B’de aynı)</h3>
+  <p>Görünüş değişir, yol değişmez. Turuncu kutular kart numarasının geçtiği yerlerdir.</p>
+  <div class="akis"><div class="akis__satir"><span class="akis__ad">B / bugün</span>
+    <span class="dg dg--kart"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4.5" width="18" height="15" rx="2"/><path d="M3 9h18M6.5 6.8h.01M9 6.8h.01"/></svg> Müşteri tarayıcısı</span><span class="ok-ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+    <span class="dg dg--kart"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="16" height="7" rx="1.5"/><rect x="4" y="13" width="16" height="7" rx="1.5"/><path d="M8 7.5h.01M8 16.5h.01"/></svg> Viamood sunucusu <small>(kaydetmez)</small></span><span class="ok-ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+    <span class="dg dg--kart">Halköde paySmart3D</span><span class="ok-ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+    <span class="dg">Banka 3D</span><span class="ok-ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span><span class="dg">Viamood dönüş</span></div></div></section></div>
+</body></html>

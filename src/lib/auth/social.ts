@@ -68,9 +68,5 @@ export async function getEnabledSocialProviders(): Promise<{ google: boolean; fa
   return { google: Boolean(g), facebook: Boolean(f) };
 }
 
-/** Secret'i ekranda göstermek için maskeler: "••••••••abcd" (son 4 hane). */
-export function maskele(v?: string | null): string {
-  const s = temiz(v);
-  if (!s) return '';
-  return `${'•'.repeat(Math.max(8, Math.min(s.length - 4, 24)))}${s.slice(-4)}`;
-}
+/** Maskeleme tek yerde yaşar (saf modül) — eski import yolu bozulmasın diye yeniden dışa verilir. */
+export { maskele } from './sosyal-ayar';

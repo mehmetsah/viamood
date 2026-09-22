@@ -9,7 +9,8 @@
  *
  * Gerçek sipariş = Orders API (draft değil) ki webhook + müşteri hesabı + routing çalışsın.
  */
-import { provinceCode, provinceName } from './tr-provinces';
+import { shopifyAdresiKur } from './adres';
+import { ilKoduUyusmazsaEtiketle } from './adres-uyusmaz';
 import { env } from '../env';
 import { upsertCustomerAddress } from './customer-address';
 import { ensureTrCustomer } from './customer-locale';
@@ -133,23 +134,9 @@ export async function createStorefrontOrder(
   // Shopify phone E.164 ister — normalize edilemiyorsa alanı HİÇ gönderme (422 'is invalid' önlenir;
   // telefon zaten note + Mikro EvrakDokum'da taşınıyor, sipariş telefonsuz da oluşabilmeli)
   const phone = normalizeTrPhone(b.phone);
-  // #615: form il alanında bazen ADI değil KODU ('TR-34') gönderiyor —
-  // normalleştirmezsek Shopify'a kod yazılıyor ve PTT etiketine "TR-34" basılıyor.
-  const il = provinceName(b.province);
-  const pcode = provinceCode(il);
-  const addr: Record<string, unknown> = {
-    first_name: b.first_name,
-    last_name: b.last_name,
-    ...(phone ? { phone } : {}),
-    address1: b.address1,
-    address2: b.address2 || '',
-    city: b.city, // ilçe
-    province: il, // il
-    zip: b.zip || '',
-    country: 'Turkey',
-    country_code: 'TR',
-  };
-  if (pcode) addr.province_code = pcode;
+  // Adres TEK yerden kurulur (adres.ts): il adı/kodu normalleşir, posta kodu seçilen
+  // ile uymuyorsa BOŞ gider — Shopify ili posta kodundan yeniden yazıyordu (#1164/#1169).
+  const { adres: addr, il, ilKodu: pcode, zip } = shopifyAdresiKur(b, phone);
 
   const shippingTl = b.shipping_cost || 0;
 
@@ -235,8 +222,25 @@ export async function createStorefrontOrder(
       console.error('[storefront-order] Shopify hata:', resp.status, bodyText); // ham hata LOG'a — müşteriye Türkçe
       return { ok: false, error: shopifyErrorToTr(resp.status, bodyText) };
     }
-    const j = (await resp.json()) as { order?: { id: number; name: string; total_price?: string } };
+    const j = (await resp.json()) as {
+      order?: {
+        id: number;
+        name: string;
+        total_price?: string;
+        shipping_address?: { province?: string | null; province_code?: string | null } | null;
+      };
+    };
     if (!j.order?.id) return { ok: false, error: 'order response boş' };
+    // Shopify ili değiştirdiyse (posta kodundan yeniden yazım) logla + 'adres-uyusmaz' etiketi.
+    // Beklenmez; hata fırlatmaz, sipariş akışını durdurmaz.
+    void ilKoduUyusmazsaEtiketle({
+      siparisId: j.order.id,
+      siparisAdi: j.order.name,
+      gonderilenIlKodu: pcode,
+      donenIlKodu: j.order.shipping_address?.province_code ?? null,
+      donenIl: j.order.shipping_address?.province ?? null,
+      kaynak: method,
+    });
     // Adresi müşterinin defterine YAPILANDIRILMIŞ (il/ilçe/mahalle) kaydet — best-effort, dedup'lu
     if (b.saved_address !== '1') { // kayıtlı adres seçildiyse tekrar kaydetme (duplicate önlemi)
       await upsertCustomerAddress({
@@ -248,7 +252,7 @@ export async function createStorefrontOrder(
         address2: b.address2,
         city: b.city,
         province: il,
-        zip: b.zip,
+        zip, // süzülmüş posta kodu — bozuk kod adres defterinde de ili yeniden yazdırıyordu
       });
     }
     // TÜRKÇE onay e-postası (Shopify send_receipt yerine — havale'de IBAN talimatı da içerir)

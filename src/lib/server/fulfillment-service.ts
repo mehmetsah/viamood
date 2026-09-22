@@ -34,6 +34,7 @@ import { notifyNativeOrderShipped } from '@/lib/orders/lifecycle';
 import { syncOrderToMikro } from '@/lib/server/mikro-sync';
 import { quoteShipmentRate } from '@/lib/kargolab/rates';
 import { env } from '@/lib/env';
+import { etiketAdresKapisi } from '@/lib/server/etiket-adres-kapisi';
 
 interface CreateOk {
   ok: true;
@@ -236,6 +237,7 @@ export async function createFulfillmentForOrderVendor(
       id: orders.id,
       orderName: orders.shopifyOrderName,
       orderNumber: orders.orderNumber,
+      shopifyOrderId: orders.shopifyOrderId,
       shippingAddress: orders.shippingAddress,
       customerEmail: orders.customerEmail,
       customerPhone: orders.customerPhone,
@@ -268,7 +270,7 @@ export async function createFulfillmentForOrderVendor(
   const senderRes = await ensureSenderAddress(vendorId);
   if (!senderRes.ok) return senderRes;
 
-  const ship = order.shippingAddress as Record<string, string | undefined>;
+  let ship = order.shippingAddress as Record<string, string | undefined>;
   // İl (ve ilçe/il'den en az biri) olmadan KargoLab gönderi kabul etmez — net hata dön
   // (örn. Shopify admin'den il seçilmeden girilen sipariş: #1015 vakası)
   if (!ship.city?.trim()) {
@@ -277,6 +279,16 @@ export async function createFulfillmentForOrderVendor(
       error: 'Teslimat adresinde İL eksik — Shopify siparişinde il/ilçe alanlarını doldurun, etiket ondan sonra kesilir',
     };
   }
+  // İlçe kayıtlı ilin listesinde değilse etiket KESİLMEZ (#1164 Ankara/Erbaa, #1169 Bingöl/Şişli:
+  // Shopify ili posta kodundan yeniden yazmıştı). Shopify'da düzeltilmişse güncel adresle devam.
+  const kapi = await etiketAdresKapisi({
+    orderId,
+    vendorId,
+    shopifyOrderId: order.shopifyOrderId ?? null,
+    ship,
+  });
+  if (!kapi.ok) return { ok: false, error: kapi.error };
+  ship = kapi.ship;
   const receiver: KargoLabAddress = {
     contact_name: ship.name ?? order.customerName ?? 'Müşteri',
     address1: ship.address1 ?? '-',

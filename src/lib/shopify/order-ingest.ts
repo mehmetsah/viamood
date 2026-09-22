@@ -8,6 +8,7 @@ import {
   vendors,
 } from '@/db/schema';
 import { upsertCustomerByEmail } from '@/lib/customers/service';
+import { teslimatAdresiKaydi } from './teslimat-adresi';
 
 /**
  * Shopify webhook payload'ından gelen order'ı local DB'ye yansıt.
@@ -197,19 +198,8 @@ export async function ingestShopifyOrder(payload: ShopifyOrderPayload): Promise<
   const discountCents = parseMoney(payload.total_discounts);
   const totalCents = parseMoney(payload.total_price);
 
-  const shippingAddr = payload.shipping_address
-    ? {
-        name: payload.shipping_address.name ?? undefined,
-        phone: payload.shipping_address.phone ?? undefined,
-        address1: payload.shipping_address.address1 ?? undefined,
-        address2: payload.shipping_address.address2 ?? undefined,
-        city: payload.shipping_address.city ?? undefined,
-        district: payload.shipping_address.province ?? undefined,
-        postalCode: payload.shipping_address.zip ?? undefined,
-        country: payload.shipping_address.country ?? undefined,
-        countryCode: payload.shipping_address.country_code ?? undefined,
-      }
-    : null;
+  // city = İLÇE, district = İL (ters adlandırma — teslimat-adresi.ts)
+  const shippingAddr = teslimatAdresiKaydi(payload.shipping_address);
 
   const placedAt = payload.created_at ? new Date(payload.created_at) : new Date();
 

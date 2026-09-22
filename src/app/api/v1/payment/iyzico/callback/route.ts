@@ -12,6 +12,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { retrieveCheckoutForm } from '@/lib/iyzico/client';
 import { env } from '@/lib/env';
 import { getStore } from '@/lib/store';
+import { taslakTamamlanincaIlDenetle } from '@/lib/shopify/adres-uyusmaz';
 import { completeNativeCardOrder } from '@/lib/store/native-create-order';
 
 export const dynamic = 'force-dynamic';
@@ -33,6 +34,14 @@ async function completeDraftOrder(draftId: string): Promise<boolean> {
       // payment_pending=false → sipariş "ödendi (paid)" olarak işaretlenir
       body: JSON.stringify({ payment_pending: false }),
     });
+    // Tamamlanırken Shopify ili posta kodundan yeniden yazabiliyor (#1164/#1169) — değiştiyse
+    // logla + 'adres-uyusmaz' etiketi. Beklenmez, hata fırlatmaz: geri dönüşü geciktirmez.
+    if (resp.ok) {
+      resp
+        .json()
+        .then((j) => taslakTamamlanincaIlDenetle(j, 'iyzico'))
+        .catch(() => {});
+    }
     return resp.ok;
   } catch {
     return false;

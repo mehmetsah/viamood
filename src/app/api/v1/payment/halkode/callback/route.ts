@@ -20,6 +20,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { env } from '@/lib/env';
 import { getStore } from '@/lib/store';
 import { completeNativeCardOrder } from '@/lib/store/native-create-order';
+import { taslakTamamlanincaIlDenetle } from '@/lib/shopify/adres-uyusmaz';
 import {
   getToken,
   checkStatus,
@@ -57,6 +58,14 @@ async function completeDraftOrder(draftId: string): Promise<boolean> {
         body: JSON.stringify({ payment_pending: false }), // ödendi
       },
     );
+    // Tamamlanırken Shopify ili posta kodundan yeniden yazabiliyor (#1164/#1169) — değiştiyse
+    // logla + 'adres-uyusmaz' etiketi. Beklenmez, hata fırlatmaz: geri dönüşü geciktirmez.
+    if (resp.ok) {
+      resp
+        .json()
+        .then((j) => taslakTamamlanincaIlDenetle(j, 'halkode'))
+        .catch(() => {});
+    }
     return resp.ok;
   } catch {
     return false;

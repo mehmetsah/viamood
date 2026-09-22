@@ -10,7 +10,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { getAllowedOrigins } from '@/lib/cors';
 import { initializeCheckoutForm } from '@/lib/iyzico/client';
-import { provinceCode, provinceName } from '@/lib/shopify/tr-provinces';
+import { shopifyAdresiKur } from '@/lib/shopify/adres';
 import { normalizeTrPhone } from '@/lib/shopify/tr-format';
 import { env } from '@/lib/env';
 import { upsertCustomerAddress } from '@/lib/shopify/customer-address';
@@ -32,23 +32,9 @@ let _lastDraftError = '';
 async function createDraftOrder(body: InitBody): Promise<number | null> {
   try {
     const phone = normalizeTrPhone(body.phone) ?? '';
-    // #615: form il alanında bazen ADI değil KODU ('TR-34') gönderiyor —
-    // normalleştirmezsek Shopify'a kod yazılıyor ve PTT etiketine "TR-34" basılıyor.
-    const il = provinceName(body.province);
-    const pcode = provinceCode(il);
-    const addr: Record<string, unknown> = {
-      first_name: body.first_name,
-      last_name: body.last_name,
-      phone,
-      address1: body.address1,
-      address2: body.address2 || '',
-      city: body.city, // İlçe
-      province: il, // İl (ad)
-      zip: body.zip || '',
-      country: 'Turkey',
-      country_code: 'TR',
-    };
-    if (pcode) addr.province_code = pcode; // Shopify il alanına oturması için
+    // Adres TEK yerden kurulur (lib/shopify/adres.ts): il adı/kodu normalleşir, posta kodu
+    // seçilen ile uymuyorsa BOŞ gider — Shopify ili posta kodundan yeniden yazıyordu (#1164/#1169).
+    const { adres: addr, il, zip } = shopifyAdresiKur(body, phone);
 
     // Kargo ücretini ayrı line item olarak ekle (sipariş toplamına dahil)
     const shippingTl = body.shipping_cost || 0;
@@ -124,7 +110,7 @@ async function createDraftOrder(body: InitBody): Promise<number | null> {
           address2: body.address2,
           city: body.city,
           province: il,
-          zip: body.zip,
+          zip, // süzülmüş posta kodu
         });
       }
     }
