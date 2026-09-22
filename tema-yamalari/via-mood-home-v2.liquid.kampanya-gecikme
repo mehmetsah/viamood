@@ -1,0 +1,1858 @@
+{%- comment -%}
+  Via Mood — Anasayfa V2 ("homepage-redesign" HTML tasarımının birebir portu).
+  V1 (via-mood-home.liquid) DOKUNULMADAN DURUYOR — rollback: templates/index.json'ı
+  v1 yedeğine geri döndür (yedek: scratchpad/v1-index-backup.json + clarity-theme/templates/).
+  Tüm bölümler Theme Editor'da parça parça düzenlenebilir (section ayarları + bloklar).
+  Ürün vitrini gerçek koleksiyondan beslenir; + butonu ürün sayfasına gider
+  (listeden sepete-ekle bilinçli yok — Madde 22/28).
+{%- endcomment -%}
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,600;0,700;1,600&display=swap" rel="stylesheet">
+
+{%- assign sec = section.settings -%}
+
+<div class="vmh2">
+
+  {%- comment -%} ============ HIZLI KATEGORİ RAYI ============ {%- endcomment -%}
+  {%- assign hizli_var = false -%}
+  {%- for block in section.blocks -%}{%- if block.type == "hizli" -%}{%- assign hizli_var = true -%}{%- endif -%}{%- endfor -%}
+  {%- if hizli_var -%}
+  <div class="vmh2-category-rail">
+    <div class="vmh2-category-wrap">
+      {%- for block in section.blocks -%}
+        {%- if block.type == "hizli" -%}
+          <a class="vmh2-quick-category" href="{{ block.settings.link | default: '/collections/all' }}" {{ block.shopify_attributes }}>
+            <span class="vmh2-quick-icon">{%- if block.settings.gorsel -%}<img src="{{ block.settings.gorsel | image_url: width: 120 }}" alt="{{ block.settings.baslik | escape }}">{%- else -%}{{ block.settings.ikon | default: "★" }}{%- endif -%}</span>
+            <span>{{ block.settings.baslik }}</span>
+          </a>
+        {%- endif -%}
+      {%- endfor -%}
+    </div>
+  </div>
+  {%- endif -%}
+
+  {%- comment -%} ============ HERO (slide bloğu varsa karışık sıralı slider) ============ {%- endcomment -%}
+  {%- assign slide_sayisi = 0 -%}
+  {%- for block in section.blocks -%}
+    {%- if block.type == "hero_slide" -%}
+      {%- assign slide_sayisi = slide_sayisi | plus: 1 -%}
+      {%- if slide_sayisi == 1 -%}{%- assign ilk_slide = block -%}{%- endif -%}
+    {%- endif -%}
+  {%- endfor -%}
+  {%- comment -%}
+    BANNER MODU (14 Ağu 2026): slaytlar hazır kampanya banner'ı ise (kendi başlığı,
+    metni, butonu görselin İÇİNDE) hero'nun metin katmanı + koyu gradyan + rozet
+    banner'ın üstüne biner ve okunmaz olur. Slaytta başlık/metin YOKSA banner modu:
+    yalnız görsel gösterilir ve TÜM alan tıklanabilir olur (cta_link'e gider).
+  {%- endcomment -%}
+  {%- assign hero_banner_mod = false -%}
+  {%- if slide_sayisi > 0 and ilk_slide.settings.baslik == blank and ilk_slide.settings.metin == blank -%}
+    {%- assign hero_banner_mod = true -%}
+  {%- endif -%}
+  <section class="vmh2-hero{% if hero_banner_mod %} vmh2-hero--banner{% endif %}">
+    <div class="vmh2-hero-media">
+      {%- liquid
+        assign hero_img = 'data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%221600%22 height=%221200%22><rect width=%221600%22 height=%221200%22 fill=%22%23ece5dc%22/></svg>'
+        if slide_sayisi > 0
+          if ilk_slide.settings.gorsel
+            assign hero_img = ilk_slide.settings.gorsel | image_url: width: 2400
+          elsif ilk_slide.settings.gorsel_url != blank
+            assign hero_img = ilk_slide.settings.gorsel_url
+          endif
+        endif
+      -%}
+      <img class="vmh2-hm-a" src="{{ hero_img }}" alt="Via Mood" loading="eager">
+      {%- if slide_sayisi > 1 -%}<img class="vmh2-hm-b" src="{{ hero_img }}" alt="" aria-hidden="true">{%- endif -%}
+    </div>
+    {%- if hero_banner_mod -%}
+      <a class="vmh2-hero-link" data-vmh2-hero-link href="{{ ilk_slide.settings.cta_link | default: '/collections/all' }}" aria-label="{{ ilk_slide.settings.eyebrow | default: 'Kampanyayı görüntüle' }}"></a>
+    {%- endif -%}
+    <div class="vmh2-hero-content">
+      {%- if slide_sayisi > 0 -%}
+        <span class="vmh2-eyebrow vmh2-hs-fade">{{ ilk_slide.settings.eyebrow }}</span>
+        <h1 class="vmh2-hs-fade">{{ ilk_slide.settings.baslik }}</h1>
+        <p class="vmh2-hs-fade">{{ ilk_slide.settings.metin }}</p>
+      {%- endif -%}
+      <div class="vmh2-hero-actions">
+        {%- comment -%} Madde 2 Faz-1: slayta özel CTA — doluysa bölüm butonlarının yerine geçer {%- endcomment -%}
+        {%- assign slayt_cta_var = false -%}
+        {%- if slide_sayisi > 0 and ilk_slide.settings.cta != blank -%}{%- assign slayt_cta_var = true -%}{%- endif -%}
+        <a class="vmh2-btn vmh2-btn-primary" data-vmh2-slide-cta href="{{ ilk_slide.settings.cta_link | default: '/collections/all' }}"{% unless slayt_cta_var %} hidden{% endunless %}>{{ ilk_slide.settings.cta }}</a>
+        {%- if sec.hero_cta1 != blank -%}<a class="vmh2-btn vmh2-btn-primary" data-vmh2-static-cta href="{{ sec.hero_cta1_link | default: '/collections/all' }}"{% if slayt_cta_var %} hidden{% endif %}>{{ sec.hero_cta1 }}</a>{%- endif -%}
+        {%- if sec.hero_cta2 != blank -%}<a class="vmh2-btn vmh2-btn-light" data-vmh2-static-cta href="{{ sec.hero_cta2_link | default: '/collections/all' }}"{% if slayt_cta_var %} hidden{% endif %}>{{ sec.hero_cta2 }}</a>{%- endif -%}
+      </div>
+    </div>
+    {%- if sec.rozet_goster and sec.rozet_buyuk != blank -%}
+    <div class="vmh2-hero-badge"><div><strong>{{ sec.rozet_buyuk }}</strong><small>{{ sec.rozet_metin }}</small></div></div>
+    {%- endif -%}
+    {%- if slide_sayisi > 1 -%}
+      {%- comment -%}
+        Hero okları (Yunus 11 Eyl 2026). Buton öğesi → klavyeyle erişilebilir.
+        Tıklama `git(i, true)`'ya bağlanır; `true` otomatik geçiş sayacını SIFIRLAR,
+        yani mevcut 6.5 sn'lik akış bozulmaz, kullanıcı müdahalesinden sonra
+        baştan sayar. Banner modunda tüm alanı saran link var — oklar onun
+        ÜSTÜNDE (z-index) durmalı, yoksa tıklama koleksiyona gider.
+      {%- endcomment -%}
+      <button type="button" class="vmh2-hs-ok vmh2-hs-ok--geri" data-vmh2-prev aria-label="Önceki görsel">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <path d="M15 5 8 12l7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+      <button type="button" class="vmh2-hs-ok vmh2-hs-ok--ileri" data-vmh2-next aria-label="Sonraki görsel">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+      <div class="vmh2-hs-dots" role="tablist" aria-label="Slaytlar"></div>
+    {%- endif -%}
+    {%- comment -%} Theme Editor: her slayt için seçim katmanı — önizlemede tıkla→solda blok seçilir; solda blok seç→slider o slayta atlar {%- endcomment -%}
+    {%- if request.design_mode -%}
+      {%- assign hs_i = 0 -%}
+      {%- for block in section.blocks -%}
+        {%- if block.type == "hero_slide" -%}
+          <div class="vmh2-hs-editarea{% if hs_i == 0 %} aktif{% endif %}" data-vmh2-slide-target="{{ hs_i }}" {{ block.shopify_attributes }}></div>
+          {%- assign hs_i = hs_i | plus: 1 -%}
+        {%- endif -%}
+      {%- endfor -%}
+    {%- endif -%}
+  </section>
+  {%- if slide_sayisi > 1 -%}
+    {%- capture slide_json -%}[
+      {%- assign sj = 0 -%}
+      {%- for block in section.blocks -%}
+        {%- if block.type == "hero_slide" -%}
+          {%- if sj > 0 -%},{%- endif -%}
+          {%- liquid
+            assign s_img = 'data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%221600%22 height=%221200%22><rect width=%221600%22 height=%221200%22 fill=%22%23ece5dc%22/></svg>'
+            if block.settings.gorsel
+              assign s_img = block.settings.gorsel | image_url: width: 2400
+            elsif block.settings.gorsel_url != blank
+              assign s_img = block.settings.gorsel_url
+            endif
+          -%}
+          {"g":{{ s_img | json }},"e":{{ block.settings.eyebrow | json }},"b":{{ block.settings.baslik | json }},"m":{{ block.settings.metin | json }},"c":{{ block.settings.cta | json }},"l":{{ block.settings.cta_link | json }}}
+          {%- assign sj = sj | plus: 1 -%}
+        {%- endif -%}
+      {%- endfor -%}
+    ]{%- endcapture -%}
+    <script type="application/json" data-vmh2-slides>{{ slide_json }}</script>
+    <script>
+      (function(){
+        var el=document.querySelector('[data-vmh2-slides]'); if(!el) return;
+        var slides; try{ slides=JSON.parse(el.textContent); }catch(err){ return; }
+        if(!slides || slides.length < 2) return;
+        var DESIGN = !!(window.Shopify && Shopify.designMode);
+        slides.forEach(function(s,i){ s._o = i; });
+        var KARISIK = {{ sec.hero_karisik | json }};
+        if(KARISIK !== false && !DESIGN){
+          // Fisher-Yates — her yüklemede farklı akış sırası
+          for(var i=slides.length-1;i>0;i--){ var j=Math.floor(Math.random()*(i+1)); var t=slides[i]; slides[i]=slides[j]; slides[j]=t; }
+        }
+        var hero=document.querySelector('.vmh2-hero'); if(!hero) return;
+        var imgA=hero.querySelector('.vmh2-hm-a'), imgB=hero.querySelector('.vmh2-hm-b');
+        var eEl=hero.querySelector('.vmh2-eyebrow'), hEl=hero.querySelector('.vmh2-hero-content h1'), pEl=hero.querySelector('.vmh2-hero-content p');
+        var dots=hero.querySelector('.vmh2-hs-dots');
+        var ctaEl=hero.querySelector('[data-vmh2-slide-cta]');
+        var linkEl=hero.querySelector('[data-vmh2-hero-link]'); // banner modu: tüm alanı saran link
+        var statikler=[].slice.call(hero.querySelectorAll('[data-vmh2-static-cta]'));
+        var idx=0, onA=true, timer=null;
+        if(dots){ slides.forEach(function(_,i){ var d=document.createElement('button'); d.type='button'; d.setAttribute('aria-label','Slayt '+(i+1)); d.addEventListener('click',function(){ git(i,true); }); dots.appendChild(d); }); }
+        function boyaDots(){ if(!dots) return; [].forEach.call(dots.children,function(d,i){ d.className = i===idx ? 'aktif' : ''; }); }
+        var alanlar=[].slice.call(hero.querySelectorAll('[data-vmh2-slide-target]'));
+        function alanAktifle(){ alanlar.forEach(function(a){ a.classList.toggle('aktif', parseInt(a.getAttribute('data-vmh2-slide-target'),10)===slides[idx]._o); }); }
+        function metinYaz(v){
+          if(linkEl){ linkEl.setAttribute('href', v.l||'/collections/all'); if(v.e) linkEl.setAttribute('aria-label', v.e); }
+          if(eEl){ eEl.textContent=v.e||''; eEl.style.display=v.e?'':'none'; }
+          if(hEl) hEl.innerHTML=v.b||'';
+          if(pEl){ pEl.textContent=v.m||''; pEl.style.display=v.m?'':'none'; }
+          if(ctaEl){
+            if(v.c){ ctaEl.textContent=v.c; ctaEl.setAttribute('href', v.l||'/collections/all'); ctaEl.hidden=false; }
+            else { ctaEl.hidden=true; }
+            statikler.forEach(function(s){ s.hidden=!!v.c; });
+          }
+        }
+        function git(i, elle){
+          idx=(i+slides.length)%slides.length; var v=slides[idx];
+          var giren=onA?imgB:imgA, cikan=onA?imgA:imgB;
+          if(giren && v.g){ var pre=new Image(); pre.onload=function(){ giren.src=v.g; giren.classList.add('vmh2-hm-gorunur'); cikan.classList.remove('vmh2-hm-gorunur'); }; pre.src=v.g; onA=!onA; }
+          [eEl,hEl,pEl].forEach(function(x){ if(x) x.classList.add('vmh2-solgun'); });
+          setTimeout(function(){ metinYaz(v); [eEl,hEl,pEl].forEach(function(x){ if(x) x.classList.remove('vmh2-solgun'); }); }, 360);
+          boyaDots();
+          alanAktifle();
+          if(elle) kur();
+        }
+        // Hero okları — `git(i,true)` çağrılır; true, autoplay sayacını sıfırlar.
+        var okGeri=hero.querySelector('[data-vmh2-prev]'), okIleri=hero.querySelector('[data-vmh2-next]');
+        if(okGeri) okGeri.addEventListener('click',function(e){ e.preventDefault(); e.stopPropagation(); git(idx-1,true); });
+        if(okIleri) okIleri.addEventListener('click',function(e){ e.preventDefault(); e.stopPropagation(); git(idx+1,true); });
+        function kur(){ clearInterval(timer); if(DESIGN) return; if(!window.matchMedia('(prefers-reduced-motion: reduce)').matches){ timer=setInterval(function(){ git(idx+1,false); },6500); } }
+        // ilk gösterim: karışık sıranın başı (server ilk bloğu bastı — anında değiştir)
+        if(imgA) imgA.classList.add('vmh2-hm-gorunur');
+        metinYaz(slides[0]); if(imgA && slides[0].g && imgA.src!==slides[0].g) imgA.src=slides[0].g;
+        boyaDots(); alanAktifle(); kur();
+        if(DESIGN){
+          document.addEventListener('shopify:block:select', function(e){
+            var t = e.target; if(!t || !t.getAttribute) return;
+            var v = t.getAttribute('data-vmh2-slide-target'); if(v === null) return;
+            var o = parseInt(v, 10);
+            for(var j = 0; j < slides.length; j++){ if(slides[j]._o === o){ if(j !== idx) git(j, true); break; } }
+          });
+        }
+        window.addEventListener('pageshow',function(ev){ if(ev && ev.persisted){ git(KARISIK!==false?Math.floor(Math.random()*slides.length):0,false); kur(); } });
+      })();
+    </script>
+  {%- endif -%}
+
+  {%- comment -%} ============ AVANTAJ ŞERİDİ ============ {%- endcomment -%}
+  {%- assign avantaj_var = false -%}
+  {%- for block in section.blocks -%}{%- if block.type == "avantaj" -%}{%- assign avantaj_var = true -%}{%- endif -%}{%- endfor -%}
+  {%- if avantaj_var -%}
+  <div class="vmh2-benefit-strip vmh2-reveal">
+    {%- for block in section.blocks -%}
+      {%- if block.type == "avantaj" -%}
+        <div class="vmh2-benefit" {{ block.shopify_attributes }}>
+          <span class="vmh2-benefit-icon">{{ block.settings.ikon | default: "✓" }}</span>
+          <div><strong>{{ block.settings.baslik }}</strong><span>{{ block.settings.alt_metin }}</span></div>
+        </div>
+      {%- endif -%}
+    {%- endfor -%}
+  </div>
+  {%- endif -%}
+
+
+  {%- comment -%} ============ ÜRÜN VİTRİNİ ============ {%- endcomment -%}
+  {%- for block in section.blocks -%}
+    {%- if block.type == "urunler" -%}
+      {%- assign col = collections[block.settings.koleksiyon] -%}
+      {%- if col == blank or col.products_count == 0 -%}{%- assign col = collections.all -%}{%- endif -%}
+      <section class="vmh2-section vmh2-reveal" id="vmh2-best" {{ block.shopify_attributes }}>
+        <div class="vmh2-section-head">
+          <div>
+            {%- if block.settings.kicker != blank -%}<div class="vmh2-section-kicker">{{ block.settings.kicker }}</div>{%- endif -%}
+            <h2>{{ block.settings.baslik }}</h2>
+          </div>
+          <a href="{{ col.url }}" class="vmh2-btn vmh2-btn-ghost">{{ block.settings.tumu_metin | default: "Tümünü Gör →" }}</a>
+        </div>
+        {%- comment -%} rastgele=true: 24'lük havuz bas, JS her ziyarette karıştırıp adet kadarını gösterir {%- endcomment -%}
+        {%- assign urun_limit = block.settings.adet -%}
+        {%- if block.settings.rastgele and block.settings.slider != true -%}{%- assign urun_limit = 24 -%}{%- endif -%}
+        {%- if block.settings.slider -%}{%- assign urun_limit = 30 -%}{%- endif -%}
+        <div class="vmh2-products{% if block.settings.slider %} vmh2-products--slider{% endif %}"{% if block.settings.rastgele and block.settings.slider != true %} data-vmh2-random="{{ block.settings.adet }}"{% endif %}>
+          {%- for p in col.products limit: urun_limit -%}
+            <article class="vmh2-product-card"{% if block.settings.rastgele and block.settings.slider != true %} data-vmh2-pool{% if forloop.index > block.settings.adet %} hidden{% endif %}{% endif %}>
+              <a href="{{ p.url }}" class="vmh2-product-image">
+                {%- if p.featured_image -%}
+                  <img src="{{ p.featured_image | image_url: width: 900 }}" alt="{{ p.title | escape }}" loading="lazy">
+                {%- endif -%}
+                {%- if p.compare_at_price > p.price -%}
+                  {%- assign indirim = p.compare_at_price | minus: p.price | times: 100 | divided_by: p.compare_at_price -%}
+                  <span class="vmh2-pill">%{{ indirim }} İNDİRİM</span>
+                {%- elsif forloop.first and block.settings.slider != true -%}
+                  <span class="vmh2-pill">ÇOK SATAN</span>
+                {%- endif -%}
+              </a>
+              <div class="vmh2-product-info">
+                <small>{{ p.vendor | default: "Via Mood" }}</small>
+                <h3><a href="{{ p.url }}">{{ p.title }}</a></h3>
+                <div class="vmh2-price-row">
+                  <div>
+                    <span class="vmh2-price">{{ p.price | money }}</span>
+                    {%- if p.compare_at_price > p.price -%}<span class="vmh2-old-price">{{ p.compare_at_price | money }}</span>{%- endif -%}
+                  </div>
+                  <a class="vmh2-mini-add" href="{{ p.url }}" aria-label="{{ p.title | escape }} — ürüne git">+</a>
+                </div>
+              </div>
+            </article>
+          {%- endfor -%}
+        </div>
+      </section>
+    {%- endif -%}
+  {%- endfor -%}
+
+  {%- comment -%} ============ HİKÂYE ============ {%- endcomment -%}
+  {%- for block in section.blocks -%}
+    {%- if block.type == "hikaye" -%}
+      <section class="vmh2-section vmh2-reveal" id="vmh2-story" {{ block.shopify_attributes }}>
+        <div class="vmh2-story">
+          <div class="vmh2-story-copy">
+            {%- if block.settings.kicker != blank -%}<div class="vmh2-section-kicker vmh2-kicker-acik">{{ block.settings.kicker }}</div>{%- endif -%}
+            <h2>{{ block.settings.baslik }}</h2>
+            <p>{{ block.settings.metin }}</p>
+            {%- if block.settings.cta != blank -%}
+              <a href="{{ block.settings.link | default: '/pages/hakkimizda' }}" class="vmh2-btn vmh2-btn-light vmh2-story-cta">{{ block.settings.cta }}</a>
+            {%- endif -%}
+          </div>
+          <div class="vmh2-story-media">
+            {%- if block.settings.gorsel -%}
+              <img src="{{ block.settings.gorsel | image_url: width: 1400 }}" alt="{{ block.settings.baslik | escape }}" loading="lazy">
+            {%- else -%}
+              <img src="data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%221600%22 height=%221200%22><rect width=%221600%22 height=%221200%22 fill=%22%23ece5dc%22/></svg>" alt="" loading="lazy">
+            {%- endif -%}
+            {%- if block.settings.etiket != blank -%}<div class="vmh2-story-tag">{{ block.settings.etiket }}</div>{%- endif -%}
+          </div>
+        </div>
+      </section>
+    {%- endif -%}
+  {%- endfor -%}
+
+  {%- comment -%} ============ İLHAM GALERİSİ ============ {%- endcomment -%}
+  {%- assign ilham_var = false -%}
+  {%- for block in section.blocks -%}{%- if block.type == "ilham" -%}{%- assign ilham_var = true -%}{%- endif -%}{%- endfor -%}
+  {%- if ilham_var -%}
+  <section class="vmh2-section vmh2-reveal" id="vmh2-inspiration">
+    <div class="vmh2-section-head">
+      <div>
+        {%- if sec.ilham_kicker != blank -%}<div class="vmh2-section-kicker">{{ sec.ilham_kicker }}</div>{%- endif -%}
+        <h2>{{ sec.ilham_baslik }}</h2>
+      </div>
+      {%- if sec.ilham_not != blank -%}<p class="vmh2-section-note">{{ sec.ilham_not }}</p>{%- endif -%}
+    </div>
+    <div class="vmh2-inspiration-grid">
+      {%- for block in section.blocks -%}
+        {%- if block.type == "ilham" -%}
+          <div class="vmh2-inspiration-card" {{ block.shopify_attributes }}>
+            {%- if block.settings.link != blank -%}<a href="{{ block.settings.link }}">{%- endif -%}
+            {%- if block.settings.gorsel -%}
+              <img src="{{ block.settings.gorsel | image_url: width: 1200 }}" alt="{{ block.settings.gorsel.alt | default: 'Via Mood ilham' | escape }}" loading="lazy">
+            {%- else -%}
+              <img src="{{ block.settings.gorsel_url | default: 'data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%221600%22 height=%221200%22><rect width=%221600%22 height=%221200%22 fill=%22%23ece5dc%22/></svg>' }}" alt="Via Mood ilham" loading="lazy">
+            {%- endif -%}
+            {%- if block.settings.link != blank -%}</a>{%- endif -%}
+          </div>
+        {%- endif -%}
+      {%- endfor -%}
+    </div>
+  </section>
+  {%- endif -%}
+
+  {%- comment -%} ============ KATEGORİ VİTRİNLERİ (sağ/sol dönüşümlü bantlar) ============ {%- endcomment -%}
+  {%- assign vitrin_i = 0 -%}
+  {%- for block in section.blocks -%}
+    {%- if block.type == "vitrin" -%}
+      {%- liquid
+        assign vitrin_i = vitrin_i | plus: 1
+        assign col = block.settings.koleksiyon
+        assign v_baslik = block.settings.baslik
+        if v_baslik == blank and col
+          assign v_baslik = col.title
+        endif
+        assign v_link = '/collections/all'
+        if col
+          assign v_link = col.url
+        endif
+        assign v_img = ''
+        if block.settings.gorsel
+          assign v_img = block.settings.gorsel | image_url: width: 1400
+        elsif block.settings.gorsel_url != blank
+          assign v_img = block.settings.gorsel_url
+        elsif col.image
+          assign v_img = col.image | image_url: width: 1400
+        elsif col.products.first.featured_image
+          assign v_img = col.products.first.featured_image | image_url: width: 1400
+        endif
+        assign urun_n = block.settings.urun_adedi | default: 3
+        assign yon = vitrin_i | modulo: 2
+      -%}
+      <section class="vmh2-vitrin vmh2-reveal{% if yon == 0 %} vmh2-vitrin-ters{% endif %}" {{ block.shopify_attributes }}>
+        <a class="vmh2-vitrin-media" href="{{ v_link }}" aria-label="{{ v_baslik | escape }}">
+          {%- if v_img != blank -%}<img src="{{ v_img }}" alt="{{ v_baslik | escape }}" loading="lazy">{%- endif -%}
+          <span class="vmh2-vitrin-tag">{{ v_baslik }}</span>
+        </a>
+        <div class="vmh2-vitrin-copy">
+          {%- if block.settings.kicker != blank -%}<div class="vmh2-section-kicker">{{ block.settings.kicker }}</div>{%- endif -%}
+          <h3>{{ v_baslik }}</h3>
+          {%- if block.settings.metin != blank -%}<p>{{ block.settings.metin }}</p>{%- endif -%}
+          {%- if col and urun_n > 0 -%}
+          <div class="vmh2-vitrin-urunler">
+            {%- for p in col.products limit: urun_n -%}
+              <a class="vmh2-vitrin-urun" href="{{ p.url }}">
+                <span class="vu-img">{%- if p.featured_image -%}<img src="{{ p.featured_image | image_url: width: 400 }}" alt="{{ p.title | escape }}" loading="lazy">{%- endif -%}</span>
+                <span class="vu-ad">{{ p.title | truncate: 44 }}</span>
+                <span class="vu-fiyat">{{ p.price | money }}</span>
+              </a>
+            {%- endfor -%}
+          </div>
+          {%- endif -%}
+          <a class="vmh2-btn vmh2-btn-primary vmh2-vitrin-cta" href="{{ v_link }}">{{ block.settings.cta | default: 'Tümünü keşfet →' }}</a>
+        </div>
+      </section>
+    {%- endif -%}
+  {%- endfor -%}
+
+  {%- comment -%} ============ MÜŞTERİ YORUMLARI (API-driven — hesap.viamood.com.tr, Club öncesi boş alan) ============ {%- endcomment -%}
+  <section class="vmh2-section vmy" id="vmh2-yorumlar" data-vmy-api="https://hesap.viamood.com.tr/api/v1/storefront/reviews" hidden>
+    <div class="vmy-head">
+      <div class="vmh2-section-kicker">Müşteri Yorumları</div>
+      <h2>Müşterilerimiz bizi seviyor</h2>
+      <div class="vmy-trust" data-vmy-trust hidden>
+        <span class="vmy-trust-score" data-vmy-avg>5,0</span>
+        <span class="vmy-stars vmy-stars-lg" aria-hidden="true">★★★★★</span>
+        <span class="vmy-trust-count" data-vmy-count></span>
+      </div>
+    </div>
+    <div class="vmy-carousel"><div class="vmy-track" data-vmy-track></div></div>
+    <div class="vmy-cta" style="display:flex;flex-wrap:wrap;gap:12px;justify-content:center;align-items:center"><a href="/pages/yorumlar" class="vmh2-btn vmh2-btn-primary">Tüm müşteri yorumlarını gör →</a><button type="button" class="vmh2-btn vmh2-btn-light" data-vmy-open>Sen de yorum yaz →</button></div>
+
+    <div class="vmy-modal" data-vmy-modal hidden>
+      <div class="vmy-modal-card" role="dialog" aria-modal="true" aria-label="Yorum yaz">
+        <button class="vmy-modal-close" type="button" data-vmy-close aria-label="Kapat">×</button>
+        <h3>Deneyimini paylaş</h3>
+        <p class="vmy-modal-sub">Via Mood'dan alışveriş yaptıysan yorumunu bırak. Yorumun <strong>admin onayından</strong> sonra yayınlanır.</p>
+        <form data-vmy-form novalidate>
+          <div class="vmy-fstars" data-vmy-fstars role="radiogroup" aria-label="Puan">
+            <span data-v="1">★</span><span data-v="2">★</span><span data-v="3">★</span><span data-v="4">★</span><span data-v="5">★</span>
+          </div>
+          <input type="hidden" name="puan" value="5">
+          <input name="isim" placeholder="Ad Soyad" required maxlength="80" autocomplete="name">
+          <input name="urun" placeholder="Aldığın ürün (opsiyonel)" maxlength="160">
+          <textarea name="metin" placeholder="Ürünle ilgili deneyimini yaz..." required rows="4" maxlength="1000"></textarea>
+          <input type="text" name="website" class="vmy-hp" tabindex="-1" autocomplete="off" aria-hidden="true">
+          <button type="submit" class="vmh2-btn vmh2-btn-primary" data-vmy-submit>Yorumu gönder</button>
+          <p class="vmy-form-msg" data-vmy-msg role="status"></p>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <style>
+    #vmh2-yorumlar.vmy{--star:#f0a636}
+    #vmh2-yorumlar .vmy-head{text-align:center;max-width:720px;margin:0 auto 40px}
+    #vmh2-yorumlar .vmy-head h2{margin-top:6px}
+    #vmh2-yorumlar .vmy-trust{display:inline-flex;align-items:center;gap:12px;margin-top:20px;padding:11px 20px;background:var(--vmh2-paper);border:1px solid var(--vmh2-line);border-radius:999px;box-shadow:0 10px 28px rgba(49,38,28,.07)}
+    #vmh2-yorumlar .vmy-trust-score{font-weight:800;font-size:20px}
+    #vmh2-yorumlar .vmy-trust-count{color:var(--vmh2-muted);font-size:13px;border-left:1px solid var(--vmh2-line);padding-left:12px}
+    #vmh2-yorumlar .vmy-stars{letter-spacing:2px;line-height:1;color:var(--star)}
+    #vmh2-yorumlar .vmy-stars-lg{font-size:17px}
+    #vmh2-yorumlar .vmy-stars .off{color:#dcd3c6}
+    #vmh2-yorumlar .vmy-track{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(320px,1fr);gap:22px;overflow-x:auto;scroll-snap-type:x mandatory;padding:6px 2px 20px;scrollbar-width:none}
+    #vmh2-yorumlar .vmy-track::-webkit-scrollbar{display:none}
+    #vmh2-yorumlar .vmy-card{scroll-snap-align:start;background:var(--vmh2-paper);border:1px solid var(--vmh2-line);border-radius:22px;padding:26px 24px;display:flex;flex-direction:column;gap:14px;box-shadow:0 14px 34px rgba(45,33,24,.05)}
+    #vmh2-yorumlar .vmy-card .vmy-stars{font-size:15px}
+    #vmh2-yorumlar .vmy-text{margin:0;line-height:1.72;color:#3c3934;font-size:15px;flex:1}
+    #vmh2-yorumlar .vmy-media{margin:0;border-radius:14px;overflow:hidden;border:1px solid var(--vmh2-line);aspect-ratio:16/10;background:#efe6da}
+    #vmh2-yorumlar .vmy-media img{width:100%;height:100%;object-fit:cover;display:block}
+    #vmh2-yorumlar .vmy-foot{display:flex;align-items:center;gap:12px;margin-top:2px}
+    #vmh2-yorumlar .vmy-avatar{width:44px;height:44px;border-radius:50%;flex:none;display:grid;place-items:center;background:#efe0d0;color:var(--vmh2-orange);font-weight:800;font-size:16px}
+    #vmh2-yorumlar .vmy-who{display:flex;flex-direction:column;min-width:0}
+    #vmh2-yorumlar .vmy-who strong{font-size:14px;font-weight:700}
+    #vmh2-yorumlar .vmy-who small{font-size:12px;color:var(--vmh2-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    #vmh2-yorumlar .vmy-verified{margin-left:auto;flex:none;display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:700;color:var(--vmh2-orange)}
+    #vmh2-yorumlar .vmy-cta{text-align:center;margin-top:28px}
+    @media(min-width:1080px){ #vmh2-yorumlar .vmy-track{grid-auto-flow:row;grid-template-columns:repeat(3,1fr);overflow:visible} }
+    @media(max-width:640px){ #vmh2-yorumlar .vmy-track{grid-auto-columns:minmax(82vw,82vw)} }
+    /* modal */
+    #vmh2-yorumlar .vmy-modal{position:fixed;inset:0;z-index:9999;background:rgba(34,33,31,.55);display:flex;align-items:center;justify-content:center;padding:20px}
+    #vmh2-yorumlar .vmy-modal[hidden]{display:none!important}
+    #vmh2-yorumlar .vmy-modal-card{position:relative;background:var(--vmh2-paper);border-radius:24px;padding:32px;width:min(520px,100%);max-height:90vh;overflow:auto;box-shadow:0 30px 80px rgba(0,0,0,.3)}
+    #vmh2-yorumlar .vmy-modal-close{position:absolute;top:14px;right:16px;background:none;border:none;font-size:28px;line-height:1;color:#999;cursor:pointer}
+    #vmh2-yorumlar .vmy-modal-card h3{font-family:"Playfair Display",serif;font-size:26px;margin:0 0 6px}
+    #vmh2-yorumlar .vmy-modal-sub{color:var(--vmh2-muted);font-size:14px;margin:0 0 18px}
+    #vmh2-yorumlar .vmy-modal-card form{display:flex;flex-direction:column;gap:12px}
+    #vmh2-yorumlar .vmy-modal-card input,#vmh2-yorumlar .vmy-modal-card textarea{width:100%;border:1px solid #ddd2c2;border-radius:12px;padding:12px 14px;font-family:inherit;font-size:14px;background:#fff}
+    #vmh2-yorumlar .vmy-fstars{display:flex;gap:6px;font-size:30px;color:#dcd3c6;cursor:pointer;user-select:none}
+    #vmh2-yorumlar .vmy-fstars span{transition:color .1s}
+    #vmh2-yorumlar .vmy-fstars span.on{color:var(--star)}
+    #vmh2-yorumlar .vmy-hp{position:absolute!important;left:-9999px!important;width:1px;height:1px}
+    #vmh2-yorumlar .vmy-form-msg{font-size:13px;margin:2px 0 0;min-height:18px}
+    #vmh2-yorumlar .vmy-form-msg.ok{color:#3f7a3a}
+    #vmh2-yorumlar .vmy-form-msg.err{color:#c0392b}
+  </style>
+
+  <script>
+    (function(){
+      var sec=document.getElementById('vmh2-yorumlar'); if(!sec) return;
+      var api=sec.getAttribute('data-vmy-api');
+      var track=sec.querySelector('[data-vmy-track]');
+      function esc(s){var d=document.createElement('div');d.textContent=s==null?'':String(s);return d.innerHTML;}
+      function stars(n){n=Math.max(0,Math.min(5,n|0));var h='';for(var i=1;i<=5;i++){h+='<span'+(i<=n?'':' class="off"')+'>★</span>';}return h;}
+      function card(r){
+        var initial=(r.authorName||'V').trim().charAt(0).toUpperCase();
+        var sub=[r.location,r.productTitle].filter(Boolean).map(esc).join(' · ');
+        var media=r.imageUrl?'<div class="vmy-media"><img src="'+esc(r.imageUrl)+'" alt="'+esc(r.productTitle||r.authorName)+'" loading="lazy"></div>':'';
+        var badge=r.verifiedBuyer?'<span class="vmy-verified" title="Doğrulanmış alışveriş"><svg viewBox="0 0 24 24" width="13" height="13" aria-hidden="true"><path fill="currentColor" d="M12 1 3 5v6c0 5 3.8 9.7 9 11 5.2-1.3 9-6 9-11V5l-9-4Zm-1.2 14.2-3.5-3.5 1.4-1.4 2.1 2.1 4.9-4.9 1.4 1.4-6.3 6.3Z"/></svg>Doğrulanmış</span>':'';
+        return '<article class="vmy-card"><div class="vmy-stars" role="img" aria-label="'+ (r.rating||5) +' / 5">'+stars(r.rating)+'</div>'+
+          '<p class="vmy-text">'+esc(r.body)+'</p>'+media+
+          '<div class="vmy-foot"><span class="vmy-avatar" aria-hidden="true">'+esc(initial)+'</span>'+
+          '<div class="vmy-who"><strong>'+esc(r.authorName||'Via Mood Müşterisi')+'</strong><small>'+sub+'</small></div>'+badge+'</div></article>';
+      }
+      function shuffle(a){for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=a[i];a[i]=a[j];a[j]=t;}return a;}
+      fetch(api,{headers:{'Accept':'application/json'}}).then(function(r){return r.json();}).then(function(d){
+        if(!d||!d.ok||!d.reviews||!d.reviews.length) return; // yorum yoksa bölüm gizli kalır (boş bant olmaz)
+        var list=shuffle(d.reviews.slice()).slice(0,9);
+        track.innerHTML=list.map(card).join('');
+        var trust=sec.querySelector('[data-vmy-trust]');
+        if(d.average){ sec.querySelector('[data-vmy-avg]').textContent=String(d.average).replace('.',','); }
+        if(d.count){ sec.querySelector('[data-vmy-count]').textContent=d.count+' değerlendirme'; }
+        if(trust) trust.hidden=false;
+        sec.hidden=false;
+      }).catch(function(){/* sessiz — bölüm gizli kalır */});
+
+      // ---- Yorum yaz modal + form ----
+      var modal=sec.querySelector('[data-vmy-modal]');
+      function openModal(){modal.hidden=false;document.body.style.overflow='hidden';}
+      function closeModal(){modal.hidden=true;document.body.style.overflow='';}
+      sec.querySelector('[data-vmy-open]').addEventListener('click',openModal);
+      sec.querySelector('[data-vmy-close]').addEventListener('click',closeModal);
+      modal.addEventListener('click',function(e){if(e.target===modal)closeModal();});
+      document.addEventListener('keydown',function(e){if((e.key==='Escape'||e.key==='Esc')&&!modal.hidden)closeModal();});
+      // yıldız seçimi
+      var fstars=sec.querySelector('[data-vmy-fstars]');
+      var puanInput=sec.querySelector('input[name="puan"]');
+      function paint(n){[].forEach.call(fstars.children,function(s,i){s.className=(i<n)?'on':'';});}
+      paint(5);
+      [].forEach.call(fstars.children,function(s,i){s.addEventListener('click',function(){puanInput.value=i+1;paint(i+1);});});
+      // gönder
+      var form=sec.querySelector('[data-vmy-form]');
+      var msg=sec.querySelector('[data-vmy-msg]');
+      form.addEventListener('submit',function(e){
+        e.preventDefault();
+        var btn=sec.querySelector('[data-vmy-submit]');
+        var body={isim:form.isim.value.trim(),metin:form.metin.value.trim(),puan:Number(puanInput.value)||5,urun:form.urun.value.trim(),website:form.website.value};
+        msg.className='vmy-form-msg';msg.textContent='';
+        if(body.isim.length<2||body.metin.length<10){msg.className='vmy-form-msg err';msg.textContent='İsim ve en az 10 karakterlik yorum gerekli.';return;}
+        btn.disabled=true;btn.textContent='Gönderiliyor...';
+        fetch(api,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}).then(function(r){return r.json();}).then(function(d){
+          if(d&&d.ok){msg.className='vmy-form-msg ok';msg.textContent=d.message||'Yorumun alındı, onaydan sonra yayınlanacak. Teşekkürler!';form.reset();paint(5);puanInput.value=5;setTimeout(closeModal,2200);}
+          else{msg.className='vmy-form-msg err';msg.textContent=(d&&d.error)||'Gönderilemedi, tekrar deneyin.';}
+        }).catch(function(){msg.className='vmy-form-msg err';msg.textContent='Bağlantı hatası, tekrar deneyin.';})
+        .then(function(){btn.disabled=false;btn.textContent='Yorumu gönder';});
+      });
+    })();
+  </script>
+
+  {%- comment -%} ============ KATEGORİ KARTLARI ============ {%- endcomment -%}
+  {%- assign kategori_var = false -%}
+  {%- for block in section.blocks -%}{%- if block.type == "kategori" -%}{%- assign kategori_var = true -%}{%- endif -%}{%- endfor -%}
+  {%- if kategori_var -%}
+  <section class="vmh2-section vmh2-reveal" id="vmh2-categories">
+    <div class="vmh2-section-head">
+      <div>
+        {%- if sec.kat_kicker != blank -%}<div class="vmh2-section-kicker">{{ sec.kat_kicker }}</div>{%- endif -%}
+        <h2>{{ sec.kat_baslik }}</h2>
+      </div>
+      {%- if sec.kat_not != blank -%}<p class="vmh2-section-note">{{ sec.kat_not }}</p>{%- endif -%}
+    </div>
+    <div class="vmh2-category-grid">
+      {%- for block in section.blocks -%}
+        {%- if block.type == "kategori" -%}
+          <a class="vmh2-category-card" href="{{ block.settings.link | default: '/collections/all' }}" {{ block.shopify_attributes }}>
+            {%- if block.settings.gorsel -%}
+              <img src="{{ block.settings.gorsel | image_url: width: 1200 }}" alt="{{ block.settings.baslik | escape }}" loading="lazy">
+            {%- else -%}
+              <img src="{{ block.settings.gorsel_url | default: 'data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%221600%22 height=%221200%22><rect width=%221600%22 height=%221200%22 fill=%22%23ece5dc%22/></svg>' }}" alt="{{ block.settings.baslik | escape }}" loading="lazy">
+            {%- endif -%}
+            <div class="vmh2-category-copy">
+              {%- if block.settings.alt_metin != blank -%}<small>{{ block.settings.alt_metin }}</small>{%- endif -%}
+              <h3>{{ block.settings.baslik }}</h3>
+            </div>
+          </a>
+        {%- endif -%}
+      {%- endfor -%}
+    </div>
+  </section>
+  {%- endif -%}
+
+  {%- comment -%} ============ MARKALARIMIZ (V2 carousel — kutulu; yorumların altı) ============ {%- endcomment -%}
+  {%- assign marka_var = false -%}
+  {%- for block in section.blocks -%}{%- if block.type == "marka" -%}{%- assign marka_var = true -%}{%- endif -%}{%- endfor -%}
+  {%- if marka_var -%}
+  <section class="vmh2-section vmb" aria-label="Markalarımız">
+    <div class="vmb-head">
+      <p class="vmb-eyebrow">{{ sec.marka_kicker | default: "Güvenilir iş ortakları" }}</p>
+      <h2>{{ sec.marka_baslik | default: "Markalarımız." }}</h2>
+    </div>
+    <div class="vmb-carousel">
+      <button type="button" class="vmb-btn vmb-btn-prev" aria-label="Önceki markalar">‹</button>
+      <button type="button" class="vmb-btn vmb-btn-next" aria-label="Sonraki markalar">›</button>
+      <div class="vmb-viewport">
+        <div class="vmb-track">
+          {%- for block in section.blocks -%}
+            {%- if block.type == "marka" -%}
+              {%- if block.settings.link != blank -%}<a class="vmb-card" href="{{ block.settings.link }}" {{ block.shopify_attributes }}>{%- else -%}<span class="vmb-card" {{ block.shopify_attributes }}>{%- endif -%}
+                <span class="vmb-logo">
+                  {%- if block.settings.gorsel -%}
+                    <img src="{{ block.settings.gorsel | image_url: width: 400 }}"{% if block.settings.acik_renk %} class="is-light"{% endif %} alt="{{ block.settings.isim | escape }}" loading="lazy">
+                  {%- else -%}
+                    <span class="vmb-ph">{{ block.settings.isim | default: "Marka" | escape }}</span>
+                  {%- endif -%}
+                </span>
+              {%- if block.settings.link != blank -%}</a>{%- else -%}</span>{%- endif -%}
+            {%- endif -%}
+          {%- endfor -%}
+        </div>
+      </div>
+    </div>
+    <div class="vmb-dots" role="tablist" aria-label="Marka sayfaları"></div>
+  </section>
+  <style>
+    .vmb{background:#f7f4ee;box-shadow:0 0 0 100vmax #f7f4ee;clip-path:inset(0 -100vmax);padding-top:56px;padding-bottom:56px}
+    .vmb-head{text-align:center;margin-bottom:36px}
+    .vmb-head::after{content:"";display:block;width:64px;height:2px;background:var(--vmh2-accent,#e1691f);margin:18px auto 0;border-radius:2px}
+    .vmb-eyebrow{font-size:13px;font-weight:600;letter-spacing:.04em;color:var(--vmh2-accent,#e1691f);margin-bottom:8px}
+    .vmb-carousel{position:relative}
+    .vmb-viewport{overflow:hidden}
+    .vmb-track{display:flex;transition:transform .45s cubic-bezier(.4,0,.2,1);will-change:transform}
+    .vmb-btn{position:absolute;top:50%;transform:translateY(-50%);z-index:2;width:44px;height:44px;border-radius:50%;border:none;background:#fff;color:var(--vmh2-ink,#3a2c22);font-size:20px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 14px rgba(90,60,30,.15);transition:all .2s ease}
+    .vmb-btn-prev{left:-14px}
+    .vmb-btn-next{right:-14px}
+    .vmb-btn:hover{background:var(--vmh2-accent,#e1691f);color:#fff}
+    .vmb-card{flex:0 0 16.6667%;padding:12px 14px;text-decoration:none;color:inherit;display:block!important;min-width:0}
+    .vmb .vmb-card .vmb-logo{width:100%!important;max-width:100%!important;aspect-ratio:1/1!important;display:flex!important;align-items:center;justify-content:center;background:#fff;border-radius:16px;padding:22px;box-shadow:0 10px 24px rgba(90,60,30,.12),0 2px 6px rgba(90,60,30,.06);transition:transform .25s ease,box-shadow .25s ease;overflow:hidden;box-sizing:border-box}
+    .vmb-card:hover .vmb-logo{transform:translateY(-5px);box-shadow:0 18px 34px rgba(90,60,30,.16),0 3px 8px rgba(90,60,30,.07)}
+    .vmb .vmb-card .vmb-logo img{width:100%!important;height:100%!important;max-width:100%!important;max-height:100%!important;object-fit:contain!important;aspect-ratio:auto!important;display:block;border-radius:0}
+    .vmb .vmb-card .vmb-logo img.is-light{filter:invert(.82) sepia(.12)}
+    .vmb-ph{font-size:13px;font-weight:700;color:#c4b49e;text-align:center}
+    .vmb-dots{display:flex;justify-content:center;gap:8px;margin-top:30px}
+    .vmb-dot{width:8px;height:8px;border-radius:50%;border:none;background:#dcccb9;cursor:pointer;padding:0;transition:all .25s ease}
+    .vmb-dot.is-active{width:22px;border-radius:99px;background:var(--vmh2-accent,#e1691f)}
+    @media (max-width:1200px){.vmb-card{flex:0 0 25%;padding:12px 12px}}
+    @media (max-width:900px){.vmb-card{flex:0 0 33.3333%}}
+    @media (max-width:680px){.vmb-card{flex:0 0 50%}.vmb-btn-prev{left:-6px}.vmb-btn-next{right:-6px}}
+    @media (max-width:420px){.vmb-card{flex:0 0 100%}}
+    @media (prefers-reduced-motion:reduce){.vmb-track{transition:none}}
+  </style>
+  <script>
+  (function(){
+    var AUTO_MS = 1500;
+    function perView(){ var w=window.innerWidth; if(w<=420)return 1; if(w<=680)return 2; if(w<=900)return 3; if(w<=1200)return 4; return 6; }
+    function initCarousel(root){
+      var track=root.querySelector('.vmb-track'), prev=root.querySelector('.vmb-btn-prev'), next=root.querySelector('.vmb-btn-next');
+      var dotsC=root.parentElement.querySelector('.vmb-dots');
+      var realCount=track.children.length; if(!realCount) return;
+      var index=0, timer=null, animating=false;
+      for(var i=0;i<realCount;i++){ track.appendChild(track.children[i].cloneNode(true)); }
+      function cardW(){ return track.children[0].offsetWidth; }
+      function setX(noAnim){ if(noAnim) track.style.transition='none'; track.style.transform='translateX('+(-index*cardW())+'px)'; if(noAnim){ void track.offsetHeight; track.style.transition=''; } }
+      function renderDots(){
+        var pv=perView(), pages=Math.max(1,Math.ceil(realCount/pv)), current=Math.floor((index%realCount)/pv)%pages;
+        dotsC.innerHTML='';
+        for(var i=0;i<pages;i++){ var d=document.createElement('button'); d.type='button'; d.className='vmb-dot'+(i===current?' is-active':''); d.setAttribute('aria-label',(i+1)+'. sayfa');
+          (function(idx){ d.addEventListener('click',function(){ index=idx*perView(); setX(false); renderDots(); restart(); }); })(i); dotsC.appendChild(d); }
+        dotsC.style.display=(pages===1)?'none':'flex';
+      }
+      function stepNext(){ if(animating)return; animating=true; index++; setX(false); }
+      function stepPrev(){ if(animating)return; animating=true; if(index<=0){ index=realCount; setX(true); } index--; setX(false); }
+      track.addEventListener('transitionend',function(){ animating=false; if(index>=realCount){ index=index-realCount; setX(true); } renderDots(); });
+      function restart(){ clearInterval(timer); timer=setInterval(stepNext,AUTO_MS); }
+      next.addEventListener('click',function(){ stepNext(); restart(); });
+      prev.addEventListener('click',function(){ stepPrev(); restart(); });
+      root.addEventListener('mouseenter',function(){ clearInterval(timer); });
+      root.addEventListener('mouseleave',restart);
+      var startX=null;
+      track.addEventListener('touchstart',function(e){ startX=e.touches[0].clientX; clearInterval(timer); },{passive:true});
+      track.addEventListener('touchend',function(e){ if(startX!==null){ var dx=e.changedTouches[0].clientX-startX; if(dx<-40)stepNext(); else if(dx>40)stepPrev(); startX=null; } restart(); },{passive:true});
+      var rid; window.addEventListener('resize',function(){ clearTimeout(rid); rid=setTimeout(function(){ setX(true); renderDots(); },120); });
+      setX(true); renderDots(); restart();
+    }
+    document.querySelectorAll('.vmb .vmb-carousel').forEach(initCarousel);
+  })();
+  </script>
+  {%- endif -%}
+
+  {%- comment -%} ============ BÜLTEN ============ {%- endcomment -%}
+  {%- for block in section.blocks -%}
+    {%- if block.type == "bulten" -%}
+      <section class="vmh2-newsletter vmh2-reveal" id="vmh2-campaign" {{ block.shopify_attributes }}>
+        <div class="vmh2-newsletter-inner">
+          {%- if block.settings.kicker != blank -%}<div class="vmh2-section-kicker">{{ block.settings.kicker }}</div>{%- endif -%}
+          <h2>{{ block.settings.baslik }}</h2>
+          <p>{{ block.settings.metin }}</p>
+          {%- form "customer", class: "vmh2-newsletter-form" -%}
+            <input type="hidden" name="contact[tags]" value="newsletter,via-mood-club">
+            {%- if form.posted_successfully? -%}
+              <span class="vmh2-form-ok">Kaydın alındı, teşekkürler! ✓</span>
+            {%- else -%}
+              <input type="email" name="contact[email]" placeholder="{{ block.settings.placeholder | default: 'E-posta adresin' }}" required autocomplete="email">
+              <button class="vmh2-btn vmh2-btn-primary" type="submit">{{ block.settings.buton | default: "Katıl →" }}</button>
+            {%- endif -%}
+          {%- endform -%}
+        </div>
+      </section>
+    {%- endif -%}
+  {%- endfor -%}
+
+</div>
+
+{%- comment -%} ============ KAMPANYA BANNER (açılış modalı) ============
+  Yunus talebi (8 Ağu 2026): anasayfa ilk açılışta ortada kampanya görseli;
+  görsele tıklayınca koleksiyona gider, sağ üstteki X ile kapanır.
+  Görseldeki X ÇİZİLİ olduğu için gerçek kapatma butonu ŞEFFAF ve tam onun
+  üzerinde duruyor (yüzde hizalı) — ekranda tek X görünür. Ölçüm:
+  görselde X dairesinin merkezi soldan %95.37, üstten %6.26 (1448x1086 orijinal).
+  Farklı bir görsel yüklenirse "Kapatma butonu" ayarını "Kendi X'imizi çiz"e al.
+{%- endcomment -%}
+{%- if sec.kampanya_goster -%}
+  {%- liquid
+    assign kmp_link = sec.kampanya_link | default: '/collections/saklama-kabi'
+    # TEKRAR SIKLIĞI — 'session' (aynı ziyaret) | 'gun' (24 saat) | 'her-acilis'
+    # Tema Editörü'nden de seçilebilir; aşağısı yalnızca varsayılandır.
+    assign kmp_siklik = sec.kampanya_siklik | default: 'session'
+    assign kmp_gecikme = sec.kampanya_gecikme | default: 15000
+    assign kmp_kapatma = sec.kampanya_kapatma | default: 'gomulu'
+  -%}
+  <div class="vmk-overlay" id="vmk-overlay" role="dialog" aria-modal="true"
+       aria-label="Kampanya duyurusu" hidden
+       data-vmk-siklik="{{ kmp_siklik }}" data-vmk-gecikme="{{ kmp_gecikme }}">
+    <div class="vmk-box">
+      <a class="vmk-link" href="{{ kmp_link }}" aria-label="Kampanyayı incele — avantajlı saklama kabı setleri">
+        {%- if sec.kampanya_gorsel -%}
+          <img class="vmk-img" src="{{ sec.kampanya_gorsel | image_url: width: 1200 }}"
+               alt="{{ sec.kampanya_alt | default: 'Siteye özel fiyat — avantajlı setleri kaçırma' | escape }}"
+               width="{{ sec.kampanya_gorsel.width }}" height="{{ sec.kampanya_gorsel.height }}">
+        {%- else -%}
+          <picture>
+            <source srcset="{{ 'via-kampanya-banner.webp' | asset_url }}" type="image/webp">
+            <img class="vmk-img" src="{{ 'via-kampanya-banner.jpg' | asset_url }}"
+                 alt="{{ sec.kampanya_alt | default: 'Siteye özel fiyat — avantajlı saklama kabı setlerini kaçırma' | escape }}"
+                 width="1200" height="900" fetchpriority="low" decoding="async">
+          </picture>
+        {%- endif -%}
+      </a>
+      <button type="button" class="vmk-close{% if kmp_kapatma == 'kendi' %} vmk-kendi{% endif %}"
+              aria-label="Kampanya duyurusunu kapat">
+        <svg class="vmk-x" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <path d="M7 7 L17 17 M17 7 L7 17" stroke="currentColor" stroke-width="3.2" stroke-linecap="round"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+{%- endif -%}
+
+{% style %}
+  .vmh2{
+    --vmh2-bg:#f7f3ed; --vmh2-paper:#fffdf9; --vmh2-ink:#22211f; --vmh2-muted:#716d67;
+    --vmh2-line:#e7dfd5; --vmh2-orange:#f06436; --vmh2-orange-dark:#d74d23;
+    --vmh2-sand:#eadfce; --vmh2-green:#5e725d; --vmh2-radius:28px;
+    --vmh2-shadow:0 24px 60px rgba(49,38,28,.12);
+    --vmh2-container:min(1440px, calc(100% - 40px));
+    font-family:"DM Sans",sans-serif !important; color:var(--vmh2-ink); background:var(--vmh2-bg);
+    overflow-x:hidden;
+  }
+  .vmh2 *{box-sizing:border-box}
+  /* Tema global tipografisi (Inter) bölüm fontlarını eziyor → zorla */
+  .vmh2 p,.vmh2 a,.vmh2 span,.vmh2 small,.vmh2 strong,.vmh2 button,.vmh2 input,.vmh2 h3{font-family:"DM Sans",sans-serif !important}
+  .vmh2 img{display:block;width:100%;height:100%;object-fit:cover}
+  .vmh2 a{text-decoration:none;color:inherit}
+  .vmh2 h1,.vmh2 h2,.vmh2 h3,.vmh2 p{margin-top:0}
+
+  .vmh2-category-rail{background:var(--vmh2-paper);border-bottom:1px solid var(--vmh2-line)}
+  .vmh2-category-wrap{width:var(--vmh2-container);margin:auto;display:flex;justify-content:center;gap:18px;padding:18px 0 22px;overflow:auto;scrollbar-width:none}
+  .vmh2-category-wrap::-webkit-scrollbar{display:none}
+  .vmh2-quick-category{min-width:138px;display:flex;align-items:center;gap:12px;padding:10px 14px 10px 10px;border-radius:999px;background:#f7f0e5;transition:.25s ease;white-space:nowrap}
+  .vmh2-quick-category:hover{background:#efe0d0;transform:translateY(-2px)}
+  .vmh2-quick-icon{width:48px;height:48px;border-radius:50%;display:grid;place-items:center;background:var(--vmh2-paper);color:var(--vmh2-orange);box-shadow:0 8px 18px rgba(240,100,54,.12);font-size:20px;overflow:hidden}
+  .vmh2-quick-icon img{width:100%;height:100%;object-fit:cover;border-radius:50%}
+  .vmh2-quick-category span:last-child{font-size:13px;font-weight:700}
+
+  .vmh2-hero{width:var(--vmh2-container);min-height:740px;margin:28px auto 0;position:relative;overflow:hidden;border-radius:36px;box-shadow:var(--vmh2-shadow);background:#c9b8a2}
+  .vmh2-hero-media{position:absolute;inset:0}
+  .vmh2-hero-media img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center;opacity:0;transition:opacity .9s ease}
+  .vmh2-hero-media img.vmh2-hm-gorunur{opacity:1}
+  .vmh2-hs-fade{transition:opacity .35s ease}
+  .vmh2-solgun{opacity:0 !important}
+  .vmh2-hs-editarea{position:absolute;inset:0;z-index:4;pointer-events:none}
+  .vmh2-hs-editarea.aktif{pointer-events:auto}
+  .vmh2-hs-dots{position:absolute;left:70px;bottom:34px;z-index:6;display:flex;gap:8px}
+  /* Banner modu: görsel kendi tasarımını taşıyor → metin/gradyan/rozet kapatılır,
+     yükseklik 3:2'ye sabitlenir (banner'lar 4:3 ve 3:2; cover ile kırpma ~%6 kalır). */
+  /* Banner modu oranı: 11 Eyl 2026'da gelen yeni banner'lar 1600x707 (~2.26:1).
+     Eskiden 3/2 (1.5) idi; bu oranda yeni görsellerin SOL ve SAĞ kenarındaki
+     ürünler `object-fit:cover` ile kırpılıyordu. Oran görselin kendi oranına
+     çekildi → kırpma yok. Yeni banner setinde oran değişirse burayı güncelle. */
+  .vmh2-hero--banner{min-height:0;aspect-ratio:1600/707;background:#14110e}
+
+  /* ── Hero okları (prev/next) ──────────────────────────────────────────────
+     Dokunma hedefi 48x48 (min 44 şartı). Kontrast: koyu yarı saydam daire +
+     beyaz çizgi ikon → açık ve koyu banner'ların ikisinde de okunur.
+     z-index banner modundaki tam alan linkinin (z-index:4) ÜSTÜNDE. */
+  .vmh2-hs-ok{
+    position:absolute; top:50%; transform:translateY(-50%);
+    z-index:6; width:48px; height:48px; padding:0;
+    display:grid; place-items:center;
+    border:0; border-radius:50%; cursor:pointer;
+    color:#fff; background:rgba(20,17,14,.42);
+    -webkit-backdrop-filter:blur(3px); backdrop-filter:blur(3px);
+    box-shadow:0 2px 10px rgba(0,0,0,.28);
+    transition:background .15s ease, transform .15s ease;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .vmh2-hs-ok svg{width:24px;height:24px;display:block}
+  .vmh2-hs-ok:hover{background:rgba(20,17,14,.64)}
+  .vmh2-hs-ok:active{transform:translateY(-50%) scale(.94)}
+  .vmh2-hs-ok:focus-visible{outline:3px solid #fff;outline-offset:2px}
+  .vmh2-hs-ok--geri{left:14px}
+  .vmh2-hs-ok--ileri{right:14px}
+  @media (max-width:749px){
+    .vmh2-hs-ok{width:44px;height:44px}
+    .vmh2-hs-ok svg{width:21px;height:21px}
+    .vmh2-hs-ok--geri{left:8px}
+    .vmh2-hs-ok--ileri{right:8px}
+  }
+  @media (prefers-reduced-motion:reduce){ .vmh2-hs-ok{transition:none} }
+  .vmh2-hero--banner .vmh2-hero-media::after{display:none}
+  .vmh2-hero--banner .vmh2-hero-content{display:none}
+  .vmh2-hero--banner .vmh2-hero-badge{display:none}
+  .vmh2-hero-link{position:absolute;inset:0;z-index:4;display:block}
+  @media (max-width:749px){ .vmh2-hero--banner{aspect-ratio:1600/707} .vmh2-hero--banner .vmh2-hs-dots{left:50%;transform:translateX(-50%);bottom:14px} }
+  .vmh2-hs-dots button{width:10px;height:10px;border-radius:50%;border:0;padding:0;background:rgba(255,255,255,.45);cursor:pointer;transition:.2s}
+  .vmh2-hs-dots button.aktif{background:#fff;transform:scale(1.25)}
+  @media(max-width:720px){.vmh2-hs-dots{left:20px;bottom:14px}}
+  .vmh2-hero-media img{filter:saturate(.92) contrast(1.02)}
+  .vmh2-hero-media::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(20,17,14,.68) 0%,rgba(20,17,14,.36) 40%,rgba(20,17,14,.05) 70%)}
+  .vmh2-hero-content{position:relative;z-index:2;width:min(660px,90%);min-height:740px;padding:88px 70px;display:flex;flex-direction:column;justify-content:center;align-items:flex-start;color:#fff}
+  .vmh2-eyebrow{display:inline-flex;align-items:center;gap:10px;padding:9px 14px;border:1px solid rgba(255,255,255,.45);border-radius:999px;font-size:12px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;background:rgba(255,255,255,.08);backdrop-filter:blur(8px)}
+  .vmh2-eyebrow::before{content:"";width:7px;height:7px;border-radius:50%;background:#ff8a63}
+  .vmh2-hero h1{font-family:"Playfair Display",serif !important;font-size:clamp(54px,6.3vw,102px);line-height:.95;letter-spacing:-.045em;margin:24px 0;max-width:760px;color:#fff !important}
+  .vmh2-hero h1 em{font-weight:600;color:#ffd8ca;display:inline;font-family:inherit !important;font-size:inherit;font-style:italic}
+  .vmh2-hero p{font-size:18px;line-height:1.65;color:rgba(255,255,255,.86) !important;max-width:520px}
+  .vmh2-hero-actions{display:flex;gap:14px;margin-top:18px;flex-wrap:wrap}
+  .vmh2-btn[hidden]{display:none !important} /* hidden attr'ı display:inline-flex'e ezdirme (slayt-CTA boş blob fix) */
+  .vmh2-btn{min-height:54px;padding:0 25px;border-radius:999px;border:1px solid transparent;display:inline-flex;align-items:center;justify-content:center;gap:10px;font-weight:700;cursor:pointer;transition:.22s ease;font-family:inherit}
+  .vmh2-btn-primary{background:var(--vmh2-orange);color:#fff;box-shadow:0 16px 30px rgba(240,100,54,.28)}
+  .vmh2-btn-primary:hover{background:var(--vmh2-orange-dark);transform:translateY(-2px)}
+  .vmh2-btn-light{background:#fff;color:var(--vmh2-ink) !important}
+  .vmh2-btn-light:hover{transform:translateY(-2px);background:#f7efe6}
+  .vmh2-btn-ghost{border-color:#d5cabe;color:var(--vmh2-ink)}
+  .vmh2-hero-badge{position:absolute;right:42px;bottom:42px;z-index:3;width:170px;height:170px;border-radius:50%;display:grid;place-items:center;text-align:center;padding:24px;background:rgba(255,253,249,.93);color:var(--vmh2-ink);box-shadow:0 18px 44px rgba(0,0,0,.2);transform:rotate(7deg)}
+  .vmh2-hero-badge strong{font-family:"Playfair Display",serif !important;font-size:28px;color:var(--vmh2-orange)}
+  .vmh2-hero-badge small{display:block;font-size:12px;line-height:1.45;color:var(--vmh2-muted)}
+
+  .vmh2-section{width:var(--vmh2-container);margin:108px auto}
+  .vmh2-section-head{display:flex;align-items:flex-end;justify-content:space-between;gap:30px;margin-bottom:34px}
+  .vmh2-section-kicker{font-size:12px;letter-spacing:.13em;text-transform:uppercase;font-weight:800;color:var(--vmh2-orange);margin-bottom:10px}
+  .vmh2-section h2{font-family:"Playfair Display",serif !important;font-size:clamp(42px,5vw,72px);line-height:1.03;letter-spacing:-.035em;margin-bottom:0}
+  .vmh2-section-note{max-width:420px;color:var(--vmh2-muted);line-height:1.7}
+
+  .vmh2-category-grid{display:grid;grid-template-columns:1.2fr .8fr .8fr;grid-template-rows:360px 360px;gap:20px}
+  .vmh2-category-card{position:relative;overflow:hidden;border-radius:var(--vmh2-radius);background:#ddd;box-shadow:0 16px 40px rgba(44,33,23,.08)}
+  .vmh2-category-card:first-child{grid-row:1/3}
+  .vmh2-category-card:nth-child(4){grid-column:2/4}
+  .vmh2-category-card::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 42%,rgba(18,15,12,.68) 100%)}
+  .vmh2-category-card img{transition:transform .7s cubic-bezier(.2,.7,.2,1)}
+  .vmh2-category-card:hover img{transform:scale(1.06)}
+  .vmh2-category-copy{position:absolute;z-index:2;left:28px;right:28px;bottom:26px;color:#fff}
+  .vmh2-category-copy small{font-size:12px;letter-spacing:.1em;text-transform:uppercase;opacity:.8;color:#fff !important}
+  .vmh2-category-copy h3{font-family:"Playfair Display",serif !important;font-size:34px;margin:6px 0 0;color:#fff !important}
+
+  .vmh2-benefit-strip{width:var(--vmh2-container);margin:40px auto 0;padding:26px 30px;display:grid;grid-template-columns:repeat(4,1fr);gap:22px;border-radius:24px;background:var(--vmh2-ink);color:#fff}
+  .vmh2-benefit{display:flex;gap:14px;align-items:center;border-right:1px solid rgba(255,255,255,.12)}
+  .vmh2-benefit:last-child{border-right:0}
+  .vmh2-benefit-icon{width:48px;height:48px;border-radius:16px;display:grid;place-items:center;background:rgba(255,255,255,.1);color:#ffd8ca;font-size:20px;flex:none}
+  .vmh2-benefit strong{display:block;font-size:14px}
+  .vmh2-benefit span:last-child{display:block;margin-top:4px;font-size:12px;color:rgba(255,255,255,.62)}
+
+  .vmh2-products{display:grid;grid-template-columns:repeat(4,1fr);gap:22px}
+  /* ==== Yeni Gelenler CAROUSEL (block.settings.slider) — Yunus referansı ====
+     ok + otomatik 3sn + sonsuz döngü + parmakla sürükle. Kart tasarımı korunur;
+     yalnızca liste bir raya (track) dönüşür. Görünen kart --vm-vis'ten hesaplanır. */
+  .vmh2 .vmh2-products--slider{--vm-vis:4;--vm-gap:22px;position:static}
+  @media(max-width:1200px){.vmh2 .vmh2-products--slider{--vm-vis:3}}
+  @media(max-width:900px) {.vmh2 .vmh2-products--slider{--vm-vis:3;--vm-gap:14px}}
+  @media(max-width:640px) {.vmh2 .vmh2-products--slider{--vm-vis:2;--vm-gap:14px}}
+  /* JS sarmalamadan önce: tek satır göster, taşmayı gizle (FOUC engelle) */
+  .vmh2 .vmh2-products--slider:not([data-vm-slider="1"]){display:flex;flex-wrap:nowrap;gap:var(--vm-gap);overflow:hidden;grid-template-columns:none}
+  .vmh2 .vmh2-products--slider:not([data-vm-slider="1"])>*{flex:0 0 calc((100% - (var(--vm-vis) - 1) * var(--vm-gap)) / var(--vm-vis));min-width:0}
+  /* JS sonrası iskelet */
+  .vmh2 .vmh2-slider{position:relative}
+  .vmh2 .vmh2-slider__viewport{overflow:hidden;padding:6px 0 14px;margin:-6px 0 -14px}
+  .vmh2 .vmh2-slider .vmh2-slider__track{display:flex !important;flex-wrap:nowrap !important;gap:var(--vm-gap) !important;grid-template-columns:none !important;margin:0 !important;transition:transform .55s cubic-bezier(.22,.61,.36,1);will-change:transform;touch-action:pan-y;cursor:grab;-webkit-user-select:none;user-select:none}
+  .vmh2 .vmh2-slider .vmh2-slider__track.is-dragging{cursor:grabbing;transition:none}
+  .vmh2 .vmh2-slider .vmh2-slider__track>*{flex:0 0 calc((100% - (var(--vm-vis) - 1) * var(--vm-gap)) / var(--vm-vis)) !important;max-width:calc((100% - (var(--vm-vis) - 1) * var(--vm-gap)) / var(--vm-vis)) !important;min-width:0 !important}
+  .vmh2 .vmh2-slider .vmh2-slider__track img{-webkit-user-drag:none;user-drag:none;pointer-events:none}
+  /* oklar */
+  .vmh2 .vmh2-slider__nav{position:absolute;top:calc(50% - 30px);transform:translateY(-50%);z-index:5;width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:1px solid rgba(45,33,24,.12);background:rgba(255,255,255,.96);color:#2d2118;font-size:22px;line-height:1;cursor:pointer;box-shadow:0 6px 18px rgba(45,33,24,.14);transition:.2s ease;padding:0}
+  .vmh2 .vmh2-slider__nav:hover{background:#2d2118;color:#fff;border-color:transparent}
+  .vmh2 .vmh2-slider__nav:focus-visible{outline:2px solid var(--vmh2-accent,#e1691f);outline-offset:3px}
+  .vmh2 .vmh2-slider__nav--prev{left:-10px}
+  .vmh2 .vmh2-slider__nav--next{right:-10px}
+  @media(min-width:1400px){.vmh2 .vmh2-slider__nav--prev{left:-22px}.vmh2 .vmh2-slider__nav--next{right:-22px}}
+  @media(max-width:640px){.vmh2 .vmh2-slider__nav{width:36px;height:36px;font-size:18px;top:calc(50% - 40px)}.vmh2 .vmh2-slider__nav--prev{left:-4px}.vmh2 .vmh2-slider__nav--next{right:-4px}}
+  @media(prefers-reduced-motion:reduce){.vmh2 .vmh2-slider .vmh2-slider__track{transition-duration:.01ms}}
+  /* 2026-08-08 MOBİL FIX — assets/via-mobile-app.css içindeki genel yardımcı kural
+     (@media max-width:749px → [class*="slider__track"]{overflow-x:auto!important;
+     scroll-snap-type;padding:6px 12px!important}) bizim ray'imize de uyuyordu.
+     overflow-x:auto ray'i kendi 342px'lik kutusuyla kırpan bir kaydırma kutusuna
+     çeviriyor; carousel ise içeriği translateX ile taşıdığı için görünürdeki tüm
+     kartlar kırpma alanının dışında kalıyor → mobilde bölüm bomboş görünüyordu.
+     Yalnızca bu carousel muaf tutulur; diğer slider'lar genel kuralda kalır. */
+  @media(max-width:749px){
+    .vmh2 .vmh2-slider .vmh2-slider__track{overflow:visible !important;scroll-snap-type:none !important;padding:0 !important}
+    .vmh2 .vmh2-slider .vmh2-slider__track>*{scroll-snap-align:none !important}
+  }
+  .vmh2-product-card{background:var(--vmh2-paper);border-radius:24px;padding:12px;transition:.25s ease;position:relative}
+  .vmh2-product-card:hover{transform:translateY(-7px);box-shadow:0 20px 44px rgba(45,33,24,.12)}
+  .vmh2-product-image{aspect-ratio:3/4;border-radius:18px;overflow:hidden;background:#ece5dc;position:relative;display:block}
+  .vmh2-product-image img{transition:transform .6s ease}
+  .vmh2-product-card:hover .vmh2-product-image img{transform:scale(1.04)}
+  .vmh2-pill{position:absolute;left:14px;top:14px;padding:8px 11px;border-radius:999px;background:#fff;font-size:11px;font-weight:800}
+  .vmh2-product-info{padding:18px 8px 10px}
+  .vmh2-product-info small{color:var(--vmh2-muted);font-size:11px;text-transform:uppercase;letter-spacing:.08em}
+  .vmh2-product-info h3{font-size:16px;margin:7px 0 10px}
+  .vmh2-price-row{display:flex;align-items:center;justify-content:space-between;gap:10px}
+  .vmh2-price{font-weight:800}
+  .vmh2-old-price{text-decoration:line-through;color:#9c958e;font-size:12px;margin-left:6px}
+  .vmh2-mini-add{width:40px;height:40px;border-radius:50%;border:0;background:var(--vmh2-orange);color:#fff;font-size:22px;cursor:pointer;display:grid;place-items:center;flex:none}
+
+  .vmh2-story{display:grid;grid-template-columns:1fr 1fr;min-height:650px;overflow:hidden;border-radius:34px;background:#d9cbb9;box-shadow:var(--vmh2-shadow)}
+  .vmh2-story-copy{padding:70px;display:flex;flex-direction:column;justify-content:center;background:#52614f;color:#fff}
+  .vmh2-story-copy h2{font-family:"Playfair Display",serif !important;font-size:64px;line-height:1.02;margin:16px 0 22px;color:#fff !important}
+  .vmh2-story-copy p{font-size:17px;line-height:1.75;color:rgba(255,255,255,.78);max-width:500px}
+  .vmh2-kicker-acik{color:#ffd8ca}
+  .vmh2-story-cta{align-self:flex-start;margin-top:18px;color:#52614f !important}
+  .vmh2-story-media{min-height:650px;position:relative}
+  .vmh2-story-tag{position:absolute;left:26px;bottom:26px;background:#fff;padding:16px 18px;border-radius:16px;font-weight:700;box-shadow:0 12px 30px rgba(0,0,0,.15);color:var(--vmh2-ink)}
+
+  .vmh2-inspiration-grid{display:grid;grid-template-columns:1.25fr .75fr .75fr;grid-template-rows:280px 280px;gap:18px}
+  .vmh2-inspiration-card{border-radius:22px;overflow:hidden;position:relative}
+  .vmh2-inspiration-card:first-child{grid-row:1/3}
+  .vmh2-inspiration-card:last-child{grid-column:2/4}
+  .vmh2-inspiration-card img{transition:.6s ease}
+  .vmh2-inspiration-card:hover img{transform:scale(1.05)}
+
+  .vmh2-vitrin{width:var(--vmh2-container);margin:26px auto;display:grid;grid-template-columns:1.05fr .95fr;min-height:460px;border-radius:34px;overflow:hidden;background:var(--vmh2-paper);box-shadow:var(--vmh2-shadow)}
+  .vmh2-vitrin:first-of-type{margin-top:108px}
+  .vmh2-vitrin-ters .vmh2-vitrin-media{order:2}
+  .vmh2-vitrin-ters .vmh2-vitrin-copy{order:1}
+  .vmh2-vitrin-media{position:relative;min-height:320px;display:block;overflow:hidden}
+  .vmh2-vitrin-media img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .7s cubic-bezier(.2,.7,.2,1)}
+  .vmh2-vitrin:hover .vmh2-vitrin-media img{transform:scale(1.05)}
+  .vmh2-vitrin-media::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 55%,rgba(18,15,12,.55) 100%)}
+  .vmh2-vitrin-tag{position:absolute;left:26px;bottom:22px;z-index:2;color:#fff !important;font-family:"Playfair Display",serif !important;font-size:30px;font-weight:700;letter-spacing:-.02em}
+  .vmh2-vitrin-copy{padding:52px 56px;display:flex;flex-direction:column;justify-content:center}
+  .vmh2-vitrin-copy h3{font-family:"Playfair Display",serif !important;font-size:clamp(30px,3vw,44px);line-height:1.05;letter-spacing:-.03em;margin:0 0 12px;color:var(--vmh2-ink) !important}
+  .vmh2-vitrin-copy > p{color:var(--vmh2-muted) !important;line-height:1.7;max-width:460px;margin:0 0 22px}
+  .vmh2-vitrin-urunler{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:24px}
+  .vmh2-vitrin-urun{display:flex;flex-direction:column;gap:8px;background:var(--vmh2-bg);border-radius:18px;padding:10px;transition:.22s ease}
+  .vmh2-vitrin-urun:hover{transform:translateY(-4px);box-shadow:0 14px 28px rgba(45,33,24,.12);background:#fff}
+  .vu-img{aspect-ratio:3/4;border-radius:12px;overflow:hidden;background:#ece5dc;display:block}
+  .vu-img img{width:100%;height:100%;object-fit:cover;display:block}
+  .vu-ad{font-size:12.5px;line-height:1.4;font-weight:600;color:var(--vmh2-ink);min-height:35px}
+  .vu-fiyat{font-weight:800;color:var(--vmh2-orange);font-size:15px}
+  .vmh2-vitrin-cta{align-self:flex-start}
+  @media (max-width:1100px){
+    .vmh2-vitrin{grid-template-columns:1fr}
+    .vmh2-vitrin-ters .vmh2-vitrin-media{order:0}
+    .vmh2-vitrin-ters .vmh2-vitrin-copy{order:1}
+    .vmh2-vitrin-media{min-height:340px}
+    .vmh2-vitrin-copy{padding:38px 30px}
+  }
+  @media (max-width:720px){
+    .vmh2-vitrin:first-of-type{margin-top:78px}
+    .vmh2-vitrin-copy{padding:28px 20px}
+    .vmh2-vitrin-urunler{gap:8px}
+    .vu-ad{font-size:11px;min-height:31px}
+    .vmh2-vitrin-tag{font-size:24px;left:18px;bottom:16px}
+  }
+  .vmh2-newsletter{width:var(--vmh2-container);margin:110px auto 50px;min-height:350px;border-radius:34px;overflow:hidden;position:relative;display:flex;align-items:center;justify-content:center;text-align:center;padding:60px;background:#e9c9b6}
+  .vmh2-newsletter::before{content:"";position:absolute;inset:0;background:radial-gradient(circle at 15% 20%,rgba(255,255,255,.65),transparent 28%),radial-gradient(circle at 85% 70%,rgba(240,100,54,.18),transparent 28%)}
+  .vmh2-newsletter-inner{position:relative;z-index:2;max-width:720px}
+  .vmh2-newsletter h2{font-family:"Playfair Display",serif !important;font-size:60px;line-height:1;margin-bottom:16px}
+  .vmh2-newsletter p{color:#5f5149;line-height:1.7}
+  .vmh2-newsletter-form{display:flex;max-width:560px;margin:26px auto 0;background:#fff;border-radius:999px;padding:7px;box-shadow:0 16px 35px rgba(78,45,26,.12)}
+  .vmh2-newsletter-form input[type="email"]{flex:1;border:0;outline:0;background:transparent;padding:0 18px;font:inherit;min-width:0}
+  /* 2026-07-21: empire-overrides.css `button[type=submit]:not(.field__button)` (0,2,1) radius'u 4px'e eziyor —
+     form.+button. ile specificity (0,2,2)'ye çıkarıldı; buton pill kalır, input'un içine yedirilmiş görünür */
+  form.vmh2-newsletter-form button.vmh2-btn{border-radius:999px !important;flex:0 0 auto}
+  .vmh2-form-ok{flex:1;display:flex;align-items:center;justify-content:center;min-height:54px;font-weight:700;color:var(--vmh2-green)}
+
+  .vmh2-reveal{opacity:0;transform:translateY(24px);transition:.8s ease}
+  .vmh2-reveal.vmh2-visible{opacity:1;transform:none}
+
+  @media (max-width:1100px){
+    .vmh2-hero{min-height:650px}.vmh2-hero-content{min-height:650px;padding:60px 44px}.vmh2-hero-badge{width:140px;height:140px}
+    .vmh2-category-grid{grid-template-columns:1fr 1fr;grid-template-rows:380px 300px 300px}.vmh2-category-card:first-child{grid-column:1/3;grid-row:auto}.vmh2-category-card:nth-child(4){grid-column:1/3}
+    .vmh2-benefit-strip{grid-template-columns:1fr 1fr}.vmh2-benefit:nth-child(2){border-right:0}
+    .vmh2-products{grid-template-columns:1fr 1fr}
+    .vmh2-story{grid-template-columns:1fr}.vmh2-story-media{min-height:500px}.vmh2-story-copy{padding:54px}
+    .vmh2-inspiration-grid{grid-template-columns:1fr 1fr;grid-template-rows:360px 260px 260px}.vmh2-inspiration-card:first-child{grid-column:1/3;grid-row:auto}.vmh2-inspiration-card:last-child{grid-column:1/3}
+  }
+  @media (max-width:720px){
+    .vmh2{--vmh2-container:calc(100% - 24px)}
+    /* 2026-07-21: hızlı kategori rayı mobilde app/story düzeni — üstte daire ikon, altında etiket */
+    .vmh2-category-wrap{justify-content:flex-start;gap:2px;padding:12px 6px 14px}
+    .vmh2-quick-category{flex:0 0 auto;min-width:82px;max-width:92px;flex-direction:column;align-items:center;gap:7px;padding:2px 4px;background:transparent;border-radius:12px;white-space:normal}
+    .vmh2-quick-category:hover{background:transparent;transform:none}
+    .vmh2-quick-icon{width:56px;height:56px;font-size:23px;background:#fff;border:1px solid #f0e6d8;box-shadow:0 4px 12px rgba(240,100,54,.14)}
+    .vmh2-quick-category span:last-child{font-size:11px;font-weight:600;line-height:1.25;text-align:center;color:var(--vmh2-ink)}
+    /* 2026-07-23: mobil hero YATAY dikdörtgen (ince-uzun dikey fix) — sabit 650px yerine içerik boyu (~yatay),
+       görsel object-fit:cover ile kompozisyon korunur, metin/buton kompakt. Taşma riski yok (aspect-ratio/height:100% KULLANILMADI). */
+    .vmh2-hero{margin-top:12px;min-height:0;border-radius:24px}
+    .vmh2-hero-content{min-height:0;padding:18px 20px 46px;justify-content:flex-end}
+    .vmh2-hero h1{font-size:clamp(24px,6.6vw,32px);margin:7px 0;line-height:1.04}
+    .vmh2-hero p{font-size:12.5px;line-height:1.4;max-width:100%}
+    .vmh2-hero-actions{margin-top:11px;gap:9px}
+    .vmh2-hero .vmh2-btn{min-height:44px;padding:0 18px;font-size:13.5px}
+    .vmh2-hero-badge{display:none}
+    .vmh2-section{margin:78px auto}.vmh2-section-head{align-items:flex-start;flex-direction:column}.vmh2-section h2{font-size:46px}
+    .vmh2-category-grid{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:auto;gap:12px}.vmh2-category-card{min-width:0;height:230px}.vmh2-category-card:first-child,.vmh2-category-card:nth-child(4){grid-column:auto;grid-row:auto}.vmh2-category-copy{left:16px;right:16px;bottom:16px}.vmh2-category-copy h3{font-size:20px}
+    .vmh2-benefit-strip{grid-template-columns:1fr;padding:22px}.vmh2-benefit{border-right:0;border-bottom:1px solid rgba(255,255,255,.1);padding-bottom:18px}.vmh2-benefit:last-child{border-bottom:0;padding-bottom:0}
+    .vmh2-products{grid-template-columns:repeat(2,1fr);gap:12px}.vmh2-product-info{padding:12px 4px 6px}.vmh2-product-info h3{font-size:13.5px;margin:5px 0 8px}.vmh2-mini-add{width:34px;height:34px;font-size:18px}.vmh2-pill{font-size:10px;padding:6px 9px;left:10px;top:10px}
+    .vmh2-story-copy{padding:42px 24px}.vmh2-story-copy h2{font-size:46px}.vmh2-story-media{min-height:430px}
+    .vmh2-inspiration-grid{display:flex;overflow:auto}.vmh2-inspiration-card{min-width:80vw;height:430px}.vmh2-inspiration-card:first-child,.vmh2-inspiration-card:last-child{grid-column:auto}
+    .vmh2-newsletter{padding:40px 20px}.vmh2-newsletter h2{font-size:44px}.vmh2-newsletter-form{flex-direction:column;background:transparent;box-shadow:none;gap:10px}.vmh2-newsletter-form input[type="email"]{height:54px;border-radius:999px;background:#fff;padding:0 18px}.vmh2-newsletter-form .vmh2-btn{width:100%}
+  }
+
+  /* ==== KAMPANYA BANNER (açılış modalı) — 2026-08-08 ====
+     Kutu genişliği hem 620px hem de "yüksekliğe sığacak genişlik" ile sınırlanır
+     (görsel 4:3). Böylece görsel KIRPILMAZ, img kutusu = görselin kendisi olur ve
+     kapatma butonunun yüzde hizası her ekranda X'in tam üstünde kalır. */
+  .vmk-overlay{position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;
+    padding:20px;background:rgba(28,22,17,.62);-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px);
+    opacity:0;transition:opacity .38s ease}
+  .vmk-overlay[hidden]{display:none}
+  .vmk-overlay.vmk-acik{opacity:1}
+  .vmk-box{position:relative;width:min(620px,100%,calc((100vh - 44px) * 4 / 3));
+    transform:translateY(16px) scale(.965);transition:transform .42s cubic-bezier(.2,.72,.28,1)}
+  @supports (height:100dvh){.vmk-box{width:min(620px,100%,calc((100dvh - 44px) * 4 / 3))}}
+  .vmk-overlay.vmk-acik .vmk-box{transform:none}
+  .vmk-link{display:block;border-radius:18px;overflow:hidden;box-shadow:0 26px 60px rgba(20,14,9,.42)}
+  .vmk-img{display:block;width:100%;height:auto}
+  /* Kapatma: görseldeki ÇİZİLİ X'in tam üstünde, şeffaf (ekranda tek X görünür) */
+  .vmk-close{position:absolute;left:95.37%;top:6.26%;transform:translate(-50%,-50%);
+    width:max(44px,8%);height:auto;aspect-ratio:1;padding:0;border:0;background:transparent;
+    border-radius:50%;cursor:pointer;color:#fff;z-index:2;-webkit-tap-highlight-color:transparent}
+  .vmk-close .vmk-x{display:none;width:100%;height:100%}
+  .vmk-close:focus-visible{outline:3px solid #fff;outline-offset:3px}
+  /* "Kendi X'imizi çiz" modu — görselinde çizili X olmayan kampanyalar için */
+  .vmk-close.vmk-kendi{background:#d75a22;box-shadow:0 4px 14px rgba(20,14,9,.35);width:max(40px,7%)}
+  .vmk-close.vmk-kendi .vmk-x{display:block;padding:22%;box-sizing:border-box}
+  @media(max-width:480px){.vmk-overlay{padding:14px}.vmk-link{border-radius:14px}}
+  @media(prefers-reduced-motion:reduce){.vmk-overlay,.vmk-box{transition:none}}
+{% endstyle %}
+
+<script>
+  (function(){
+    // "Her ziyarette karışık" ürün vitrinleri
+    document.querySelectorAll('.vmh2 [data-vmh2-random]').forEach(function(g){
+      var n = parseInt(g.getAttribute('data-vmh2-random')) || 4;
+      var cards = [].slice.call(g.querySelectorAll('[data-vmh2-pool]'));
+      for (var i = cards.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var t = cards[i]; cards[i] = cards[j]; cards[j] = t; }
+      cards.forEach(function(c, i){ c.hidden = i >= n; g.appendChild(c); });
+    });
+    var items = document.querySelectorAll('.vmh2 .vmh2-reveal');
+    if (!('IntersectionObserver' in window)) { items.forEach(function(i){ i.classList.add('vmh2-visible'); }); return; }
+    var obs = new IntersectionObserver(function(entries){
+      entries.forEach(function(e){ if(e.isIntersecting) e.target.classList.add('vmh2-visible'); });
+    },{threshold:.12});
+    items.forEach(function(i){ obs.observe(i); });
+  })();
+</script>
+
+<script>
+/* ==== Yeni Gelenler CAROUSEL — Yunus referans mekanizması ====
+   .vmh2-products--slider listesini sarmalar, ok ekler, otomatik 3sn kaydırır,
+   sonsuz döngü + parmakla sürükleme. Bağımlılık yok, kart markup'ına dokunmaz. */
+(function () {
+  'use strict';
+  var CFG = { selector: '.vmh2 .vmh2-products--slider', autoplay: true, interval: 3000, threshold: 8 };
+  var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  function build(list) {
+    if (list.dataset.vmSlider === '1') return;
+    list.dataset.vmSlider = '1';
+    var originals = Array.prototype.slice.call(list.children);
+    var total = originals.length;
+    if (total < 2) return;
+
+    var root = document.createElement('div');
+    root.className = 'vmh2-slider';
+    root.setAttribute('role', 'region');
+    root.setAttribute('aria-roledescription', 'ürün karuseli');
+    root.setAttribute('aria-label', 'Yeni gelen ürünler');
+    root.tabIndex = 0;
+    var viewport = document.createElement('div');
+    viewport.className = 'vmh2-slider__viewport';
+    list.parentNode.insertBefore(root, list);
+    root.appendChild(viewport);
+    viewport.appendChild(list);
+    list.classList.add('vmh2-slider__track');
+
+    var prevBtn = makeNav('prev', 'Önceki ürünler', '‹');
+    var nextBtn = makeNav('next', 'Sonraki ürünler', '›');
+    root.appendChild(prevBtn);
+    root.appendChild(nextBtn);
+
+    addCopy(); addCopy();
+    function addCopy() {
+      for (var i = 0; i < total; i++) {
+        var c = originals[i].cloneNode(true);
+        c.setAttribute('aria-hidden', 'true');
+        var links = c.querySelectorAll('a');
+        for (var j = 0; j < links.length; j++) links[j].tabIndex = -1;
+        list.appendChild(c);
+      }
+    }
+
+    var index = total, step = 0, timer = null;
+    var hovered = false, focused = false, dragging = false, moved = false, capturedId = null;
+    var startX = 0, startY = 0, startTx = 0, currentTx = 0, blockClick = false;
+
+    measure(); place(false); bind(); start();
+
+    function measure() {
+      var first = list.children[0];
+      if (!first) return;
+      var cs = getComputedStyle(list);
+      var gap = parseFloat(cs.columnGap);
+      if (isNaN(gap)) gap = parseFloat(cs.gap) || 0;
+      step = first.getBoundingClientRect().width + gap;
+    }
+    function place(animate) {
+      var x = -index * step;
+      if (!isFinite(x)) return;
+      if (animate) { list.style.transform = 'translate3d(' + x + 'px,0,0)'; }
+      else {
+        var t = list.style.transition;
+        list.style.transition = 'none';
+        list.style.transform = 'translate3d(' + x + 'px,0,0)';
+        void list.offsetWidth;
+        list.style.transition = t;
+      }
+    }
+    function goTo(i) { index = i; place(true); }
+    function next() { goTo(index + 1); }
+    function prev() { goTo(index - 1); }
+    function normalize() {
+      var n = index;
+      while (n >= total * 2) n -= total;
+      while (n < total) n += total;
+      if (n !== index) { index = n; place(false); }
+    }
+    function start() {
+      stop();
+      if (!CFG.autoplay || reduceMotion) return;
+      timer = setInterval(function () {
+        if (hovered || focused || dragging || document.hidden) return;
+        next();
+      }, CFG.interval);
+    }
+    function stop() { if (timer) { clearInterval(timer); timer = null; } }
+
+    function bind() {
+      nextBtn.addEventListener('click', function () { next(); });
+      prevBtn.addEventListener('click', function () { prev(); });
+      root.addEventListener('mouseenter', function () { hovered = true; });
+      root.addEventListener('mouseleave', function () { hovered = false; });
+      root.addEventListener('focusin', function (e) {
+        try { focused = e.target.matches(':focus-visible'); } catch (err) { focused = true; }
+      });
+      root.addEventListener('focusout', function () { focused = false; });
+      root.addEventListener('keydown', function (e) {
+        if (e.key === 'ArrowRight') { e.preventDefault(); next(); }
+        else if (e.key === 'ArrowLeft') { e.preventDefault(); prev(); }
+      });
+      list.addEventListener('transitionend', function (e) {
+        if (e.target !== list || e.propertyName !== 'transform') return;
+        normalize();
+      });
+      viewport.addEventListener('pointerdown', onDown);
+      viewport.addEventListener('pointermove', onMove);
+      viewport.addEventListener('pointerup', onUp);
+      viewport.addEventListener('pointercancel', onUp);
+      root.addEventListener('click', function (e) {
+        if (!blockClick) return;
+        blockClick = false;
+        e.preventDefault();
+        e.stopPropagation();
+      }, true);
+      var raf = null;
+      function onResize() {
+        if (raf) cancelAnimationFrame(raf);
+        raf = requestAnimationFrame(function () { measure(); place(false); });
+      }
+      window.addEventListener('resize', onResize);
+      window.addEventListener('orientationchange', onResize);
+      window.addEventListener('load', onResize);
+      if (window.ResizeObserver) new ResizeObserver(onResize).observe(viewport);
+      document.addEventListener('visibilitychange', function () { if (!document.hidden) start(); });
+    }
+    function onDown(e) {
+      if (e.pointerType === 'mouse' && e.button !== 0) return;
+      dragging = true; moved = false;
+      capturedId = null;
+      startX = e.clientX; startY = e.clientY;
+      startTx = -index * step; currentTx = startTx;
+      list.classList.add('is-dragging');
+      /* DİKKAT: burada setPointerCapture ÇAĞIRMA. Pointer capture aktifken tarayıcı
+         sonraki `click`i yakalayan elemana (viewport) yönlendiriyor → kartın <a>'sına
+         hiç ulaşmıyordu: "Yeni Gelenler"de ürüne tıklama ve karttaki "+" ölüydü
+         (Yunus, 12 Ağu). Capture yalnız GERÇEK sürükleme başlayınca alınır (onMove). */
+    }
+    function onMove(e) {
+      if (!dragging) return;
+      var dx = e.clientX - startX, dy = e.clientY - startY;
+      if (!moved) {
+        if (Math.abs(dx) < CFG.threshold) return;
+        if (Math.abs(dy) > Math.abs(dx)) { cancel(); return; }
+        moved = true;
+        // Sürükleme kesinleşti → parmak viewport dışına çıksa da takip et.
+        try { viewport.setPointerCapture(e.pointerId); capturedId = e.pointerId; } catch (err) {}
+      }
+      if (e.cancelable) e.preventDefault();
+      currentTx = startTx + dx;
+      list.style.transform = 'translate3d(' + currentTx + 'px,0,0)';
+    }
+    function onUp() {
+      if (!dragging) return;
+      dragging = false;
+      releaseCapture();
+      list.classList.remove('is-dragging');
+      if (!moved || !step) { start(); return; }
+      var dx = currentTx - startTx;
+      var target = Math.round(-currentTx / step);
+      if (target === index && Math.abs(dx) > step * 0.12) {
+        target = index + (dx < 0 ? 1 : -1);
+      }
+      blockClick = true;
+      setTimeout(function () { blockClick = false; }, 400);
+      goTo(target); start();
+    }
+    function releaseCapture() {
+      if (capturedId == null) return;
+      try { viewport.releasePointerCapture(capturedId); } catch (err) {}
+      capturedId = null;
+    }
+    function cancel() {
+      dragging = false; moved = false;
+      releaseCapture();
+      list.classList.remove('is-dragging');
+      place(false);
+    }
+    function makeNav(dir, label, glyph) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'vmh2-slider__nav vmh2-slider__nav--' + dir;
+      b.setAttribute('aria-label', label);
+      b.textContent = glyph;
+      return b;
+    }
+  }
+  function init() {
+    var lists = document.querySelectorAll(CFG.selector);
+    for (var i = 0; i < lists.length; i++) build(lists[i]);
+  }
+  if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', init); }
+  else { init(); }
+})();
+</script>
+
+{%- comment -%} Kampanya banner davranışı — 2026-08-08 {%- endcomment -%}
+<script>
+  (function(){
+    var ov = document.getElementById('vmk-overlay');
+    if (!ov) return;
+    var ANAHTAR = 'vmk-kampanya-kapali';
+    var siklik  = ov.getAttribute('data-vmk-siklik') || 'session';
+    var gecikme = parseInt(ov.getAttribute('data-vmk-gecikme'), 10);
+    if (isNaN(gecikme) || gecikme < 0) gecikme = 15000;
+    var btn = ov.querySelector('.vmk-close');
+    var sonOdak = null;
+
+    function gizliMi(){
+      try {
+        if (siklik === 'her-acilis') return false;
+        if (siklik === 'gun') {
+          var t = parseInt(window.localStorage.getItem(ANAHTAR), 10);
+          return !!t && (new Date().getTime() - t) < 86400000;
+        }
+        return window.sessionStorage.getItem(ANAHTAR) === '1';
+      } catch (e) { return false; }  /* çerez/depolama kapalıysa banner yine çalışsın */
+    }
+    function isaretle(){
+      try {
+        if (siklik === 'gun') window.localStorage.setItem(ANAHTAR, String(new Date().getTime()));
+        else if (siklik !== 'her-acilis') window.sessionStorage.setItem(ANAHTAR, '1');
+      } catch (e) {}
+    }
+    function esc(e){
+      if (e.key === 'Escape' || e.key === 'Esc' || e.keyCode === 27) { e.preventDefault(); kapat(); }
+    }
+    function ac(){
+      if (gizliMi()) return;
+      sonOdak = document.activeElement;
+      ov.hidden = false;
+      /* reflow — geçişin tetiklenmesi için. rAF arka plan sekmede çalışmaz, kullanma. */
+      void ov.offsetWidth;
+      ov.classList.add('vmk-acik');
+      if (btn) { try { btn.focus({ preventScroll: true }); } catch (e) { btn.focus(); } }
+      document.addEventListener('keydown', esc);
+    }
+    function kapat(){
+      isaretle();
+      ov.classList.remove('vmk-acik');
+      document.removeEventListener('keydown', esc);
+      setTimeout(function(){ ov.hidden = true; }, 420);
+      if (sonOdak && sonOdak.focus) { try { sonOdak.focus({ preventScroll: true }); } catch (e) {} }
+    }
+
+    if (btn) btn.addEventListener('click', kapat);
+    /* overlay'in boşluğuna tıklama kapatır; kutunun içi kapatmaz */
+    ov.addEventListener('click', function(e){ if (e.target === ov) kapat(); });
+    /* görsele tıklayıp koleksiyona giden kullanıcıya geri dönünce tekrar gösterme */
+    var link = ov.querySelector('.vmk-link');
+    if (link) link.addEventListener('click', isaretle);
+
+    if (gizliMi()) return;
+    if (document.readyState === 'complete') setTimeout(ac, gecikme);
+    else window.addEventListener('load', function(){ setTimeout(ac, gecikme); });
+  })();
+</script>
+
+{% schema %}
+{
+  "name": "Via Mood Anasayfa v2",
+  "settings": [
+    {
+      "type": "header",
+      "content": "Hero slaytları",
+      "info": "Slayt görselleri SOLDAKİ blok listesinden yönetilir: 'Hero slaytı' bloklarına tıklayın (görsel değiştir/kaldır, yazı, buton hepsi orada). Yeni slayt: Blok ekle → Hero slaytı. Silme: bloğun ⋯ menüsünden."
+    },
+    {
+      "type": "checkbox",
+      "id": "hero_karisik",
+      "label": "Hero slaytları karışık sırayla dönsün",
+      "default": true
+    },
+    {
+      "type": "header",
+      "content": "Genel hero butonları",
+      "info": "Tüm slaytlarda görünür; bir slayta özel buton girilirse o slaytta bunların yerine geçer."
+    },
+    {
+      "type": "text",
+      "id": "hero_cta1",
+      "label": "Buton 1 metni",
+      "default": "Koleksiyonu Keşfet →"
+    },
+    {
+      "type": "url",
+      "id": "hero_cta1_link",
+      "label": "Buton 1 linki"
+    },
+    {
+      "type": "text",
+      "id": "hero_cta2",
+      "label": "Buton 2 metni",
+      "default": "Kategorilere Bak"
+    },
+    {
+      "type": "url",
+      "id": "hero_cta2_link",
+      "label": "Buton 2 linki"
+    },
+    {
+      "type": "checkbox",
+      "id": "rozet_goster",
+      "label": "Yuvarlak rozet görünsün",
+      "default": true
+    },
+    {
+      "type": "text",
+      "id": "rozet_buyuk",
+      "label": "Rozet büyük metin",
+      "default": "%20"
+    },
+    {
+      "type": "text",
+      "id": "rozet_metin",
+      "label": "Rozet açıklama",
+      "default": "Seçili düzenleme ürünlerinde hafta sonuna özel"
+    },
+    {
+      "type": "header",
+      "content": "Kategori bölümü başlığı"
+    },
+    {
+      "type": "text",
+      "id": "kat_kicker",
+      "label": "Kicker",
+      "default": "Yaşam alanına göre keşfet"
+    },
+    {
+      "type": "inline_richtext",
+      "id": "kat_baslik",
+      "label": "Başlık",
+      "default": "Her köşeye başka bir mood."
+    },
+    {
+      "type": "textarea",
+      "id": "kat_not",
+      "label": "Yan not",
+      "default": "Kullanıcı ürünü değil, yaşayacağı alanı görür — gerçek kullanım anlarını gösteren kategori kartları."
+    },
+    {
+      "type": "header",
+      "content": "İlham bölümü başlığı"
+    },
+    {
+      "type": "text",
+      "id": "ilham_kicker",
+      "label": "Kicker",
+      "default": "İlham veren evler"
+    },
+    {
+      "type": "inline_richtext",
+      "id": "ilham_baslik",
+      "label": "Başlık",
+      "default": "Via Mood ile yaşa."
+    },
+    {
+      "type": "textarea",
+      "id": "ilham_not",
+      "label": "Yan not",
+      "default": "Gerçek yaşam hissi veren fotoğraflar, ürünleri bağlam içinde gösterir."
+    },
+    {
+      "type": "header",
+      "content": "Markalarımız"
+    },
+    {
+      "type": "text",
+      "id": "marka_kicker",
+      "label": "Üst yazı",
+      "default": "Güvenilir iş ortakları"
+    },
+    {
+      "type": "text",
+      "id": "marka_baslik",
+      "label": "Başlık",
+      "default": "Markalarımız."
+    },
+    {
+      "type": "header",
+      "content": "Kampanya banner'ı",
+      "info": "Anasayfa açılışında ortada gösterilen kampanya duyurusu. Görsel yüklenmezse temadaki via-kampanya-banner görseli kullanılır."
+    },
+    {
+      "type": "checkbox",
+      "id": "kampanya_goster",
+      "label": "Kampanya banner'ını göster",
+      "default": true
+    },
+    {
+      "type": "image_picker",
+      "id": "kampanya_gorsel",
+      "label": "Kampanya görseli",
+      "info": "Boş bırakılırsa mevcut kampanya görseli kullanılır. YENİ görsel yüklerseniz, üzerinde çizili bir X yoksa aşağıdaki 'Kapatma butonu' ayarını 'Kendi X'imizi çiz' yapın."
+    },
+    {
+      "type": "text",
+      "id": "kampanya_alt",
+      "label": "Görsel açıklaması (alt metni)",
+      "default": "Siteye özel fiyat — avantajlı saklama kabı setlerini kaçırma"
+    },
+    {
+      "type": "url",
+      "id": "kampanya_link",
+      "label": "Görsele tıklayınca gidilecek adres",
+      "info": "Boşsa /collections/saklama-kabi kullanılır."
+    },
+    {
+      "type": "select",
+      "id": "kampanya_siklik",
+      "label": "Kapatıldıktan sonra tekrar gösterme",
+      "options": [
+        { "value": "session", "label": "Aynı ziyaret boyunca bir daha çıkmasın" },
+        { "value": "gun", "label": "24 saat boyunca bir daha çıkmasın" },
+        { "value": "her-acilis", "label": "Her sayfa açılışında çıksın" }
+      ],
+      "default": "session"
+    },
+    {
+      "type": "number",
+      "id": "kampanya_gecikme",
+      "label": "Açılma gecikmesi (ms)",
+      "default": 15000,
+      "info": "Sayfa açıldıktan kaç ms sonra çıksın. 15000 = 15 saniye. Boş bırakılırsa 15000 kullanılır. (Bu ayar 'range' değil 'number' çünkü Shopify range üst sınırını 10000 ms ile sınırlıyor.)"
+    },
+    {
+      "type": "select",
+      "id": "kampanya_kapatma",
+      "label": "Kapatma butonu",
+      "options": [
+        { "value": "gomulu", "label": "Görseldeki X'in üzerinde (görünmez)" },
+        { "value": "kendi", "label": "Kendi X'imizi çiz (turuncu daire)" }
+      ],
+      "default": "gomulu",
+      "info": "Mevcut kampanya görselinde çizili bir X var; 'görünmez' seçenek onun tam üzerine hizalanır."
+    }
+  ],
+  "blocks": [
+    {
+      "type": "vitrin",
+      "name": "Kategori bandı",
+      "limit": 6,
+      "settings": [
+        {
+          "type": "collection",
+          "id": "koleksiyon",
+          "label": "Koleksiyon"
+        },
+        {
+          "type": "text",
+          "id": "kicker",
+          "label": "Kicker"
+        },
+        {
+          "type": "text",
+          "id": "baslik",
+          "label": "Başlık (boşsa koleksiyon adı)"
+        },
+        {
+          "type": "textarea",
+          "id": "metin",
+          "label": "Metin"
+        },
+        {
+          "type": "image_picker",
+          "id": "gorsel",
+          "label": "Görsel"
+        },
+        {
+          "type": "text",
+          "id": "gorsel_url",
+          "label": "Görsel URL (alternatif)"
+        },
+        {
+          "type": "range",
+          "id": "urun_adedi",
+          "label": "Mini ürün kartı",
+          "min": 0,
+          "max": 3,
+          "step": 1,
+          "default": 3
+        },
+        {
+          "type": "text",
+          "id": "cta",
+          "label": "Buton",
+          "default": "Tümünü keşfet →"
+        }
+      ]
+    },
+    {
+      "type": "hero_slide",
+      "name": "Hero slaytı",
+      "limit": 8,
+      "settings": [
+        {
+          "type": "image_picker",
+          "id": "gorsel",
+          "label": "Görsel"
+        },
+        {
+          "type": "text",
+          "id": "gorsel_url",
+          "label": "Görsel URL (görsel seçilmediyse)"
+        },
+        {
+          "type": "text",
+          "id": "eyebrow",
+          "label": "Üst rozet"
+        },
+        {
+          "type": "inline_richtext",
+          "id": "baslik",
+          "label": "Başlık (italik için em kullan)"
+        },
+        {
+          "type": "textarea",
+          "id": "metin",
+          "label": "Alt metin"
+        },
+        {
+          "type": "text",
+          "id": "cta",
+          "label": "Buton yazısı (boşsa bölüm butonları görünür)"
+        },
+        {
+          "type": "url",
+          "id": "cta_link",
+          "label": "Buton linki"
+        }
+      ]
+    },
+    {
+      "type": "hizli",
+      "name": "Hızlı kategori",
+      "limit": 8,
+      "settings": [
+        {
+          "type": "image_picker",
+          "id": "gorsel",
+          "label": "Daire görseli (boşsa ikon gösterilir)"
+        },
+        {
+          "type": "text",
+          "id": "ikon",
+          "label": "İkon (emoji/karakter)",
+          "default": "★"
+        },
+        {
+          "type": "text",
+          "id": "baslik",
+          "label": "Başlık",
+          "default": "Çok Satanlar"
+        },
+        {
+          "type": "url",
+          "id": "link",
+          "label": "Link"
+        }
+      ]
+    },
+    {
+      "type": "kategori",
+      "name": "Kategori kartı",
+      "limit": 4,
+      "settings": [
+        {
+          "type": "image_picker",
+          "id": "gorsel",
+          "label": "Görsel"
+        },
+        {
+          "type": "text",
+          "id": "gorsel_url",
+          "label": "Görsel URL (görsel seçilmediyse)"
+        },
+        {
+          "type": "text",
+          "id": "baslik",
+          "label": "Başlık",
+          "default": "Mutfak"
+        },
+        {
+          "type": "text",
+          "id": "alt_metin",
+          "label": "Üst küçük metin",
+          "default": "124 ürün"
+        },
+        {
+          "type": "url",
+          "id": "link",
+          "label": "Link"
+        }
+      ]
+    },
+    {
+      "type": "avantaj",
+      "name": "Avantaj",
+      "limit": 4,
+      "settings": [
+        {
+          "type": "text",
+          "id": "ikon",
+          "label": "İkon (emoji/karakter)",
+          "default": "✓"
+        },
+        {
+          "type": "text",
+          "id": "baslik",
+          "label": "Başlık",
+          "default": "Hızlı Kargo"
+        },
+        {
+          "type": "text",
+          "id": "alt_metin",
+          "label": "Alt metin",
+          "default": "Siparişlerin özenle hazırlanır"
+        }
+      ]
+    },
+    {
+      "type": "urunler",
+      "name": "Ürün vitrini",
+      "limit": 2,
+      "settings": [
+        {
+          "type": "text",
+          "id": "kicker",
+          "label": "Kicker",
+          "default": "En çok sevilenler"
+        },
+        {
+          "type": "inline_richtext",
+          "id": "baslik",
+          "label": "Başlık",
+          "default": "Evin favorileri."
+        },
+        {
+          "type": "collection",
+          "id": "koleksiyon",
+          "label": "Koleksiyon"
+        },
+        {
+          "type": "range",
+          "id": "adet",
+          "label": "Ürün adedi",
+          "min": 4,
+          "max": 12,
+          "step": 4,
+          "default": 4
+        },
+        {
+          "type": "checkbox",
+          "id": "rastgele",
+          "label": "Her ziyarette karışık göster",
+          "default": false
+        },
+        {
+          "type": "checkbox",
+          "id": "slider",
+          "label": "Yatay slider (kaydırmalı) göster",
+          "info": "Açıkken ürünler yatay kaydırmalı slider olarak gelir (12 ürün, mobilde swipe). Karışık göster devre dışı kalır.",
+          "default": false
+        },
+        {
+          "type": "text",
+          "id": "tumu_metin",
+          "label": "Tümü butonu",
+          "default": "Tümünü Gör →"
+        }
+      ]
+    },
+    {
+      "type": "hikaye",
+      "name": "Hikâye bandı",
+      "limit": 1,
+      "settings": [
+        {
+          "type": "text",
+          "id": "kicker",
+          "label": "Kicker",
+          "default": "Via Mood yaklaşımı"
+        },
+        {
+          "type": "inline_richtext",
+          "id": "baslik",
+          "label": "Başlık",
+          "default": "Düzen sadece görünüm değil, iyi hissetme biçimi."
+        },
+        {
+          "type": "textarea",
+          "id": "metin",
+          "label": "Metin",
+          "default": "Günlük rutini kolaylaştıran, evin estetiğine uyum sağlayan ve uzun süre severek kullanabileceğin ürünleri bir araya getiriyoruz."
+        },
+        {
+          "type": "text",
+          "id": "cta",
+          "label": "Buton metni",
+          "default": "Hikâyemizi Oku →"
+        },
+        {
+          "type": "url",
+          "id": "link",
+          "label": "Buton linki"
+        },
+        {
+          "type": "image_picker",
+          "id": "gorsel",
+          "label": "Görsel"
+        },
+        {
+          "type": "text",
+          "id": "etiket",
+          "label": "Görsel üstü etiket",
+          "default": "Seçili ürünler · doğal tonlar · günlük konfor"
+        }
+      ]
+    },
+    {
+      "type": "ilham",
+      "name": "İlham görseli",
+      "limit": 4,
+      "settings": [
+        {
+          "type": "image_picker",
+          "id": "gorsel",
+          "label": "Görsel"
+        },
+        {
+          "type": "text",
+          "id": "gorsel_url",
+          "label": "Görsel URL (görsel seçilmediyse)"
+        },
+        {
+          "type": "url",
+          "id": "link",
+          "label": "Link (opsiyonel)"
+        }
+      ]
+    },
+    {
+      "type": "bulten",
+      "name": "Bülten kaydı",
+      "limit": 1,
+      "settings": [
+        {
+          "type": "text",
+          "id": "kicker",
+          "label": "Kicker",
+          "default": "Via Mood Club"
+        },
+        {
+          "type": "inline_richtext",
+          "id": "baslik",
+          "label": "Başlık",
+          "default": "Evin için güzel fikirler, önce sana gelsin."
+        },
+        {
+          "type": "textarea",
+          "id": "metin",
+          "label": "Metin",
+          "default": "Yeni koleksiyonlar, kampanyalar ve yaşam alanını dönüştürecek ilhamlar için e-posta listemize katıl."
+        },
+        {
+          "type": "text",
+          "id": "placeholder",
+          "label": "Input placeholder",
+          "default": "E-posta adresin"
+        },
+        {
+          "type": "text",
+          "id": "buton",
+          "label": "Buton metni",
+          "default": "Katıl →"
+        }
+      ]
+    },
+    {
+      "type": "marka",
+      "name": "Marka logosu",
+      "settings": [
+        {
+          "type": "image_picker",
+          "id": "gorsel",
+          "label": "Logo görseli"
+        },
+        {
+          "type": "text",
+          "id": "isim",
+          "label": "Marka adı",
+          "default": "Marka"
+        },
+        {
+          "type": "url",
+          "id": "link",
+          "label": "Link (opsiyonel)"
+        },
+        {
+          "type": "checkbox",
+          "id": "acik_renk",
+          "label": "Açık renkli logo (koyulat)",
+          "default": false
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "Via Mood Anasayfa v2"
+    }
+  ]
+}
+{% endschema %}
