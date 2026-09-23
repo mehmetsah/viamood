@@ -7,6 +7,7 @@
  *   3. getLabel(shipmentId) → PDF/URL
  *   4. trackByBarcode(barcode) → mevcut event'ler
  */
+import { gercekTakipNo } from './takip-no';
 import { authFetch, KargoLabError } from './internal';
 
 // ============================================================================
@@ -235,6 +236,9 @@ export async function createKargoLabShipment(
   input: ShipmentCreateInput,
 ): Promise<ShipmentCreatedOk | ShipmentErr> {
   try {
+    // İstekte referans olarak NE gönderdiğimizi tut — yanıtta aynısı dönerse
+    // onu takip numarası saymayacağız (bkz. gercekTakipNo).
+    const bizimRefler = [input.tracking_number, input.order_number, input.waybill];
     const res = await authFetch<ShipmentCreateResponse>('/shipment-create', {
       method: 'POST',
       body: JSON.stringify({
@@ -248,12 +252,15 @@ export async function createKargoLabShipment(
     });
     // Duplicate / idempotent: KargoLab "kayıt zaten var" döndüğünde mevcut id ile success ver
     if (res.existing_shipment?.id) {
+      // ⚠ `?? ref_number` KALDIRILDI: ref_number bizim referansımızdır
+      // (sipariş no), kurye barkodu değil. Barkod yoksa null bırakılır.
+      // Tip `string | undefined` istiyor; 'yok' hâli undefined ile ifade edilir.
+      const mevcut = gercekTakipNo(res.existing_shipment.tracking_number, bizimRefler) ?? undefined;
       return {
         ok: true,
         shipmentId: res.existing_shipment.id,
-        barcode: res.existing_shipment.tracking_number ?? res.existing_shipment.ref_number,
-        trackingNumber:
-          res.existing_shipment.tracking_number ?? res.existing_shipment.ref_number,
+        barcode: mevcut,
+        trackingNumber: mevcut,
         raw: res,
       };
     }
@@ -268,19 +275,21 @@ export async function createKargoLabShipment(
     const shipment = data.shipment ?? {};
     const id = data.shipment_id ?? data.id ?? shipment.id;
     if (!id) return { ok: false, error: 'shipment response içinde id yok', raw: res };
-    const barcode =
-      res.courrier_api?.data?.dongu?.barkod ??
-      shipment.barcode ??
-      data.barcode ??
-      data.tracking_number ??
-      shipment.tracking_number ??
-      res.tracking_number;
-    const trackingNumber =
-      res.tracking_number ??
-      data.tracking_number ??
-      shipment.tracking_number ??
-      data.reference_number ??
-      res.reference_number;
+    // Sıra ÖNEMLİ: en güvenilir kaynak kuryenin kendi ürettiği barkod.
+    // Her aday `gercekTakipNo`den geçer — bizim referansımızın yansıması ve
+    // rakam-olmayan değerler elenir. `?? reference_number` geri düşüşü
+    // KALDIRILDI: o alan tanımı gereği BİZİM referansımızdır.
+    const adaylar = [
+      res.courrier_api?.data?.dongu?.barkod,
+      res.courrier_api?.tracking_number,
+      shipment.barcode,
+      data.barcode,
+      data.tracking_number,
+      shipment.tracking_number,
+      res.tracking_number,
+    ];
+    const barcode = adaylar.map((a) => gercekTakipNo(a, bizimRefler)).find(Boolean) ?? undefined;
+    const trackingNumber = barcode;
     return {
       ok: true,
       shipmentId: id,
