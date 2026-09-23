@@ -689,7 +689,7 @@
     # TEKRAR SIKLIĞI — 'session' (aynı ziyaret) | 'gun' (24 saat) | 'her-acilis'
     # Tema Editörü'nden de seçilebilir; aşağısı yalnızca varsayılandır.
     assign kmp_siklik = sec.kampanya_siklik | default: 'session'
-    assign kmp_gecikme = sec.kampanya_gecikme | default: 15000
+    assign kmp_gecikme = sec.kampanya_gecikme | default: 1000
     assign kmp_kapatma = sec.kampanya_kapatma | default: 'gomulu'
   -%}
   <div class="vmk-overlay" id="vmk-overlay" role="dialog" aria-modal="true"
@@ -1246,7 +1246,7 @@
     var ANAHTAR = 'vmk-kampanya-kapali';
     var siklik  = ov.getAttribute('data-vmk-siklik') || 'session';
     var gecikme = parseInt(ov.getAttribute('data-vmk-gecikme'), 10);
-    if (isNaN(gecikme) || gecikme < 0) gecikme = 15000;
+    if (isNaN(gecikme) || gecikme < 0) gecikme = 1000;
     var btn = ov.querySelector('.vmk-close');
     var sonOdak = null;
 
@@ -1465,7 +1465,7 @@
       "id": "kampanya_gecikme",
       "label": "Açılma gecikmesi (ms)",
       "default": 15000,
-      "info": "Sayfa açıldıktan kaç ms sonra çıksın. 15000 = 15 saniye. Boş bırakılırsa 15000 kullanılır. (Bu ayar 'range' değil 'number' çünkü Shopify range üst sınırını 10000 ms ile sınırlıyor.)"
+      "info": "Sayfa açıldıktan kaç ms sonra çıksın. 15000 = 15 saniye. Bu ayar 'range' DEĞİL 'number': Shopify range üst sınırını 10000 ms ile kapatıyor, 15 sn range ile temsil edilemiyordu."
     },
     {
       "type": "select",

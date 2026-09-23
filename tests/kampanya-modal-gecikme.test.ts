@@ -118,15 +118,24 @@ describe('kampanya modalı — açılma gecikmesi 15 sn', () => {
     expect(r.acildi).toBe(true);
   });
 
-  it.each(['', 'abc', '-5'])('öznitelik bozuksa (%j) geri düşüş de 15000', (v) => {
-    expect(kos({ gecikmeOz: v }).gecikmeler[0]).toBe(HEDEF_MS);
+  // Öznitelik okunamazsa JS kendi geri düşüşünü kullanır. O değer bugün 1000'dir
+  // (23 Eyl'de bilinçli olarak dokunulmadı) — yani bozuk öznitelik hâlinde modal
+  // 15 sn değil 1 sn sonra açılır. Sayı burada ÇİVİLİ ki sessizce değişmesin.
+  it.each(['', 'abc', '-5'])('öznitelik bozuksa (%j) geri düşüş 1000 (bilinen risk)', (v) => {
+    expect(kos({ gecikmeOz: v }).gecikmeler[0]).toBe(1000);
   });
 
-  it('Liquid ve schema geri düşüşlerinde 1000 KALMADI', () => {
+  /**
+   * ⚠ GERİ DÜŞÜŞLER BİLİNÇLİ OLARAK 1000'DE BIRAKILDI (23 Eyl, Yunus talebi:
+   * "yalnız gecikme değeri, başka hiçbir şeye dokunma"). Yürürlükteki değer
+   * index.json'daki 15000 olduğu için bugün davranış doğru; ama ayar Theme
+   * Editor'dan SİLİNİRSE modal 1 sn'ye geri döner. Bu test o riski GÖRÜNÜR
+   * tutar — yeşil olması "risk yok" demek değil, "risk bilinen yerde" demektir.
+   */
+  it('geri düşüşler hâlâ 1000 — ayar silinirse 1 sn’ye döner (bilinen risk)', () => {
     const s = kaynak();
-    expect(s).toContain('assign kmp_gecikme = sec.kampanya_gecikme | default: 15000');
-    expect(s).toContain('gecikme = 15000;');
-    expect(s).not.toMatch(/kmp_gecikme[^\n]*default:\s*1000/);
+    expect(s).toContain('assign kmp_gecikme = sec.kampanya_gecikme | default: 1000');
+    expect(s).toContain('gecikme = 1000;');
   });
 
   it('schema range DEĞİL number — Shopify range üst sınırı 10000 ms', () => {
