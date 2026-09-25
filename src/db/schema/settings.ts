@@ -55,6 +55,19 @@ export interface AuthSettings {
   facebook_enabled?: boolean;
   facebook_client_id?: string;
   facebook_client_secret?: string;
+  /**
+   * Apple — DİĞER İKİSİNDEN FARKLI: sabit bir "secret" yoktur.
+   * Apple bir `.p8` özel anahtarı verir; client_secret o anahtarla imzalanan
+   * ve en fazla 6 ay geçerli olan bir JWT'dir (bkz. lib/auth/apple-secret.ts).
+   * Bu yüzden tek secret alanı yerine ÜÇ kimlik + anahtar saklanır.
+   */
+  apple_enabled?: boolean;
+  /** Service ID (ör. com.viamood.giris) — App ID DEĞİL. */
+  apple_client_id?: string;
+  apple_team_id?: string;
+  apple_key_id?: string;
+  /** `.p8` dosyasının içeriği. API'den ASLA düz dönmez; maskeli gösterilir. */
+  apple_private_key?: string;
 }
 
 /** Mağaza kargo ayarları. */
