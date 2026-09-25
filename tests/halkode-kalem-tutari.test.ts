@@ -77,8 +77,10 @@ describe('Halköde kalem tutarı — items toplamı = fatura toplamı', () => {
     const l: Kalem[] = [{ variant_id: 1, quantity: 3, price: 270000, title: 'Ürün' }];
     const { items } = hesapla(l, 0, 0);
     expect(items).toHaveLength(1);
-    expect(items[0].quantity).toBe(3);
-    expect(items[0].price, 'price BİRİM fiyat olmalı, satır toplamı değil').toBe(2700);
+    const [tek] = items;
+    if (!tek) throw new Error('kalem üretilmedi');
+    expect(tek.quantity).toBe(3);
+    expect(tek.price, 'price BİRİM fiyat olmalı, satır toplamı değil').toBe(2700);
     expect(halkodeToplami(items)).toBe(beklenenTotal(l, 0, 0)); // 810000 kuruş
   });
 

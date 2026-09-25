@@ -24,6 +24,9 @@ const KIMLIK = { clientId: 'com.viamood.giris', teamId: 'ABCDE12345', keyId: 'KE
 
 function coz(jwt: string) {
   const [h, p] = jwt.split('.');
+  // noUncheckedIndexedAccess: split sonucu string|undefined döner. JWT üç parçalı
+  // olmak zorunda; değilse test burada ANLAMLI hata versin (susturma değil, iddia).
+  if (!h || !p) throw new Error(`JWT üç parçalı değil: ${jwt.slice(0, 24)}…`);
   return {
     baslik: JSON.parse(Buffer.from(h, 'base64url').toString()),
     govde: JSON.parse(Buffer.from(p, 'base64url').toString()),
@@ -67,6 +70,7 @@ describe('Apple client secret (ES256 JWT)', () => {
     const { privateKey, publicKey } = testAnahtari();
     const jwt = appleClientSecret({ ...KIMLIK, privateKey });
     const [h, p, s] = jwt.split('.');
+    if (!h || !p || !s) throw new Error('JWT üç parçalı değil');
     const dogrulayici = createVerify('sha256');
     dogrulayici.update(`${h}.${p}`);
     const gecerli = dogrulayici.verify(

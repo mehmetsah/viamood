@@ -43,7 +43,7 @@ function cizilenHtml(): string {
   // hkIc('ad', boy) çağrıları önce atılır: argümandaki ikon adı HTML metni değildir.
   const g = islev(URUN, 'hkFormHtml').replace(/hkIc\([^)]*\)/g, '<svg></svg>');
   return [...g.matchAll(/'((?:[^'\\]|\\.)*)'/g)]
-    .map((m) => m[1])
+    .map((m) => m[1] ?? '')
     .filter((t) => !t.startsWith('data:image/'))
     .join('')
     .replace(/\\'/g, "'");
@@ -75,7 +75,7 @@ describe('Halköde kart formu — maket üst sınırdır', () => {
   it('alan sırası ve etiketleri maketle birebir', () => {
     const etiket = (s: string) =>
       [...s.matchAll(/<label class="hp-label"[^>]*>([\s\S]*?)<\/label>/g)].map((m) =>
-        m[1].replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim(),
+        (m[1] ?? '').replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim(),
       );
     expect(etiket(URUN_HTML)).toEqual(etiket(MAKET_HTML));
     expect(etiket(URUN_HTML)).toEqual([
@@ -164,11 +164,11 @@ describe('Halköde kart formu — maket üst sınırdır', () => {
   it('tipografi: 11px altında yazı boyutu YOK (nefes eşiği)', () => {
     const css = URUN.slice(tekIndex(URUN, '/* Halköde kart formu — Yunus'), tekIndex(URUN, '.vco-iyzico.is-hk .vco-err'));
     const kucuk = [...css.matchAll(/font-size:\s*(?:max\(11px,\s*)?(?:calc\()?([\d.]+)px/g)]
-      .map((m) => parseFloat(m[1]))
+      .map((m) => parseFloat(m[1] ?? 'NaN'))
       .filter((n) => n < 11);
     // 11px altı taban YALNIZ max(11px, …) sarmalı içinde kalabilir; sarmalsız olan kırmızıdır.
     const sarmalsiz = [...css.matchAll(/font-size:\s*(?!max\()[^;]*?([\d.]+)px/g)]
-      .map((m) => parseFloat(m[1]))
+      .map((m) => parseFloat(m[1] ?? 'NaN'))
       .filter((n) => n < 11);
     expect(sarmalsiz, `11px altı sarmalsız değer: ${sarmalsiz}`).toEqual([]);
     expect(kucuk.every(() => true)).toBe(true);
@@ -177,7 +177,7 @@ describe('Halköde kart formu — maket üst sınırdır', () => {
   it('satır yüksekliği: tanımlı her line-height ≥ 1.3 (nefes eşiği)', () => {
     const css = URUN.slice(tekIndex(URUN, '/* Halköde kart formu — Yunus'), tekIndex(URUN, '.vco-iyzico.is-hk .vco-err'));
     const dusuk = [...css.matchAll(/line-height:\s*([\d.]+)\b(?!px)/g)]
-      .map((m) => parseFloat(m[1]))
+      .map((m) => parseFloat(m[1] ?? 'NaN'))
       .filter((n) => n < 1.3);
     expect(dusuk, `1.3 altı satır yüksekliği: ${dusuk}`).toEqual([]);
   });
