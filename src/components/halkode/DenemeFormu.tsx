@@ -32,10 +32,13 @@ export default function DenemeFormu({
   anahtar,
   tutar,
   ortam,
+  sepet,
   testKarti,
 }: {
   anahtar: string;
   tutar: number;
+  /** Yalnız SEÇİM: 'coklu' → sunucudaki sabit çok kalemli sepet. */
+  sepet?: 'coklu';
   ortam: 'test' | 'canli';
   /** Yalnız TEST sayfasında verilir — canlı POS test kartını tanımaz. */
   testKarti?: { no: string; sahip: string; ay: string; yil: string; cvv: string };
@@ -123,6 +126,7 @@ export default function DenemeFormu({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          ...(sepet ? { sepet } : {}),
           anahtar,
           installments_number: secili,
           cc_holder_name: sahip,

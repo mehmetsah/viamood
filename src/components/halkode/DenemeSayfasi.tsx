@@ -13,11 +13,13 @@ export default function DenemeSayfasi({
   ortam,
   anahtar,
   tutar,
+  kalemler,
   sp,
 }: {
   ortam: HalkodeOrtam;
   anahtar: string;
   tutar: number;
+  kalemler?: ReadonlyArray<{ name: string; price: number; quantity: number }>;
   sp: Record<string, string | string[] | undefined>;
 }) {
   const canli = ortam === 'canli';
@@ -127,6 +129,7 @@ export default function DenemeSayfasi({
         )}
 
         <DenemeFormu
+          sepet={kalemler ? 'coklu' : undefined}
           anahtar={anahtar}
           tutar={tutar}
           ortam={ortam}
