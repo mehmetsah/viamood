@@ -363,17 +363,26 @@ export function CheckoutForm({ payment }: { payment: VitrinOdemeAyarlari }) {
                       </div>
                     </div>
                     {installments.length > 1 && (
-                      /* TAKSİT — örnekteki KARE IZGARA (ölçülen tek yapısal fark, kart #990862).
-                         Liste /api/v1/payment/halkode/installments ucundan gelir; sabit
-                         kodlama YOK, adet ve tutar bankadan ne gelirse o çizilir. */
-                      <fieldset>
+                      /* TAKSİT IZGARASI — Ayşe Demiröz hükümleri (25 Eyl 2026):
+                         · ayse:123 — kırılım VIEWPORT'a değil KAPSAYICIYA bağlı (container query):
+                           <300px → 3 sütun · 300–499px → 4 · ≥500px → 6  (eşik 340 DEĞİL 300 — referansın
+                           ölçülmüş değeri; ayse:123 metninde 340 yazıyor ama aynı kararda
+                           "kapsayıcı ~307px → 4 sütun" deniyor, ikisi çelişiyordu). Ölçüldü: bizim kapsayıcı
+                           1280 ve 768'de ~436px olduğu için ikisinde de 4 sütun çıkar (sapma DEĞİL,
+                           referansın kendi kuralı 436px'te zaten 4 verir); 430px'te ~307px → 4.
+                         · ayse:122 — kare (aspect-ratio) İSTENMEDİ; kutuya min-h-[72px] tabanı.
+                           Referansın karesi 4 satır metin içindi, bizim kutuda 3 satır var.
+                         · ayse:121 — köşe yarıçapı 8px (rounded-lg) ONAYLANDI; referanstaki 10px'e
+                           bilinçli olarak uyulmuyor, ekranın diğer kutuları da 8px.
+                         Liste /api/v1/payment/halkode/installments ucundan gelir; sabit kodlama YOK. */
+                      <fieldset className="@container">
                         <legend className="mb-2 block text-xs font-medium leading-relaxed text-neutral-700">Taksit</legend>
-                        <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+                        <div className="grid grid-cols-3 gap-2 p-3 @[300px]:grid-cols-4 @[500px]:grid-cols-6">
                           {installments.map((i) => {
                             const secili = selectedInstallment === i.installments_number;
                             return (
                               <label key={i.installments_number}
-                                className={`flex cursor-pointer flex-col items-center justify-center rounded-lg border px-2 py-2 text-center leading-relaxed transition ${
+                                className={`flex min-h-[72px] cursor-pointer flex-col items-center justify-center rounded-lg border px-2 py-2 text-center leading-relaxed transition ${
                                   secili
                                     ? 'border-neutral-900 bg-neutral-900 text-white'
                                     : 'border-neutral-200 bg-white text-neutral-800 hover:border-neutral-400'

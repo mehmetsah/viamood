@@ -224,14 +224,16 @@ export default function DenemeFormu({
           /* TAKSİT — örnekteki KARE IZGARA (Ayşe #76; ölçülen tek yapısal fark, kart #990862).
              Liste get-installments ucundan gelir, sabit kodlama YOK.
              Satır yükseklikleri leading-relaxed — #102 eşiği 1.3. */
-          <ul className="mt-2 grid grid-cols-3 gap-2 sm:grid-cols-4">
+          /* Ayşe hükümleri ayse:121/122/123 — kırılım kapsayıcıya bağlı, kutu min-h 72px,
+             köşe 8px (referanstaki 10px'e bilinçli uyulmuyor). Bkz. CheckoutForm. */
+          <ul className="@container mt-2 grid grid-cols-3 gap-2 p-3 @[300px]:grid-cols-4 @[500px]:grid-cols-6">
             {taksitler.map((t) => {
               const n = t.installments_number;
               const toplam = parseFloat(t.amount_to_be_paid) || tutar;
               const aylik = n > 1 ? toplam / n : toplam;
               return (
                 <li key={`${n}-${t.card_program ?? ''}`}>
-                  <label className={`flex h-full cursor-pointer flex-col items-center justify-center gap-0.5 rounded-lg border px-2 py-2 text-center leading-relaxed ${
+                  <label className={`flex h-full min-h-[72px] cursor-pointer flex-col items-center justify-center gap-0.5 rounded-lg border px-2 py-2 text-center leading-relaxed ${
                     secili === n
                       ? 'border-[var(--color-brand-orange,#f25334)] bg-orange-50'
                       : 'border-neutral-200 hover:border-neutral-400'
