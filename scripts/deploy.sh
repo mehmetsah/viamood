@@ -136,11 +136,28 @@ echo "▸ PM2 restart..."
 pm2 restart viamood-web --update-env > /dev/null
 sleep 2
 
-STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost/api/health)
+# ÖLÇÜLDÜ (25 Eyl 2026): bu kapı SESSİZCE HİÇ ÇALIŞMIYORDU.
+#   http://localhost/api/health            → 404   (nginx'in varsayılan sunucusu)
+#   https://hesap.viamood.com.tr/api/health → 200   (uç ÇALIŞIYOR)
+# `localhost` isteği uygulamanın sanal sunucusuna değil, varsayılan server bloğuna
+# düşüyordu; uç sağlamken kapı 404 görüp `exit 1` veriyor, auto-deploy.sh ise
+# deploy.sh'ın çıkış kodunu kontrol etmediği için log'a "deploy bitti" yazıyordu.
+# Sessiz geçen sağlık kapısı, olmayan kapıdan kötüdür: deploy "başarılı" derken
+# site ölü olabilirdi. Artık DOĞRUDAN uygulama portuna soruluyor.
+# Port pm2 ortamından okunur; bulunamazsa 4001 (ölçülen canlı port).
+SAGLIK_PORT="${PORT:-$(sudo -u ubuntu pm2 jlist 2>/dev/null | python3 -c "import json,sys
+try:
+    for p in json.load(sys.stdin):
+        if p.get('name')=='viamood-web':
+            print(p['pm2_env'].get('env',{}).get('PORT') or p['pm2_env'].get('PORT') or '')
+except Exception: pass" 2>/dev/null)}"
+SAGLIK_PORT="${SAGLIK_PORT:-4001}"
+SAGLIK_URL="http://127.0.0.1:${SAGLIK_PORT}/api/health"
+STATUS=$(curl -s -o /dev/null -m 10 -w "%{http_code}" "$SAGLIK_URL")
 if [ "$STATUS" = "200" ]; then
-  echo "  ✓ Health: $STATUS"
+  echo "  ✓ Health: $STATUS ($SAGLIK_URL)"
 else
-  echo "  ✗ Health: $STATUS"
+  echo "  ✗ Health: $STATUS ($SAGLIK_URL) — deploy BAŞARISIZ sayılıyor"
   pm2 logs viamood-web --lines 10 --nostream
   exit 1
 fi

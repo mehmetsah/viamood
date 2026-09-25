@@ -17,6 +17,13 @@ REMOTE=$(git rev-parse origin/main 2>/dev/null)
 if [ -n "$REMOTE" ] && [ "$LOCAL" != "$REMOTE" ]; then
   echo "[$(date '+%Y-%m-%d %H:%M:%S')] yeni sürüm $REMOTE — deploy başlıyor" >> "$LOG"
   # Kilit zaten bizde (FD 9) — deploy.sh tekrar almasın (deadlock önleme).
-  DEPLOY_LOCK_HELD=1 bash scripts/deploy.sh >> "$LOG" 2>&1
-  echo "[$(date '+%Y-%m-%d %H:%M:%S')] deploy bitti" >> "$LOG"
+  # ÇIKIŞ KODU YUTULMAZ: 25 Eyl 2026'da deploy.sh sağlık kapısında exit 1 veriyordu
+  # ama sonuç okunmadığı için log'a düz "deploy bitti" yazılıyordu — başarısız deploy
+  # başarılı görünüyordu. Artık sonuç log'a ayrı ayrı düşer.
+  if DEPLOY_LOCK_HELD=1 bash scripts/deploy.sh >> "$LOG" 2>&1; then
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] deploy BİTTİ (başarılı)" >> "$LOG"
+  else
+    RC=$?
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] ⛔ deploy BAŞARISIZ (çıkış $RC) — sürüm $REMOTE canlıya ALINMADI" >> "$LOG"
+  fi
 fi
