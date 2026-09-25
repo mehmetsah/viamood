@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { ILLER, getIlceler } from '@/lib/tr-addresses';
+import Halkode3DCerceve from '@/components/halkode/Halkode3DCerceve';
 // ⚠️ PaymentSettings DEĞİL: bu bileşen istemcide çalışıyor ve prop'u RSC yüküyle
 // HTML'e gömülüyor. Tip daraltıldı ki sır içeren bir alan buraya kazara geçmesin
 // (bkz. lib/settings/store.ts → vitrinOdemeAyarlari).
@@ -53,6 +54,8 @@ export function CheckoutForm({ payment }: { payment: VitrinOdemeAyarlari }) {
   const [card, setCard] = useState({ holder: '', no: '', month: '', year: '', cvv: '' });
   const [installments, setInstallments] = useState<{ installments_number: number; amount_to_be_paid: string }[]>([]);
   const [selectedInstallment, setSelectedInstallment] = useState(1);
+  // 3D formu artık sayfayı ezmiyor; site içi çerçevede açılıyor (Yunus kararı, 25 Eyl 2026).
+  const [uc3d, setUc3d] = useState<{ html: string; invoiceId?: string } | null>(null);
 
   const ilceler = useMemo(() => (il ? getIlceler(il) : []), [il]);
 
@@ -176,12 +179,13 @@ export function CheckoutForm({ payment }: { payment: VitrinOdemeAyarlari }) {
         });
         const d = await res.json();
         if (d.ok && d.form_html) {
-          // 3D formu kendi kendine banka sayfasına POST eder — innerHTML script çalıştırmaz,
-          // bu yüzden belge doğrudan yazılır (PSP entegrasyonlarının standart yolu).
-          document.open();
-          document.write(d.form_html);
-          document.close();
-          return; // sayfa bankaya gidiyor
+          // ESKİDEN: document.write ile TÜM sayfa eziliyordu, müşteri siteden çıkmış gibi
+          // oluyordu. ARTIK: sepet özeti/başlık ekranda kalır, doğrulama aşağıdaki
+          // çerçevede açılır. Banka çerçeveyi reddederse Halkode3DCerceve kendiliğinden
+          // tam sayfaya düşer (emniyet subabı) — müşteri boş ekranda kalmaz.
+          setUc3d({ html: d.form_html, invoiceId: typeof d.invoice_id === 'string' ? d.invoice_id : undefined });
+          setStatus('idle');
+          return;
         }
         setResult({ ok: false, error: d.detail || d.error || 'Kart ödemesi başlatılamadı' });
         return;
@@ -237,6 +241,16 @@ export function CheckoutForm({ payment }: { payment: VitrinOdemeAyarlari }) {
     <div className="grid md:grid-cols-[1fr_320px] gap-8 items-start">
       {/* Sol: adres + ödeme */}
       <div className="flex flex-col gap-6">
+        {/* 3D doğrulama açıkken form gizlenir ama SAYFA KALIR: başlık, sepet özeti,
+            marka yerinde. Eskiden document.write tüm belgeyi eziyordu. */}
+        {uc3d && (
+          <Halkode3DCerceve
+            formHtml={uc3d.html}
+            iz={{ invoiceId: uc3d.invoiceId, kaynak: 'odeme' }}
+            baslik="Ödemenizi doğrulayın"
+          />
+        )}
+        <div className={uc3d ? 'hidden' : 'flex flex-col gap-6'}>
         <section className="bg-white rounded-2xl border p-6">
           <h2 className="font-bold border-b pb-2 mb-4">Teslimat adresi</h2>
           <div className="grid grid-cols-2 gap-3">
@@ -327,6 +341,7 @@ export function CheckoutForm({ payment }: { payment: VitrinOdemeAyarlari }) {
             )}
           </div>
         </section>
+      </div>
       </div>
 
       {/* Sağ: özet */}

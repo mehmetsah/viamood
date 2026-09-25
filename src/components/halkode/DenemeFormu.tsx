@@ -14,6 +14,7 @@
  * yine 10 TL olur. Canlı ortamda bu tek başına en önemli koruma.
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
+import Halkode3DCerceve from './Halkode3DCerceve';
 
 interface Taksit {
   installments_number: number;
@@ -51,6 +52,8 @@ export default function DenemeFormu({
   const [secili, setSecili] = useState(1);
   const [gonderiliyor, setGonderiliyor] = useState(false);
   const [hata, setHata] = useState<string | null>(null);
+  // Yunus aynı deneyimi görsün: 3D burada da site içi çerçevede açılır.
+  const [uc3d, setUc3d] = useState<string | null>(null);
   const sonBin = useRef('');
 
   const rakam = (v: string) => v.replace(/\D/g, '');
@@ -139,10 +142,10 @@ export default function DenemeFormu({
         setGonderiliyor(false);
         return;
       }
-      // Bankanın auto-submit formu — olduğu gibi yazılır, tarayıcı 3D'ye gider.
-      document.open();
-      document.write(j.html);
-      document.close();
+      // ESKİDEN: document.write tüm sayfayı eziyordu. ARTIK: site içi çerçeve
+      // (Halkode3DCerceve). Banka çerçeveyi reddederse bileşen tam sayfaya düşer.
+      setUc3d(j.html);
+      setGonderiliyor(false);
     } catch {
       setHata('Sunucuya ulaşılamadı.');
       setGonderiliyor(false);
@@ -150,6 +153,11 @@ export default function DenemeFormu({
   }
 
   const hazir = rakam(kartNo).length >= 15 && sahip.trim().length >= 3 && ay.length === 2 && yil.length === 4 && cvv.length >= 3;
+
+  // 3D açıldığında form yerine çerçeve gösterilir; sayfanın kendisi (başlık, tutar) kalır.
+  if (uc3d) {
+    return <Halkode3DCerceve formHtml={uc3d} iz={{ kaynak: 'deneme' }} baslik="Ödemenizi doğrulayın" />;
+  }
 
   return (
     <form onSubmit={ode} className="mt-4 rounded-xl border border-neutral-200 bg-white p-4">
