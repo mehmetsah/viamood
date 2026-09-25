@@ -64,4 +64,49 @@ describe('deploy sağlık kapısı', () => {
     const uc = readFileSync(path.join(KOK, 'src/app/api/health/route.ts'), 'utf8');
     expect(uc).not.toMatch(/SECRET|TOKEN|PASSWORD|API_KEY|process\.env\.[A-Z_]*(KEY|SECRET|TOKEN)/);
   });
+
+  /**
+   * ÖLÇÜLDÜ (25 Eyl 2026): uç dışarıya açık (hesap.viamood.com.tr/api/health → 200) ve
+   * yanıtı `kargolab.meta.userId` / `memberId` taşıyordu — üçüncü kişinin iç kimlikleri.
+   * Aşağıdaki iddia SAHTE YANIT üzerinde ölçülür: alan geri konursa test KIRILIR.
+   */
+  const yasakli = /\b(userId|memberId|email|e-?posta|customerId|orderId|password|token)\b/i;
+
+  it('NEGATİF: yanıta iç kimlik alanı konursa çivi KIRILIR (sahte yanıtla ölçüldü)', () => {
+    const kirliYanit = {
+      status: 'healthy',
+      checks: { kargolab: { ok: true, meta: { userId: 4213, memberId: 991 } } },
+    };
+    expect(
+      yasakli.test(JSON.stringify(kirliYanit)),
+      'kirli yanıt yakalanmadı — iddia kör',
+    ).toBe(true);
+
+    const temizYanit = {
+      status: 'healthy',
+      buildId: 'lujkrNnRpmc8kwa05ZiWL',
+      uptimeSec: 1234,
+      checks: { db: { ok: true, latencyMs: 3 }, kargolab: { ok: true, latencyMs: 41 } },
+      timestamp: '2026-09-25T15:00:00.000Z',
+    };
+    expect(yasakli.test(JSON.stringify(temizYanit)), 'temiz yanıt yanlışlıkla yakalandı').toBe(false);
+  });
+
+  it('kaynakta iç kimlik alanı ÜRETİLMİYOR (meta/userId/memberId yok)', () => {
+    const uc = readFileSync(path.join(KOK, 'src/app/api/health/route.ts'), 'utf8');
+    const kod = uc.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|\s)\/\/.*$/gm, '$1');
+    expect(kod, 'yanıt gövdesinde iç kimlik alanı var').not.toMatch(/meta:|userId|memberId/);
+  });
+
+  it('DEPLOY SÖZLEŞMESİ korunuyor: sağlıklıyken 200, bozukken 503', () => {
+    const uc = readFileSync(path.join(KOK, 'src/app/api/health/route.ts'), 'utf8');
+    expect(uc).toMatch(/status:\s*allOk\s*\?\s*200\s*:\s*503/);
+    expect(uc).toContain("status: allOk ? 'healthy' : 'degraded'");
+  });
+
+  it('hata metni ham dönmüyor — yalnız sınıf adı', () => {
+    const uc = readFileSync(path.join(KOK, 'src/app/api/health/route.ts'), 'utf8');
+    expect(uc, 'ham hata mesajı yanıta giriyor').not.toMatch(/error:\s*err instanceof Error \? err\.message/);
+    expect(uc).toContain('hataSinifi');
+  });
 });
