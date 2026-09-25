@@ -128,6 +128,32 @@ export default function DenemeSayfasi({
           </section>
         )}
 
+        {/* ── SEPET ÖZETİ — ödemeden ÖNCE, kart formunun hemen üstünde. ──
+             Çok kalemli denemenin kanıtı bu blok: Yunus 4 satırı (2 ürün + kargo +
+             indirim) ve toplamı EKRANDA görmeli. 3D dönüş sonucuna BAĞLANMAZ;
+             sayfa ilk açıldığında görünür. Tek kalemlide `kalemler` gelmez → blok
+             hiç çizilmez, eski davranış aynen sürer. */}
+        {kalemler && kalemler.length > 0 && (
+          <div className="mt-6 rounded-xl border border-neutral-200 bg-white p-4">
+            <h2 className="text-sm font-bold text-neutral-800">Sepet özeti ({kalemler.length} kalem)</h2>
+            <ul className="mt-2 divide-y divide-neutral-100 text-sm leading-relaxed">
+              {kalemler.map((k) => (
+                <li key={k.name} className="flex items-center justify-between py-1.5">
+                  <span className="text-neutral-700">
+                    {k.name}
+                    {k.quantity > 1 && <span className="text-neutral-500"> × {k.quantity}</span>}
+                  </span>
+                  <span className="font-medium tabular-nums">{(k.price * k.quantity).toFixed(2)} TL</span>
+                </li>
+              ))}
+            </ul>
+            <div className="mt-2 flex items-center justify-between border-t border-neutral-200 pt-2 text-sm font-bold">
+              <span>Toplam</span>
+              <span className="tabular-nums">{tutar.toFixed(2)} TL</span>
+            </div>
+          </div>
+        )}
+
         <DenemeFormu
           sepet={kalemler ? 'coklu' : undefined}
           anahtar={anahtar}

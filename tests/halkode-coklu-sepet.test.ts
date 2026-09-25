@@ -60,6 +60,26 @@ describe('çok kalemli demo sepet', () => {
     expect(TEST_INIT, 'istemciden kalem listesi alınıyor').not.toMatch(/b\.(items|line_items)/);
   });
 
+  it('sepet özeti ödemeden ÖNCE görünür (3D sonucuna bağlı DEĞİL)', () => {
+    const sayfa = readFileSync(path.join(KOK, 'src/components/halkode/DenemeSayfasi.tsx'), 'utf8');
+    const ozet = sayfa.indexOf('Sepet özeti');
+    const sonucKosulu = sayfa.indexOf('{sonuc && (');
+    const form = sayfa.indexOf('<DenemeFormu');
+    expect(ozet, 'sepet özeti bloğu yok').toBeGreaterThan(-1);
+    // Özet, 3D sonuç bloğundan SONRA ve kart formundan ÖNCE olmalı — yani
+    // `{sonuc && …}` koşulunun içinde DEĞİL, sayfa ilk açıldığında çizilen yerde.
+    expect(ozet, 'özet sonuç koşulunun içinde kalmış').toBeGreaterThan(sonucKosulu);
+    expect(ozet, 'özet kart formundan sonra gelmiş').toBeLessThan(form);
+    expect(sayfa).toContain('{kalemler && kalemler.length > 0 && (');
+  });
+
+  it('tek kalemlide özet çizilmez (geriye dönük kırılma yok)', () => {
+    const sayfa = readFileSync(path.join(KOK, 'src/components/halkode/DenemeSayfasi.tsx'), 'utf8');
+    // `kalemler` verilmezse blok hiç render edilmez — koşul bunu garanti eder.
+    expect(sayfa).toMatch(/\{kalemler && kalemler\.length > 0 && \(/);
+    expect(sayfa).toMatch(/kalemler\?: ReadonlyArray/);
+  });
+
   it('DEĞİŞMEZ: ödeme ucu birim fiyat yazıyor (satır toplamı DEĞİL)', () => {
     expect(INIT).toContain('price: Math.round(li.price ?? 0) / 100');
     expect(INIT, 'eski bozuk kalıp geri gelmiş').not.toMatch(
