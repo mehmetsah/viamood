@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+# main'e giden her push'ta tip kapısı. 25 Eyl 2026: tip hatalı bir commit main'e girdi,
+# sunucuda build düştü, .next yarım kaldı ve canlı 502 verdi (30 dk'da 8 kez).
+# vitest yeşil olması build'in geçtiğini GÖSTERMEZ — tip denetimi ayrı kapıdır.
+while read -r _ _ uzak_ref _; do
+  case "$uzak_ref" in */main|*/master) ;; *) continue ;; esac
+  echo "▸ pre-push: npx tsc --noEmit (main'e gidiyor)"
+  if ! npx tsc --noEmit; then
+    echo "⛔ TİP HATASI — push durduruldu. Atlamak için: git push --no-verify"
+    exit 1
+  fi
+  echo "✓ tip denetimi temiz"
+done

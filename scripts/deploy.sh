@@ -67,6 +67,20 @@ for m in 0008_customers 0009_native_orders 0010_carts 0011_store_settings 0011_a
   fi
 done
 
+# Tip kapısı — build'den ÖNCE. `next build` zaten tip denetimi yapar ama 129 sn sürer ve
+# o süre boyunca .next ağacına dokunulmuş olur. `tsc --noEmit` aynı hatayı diske HİÇ
+# dokunmadan yakalar; 25 Eyl'de canlıyı 502'ye düşüren hata tam buydu
+# (route.ts:294 'son' is possibly 'undefined').
+echo ""
+echo "▸ Tip denetimi (tsc --noEmit)..."
+TSC_BAS=$(date +%s)
+if ! npx tsc --noEmit > /tmp/viamood-tsc.log 2>&1; then
+  echo "  ✗ TİP HATASI — build'e hiç girilmedi, .next'e DOKUNULMADI ($(( $(date +%s) - TSC_BAS ))s)"
+  grep -E 'error TS' /tmp/viamood-tsc.log | head -10
+  exit 1
+fi
+echo "  ✓ Tip denetimi temiz ($(( $(date +%s) - TSC_BAS ))s)"
+
 # Build
 echo ""
 echo "▸ Next.js build..."
