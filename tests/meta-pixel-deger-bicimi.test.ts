@@ -42,8 +42,34 @@ describe('Meta Pixel değer biçimi', () => {
     expect(kod()).not.toMatch(/value:\s*['"]/);
   });
 
-  it('Pixel ID boşken hiçbir script basılmaz (güvenli varsayılan)', () => {
-    expect(ham()).toContain("{%- if pixel_id == blank -%}");
+  it('Shopify Web Pixel ZATEN gönderdiği olaylar KODDA tekrarlanmaz (çift sayım)', () => {
+    // 25 Eyl canlı ölçümü: PageView / ViewContent / AddToCart üçü de
+    // www.facebook.com/tr POST ile id=1355197119331444 üzerinden gidiyor.
+    // Snippet bunları tekrar gönderirse Meta sayıları ikiye katlanır.
+    const k = kod();
+    expect(k).not.toContain("'PageView'");
+    expect(k).not.toContain("'ViewContent'");
+    expect(k).not.toContain("'AddToCart'");
+  });
+
+  it('KODDA fbq init YAPILMAZ (piksel zaten init edilmiş, ikinci init PageView tekrarlar)', () => {
+    expect(kod()).not.toMatch(/fbq\(\s*'init'/);
+  });
+
+  it('YALNIZ gerçekten eksik iki olay gönderilir', () => {
+    const k = kod();
+    expect(k).toContain("'InitiateCheckout'");
+    expect(k).toContain("'Purchase'");
+  });
+
+  it('Olaylar doğru sayfalara bağlanır (page.handle — template contains değil)', () => {
+    const h = ham();
+    expect(h).toContain("page.handle == 'odeme'");
+    expect(h).toContain("page.handle == 'siparis-alindi'");
+  });
+
+  it('fbq hazır değilse olay atlanır, hata fırlatılmaz', () => {
+    expect(kod()).toContain('fbqHazirOlunca');
   });
 
   it('Purchase çift sayıma karşı korunur (sayfa yenilemesi)', () => {
