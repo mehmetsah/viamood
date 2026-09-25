@@ -105,7 +105,12 @@ describe('Halköde kimlik seçimi — canlı paranın geçtiği yol', () => {
       HALKODE_LIVE_APP_SECRET: 'SECRET-ENV',
       HALKODE_LIVE_MERCHANT_KEY: 'MKEY-ENV',
     });
-    expect(k.appId, 'env, DB değerini gölgeledi').toBe('APPID-CANLI');
+    // ÜÇ ALANIN HER BİRİ ayrı ayrı ölçülür: yalnız appId ölçmek yetmiyordu —
+    // mutasyon koşusunda merchantKey'in önceliği env||ps'ye çevrildiğinde çivi
+    // sessizce yeşil kaldı (ölçüldü, 25 Eyl). Kapı her alan için ayrı kurulur.
+    expect(k.appId, 'env, DB appId değerini gölgeledi').toBe('APPID-CANLI');
+    expect(k.appSecret, 'env, DB appSecret değerini gölgeledi').toBe('SECRET-CANLI');
+    expect(k.merchantKey, 'env, DB merchantKey değerini gölgeledi').toBe('MKEY-CANLI');
   });
 
   it('4b) DB boşken env YEDEK olarak devreye girer', () => {
@@ -136,7 +141,13 @@ describe('Halköde kimlik seçimi — canlı paranın geçtiği yol', () => {
       /const k = canliMi && kimlikDolu\(canliKimlik\) \? canliKimlik : testKimlik;/,
     );
     // Öncelik sırası DB→env olmalı: `ps.x || process.env.X`, tersi DEĞİL.
-    expect(KAYNAK).toMatch(/ps\.halkode_live_app_id \|\| process\.env\.HALKODE_LIVE_APP_ID/);
+    for (const [db, env] of [
+      ['halkode_live_app_id', 'HALKODE_LIVE_APP_ID'],
+      ['halkode_live_app_secret', 'HALKODE_LIVE_APP_SECRET'],
+      ['halkode_live_merchant_key', 'HALKODE_LIVE_MERCHANT_KEY'],
+    ]) {
+      expect(KAYNAK, `${db} önceliği DB→env değil`).toContain(`ps.${db} || process.env.${env}`);
+    }
   });
 
   it('testte gerçek kimlik/sır yok — yalnız uydurma değerler', () => {
