@@ -1,0 +1,109 @@
+{%- comment -%}
+  META PIXEL — ölçüm olayları (Yunus talebi, 25 Eyl 2026 · #990684 devamı)
+
+  ⚠ BU DOSYA HENÜZ HİÇBİR YERE BAĞLI DEĞİL. Canlı temada `fbq` ÖLÇÜLDÜ ve
+  HİÇ YOK: ana sayfa, ürün, /pages/odeme, /pages/siparis-alindi ve /cart
+  sayfalarının beşinde de `fbq(` sayısı 0; layout/theme.liquid dahil altı ana
+  tema dosyasında da 0; Shopify script_tags sayısı 0. Yani ortada düzeltilecek
+  bozuk bir kod yoktu — kurulacak bir ölçüm vardı.
+
+  KURULUM İÇİN GEREKEN TEK ŞEY: Pixel ID. Ayar boşken bu snippet HİÇBİR ŞEY
+  basmaz (aşağıdaki erken çıkış) — yani yanlışlıkla yayına girse bile sayfaya
+  tek satır script eklemez. Kimlik geldiğinde Theme Editor'dan girilir.
+
+  DEĞER BİÇİMİ — arızanın özü buydu:
+    · value TIRNAKSIZ ve NOKTALI sayı olmalı. `money_without_currency` mağazanın
+      yerel biçimini uygular ve bu mağazada money_format = {{amount_with_comma_separator}}TL,
+      yani "400,00" üretir — virgüllü METİN. Meta bunu reddeder.
+    · Doğru yol `divided_by: 100.0`: Shopify fiyatı kuruş tutar (40000), bölme
+      noktalı sayı verir (400.0). Bu kalıp OG etiketlerinde ZATEN çalışıyor —
+      canlı ölçüm: og:price:amount = 500.0 (noktalı, tırnaksız).
+    · currency mağazadan türetilir (`shop.currency`), elle 'USD' yazılmaz.
+      Ölçüldü: shop.currency = TRY.
+{%- endcomment -%}
+
+{%- assign pixel_id = settings.meta_pixel_id | strip -%}
+{%- if pixel_id == blank -%}
+  {%- comment -%} Kimlik yok → hiçbir çıktı yok. Sessiz ve güvenli. {%- endcomment -%}
+{%- else -%}
+<script>
+  !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+  n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;
+  n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;
+  t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,
+  document,'script','https://connect.facebook.net/en_US/fbevents.js');
+  fbq('init', '{{ pixel_id }}');
+  fbq('track', 'PageView');
+</script>
+
+{%- if template contains 'product' and product -%}
+  {%- assign v = product.selected_or_first_available_variant -%}
+<script>
+  fbq('track', 'ViewContent', {
+    content_ids: ['{{ v.id }}'],
+    content_type: 'product',
+    value: {{ v.price | divided_by: 100.0 }},
+    currency: '{{ shop.currency }}'
+  });
+</script>
+{%- endif -%}
+
+{%- comment -%}
+  SEPETE EKLE — tema kendi olayını yayınlıyorsa ona bağlanır. Fiyat yine
+  kuruştan bölünür; sepet toplamı `cart.total_price` da kuruştur.
+{%- endcomment -%}
+<script>
+  document.addEventListener('vm:sepete-eklendi', function (e) {
+    if (!window.fbq || !e.detail) return;
+    fbq('track', 'AddToCart', {
+      content_ids: [String(e.detail.variantId || '')],
+      content_type: 'product',
+      value: Number(e.detail.priceKurus || 0) / 100,
+      currency: '{{ shop.currency }}'
+    });
+  });
+</script>
+
+{%- if template contains 'cart' -%}
+<script>
+  fbq('track', 'InitiateCheckout', {
+    value: {{ cart.total_price | divided_by: 100.0 }},
+    currency: '{{ shop.currency }}'
+  });
+</script>
+{%- endif -%}
+
+{%- comment -%}
+  SATIN ALMA — bizim ÖZEL ödeme akışımız. Shopify'ın kendi teşekkür sayfası
+  kullanılmıyor: /pages/odeme ödeme bitince `/pages/siparis-alindi?order=…&yontem=…&total=…`
+  adresine YÖNLENDİRİYOR (via-checkout.liquid içindeki vmTesekkureGit; canlıda
+  ölçüldü, goStep(3) kaldırılmış). Bu yüzden Purchase burada, teşekkür
+  sayfasında tetiklenir.
+
+  ⚠ `total` URL'den gelir ve URL zaten NOKTALI sayı taşır (vmTesekkureGit
+  `d.total`'ı olduğu gibi koyar). Yine de Number() ile sayıya çevriliyor:
+  metin gönderilirse Meta olayı sessizce düşürür — "gitti sanılır, gitmez"
+  sınıfı bir arıza olurdu.
+
+  ⚠ ÇİFT SAYIM KORUMASI: sayfa yenilenince Purchase İKİNCİ KEZ gitmesin diye
+  sipariş numarası sessionStorage'a damgalanır. Ciro raporunu şişiren en yaygın
+  hata budur.
+{%- endcomment -%}
+{%- if template contains 'siparis-alindi' -%}
+<script>
+  (function () {
+    if (!window.fbq) return;
+    var q = new URLSearchParams(window.location.search);
+    var no = q.get('order');
+    var tutar = Number(q.get('total'));
+    if (!no || !isFinite(tutar) || tutar <= 0) return;
+    var anahtar = 'vm_fbq_purchase_' + no;
+    try { if (sessionStorage.getItem(anahtar)) return; sessionStorage.setItem(anahtar, '1'); } catch (e) {}
+    fbq('track', 'Purchase', {
+      value: tutar,
+      currency: '{{ shop.currency }}'
+    });
+  })();
+</script>
+{%- endif -%}
+{%- endif -%}
