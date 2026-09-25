@@ -16,7 +16,28 @@ interface CartView {
   items_subtotal_cents: number;
 }
 
-const tl = (c: number) => (c / 100).toLocaleString('tr-TR', { minimumFractionDigits: 2 }) + ' ₺';
+/** Kuruş → Türkçe para metni. Sonlu olmayan girdide "NaN ₺" basmaz: API sözleşmesi
+ *  bir gün değişip alan eksik gelirse müşteri anlamsız bir sayı yerine "—" görür. */
+const tl = (c: number) =>
+  Number.isFinite(c) ? (c / 100).toLocaleString('tr-TR', { minimumFractionDigits: 2 }) + ' ₺' : '—';
+
+/** Taksit tutarı → Türkçe para metni.
+ *  ⚠ `amount_to_be_paid` bankadan TL cinsinden STRING gelir (kuruş DEĞİL), bu yüzden
+ *  tl() ile basılamaz — tl() kuruş beklediği için değer 100'e bölünürdü.
+ *  ÖLÇÜLEN KUSUR (25 Eyl 2026, taksit-1280.png): ham basıldığı için kutularda
+ *  "2499.00 ₺ / 833.00 ₺" görünüyordu — ondalık ayırıcı nokta, binlik ayırıcı yok;
+ *  aynı ekranın Özet panelinde ise "2.499,00 ₺" yazıyordu. Tek ekranda iki ayrı
+ *  para biçimi, biri Türkçe değil. Sonlu değilse tutar HİÇ basılmaz (boş bırakılır). */
+const tlTutar = (v: string | number | null | undefined) => {
+  // ÖLÇÜLDÜ: yalnız Number.isFinite yetmiyor — Number(null) === 0 olduğu için null bir
+  // tutar ekranda "0,00 ₺" görünüyordu; müşteri bunu "bedava" diye okur. Boş/null/boş
+  // metin önce elenir, sonra sonluluk bakılır.
+  if (v === null || v === undefined || (typeof v === 'string' && v.trim() === '')) return '';
+  const n = Number(v);
+  return Number.isFinite(n)
+    ? n.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ₺'
+    : '';
+};
 const inputCls =
   'h-11 w-full px-3 rounded-lg border border-neutral-300 text-sm outline-none focus:border-[var(--color-brand-orange)]';
 
@@ -364,7 +385,7 @@ export function CheckoutForm({ payment }: { payment: VitrinOdemeAyarlari }) {
                                   {i.installments_number === 1 ? 'Tek çekim' : `${i.installments_number} taksit`}
                                 </span>
                                 <span className={`text-[11px] leading-relaxed ${secili ? 'text-white/80' : 'text-neutral-500'}`}>
-                                  {i.amount_to_be_paid} ₺
+                                  {tlTutar(i.amount_to_be_paid)}
                                 </span>
                               </label>
                             );
