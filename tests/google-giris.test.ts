@@ -48,7 +48,24 @@ describe('kimlik çözümleme — env öncelikli, yoksa DB', () => {
 
 describe('giriş ekranı görünürlüğü', () => {
   it('kimlik yokken Google düğmesi GÖSTERİLMEZ', async () => {
-    expect(await getEnabledSocialProviders()).toEqual({ google: false, facebook: false });
+    expect(await getEnabledSocialProviders()).toEqual({
+      google: false,
+      facebook: false,
+      apple: false,
+    });
+  });
+
+  it('Apple kimliği yokken kapalı kalır — dört alandan biri eksikse de açılmaz', async () => {
+    // Yarım kimlikle açılan Apple girişi kullanıcıyı Apple'a gönderip
+    // anlaşılmaz bir hata ekranında bırakır; hiç göstermemek doğrusu.
+    store.auth = {
+      apple_enabled: true,
+      apple_client_id: 'com.viamood.giris',
+      apple_team_id: 'ABCDE12345',
+      apple_key_id: 'KEY1234567',
+      // apple_private_key YOK
+    };
+    expect((await getEnabledSocialProviders()).apple).toBe(false);
   });
 
   it('Facebook kimliği yokken kapalı kalır (Apple sonraya)', async () => {

@@ -1,0 +1,98 @@
+{%- comment -%}
+  META PIXEL — YALNIZ EKSİK İKİ OLAY (Elif, 25 Eyl 2026 · #990686 madde "pixel")
+
+  ⚠ BU DOSYA HENÜZ HİÇBİR YERE BAĞLI DEĞİL. Kurulum kararı Yunus'ta.
+
+  NEDEN AYRI BİR DOSYA — ÖLÇÜLDÜ (25 Eyl, Playwright, canlı site):
+    Shopify'ın kendi Web Pixel'i KURULU VE ÇALIŞIYOR. `fbq` ana pencerede
+    tanımlı, `pixelIds: ["1355197119331444"]`, izin bayrakları (analytics /
+    marketing / saleOfData) hepsi true. Yakalanan çağrılar:
+      ana sayfa → fbq('trackShopify', '1355197119331444', 'PageView', …)
+      ürün      → … 'ViewContent', {content_ids:[…], content_type:'product_group'}
+      sepete ekle → … 'AddToCart',  {content_ids:[…]}
+      /pages/odeme → YALNIZ 'PageView'
+
+    Yani PageView · ViewContent · AddToCart ZATEN GİDİYOR. Kardeş dosya
+    `via-meta-pixel.liquid.YENI` bu üçünü de basar; olduğu gibi kurulursa
+    her biri İKİ KEZ sayılır ve reklam raporu şişer. Bu dosya o üçüne
+    DOKUNMAZ, yalnız Shopify'ın üretemediği ikisini ekler:
+
+      · InitiateCheckout — ödeme adımımız Shopify checkout'u DEĞİL
+        (/pages/odeme, via-checkout.liquid), o yüzden Shopify'ın
+        `checkout_started` olayı hiç doğmuyor.
+      · Purchase — sipariş `/pages/siparis-alindi`'ya yönleniyor,
+        Shopify'ın teşekkür sayfası kullanılmıyor (vmTesekkureGit).
+
+  init YOK: Shopify'ın Web Pixel'i `fbq`'yu zaten kurup init ediyor.
+  Burada ikinci bir init `fbevents.js`'i yeniden yükler ve PageView'ı
+  tekrarlar. Bu dosya var olan `fbq`'ya yalnız iki olay EKLER; `fbq`
+  yoksa (izin reddi, reklam engelleyici) sessizce hiçbir şey yapmaz.
+
+  DEĞER BİÇİMİ: value TIRNAKSIZ ve NOKTALI sayı olmalı.
+  `money_without_currency` bu mağazada "2.600,00" üretir — virgüllü METİN,
+  Meta bunu sessizce düşürür. Doğru yol `divided_by: 100.0`
+  (Shopify kuruş tutar: 260000 → 2600.0). Aynı kalıp OG etiketlerinde
+  zaten çalışıyor (canlı ölçüm: og:price:amount = 2600.0).
+{%- endcomment -%}
+
+{%- comment -%}
+  fbq ASYNC YÜKLENİR. Shopify Web Pixel'i sayfa yüklenirken indirir; bu snippet
+  ondan önce çalışırsa `window.fbq` henüz tanımsızdır ve olay SESSİZCE kaçar —
+  "gitti sanılır, gitmez" sınıfı arıza. Bu yüzden hazır olana kadar beklenir.
+{%- endcomment -%}
+<script>
+  window.vmFbqHazirOlunca = function (isle) {
+    var kalan = 40; /* 40 × 250ms = 10 sn */
+    (function dene() {
+      if (window.fbq) { isle(window.fbq); return; }
+      if (--kalan > 0) setTimeout(dene, 250);
+    })();
+  };
+</script>
+
+{%- comment -%} ————— 1) ÖDEME BAŞLADI ————— {%- endcomment -%}
+{%- comment -%}
+  `page.handle` kullanılıyor: `template contains 'odeme'` odeme-sartlari gibi
+  sayfalara da uyar. Sepet sayfası da KAPSAM DIŞI — sepeti görüntülemek ödeme
+  başlatmak değildir; Meta'da InitiateCheckout şişerse dönüşüm oranı düşük görünür.
+{%- endcomment -%}
+{%- if page.handle == 'odeme' -%}
+<script>
+  vmFbqHazirOlunca(function (fbq) {
+    var tutar = {{ cart.total_price | divided_by: 100.0 }};
+    if (!isFinite(tutar) || tutar <= 0) return;
+    /* Sayfa yenilemesinde tekrar sayılmasın: sepet tutarı damgalanır. */
+    var anahtar = 'vm_fbq_ic_' + tutar;
+    try { if (sessionStorage.getItem(anahtar)) return; sessionStorage.setItem(anahtar, '1'); } catch (e) {}
+    fbq('track', 'InitiateCheckout', {
+      value: tutar,
+      currency: '{{ shop.currency }}',
+      num_items: {{ cart.item_count | default: 0 }}
+    });
+  });
+</script>
+{%- endif -%}
+
+{%- comment -%}
+  ————— 2) SATIN ALMA —————
+  `total` URL'den gelir ve vmTesekkureGit onu noktalı sayı olarak koyar.
+  Yine de Number() ile çevriliyor: metin gönderilirse Meta olayı SESSİZCE
+  düşürür — "gitti sanılır, gitmez" sınıfı bir arıza olurdu.
+  Sipariş numarası damgalanır; sayfa yenilenince ciro iki kez sayılmaz.
+{%- endcomment -%}
+{%- if page.handle == 'siparis-alindi' -%}
+<script>
+  vmFbqHazirOlunca(function (fbq) {
+    var q = new URLSearchParams(window.location.search);
+    var no = q.get('order');
+    var tutar = Number(q.get('total'));
+    if (!no || !isFinite(tutar) || tutar <= 0) return;
+    var anahtar = 'vm_fbq_purchase_' + no;
+    try { if (sessionStorage.getItem(anahtar)) return; sessionStorage.setItem(anahtar, '1'); } catch (e) {}
+    fbq('track', 'Purchase', {
+      value: tutar,
+      currency: '{{ shop.currency }}'
+    });
+  });
+</script>
+{%- endif -%}
