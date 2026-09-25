@@ -28,6 +28,13 @@ const DURUM_METNI: Record<string, { baslik: string; aciklama: string }> = {
     baslik: 'Talep alındı, işleniyor',
     aciklama: 'Talebiniz kaydedildi, işlem kısa süre içinde tamamlanacak. Sorularınız için destek@viamood.com.',
   },
+  // Silme geri alınamaz olduğu için otomatik yapılmaz: talep kaydedilir,
+  // uygulamayı bir yetkili onaylar. Kullanıcıya da bu böyle anlatılır.
+  'onay-bekliyor': {
+    baslik: 'Talep alındı, onay bekliyor',
+    aciklama:
+      'Facebook bağlantınız bulundu ve silme talebiniz kaydedildi. Silme işlemi geri alınamaz olduğu için bir yetkilimiz tarafından kontrol edildikten sonra uygulanır. Sorularınız için destek@viamood.com.',
+  },
 };
 
 export default async function VeriSilmeDurumuPage({
