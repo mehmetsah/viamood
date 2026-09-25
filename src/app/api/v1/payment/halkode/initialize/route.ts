@@ -289,8 +289,8 @@ export async function POST(req: NextRequest) {
   // yazılır; böylece Halköde'ye giden items toplamı total'a KURUŞU KURUŞUNA eşit olur.
   const itemsToplamKurus = items.reduce((s, it) => s + Math.round(it.price * 100) * it.quantity, 0);
   const sapmaKurus = totalKurus - itemsToplamKurus;
-  if (sapmaKurus !== 0 && items.length > 0) {
-    const son = items[items.length - 1];
+  const son = items.at(-1);
+  if (sapmaKurus !== 0 && son) {
     son.price = Math.round(son.price * 100 + sapmaKurus / son.quantity) / 100;
     console.warn('[halkode/initialize] kalem toplamı düzeltildi', { sapmaKurus, totalKurus });
   }
