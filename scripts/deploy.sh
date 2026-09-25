@@ -14,7 +14,15 @@ cd /var/www/viamood
 # FD 9 re-exec'e miras kalır (lock korunur); flock yalnız ilk (re-exec öncesi) çağrıda alınır.
 # ──────────────────────────────────────────────────────────────────────────
 if [ -z "$DEPLOY_LOCK_HELD" ] && [ -z "$DEPLOY_REEXEC" ]; then
-  exec 9>/tmp/viamood-autodeploy.lock
+  # Kilit dosyası bilerek PAYLAŞILAN /tmp yolunda: iki süreç AYNI kilidi görmeli,
+  # kullanıcıya özel yapmak kilidi işlevsiz bırakır. Ama `exec 9>` de açılamazsa
+  # sessizce düşer — log tuzağının kardeşi. Açıkça söylenir ve ayrı kodla çıkılır.
+  if ! exec 9>/tmp/viamood-autodeploy.lock 2>/dev/null; then
+    echo "  ✗ KİLİT DOSYASI AÇILAMADI: /tmp/viamood-autodeploy.lock"
+    echo "    sahip : $(stat -c '%U:%G %a' /tmp/viamood-autodeploy.lock 2>/dev/null || echo '(yok)')"
+    echo "    koşan : $(id -un)"
+    exit 4
+  fi
   if ! flock -w 600 9; then echo "⚠ Başka bir deploy (cron) sürüyor — atlandı."; exit 1; fi
 fi
 
@@ -74,12 +82,38 @@ done
 # Kapsam tsconfig.deploy.json: tests/ HARİÇ — `next build` de testleri derlemez, kapı
 # build'den daha sıkı olursa deploy edilmeyen kod yüzünden yayın durur (ölçüldü: kök
 # yapılandırmayla 11 hata, hepsi tests/ içinde).
+# ─────────────────────────────────────────────────────────────────────────────
+# LOG YOLU — 25 Eyl 2026'da ÜÇ SAAT KAYBETTİREN TUZAK BURADAYDI.
+# Loglar sabit /tmp/viamood-*.log yollarına yazılıyordu. Makinede hem root hem
+# ubuntu deploy koşturabiliyor; dosyayı ilk kim yaratırsa sahibi o oluyor (644).
+# Sonra diğer kullanıcı `> /tmp/viamood-build.log` yazmaya kalkınca BASH KOMUTU
+# HİÇ ÇALIŞTIRMIYOR — yönlendirme açılamadığı için doğrudan hata dalına giriyor.
+# Ölçüldü: build.log root:root, ubuntu "Permission denied"; deploy 13 sn'de
+# "BUILD FAİL" yazıyordu ama `npm run build` hiç koşmamıştı ve ekrana ÜÇ SAAT
+# ÖNCEKİ bayat log basılıyordu. Hata gerçek değildi, ETİKETİ yanlıştı.
+LOG_DIR="${LOG_DIR:-$HOME/.viamood-log}"
+mkdir -p "$LOG_DIR" 2>/dev/null
+TSC_LOG="$LOG_DIR/tsc.log"
+BUILD_LOG="$LOG_DIR/build.log"
+
+# Yazılabilirlik ÖNCEDEN sınanır: sessizce "build başarısız" demek yerine
+# sorunun LOG olduğunu açıkça söyler ve AYRI çıkış koduyla (3) çıkar.
+for _l in "$TSC_LOG" "$BUILD_LOG"; do
+  if ! : > "$_l" 2>/dev/null; then
+    echo "  ✗ BUILD LOGU AÇILAMADI: $_l"
+    echo "    sahip : $(stat -c '%U:%G %a' "$_l" 2>/dev/null || echo '(dosya yok — dizin yazılamıyor)')"
+    echo "    koşan : $(id -un) ($(id -u))"
+    echo "    ÇÖZÜM : bu dosyayı silin ya da LOG_DIR=<yazılabilir-dizin> ile koşun."
+    exit 3
+  fi
+done
+
 echo ""
 echo "▸ Tip denetimi (tsc --noEmit)..."
 TSC_BAS=$(date +%s)
-if ! npx tsc --noEmit -p tsconfig.deploy.json > /tmp/viamood-tsc.log 2>&1; then
+if ! npx tsc --noEmit -p tsconfig.deploy.json > "$TSC_LOG" 2>&1; then
   echo "  ✗ TİP HATASI — build'e hiç girilmedi, .next'e DOKUNULMADI ($(( $(date +%s) - TSC_BAS ))s)"
-  grep -E 'error TS' /tmp/viamood-tsc.log | head -10
+  grep -E 'error TS' "$TSC_LOG" | head -10
   exit 1
 fi
 echo "  ✓ Tip denetimi temiz ($(( $(date +%s) - TSC_BAS ))s)"
@@ -101,9 +135,9 @@ YEDEK=".next.onceki-$(date +%H%M%S)"
 if [ -d .next ]; then
   cp -al .next "$YEDEK" 2>/dev/null || cp -r .next "$YEDEK"
 fi
-if ! NEXT_TELEMETRY_DISABLED=1 npm run build > /tmp/viamood-build.log 2>&1; then
+if ! NEXT_TELEMETRY_DISABLED=1 npm run build > "$BUILD_LOG" 2>&1; then
   echo "  ✗ BUILD FAİL — eski .next geri konuyor"
-  tail -20 /tmp/viamood-build.log
+  tail -20 "$BUILD_LOG"
   if [ -d "$YEDEK" ]; then
     rm -rf .next && mv "$YEDEK" .next
     # Süreç yarım ağaçta asılı kalmasın diye sağlam .next ile yeniden bağlanır.

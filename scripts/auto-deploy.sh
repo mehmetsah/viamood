@@ -8,7 +8,11 @@ exec 9>/tmp/viamood-autodeploy.lock
 flock -n 9 || exit 0   # önceki çalışma sürüyorsa atla (üst üste deploy yok)
 
 cd /var/www/viamood || exit 1
-LOG=/tmp/viamood-autodeploy.log
+# Sabit /tmp yolu, çok kullanıcılı makinede sahiplik kilidi yaratır (bkz. deploy.sh
+# içindeki uzun not; 25 Eyl 2026 arızası). Kullanıcıya ait dizine alındı.
+LOG_DIR="${LOG_DIR:-$HOME/.viamood-log}"
+mkdir -p "$LOG_DIR" 2>/dev/null
+LOG="$LOG_DIR/autodeploy.log"
 
 git fetch --quiet origin main 2>/dev/null || exit 0
 LOCAL=$(git rev-parse HEAD 2>/dev/null)
