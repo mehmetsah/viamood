@@ -102,12 +102,22 @@ async function handle(req: NextRequest): Promise<NextResponse> {
   const invoiceId = p.invoice_id || '';
   const hashKey = p.hash_key || '';
 
+  // ÖLÇÜLDÜ (25 Eyl 2026, nginx access · 12:44:58 UTC): Halköde dönüşünde gelen alanlar
+  //   invoice_id · status_code · error_code · status_description · transaction_type
+  //   payment_status · payment_method · pos_bank · hash_key
+  // `original_bank_error_code` DİYE BİR ALAN GELMİYOR. Kod onu okuduğu için günlükte
+  // 60 satırda 2 kez `bankError: undefined` doğuyordu; sağlayıcının gerçek hatası
+  // (status_code=13 · "The total of your items price … is not equal to …") hiç
+  // görünmüyor, teşhis eden kişi eli boş kalıyordu.
+  const saglayiciHata =
+    p.original_bank_error_code || p.error_code || p.error || p.status_description || '';
+
   console.info('[halkode/callback-giris] dönüş alındı', {
     invoiceId: invoiceId || '(yok)',
     statusCode: p.status_code ?? '-',
     mdStatus: p.md_status ?? '-',
     orderNo: p.order_no ?? '-',
-    bankaHata: p.original_bank_error_code || '-',
+    bankaHata: saglayiciHata || '-',
     yontem: req.method,
   });
 
@@ -161,8 +171,11 @@ async function handle(req: NextRequest): Promise<NextResponse> {
       description: st.description,
       urlStatusCode: p.status_code, // teşhis: URL ne diyordu
       mdStatus: p.md_status,
-      bankError: p.original_bank_error_code,
+      bankError: saglayiciHata || '(sağlayıcı hata alanı boş geldi)',
     });
+    // Müşteriye giden metin ayırt edici olmalı: durum kodu + invoice referansı.
+    // "bilinmeyen hata" gören müşteri ne yapacağını bilmiyor, biz de sonraki vakayı
+    // koda göre bulamıyoruz (25 Eyl şikâyetinin kaynağı tam buydu).
     const reason = st.statusCode === HALKODE_STATUS.ORDER_OR_PAYMENT_FAILED ? 'declined' : `status_${st.statusCode}`;
     return failPage(reason, invoiceId);
   }
