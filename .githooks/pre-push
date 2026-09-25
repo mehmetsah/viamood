@@ -5,7 +5,7 @@
 while read -r _ _ uzak_ref _; do
   case "$uzak_ref" in */main|*/master) ;; *) continue ;; esac
   echo "▸ pre-push: npx tsc --noEmit (main'e gidiyor)"
-  if ! npx tsc --noEmit; then
+  if ! npx tsc --noEmit -p tsconfig.deploy.json; then
     echo "⛔ TİP HATASI — push durduruldu. Atlamak için: git push --no-verify"
     exit 1
   fi

@@ -71,10 +71,13 @@ done
 # o süre boyunca .next ağacına dokunulmuş olur. `tsc --noEmit` aynı hatayı diske HİÇ
 # dokunmadan yakalar; 25 Eyl'de canlıyı 502'ye düşüren hata tam buydu
 # (route.ts:294 'son' is possibly 'undefined').
+# Kapsam tsconfig.deploy.json: tests/ HARİÇ — `next build` de testleri derlemez, kapı
+# build'den daha sıkı olursa deploy edilmeyen kod yüzünden yayın durur (ölçüldü: kök
+# yapılandırmayla 11 hata, hepsi tests/ içinde).
 echo ""
 echo "▸ Tip denetimi (tsc --noEmit)..."
 TSC_BAS=$(date +%s)
-if ! npx tsc --noEmit > /tmp/viamood-tsc.log 2>&1; then
+if ! npx tsc --noEmit -p tsconfig.deploy.json > /tmp/viamood-tsc.log 2>&1; then
   echo "  ✗ TİP HATASI — build'e hiç girilmedi, .next'e DOKUNULMADI ($(( $(date +%s) - TSC_BAS ))s)"
   grep -E 'error TS' /tmp/viamood-tsc.log | head -10
   exit 1
