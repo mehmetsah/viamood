@@ -9,10 +9,11 @@ import NextAuth, { type DefaultSession, type NextAuthConfig } from 'next-auth';
 import Credentials from 'next-auth/providers/credentials';
 import Google from 'next-auth/providers/google';
 import Facebook from 'next-auth/providers/facebook';
+import Apple from 'next-auth/providers/apple';
 import { db } from '@/db/client';
 import * as schema from '@/db/schema';
 import { authConfig } from './auth.config';
-import { getGoogleCreds, getFacebookCreds } from './auth/social';
+import { getGoogleCreds, getFacebookCreds, getAppleCreds } from './auth/social';
 import { verifyPassword } from './password';
 
 declare module 'next-auth' {
@@ -37,6 +38,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth(async () => {
   // `/admin/ayarlar/sosyal-giris` ekranından girilince kendiliğinden açılır
   // (SSH kapalı olduğu için env yolu zaten kullanılamıyor).
   const facebook = await getFacebookCreds();
+  // Apple — aynı tembel kalıp. Fark: clientSecret sabit değil, `.p8`
+  // anahtarından ÜRETİLİYOR ve süresi dolmadan kendiliğinden yenileniyor
+  // (lib/auth/apple-secret.ts). Kimlik yoksa provider hiç yüklenmez.
+  const apple = await getAppleCreds();
   return {
   ...authConfig,
   adapter: DrizzleAdapter(db, {
@@ -63,6 +68,17 @@ export const { handlers, auth, signIn, signOut } = NextAuth(async () => {
             clientSecret: facebook.clientSecret,
             // Google ile aynı: aynı e-postayla gelen kişi mevcut hesabına
             // bağlanır, ikinci bir kullanıcı kaydı açılmaz.
+            allowDangerousEmailAccountLinking: true,
+          }),
+        ]
+      : []),
+    ...(apple
+      ? [
+          Apple({
+            clientId: apple.clientId,
+            clientSecret: apple.clientSecret,
+            // Google/Facebook ile aynı: aynı e-postayla gelen kişi mevcut
+            // hesabına bağlanır, ikinci kullanıcı kaydı açılmaz.
             allowDangerousEmailAccountLinking: true,
           }),
         ]
