@@ -58,9 +58,24 @@ describe('tamamlayıcı pixel snippet', () => {
     expect(korumalar).toHaveLength(2);
   });
 
-  it('fbq yoksa sessizce çıkar — hata fırlatmaz', () => {
-    const cikislar = kod.match(/if \(!window\.fbq\) return;/g) ?? [];
-    expect(cikislar).toHaveLength(2);
+  it('fbq ASYNC yüklendiği için beklenir — erken çalışıp olayı kaçırmaz', () => {
+    // Shopify Web Pixel'i fbevents.js'i sonradan indirir. Snippet ondan önce
+    // çalışırsa `window.fbq` tanımsızdır; doğrudan `return` edilseydi olay
+    // sessizce kaçardı ("gitti sanılır, gitmez"). Bu yüzden bekleyiş şart.
+    expect(kod).toContain('window.vmFbqHazirOlunca');
+    const kullanim = kod.match(/vmFbqHazirOlunca\(function \(fbq\)/g) ?? [];
+    expect(kullanim).toHaveLength(2); // InitiateCheckout + Purchase
+    // Bekleyiş sonsuz olmamalı: sayaçla vazgeçer.
+    expect(kod).toMatch(/kalan\s*=\s*\d+/);
+    expect(kod).toMatch(/if \(--kalan > 0\)/);
+  });
+
+  it('olaylar doğru sayfalara bağlanır — template contains DEĞİL page.handle', () => {
+    // `template contains 'odeme'` odeme-sartlari gibi sayfalara da uyar ve
+    // InitiateCheckout'u şişirir; sepet sayfası da ödeme başlangıcı değildir.
+    expect(snippet).toContain("page.handle == 'odeme'");
+    expect(snippet).toContain("page.handle == 'siparis-alindi'");
+    expect(snippet).not.toContain("template contains 'cart'");
   });
 
   it('sıfır/negatif tutarda olay göndermez', () => {
