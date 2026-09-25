@@ -469,7 +469,7 @@ export async function paySmart3D(
   p: Halkode3DParams,
   token: string,
   ortam?: HalkodeOrtamSecimi,
-): Promise<{ ok: true; html: string } | { ok: false; statusCode: number; error: string; raw?: Json }> {
+): Promise<{ ok: true; html: string } | { ok: false; statusCode: number; error: string; ref?: string; raw?: Json }> {
   const c = await cfg(ortam);
   const currency = p.currencyCode ?? 'TRY';
   const total = p.total.toFixed(2);
@@ -559,8 +559,19 @@ export async function paySmart3D(
     }
     const data = (json.data ?? {}) as Json;
     const code = Number(json.status_code ?? data.status_code ?? -1);
-    const desc = String(json.status_description ?? data.error ?? data.status_description ?? 'bilinmeyen hata');
-    return { ok: false, statusCode: code, error: desc, raw: json };
+    // Son çare metni ARTIK "bilinmeyen hata" DEĞİL: müşteri ne yapacağını bilemiyor,
+    // biz de sonraki vakayı logda bulamıyoruz (25 Eyl 2026 vakası). Sağlayıcının kendi
+    // metni yoksa durum kodunu ve aranabilir bir referans kodunu birlikte veriyoruz.
+    const ref = `HK-${code}-${Date.now().toString(36).slice(-6).toUpperCase()}`;
+    const desc = String(
+      json.status_description ??
+        data.error ??
+        data.status_description ??
+        `Banka ödemeyi tamamlayamadı (durum ${code}). Kartınızdan para çekilmedi; ` +
+          `bilgileri kontrol edip tekrar deneyin, sürerse bu kodu bize iletin: ${ref}`,
+    );
+    console.error('[halkode/paySmart3D] sağlayıcı hatası', { ref, statusCode: code, desc: desc.slice(0, 200) });
+    return { ok: false, statusCode: code, error: desc, ref, raw: json };
   } catch (e) {
     return { ok: false, statusCode: -1, error: e instanceof Error ? e.message : String(e) };
   }
