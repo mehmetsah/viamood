@@ -221,24 +221,27 @@ export default function DenemeFormu({
           </p>
         )}
         {taksitler && taksitler.length > 0 && (
-          <ul className="mt-2 grid gap-2">
+          /* TAKSİT — örnekteki KARE IZGARA (Ayşe #76; ölçülen tek yapısal fark, kart #990862).
+             Liste get-installments ucundan gelir, sabit kodlama YOK.
+             Satır yükseklikleri leading-relaxed — #102 eşiği 1.3. */
+          <ul className="mt-2 grid grid-cols-3 gap-2 sm:grid-cols-4">
             {taksitler.map((t) => {
               const n = t.installments_number;
               const toplam = parseFloat(t.amount_to_be_paid) || tutar;
               const aylik = n > 1 ? toplam / n : toplam;
               return (
                 <li key={`${n}-${t.card_program ?? ''}`}>
-                  <label className={`flex cursor-pointer items-center justify-between gap-3 rounded-lg border px-3 py-2.5 ${
-                    secili === n ? 'border-[var(--color-brand-orange,#f25334)] bg-orange-50' : 'border-neutral-200'
+                  <label className={`flex h-full cursor-pointer flex-col items-center justify-center gap-0.5 rounded-lg border px-2 py-2 text-center leading-relaxed ${
+                    secili === n
+                      ? 'border-[var(--color-brand-orange,#f25334)] bg-orange-50'
+                      : 'border-neutral-200 hover:border-neutral-400'
                   }`}>
-                    <span className="flex items-center gap-2.5">
-                      <input type="radio" name="taksit" checked={secili === n} onChange={() => setSecili(n)} />
-                      <span className="text-sm font-semibold">
-                        {n === 1 ? 'Tek çekim' : `${n} taksit`}
-                      </span>
-                      {n > 1 && <span className="text-xs text-neutral-500">{tl(aylik)} × {n}</span>}
+                    <input type="radio" name="taksit" className="sr-only" checked={secili === n} onChange={() => setSecili(n)} />
+                    <span className="text-xs font-semibold leading-relaxed">
+                      {n === 1 ? 'Tek çekim' : `${n} taksit`}
                     </span>
-                    <span className="text-sm font-bold">{tl(toplam)}</span>
+                    <span className="text-[11px] font-bold leading-relaxed">{tl(toplam)}</span>
+                    {n > 1 && <span className="text-[11px] leading-relaxed text-neutral-500">{tl(aylik)} × {n}</span>}
                   </label>
                 </li>
               );
@@ -254,7 +257,7 @@ export default function DenemeFormu({
         <p className="mt-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">{hata}</p>
       )}
 
-      <button type="submit" disabled={!hazir || gonderiliyor}
+      <button type="submit" disabled={!hazir || gonderiliyor} aria-busy={gonderiliyor}
               className={`mt-5 w-full rounded-full px-6 py-3 font-semibold text-white disabled:opacity-40 ${
                 canli ? 'bg-red-700' : 'bg-neutral-900'
               }`}>
