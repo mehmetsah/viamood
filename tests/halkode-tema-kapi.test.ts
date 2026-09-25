@@ -12,14 +12,14 @@
  *  2) YÖNLENDİRME: startKart'ın paytr/iyzico dalları değişmedi.
  *  3) SÖZLEŞME: initialize'ın zorunlu tuttuğu her alan temanın gönderdiği gövdede var.
  *  4) Kart alanları console/localStorage/sepet özniteliğine yazılmaz. Formun BÖLGE KİLİDİ
- *     (onaylı Seçenek B maketi ↔ ürün) ayrı dosyada: tests/halkode-form-b.test.ts.
+ *     (onaylı maket ↔ ürün) ayrı dosyada: tests/halkode-form-hp.test.ts.
  */
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 
 const KOK = path.resolve(__dirname, '..');
-const TEMA = readFileSync(path.join(KOK, 'tema-yamalari/via-checkout.liquid.halkode-form-b'), 'utf8');
+const TEMA = readFileSync(path.join(KOK, 'tema-yamalari/via-checkout.liquid.halkode-form-hp'), 'utf8');
 const ROUTE = readFileSync(path.join(KOK, 'src/app/api/v1/payment/halkode/initialize/route.ts'), 'utf8');
 
 /** Çapanın tam 1 kez geçtiğini iddia ederek dilim alır (CLAUDE.md §3c: sınır yapıyla çizilir). */
