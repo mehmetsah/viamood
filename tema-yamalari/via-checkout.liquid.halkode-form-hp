@@ -389,58 +389,186 @@
   .vco-sum__status { font-size:12px; color:#c62828; margin:8px 0 0; min-height:14px; }
   .vco-iyzico { min-height:420px; }
   .vco-iyzico.is-hk { min-height:0; }
-  /* Halköde kart formu — Seçenek B (Mehmet onayı 21 Eyl 2026). Onaylı maket:
-     tema-yamalari/tasarim/halkode-form-secenek-B.html — ÜST SINIRDIR, makette olmayan öğe
-     eklenmez. Bekçi: tests/halkode-form-b.test.ts (maket ↔ ürün metin/denetim listesi). */
+  /* Halköde kart formu — Yunus'un 23 Eyl 2026 örneği (Ayşe Demiröz onayı: #76 %89 · #102 %100).
+     Onaylı maket: tema-yamalari/tasarim/halkode-form-hp.html — ÜST SINIRDIR, makette olmayan
+     düğme/alan/rozet üründe OLMAZ. Bekçi: tests/halkode-form-hp.test.ts.
+     Tüm sınıflar "hp-" önekli; temanın kendi CSS'iyle çakışmaz. Maketin sahne kuralları
+     (.hp-stage, body) ve kendi <link> fontu alınmaz — font temadan miras alınır. */
   .vco-hk { margin-top:4px; }
-  .vco-hk [hidden] { display:none !important; }
-  .vco-hk__bas { display:flex; justify-content:space-between; align-items:center; gap:10px; margin:0 0 12px; }
-  .vco-hk__bas b { font-size:14.5px; color:var(--ink); }
-  .vco-hk__rozet, .vco-hk__cip { display:inline-flex; align-items:center; gap:5px; font-size:11.5px; font-weight:700; line-height:1.2; color:var(--ok); background:#edf6f0; border:1px solid #cfe6d8; border-radius:999px; white-space:nowrap; }
-  .vco-hk__rozet { padding:4px 10px; }
-  .vco-hk__cip { padding:3px 9px; }
-  .vco-hk__alan { margin-bottom:12px; min-width:0; }
-  .vco-hk .vco-lbl { margin-bottom:5px; }
-  .vco-hk .vco-input { height:46px; padding:0 13px; font-size:14.5px; font-family:inherit; }
-  .vco-hk .vco-input:focus { border-color:var(--o); box-shadow:0 0 0 3px rgba(242,83,52,.12); }
-  .vco-hk__ici { position:relative; }
-  .vco-hk__ici .vco-input[data-hk="no"] { padding-left:42px; font-variant-numeric:tabular-nums; letter-spacing:.04em; }
-  .vco-hk__ici--cip .vco-input[data-hk="no"] { padding-right:104px; }
-  .vco-hk__ici .vco-input[data-hk="cvv"] { padding-right:38px; }
-  .vco-hk__sol { position:absolute; left:13px; top:50%; transform:translateY(-50%); color:var(--muted); display:inline-flex; pointer-events:none; }
-  .vco-hk__sag { position:absolute; right:10px; top:50%; transform:translateY(-50%); display:inline-flex; align-items:center; gap:6px; color:var(--muted); }
-  .vco-hk__iki { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
-  .vco-hk-tk { border:1px solid var(--line); border-radius:10px; overflow:hidden; margin:4px 0 14px; }
-  .vco-hk-tk__bas { display:flex; justify-content:space-between; align-items:baseline; gap:10px; padding:11px 14px; background:#faf8f4; border-bottom:1px solid var(--line); }
-  .vco-hk-tk__bas b { font-size:13.5px; color:var(--ink); }
-  .vco-hk-tk__bas small { font-size:12px; color:var(--muted); }
-  /* .vco-hk öneki şart: tema genelindeki label:has(input[type="radio"]) kuralı (özgüllük 0,1,2)
-     tek sınıflı satırı ezip display/gap'i inline-flex'e çeviriyordu (test temasında ölçüldü). */
-  .vco-hk .vco-hk-tk__s { display:grid; grid-template-columns:22px 1fr auto auto; align-items:center; gap:12px; margin:0; padding:11px 14px; border-top:1px solid #efe9e0; font-size:14px; font-weight:400; color:var(--ink); cursor:pointer; position:relative; }
-  .vco-hk-tk__s:first-child { border-top:0; }
-  .vco-hk-tk__s.is-sel { background:#fff6f3; }
-  .vco-hk-tk__s input { position:absolute; opacity:0; width:1px; height:1px; margin:0; pointer-events:none; }
-  .vco-hk-tk__rd { width:18px; height:18px; border-radius:50%; border:2px solid #cfc7ba; display:grid; place-items:center; }
-  .vco-hk-tk__s.is-sel .vco-hk-tk__rd { border-color:var(--o); }
-  .vco-hk-tk__s.is-sel .vco-hk-tk__rd::after { content:""; width:8px; height:8px; border-radius:50%; background:var(--o); }
-  .vco-hk-tk__s input:focus-visible + .vco-hk-tk__rd { box-shadow:0 0 0 3px rgba(242,83,52,.25); }
-  .vco-hk-tk__ay { color:var(--muted); font-variant-numeric:tabular-nums; }
-  .vco-hk-tk__top { font-weight:700; font-variant-numeric:tabular-nums; min-width:86px; text-align:right; }
-  .vco-hk__tutar { display:flex; justify-content:space-between; align-items:baseline; gap:10px; padding:14px 2px 12px; border-top:1px solid var(--line); margin-top:4px; }
-  .vco-hk__tutar span { font-size:14px; color:#3d3833; }
-  .vco-hk__tutar small { display:block; color:var(--muted); font-size:12px; }
-  .vco-hk__tutar b { font-size:20px; font-weight:800; font-variant-numeric:tabular-nums; letter-spacing:-.01em; color:var(--ink); white-space:nowrap; }
-  .vco-hk__ode { width:100%; height:52px; border:0; border-radius:10px; background:var(--o); color:#fff; font:inherit; font-size:15.5px; font-weight:700; display:flex; align-items:center; justify-content:center; gap:9px; cursor:pointer; box-shadow:0 1px 0 rgba(0,0,0,.04),0 6px 16px rgba(242,83,52,.22); transition:background .15s, opacity .15s; }
-  .vco-hk__ode:hover { background:#d9431f; }
-  .vco-hk__ode:disabled { opacity:.6; cursor:not-allowed; }
-  .vco-hk__guven { list-style:none; margin:14px 0 0; padding:0; display:grid; gap:9px; }
-  .vco-hk__guven li { display:flex; gap:10px; align-items:flex-start; margin:0; font-size:12.5px; line-height:1.45; color:#3d3833; }
-  .vco-hk__guven li > span:first-child { color:var(--ok); display:inline-flex; margin-top:1px; flex:0 0 auto; }
-  .vco-hk__guven b { font-weight:700; color:var(--ink); }
-  @media (max-width:560px){
-    .vco-hk .vco-hk-tk__s { grid-template-columns:20px 1fr auto; gap:10px; }
-    .vco-hk-tk__ay { grid-column:2/3; grid-row:2; margin-top:-6px; font-size:12.5px; }
-    .vco-hk-tk__top { min-width:0; }
+  .hp {
+    --hp-blue:#075698;        /* HalkÖde logosundaki mavi */
+    --hp-blue-deep:#053F73;
+    --hp-blue-sky:#2872B5;
+    --hp-orange:#F4731C;      /* HalkÖde logosundaki turuncu */
+    --hp-ink:#10263D;
+    --hp-muted:#55677A;
+    --hp-line:#D3DDE8;
+    --hp-tint:#F1F6FB;
+    --hp-ok:#14683F;
+    --hp-ok-bg:#E7F4EC;
+    --hp-ok-line:#BFE0CC;
+    --hp-font:inherit;
+    box-sizing:border-box; width:100%; max-width:var(--hp-max, 620px); overflow:hidden;
+    border:1px solid var(--hp-line); border-radius:16px; background:#fff;
+    box-shadow:0 1px 0 rgba(7,86,152,.04), 0 18px 40px -22px rgba(5,63,115,.45);
+    color:var(--hp-ink); font-family:var(--hp-font); font-size:15px; line-height:1.45; text-align:left;
+    -webkit-font-smoothing:antialiased;
+  }
+  .hp *, .hp *::before, .hp *::after { box-sizing:border-box; }
+  .hp [hidden] { display:none !important; }
+  /* Üst bant: logo + 3D Secure */
+  .hp-head { position:relative; display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:10px 12px; padding:18px 22px 19px; }
+  .hp-head::after { content:""; position:absolute; left:0; right:0; bottom:0; height:3px; background:linear-gradient(90deg, var(--hp-blue) 0 64%, var(--hp-orange) 64% 100%); }
+  .hp-brand { display:flex; flex-direction:column; gap:5px; min-width:0; }
+  .hp-logo { display:block; width:auto; height:36px; }
+  .hp-parent { font-size:12px; line-height:1.3; color:var(--hp-muted); white-space:nowrap; }
+  .hp-chip { display:inline-flex; align-items:center; gap:6px; flex:none; padding:6px 11px 6px 8px; border:1px solid var(--hp-ok-line); border-radius:999px; background:var(--hp-ok-bg); color:var(--hp-ok); font-size:13px; font-weight:700; line-height:1.3; white-space:nowrap; }
+  .hp-chip svg { width:15px; height:15px; flex:none; }
+  .hp-body { padding:18px 22px 20px; }
+  /* Kart paneli – Halkbank formundaki mavi zemin, beyaz etiket, beyaz kutu */
+  .hp-panel { position:relative; isolation:isolate; overflow:hidden; padding:18px 18px 20px; border-radius:12px; color:#fff; background:linear-gradient(125deg, var(--hp-blue-deep) 0%, var(--hp-blue) 46%, var(--hp-blue-sky) 100%); }
+  .hp-panel::before { content:""; position:absolute; z-index:-1; top:0; right:0; bottom:0; width:62%; background:repeating-linear-gradient(90deg, rgba(255,255,255,.14) 0 2px, transparent 2px 10px); -webkit-mask-image:radial-gradient(120% 100% at 100% 50%, #000 0%, transparent 74%); mask-image:radial-gradient(120% 100% at 100% 50%, #000 0%, transparent 74%); }
+  .hp-field { margin:0 0 14px; }
+  .hp-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; align-items:start; }
+  .hp-row .hp-field { margin-bottom:0; }
+  .hp-labelrow { display:flex; flex-wrap:wrap; align-items:baseline; justify-content:space-between; gap:2px 10px; margin-bottom:6px; }
+  .hp .hp-label { display:block; margin:0; color:#fff; font-size:14px; font-weight:600; line-height:1.3; white-space:nowrap; }
+  .hp-accept { color:rgba(255,255,255,.85); font-size:13px; line-height:1.3; }
+  .hp-accept.is-brand { padding:1px 8px; border-radius:5px; background:#fff; color:var(--hp-blue); font-weight:700; }
+  .hp-cardtags { display:flex; flex-wrap:wrap; justify-content:flex-end; gap:5px; }
+  .hp-bank { display:inline-flex; align-items:center; gap:5px; padding:1px 8px 1px 6px; border-radius:5px; background:var(--hp-orange); color:#fff; font-size:13px; font-weight:700; line-height:1.3; }
+  .hp-bank svg { width:13px; height:13px; flex:none; }
+  .hp-bank.is-pending { background:rgba(255,255,255,.18); color:rgba(255,255,255,.85); font-weight:400; }
+  .hp-control { position:relative; }
+  .hp .hp-input {
+    display:block; width:100%; height:48px; margin:0; padding:0 14px;
+    border:2px solid transparent; border-radius:9px; background:#fff; color:var(--hp-ink);
+    font-family:var(--hp-font); font-size:17px; font-weight:600; line-height:1.3;
+    font-variant-numeric:tabular-nums lining-nums;
+    box-shadow:0 1px 0 rgba(255,255,255,.22), inset 0 1px 2px rgba(5,63,115,.2);
+    transition:border-color .12s, box-shadow .12s; -webkit-appearance:none; appearance:none;
+  }
+  .hp .hp-input::placeholder { color:#9AA8B7; font-weight:400; letter-spacing:0; text-transform:none; opacity:1; }
+  .hp .hp-input:focus { outline:none; border-color:var(--hp-orange); box-shadow:0 0 0 3px rgba(244,115,28,.5); }
+  .hp .hp-input[readonly] { background:#EEF3F8; }
+  .hp .hp-input--name { text-transform:uppercase; }
+  .hp .hp-input--num { letter-spacing:.07em; }
+  .hp .hp-input--cvv { padding-right:46px; letter-spacing:.18em; }
+  .hp-err { display:none; margin:6px 0 0; color:#fff; font-size:13px; font-weight:600; line-height:1.3; }
+  .hp-err::before { content:"!"; display:inline-block; width:15px; height:15px; margin-right:6px; border-radius:50%; background:#fff; color:#C2341D; font-size:11px; font-weight:700; line-height:15px; text-align:center; vertical-align:1px; }
+  .hp-field.is-invalid .hp-err { display:block; }
+  .hp-field.is-invalid .hp-input { border-color:#FF9A85; box-shadow:0 0 0 3px rgba(255,140,115,.35); }
+  .hp-field.is-invalid .hp-input:focus { border-color:var(--hp-orange); box-shadow:0 0 0 3px rgba(244,115,28,.5); }
+  /* CVV yardım balonu */
+  .hp .hp-help { position:absolute; top:50%; right:8px; transform:translateY(-50%); display:grid; place-items:center; width:30px; height:30px; padding:0; border:0; border-radius:50%; background:transparent; color:var(--hp-muted); cursor:help; }
+  .hp-help svg { width:18px; height:18px; }
+  .hp .hp-help:hover, .hp .hp-help:focus-visible { background:var(--hp-tint); color:var(--hp-blue); outline:none; }
+  .hp .hp-help:focus-visible { box-shadow:0 0 0 2px var(--hp-orange); }
+  .hp-tip { position:absolute; z-index:2; right:0; bottom:calc(100% + 8px); width:230px; max-width:70vw; padding:9px 11px; border-radius:8px; background:var(--hp-ink); color:#fff; font-size:13px; font-weight:400; line-height:1.35; opacity:0; visibility:hidden; transform:translateY(4px); transition:opacity .12s, transform .12s, visibility .12s; }
+  .hp-help:hover + .hp-tip, .hp-help:focus + .hp-tip { opacity:1; visibility:visible; transform:none; }
+  /* Taksit seçenekleri: kare kutular (telefonda 4 kolon, genişte 6 kolon, çok darda 3 kolon) */
+  .hp-inst { margin-top:14px; overflow:hidden; border:1px solid var(--hp-line); border-radius:12px; container-type:inline-size; }
+  .hp-inst__head { display:flex; flex-wrap:wrap; align-items:baseline; justify-content:space-between; gap:2px 10px; padding:10px 14px; background:var(--hp-tint); font-size:15px; font-weight:700; line-height:1.35; }
+  .hp-inst__head small { color:var(--hp-muted); font-size:13px; font-weight:400; line-height:1.35; }
+  /* Avantaj şeridi: "3 taksite kadar vade farksız" */
+  .hp-inst__perk { display:flex; align-items:center; gap:8px; margin:0; padding:9px 14px; border-top:1px solid var(--hp-ok-line); background:var(--hp-ok-bg); color:var(--hp-ok); font-size:14.5px; font-weight:700; line-height:1.3; }
+  .hp-inst__perk svg { flex:none; width:18px; height:18px; }
+  .hp-inst__perk span span { font-weight:400; }
+  .hp-inst__empty { margin:0; padding:13px 14px; border-top:1px solid var(--hp-line); color:var(--hp-muted); font-size:14.5px; line-height:1.4; }
+  .hp-inst__perk + .hp-inst__empty, .hp-inst__perk:not([hidden]) ~ .hp-inst__scroll { border-top-color:var(--hp-ok-line); }
+  .hp-inst__scroll { border-top:1px solid var(--hp-line); }
+  .hp-inst__list { display:grid; grid-template-columns:repeat(4, 1fr); gap:6px; padding:10px; }
+  /* .hp öneki şart: tema genelindeki label:has(input[type="radio"]) kuralı (özgüllük 0,1,2)
+     tek sınıflı kutuyu ezip display/gap'i inline-flex'e çeviriyordu (test temasında ölçüldü). */
+  .hp .hp-tile {
+    position:relative; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px;
+    aspect-ratio:1 / 1; min-width:0; margin:0; padding:5px 2px;
+    border:1.5px solid var(--hp-line); border-radius:10px; background:#fff; color:var(--hp-ink);
+    text-align:center; white-space:nowrap; font-weight:400; font-variant-numeric:tabular-nums lining-nums; cursor:pointer;
+    transition:background-color .12s, border-color .12s, color .12s;
+  }
+  .hp .hp-tile input { position:absolute; inset:0; width:100%; height:100%; margin:0; opacity:0; cursor:pointer; }
+  /* --hp-fit: JS, en uzun tutar kutuya sığsın diye yazıları birlikte küçültür (bkz. hkFitTiles) */
+  .hp-tile__n { color:var(--hp-muted); font-size:max(11px, calc(12px * var(--hp-fit, 1))); line-height:1.3; }
+  .hp-tile__n b { margin-right:2px; color:var(--hp-ink); font-size:max(11px, calc(17px * var(--hp-fit, 1))); font-weight:700; }
+  .hp-tile__n--tek { color:var(--hp-ink); font-size:max(11px, calc(12.5px * var(--hp-fit, 1))); font-weight:700; line-height:1.6; }
+  .hp-tile__tek { font-size:max(11px, calc(13px * var(--hp-fit, 1))); font-weight:700; line-height:1.6; }
+  .hp-tile__each { font-size:max(11px, calc(12.5px * var(--hp-fit, 1))); font-weight:700; line-height:1.3; }
+  .hp-tile__total { color:var(--hp-muted); font-size:max(11px, calc(11px * var(--hp-fit, 1))); line-height:1.3; }
+  .hp-tile__note { min-height:1.3em; color:var(--hp-muted); font-size:max(11px, calc(11px * var(--hp-fit, 1))); line-height:1.3; }
+  .hp .hp-tile.is-free { border-color:var(--hp-ok-line); background:var(--hp-ok-bg); }
+  .hp-tile.is-free .hp-tile__note { color:var(--hp-ok); font-weight:700; }
+  .hp .hp-tile:hover { border-color:var(--hp-blue); }
+  .hp .hp-tile:has(input:focus-visible) { outline:3px solid var(--hp-orange); outline-offset:1px; }
+  .hp .hp-tile.is-selected { border-color:var(--hp-blue); background:var(--hp-blue); color:#fff; box-shadow:0 6px 12px -8px rgba(5,63,115,.9); }
+  .hp-tile.is-selected .hp-tile__n, .hp-tile.is-selected .hp-tile__n b { color:#fff; }
+  .hp-tile.is-selected .hp-tile__note, .hp-tile.is-selected .hp-tile__total { color:rgba(255,255,255,.8); }
+  .hp-tile.is-selected.is-free .hp-tile__note { color:#C9F0D8; }
+  @container (min-width: 500px) {
+    .hp-inst__list { grid-template-columns:repeat(6, 1fr); gap:8px; padding:12px; }
+    .hp-tile__n b { font-size:max(11px, calc(19px * var(--hp-fit, 1))); }
+    .hp-tile__n--tek { font-size:max(11px, calc(14px * var(--hp-fit, 1))); }
+    .hp-tile__each { font-size:max(11px, calc(14px * var(--hp-fit, 1))); }
+    .hp-tile__total { font-size:max(11px, calc(12px * var(--hp-fit, 1))); }
+    .hp-tile__tek { font-size:max(11px, calc(15px * var(--hp-fit, 1))); }
+    .hp-tile__note { font-size:max(11px, calc(11.5px * var(--hp-fit, 1))); }
+  }
+  @container (max-width: 419px) {   /* telefonda yükseklikten kazan */
+    .hp-inst__head small, .hp-inst__perk span span { display:none; }
+  }
+  @container (max-width: 299px) {   /* çok dar ekranda 3 kolon */
+    .hp-inst__list { grid-template-columns:repeat(3, 1fr); }
+  }
+  /* Tutar + ödeme butonu */
+  .hp-total { display:flex; align-items:flex-end; justify-content:space-between; gap:12px; margin:18px 0 12px; padding-top:15px; border-top:1px dashed #B9C7D6; }
+  .hp-total__label { display:block; color:var(--hp-ink); font-size:15px; font-weight:600; line-height:1.3; }
+  .hp-total__sub { display:block; color:var(--hp-muted); font-size:13px; line-height:1.35; font-variant-numeric:tabular-nums lining-nums; }
+  .hp-total__amount { color:var(--hp-blue-deep); font-size:30px; font-weight:700; line-height:1.3; letter-spacing:-.01em; font-variant-numeric:tabular-nums lining-nums; white-space:nowrap; }
+  .hp-total__amount small { margin-left:2px; font-size:.58em; font-weight:600; letter-spacing:0; }
+  .hp .hp-pay {
+    display:flex; align-items:center; justify-content:center; gap:10px;
+    width:100%; height:56px; margin:0; padding:0 18px;
+    border:0; border-radius:12px; background:var(--hp-blue); color:#fff;
+    font-family:var(--hp-font); font-size:18px; font-weight:700; line-height:1.3;
+    font-variant-numeric:tabular-nums lining-nums; cursor:pointer;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.18), 0 10px 20px -12px rgba(5,63,115,.8);
+    transition:background-color .15s, transform .05s;
+  }
+  .hp .hp-pay:hover { background:var(--hp-blue-deep); }
+  .hp .hp-pay:active { transform:translateY(1px); }
+  .hp .hp-pay:focus-visible { outline:3px solid var(--hp-orange); outline-offset:3px; }
+  .hp-pay svg { flex:none; width:18px; height:18px; }
+  .hp-pay .hp-spin { display:none; }
+  .hp .hp-pay.is-loading { background:var(--hp-blue-deep); cursor:progress; }
+  .hp-pay.is-loading svg { display:none; }
+  .hp-pay.is-loading .hp-spin { display:block; }
+  .hp-spin { flex:none; width:18px; height:18px; border-radius:50%; border:2.5px solid rgba(255,255,255,.35); border-top-color:#fff; animation:hp-spin .8s linear infinite; }
+  @keyframes hp-spin { to { transform:rotate(360deg); } }
+  .hp-assure { display:grid; gap:7px; margin:14px 0 0; padding:0; list-style:none; color:var(--hp-muted); font-size:13.5px; line-height:1.4; }
+  .hp-assure li { display:grid; grid-template-columns:16px 1fr; gap:9px; align-items:start; margin:0; }
+  .hp-assure svg { width:16px; height:16px; margin-top:1px; color:var(--hp-blue); }
+  .hp-assure b { color:var(--hp-ink); font-weight:600; }
+  .hp-foot { padding:12px 22px 13px; border-top:1px solid var(--hp-line); background:var(--hp-tint); color:var(--hp-muted); font-size:13px; line-height:1.4; }
+  .hp-foot b { color:var(--hp-ink); font-weight:600; }
+  .hp-foot__line { display:block; }
+  @media (max-width: 480px) {
+    .hp-head { padding:16px 16px 17px; }
+    .hp-body { padding:16px 16px 18px; }
+    .hp-foot { padding:11px 16px 12px; }
+    .hp-logo { height:32px; }
+    .hp-panel { padding:16px 14px 18px; }
+    .hp .hp-input { padding:0 12px; font-size:16px; }
+    .hp .hp-input--num { letter-spacing:.04em; }
+    .hp-row { gap:10px; }
+    .hp-total__amount { font-size:26px; }
+    .hp .hp-pay { font-size:17px; }
+  }
+  @media (max-width: 380px) {
+    .hp-cvvtag { display:none; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .hp *, .hp *::before, .hp *::after { transition:none !important; }
+    .hp-spin { animation-duration:2.4s; }
   }
   .vco-iyzico.is-hk .vco-err { margin-bottom:10px; }
   .vco-loading { text-align:center; padding:60px 20px; color:var(--muted); }
@@ -1130,90 +1258,208 @@
   function hkTotalKurus(){ var g=grossKurus(); return Math.max(0, g - Math.min(discountKurus(g), g)) + Math.round(effShip()*100); }
   function hkLuhn(n){ var s=0, alt=false; for(var i=n.length-1;i>=0;i--){ var d=n.charCodeAt(i)-48; if(alt){ d*=2; if(d>9) d-=9; } s+=d; alt=!alt; } return s%10===0; }
   function hkErr(msg){ var e=$('[data-vco-err]'); if(!e) return; if(msg){ e.textContent=msg; e.style.display='block'; } else { e.textContent=''; e.style.display='none'; } }
-  /* Seçenek B ikonları — ince çizgi SVG (currentColor). Kart/banka markası logosu YOK (bilerek). */
+  /* İkonlar — ince çizgi SVG (currentColor), onaylı maketten birebir. */
   function hkIc(ad, s){
     var d = {
-      kalkan:'<path d="M12 3 5 6v5.5c0 4.3 3 7.9 7 9.5 4-1.6 7-5.2 7-9.5V6l-7-3Z"/><path d="m9 12 2.2 2.2L15.5 10"/>',
-      kart:'<rect x="2.5" y="5" width="19" height="14" rx="2.5"/><path d="M2.5 10h19M6.5 15h4"/>',
-      bilgi:'<circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/>',
-      kilit:'<rect x="5" y="10.5" width="14" height="10" rx="2"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5"/>',
-      tel:'<rect x="6" y="2.5" width="12" height="19" rx="2.5"/><path d="M10.5 18.5h3"/>',
-      bina:'<path d="M4 20.5V8l8-4.5L20 8v12.5M4 20.5h16M9 20.5v-5h6v5M8 11h.01M12 11h.01M16 11h.01"/>'
+      kalkan:'<path d="M12 3l7 3v5.5c0 4.4-2.9 7.9-7 9.5-4.1-1.6-7-5.1-7-9.5V6l7-3z"/><path d="M9 12l2.2 2.2 4-4.2"/>',
+      bina:'<path d="M3 10l9-6 9 6"/><path d="M5 10v9M9.5 10v9M14.5 10v9M19 10v9"/><path d="M3 19h18"/>',
+      soru:'<circle cx="12" cy="12" r="9"/><path d="M9.6 9.4a2.5 2.5 0 1 1 3.7 2.2c-.8.5-1.3 1-1.3 1.9"/><path d="M12 17h.01"/>',
+      onay:'<circle cx="12" cy="12" r="9"/><path d="M8.5 12.2l2.4 2.4 4.6-4.9"/>',
+      kilit:'<rect x="4.5" y="10.5" width="15" height="10" rx="2"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/>',
+      tel:'<rect x="7" y="2.5" width="10" height="19" rx="2.2"/><path d="M11 18h2"/>'
     }[ad] || '';
-    return '<svg width="'+s+'" height="'+s+'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+d+'</svg>';
+    return '<svg width="'+s+'" height="'+s+'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+d+'</svg>';
   }
-  /* Formun iskeleti — onaylı maketin (Seçenek B) birebir karşılığı. Tutar, taksit satırları ve
-     kart türü işareti burada BOŞ doğar; hkTutarCiz / hkTaksitSorgu / hkTurCiz doldurur.
-     Güven satırları yalnız bugün doğru olanlar: kart bizim sunucumuzdan geçer (kaydedilmez,
-     loglanmaz — initialize/route.ts), bu yüzden "doğrudan Halköde'ye iletilir" DENMEZ. */
+  /* HalkÖde markası — onaylı maketten alındı (düşük çözünürlüklü kırpma).
+     Resmi SVG/PNG geldiğinde YALNIZ bu değişken değişir. */
+  var HK_LOGO = 'data:image/png;base64,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';
+  /* Formun iskeleti — onaylı maketin (Yunus 23 Eyl örneği) birebir karşılığı. Tutar, taksit
+     kutuları, kart markası ve banka adı burada BOŞ doğar; hkTutarCiz / hkTaksitSorgu / hkTurCiz
+     doldurur.
+     DEĞİŞMEZ: alanların id'leri (vco-hk-ad/no/skt/cvv) ve data-hk adları — hkOde bunlarla okur.
+     Kart alanlarında name="" YOK: sayfa postback olsa bile kart verisi bizim sunucumuza gitmez.
+     Güvence satırları yalnız bugün doğru olanlar: kart bizim ucumuzdan geçer ama kaydedilmez,
+     loglanmaz (initialize/route.ts), bu yüzden "doğrudan Halköde'ye iletilir" DENMEZ. */
   function hkFormHtml(){
-    return '<div class="vco-hk__bas"><b>Kart Bilgileri</b><span class="vco-hk__rozet">'+hkIc('kalkan',16)+' 3D Secure</span></div>'
-      + '<div class="vco-hk__alan"><label class="vco-lbl" for="vco-hk-ad">Kart Üzerindeki Ad Soyad</label>'
-      + '<input class="vco-input" id="vco-hk-ad" data-hk="ad" autocomplete="cc-name" placeholder="Ad Soyad"></div>'
-      + '<div class="vco-hk__alan"><label class="vco-lbl" for="vco-hk-no">Kart Numarası</label><div class="vco-hk__ici">'
-      + '<span class="vco-hk__sol">'+hkIc('kart',18)+'</span>'
-      + '<input class="vco-input" id="vco-hk-no" data-hk="no" inputmode="numeric" autocomplete="cc-number" maxlength="23" placeholder="0000 0000 0000 0000">'
-      + '<span class="vco-hk__sag"><span class="vco-hk__cip" data-hk="tur" hidden></span></span></div></div>'
-      + '<div class="vco-hk__iki">'
-      + '<div class="vco-hk__alan"><label class="vco-lbl" for="vco-hk-skt">Son Kullanma</label>'
-      + '<input class="vco-input" id="vco-hk-skt" data-hk="skt" inputmode="numeric" autocomplete="cc-exp" maxlength="5" placeholder="AA / YY"></div>'
-      + '<div class="vco-hk__alan"><label class="vco-lbl" for="vco-hk-cvv">Güvenlik Kodu (CVV)</label><div class="vco-hk__ici">'
-      + '<input class="vco-input" id="vco-hk-cvv" data-hk="cvv" inputmode="numeric" autocomplete="cc-csc" maxlength="4" placeholder="•••">'
-      + '<span class="vco-hk__sag" title="Kartın arka yüzündeki 3 hane">'+hkIc('bilgi',16)+'</span></div></div>'
-      + '</div>'
-      + '<div class="vco-hk-tk" data-hk="taksit-satir" hidden><div class="vco-hk-tk__bas"><b>Taksit Seçenekleri</b><small>Kartınızın ilk 6 hanesine göre bankanızdan gelir</small></div>'
-      + '<div data-hk="taksit-liste" role="radiogroup" aria-label="Taksit Seçenekleri"></div></div>'
+    return '<header class="hp-head"><div class="hp-brand">'
+      + '<img class="hp-logo" src="'+HK_LOGO+'" width="266" height="58" alt="HalkÖde">'
+      + '<span class="hp-parent">Halk Bankası bağlı ortaklığıdır</span></div>'
+      + '<span class="hp-chip">'+hkIc('kalkan',15)+' 3D Secure</span></header>'
+      + '<div class="hp-body"><div class="hp-panel">'
+      + '<div class="hp-field"><div class="hp-labelrow"><label class="hp-label" for="vco-hk-ad">Kart Üzerindeki Ad Soyad</label></div>'
+      + '<div class="hp-control"><input class="hp-input hp-input--name" id="vco-hk-ad" data-hk="ad" type="text" placeholder="Ad Soyad"'
+      + ' autocomplete="cc-name" autocapitalize="characters" spellcheck="false" maxlength="40" aria-describedby="vco-hk-ad-err"></div>'
+      + '<p class="hp-err" id="vco-hk-ad-err" data-hk="ad-err" role="alert"></p></div>'
+      + '<div class="hp-field"><div class="hp-labelrow"><label class="hp-label" for="vco-hk-no">Kart Numarası</label>'
+      + '<span class="hp-cardtags"><span class="hp-bank" data-hk="banka" hidden>'+hkIc('bina',13)+'<span data-hk="banka-ad"></span></span>'
+      + '<span class="hp-accept" data-hk="marka">Visa, Mastercard, Troy</span></span></div>'
+      + '<div class="hp-control"><input class="hp-input hp-input--num" id="vco-hk-no" data-hk="no" type="text" inputmode="numeric" placeholder="0000 0000 0000 0000"'
+      + ' autocomplete="cc-number" spellcheck="false" maxlength="19" aria-describedby="vco-hk-no-err"></div>'
+      + '<p class="hp-err" id="vco-hk-no-err" data-hk="no-err" role="alert"></p></div>'
+      + '<div class="hp-row">'
+      + '<div class="hp-field"><div class="hp-labelrow"><label class="hp-label" for="vco-hk-skt">Son Kullanma</label></div>'
+      + '<div class="hp-control"><input class="hp-input" id="vco-hk-skt" data-hk="skt" type="text" inputmode="numeric" placeholder="AA / YY"'
+      + ' autocomplete="cc-exp" maxlength="7" aria-describedby="vco-hk-skt-err"></div>'
+      + '<p class="hp-err" id="vco-hk-skt-err" data-hk="skt-err" role="alert"></p></div>'
+      + '<div class="hp-field"><div class="hp-labelrow"><label class="hp-label" for="vco-hk-cvv">Güvenlik Kodu <span class="hp-cvvtag">(CVV)</span></label></div>'
+      + '<div class="hp-control"><input class="hp-input hp-input--cvv" id="vco-hk-cvv" data-hk="cvv" type="password" inputmode="numeric" placeholder="&bull;&bull;&bull;"'
+      + ' autocomplete="cc-csc" maxlength="3" aria-describedby="vco-hk-cvv-err vco-hk-cvv-tip">'
+      + '<button class="hp-help" type="button" aria-label="Güvenlik kodu nerede?">'+hkIc('soru',18)+'</button>'
+      + '<span class="hp-tip" id="vco-hk-cvv-tip" role="tooltip">Kartınızın arka yüzünde, imza bandının yanındaki 3 haneli kod.</span></div>'
+      + '<p class="hp-err" id="vco-hk-cvv-err" data-hk="cvv-err" role="alert"></p></div>'
+      + '</div></div>'
+      + '<div class="hp-inst"><div class="hp-inst__head">Taksit Seçenekleri <small data-hk="taksit-banka">Kartınızın bankasına göre listelenir</small></div>'
+      + '<p class="hp-inst__perk" data-hk="perk" hidden>'+hkIc('onay',18)+'<span data-hk="perk-metin"></span></p>'
+      + '<p class="hp-inst__empty" data-hk="taksit-bos"></p>'
+      + '<div class="hp-inst__scroll" data-hk="taksit-satir" hidden>'
+      + '<div class="hp-inst__list" data-hk="taksit-liste" role="radiogroup" aria-label="Taksit sayısı"></div></div></div>'
       + '<input type="hidden" data-hk="taksit" value="1">'
-      + '<div class="vco-hk__tutar"><div><span>Ödenecek Tutar</span><small data-hk="tutar-not" hidden></small></div><b data-hk="tutar"></b></div>'
-      + '<button type="button" class="vco-hk__ode" data-hk="ode"></button>'
-      + '<ul class="vco-hk__guven">'
-      + '<li><span>'+hkIc('tel',16)+'</span><span><b>3D Secure:</b> ödemeyi bankanızın doğrulama ekranında SMS şifresiyle onaylarsınız.</span></li>'
-      + '<li><span>'+hkIc('kilit',16)+'</span><span><b>Kart bilgileriniz Viamood’da kaydedilmez;</b> bağlantı SSL ile şifrelidir.</span></li>'
-      + '<li><span>'+hkIc('bina',16)+'</span><span><b>Ödeme altyapısı:</b> HalkÖde (Halk Elektronik Para ve Ödeme Hizmetleri A.Ş.)</span></li>'
-      + '</ul>';
+      + '<div class="hp-total"><div><span class="hp-total__label">Ödenecek Tutar</span>'
+      + '<span class="hp-total__sub" data-hk="tutar-not"></span></div>'
+      + '<div class="hp-total__amount" aria-live="polite"><span data-hk="tutar"></span><small>TL</small></div></div>'
+      + '<button class="hp-pay" data-hk="ode" type="button">'+hkIc('kilit',18)
+      + '<span class="hp-spin" aria-hidden="true"></span><span data-hk="ode-metin"></span></button>'
+      + '<ul class="hp-assure">'
+      + '<li>'+hkIc('tel',16)+'<span><b>3D Secure:</b> Ödemeyi bankanızın doğrulama ekranında SMS şifresiyle onaylarsınız.</span></li>'
+      + '<li>'+hkIc('kilit',16)+'<span><b>Kart bilgileriniz Via Mood\'da kaydedilmez;</b> bağlantı SSL ile şifrelidir.</span></li>'
+      + '</ul></div>'
+      + '<footer class="hp-foot"><b>Ödeme altyapısı:</b> HalkÖde (Halk Elektronik Para ve Ödeme Hizmetleri A.Ş.)'
+      + '<span class="hp-foot__line">TCMB lisanslı elektronik para kuruluşudur.</span></footer>';
+  }
+  /* ---- Kart markası tanıma (maketten birebir) ---- */
+  var HK_MARKALAR = { visa:'Visa', mastercard:'Mastercard', troy:'Troy', amex:'American Express' };
+  function hkMarka(d){
+    if(/^4/.test(d)) return 'visa';
+    if(/^(5[1-5]|222[1-9]|22[3-9]\d|2[3-6]\d\d|27[01]\d|2720)/.test(d)) return 'mastercard';
+    if(/^(9792|65)/.test(d)) return 'troy';
+    if(/^3[47]/.test(d)) return 'amex';
+    return '';
+  }
+  /* ---- Alan hatası: görünür metin + aria-invalid (ARIA üçlüsünün ikinci ayağı;
+         role="alert" duyurur, aria-describedby metni alana bağlar) ---- */
+  function hkFlag(ad, msg){
+    var el=hkEl(ad), p=hkEl(ad+'-err'); if(!el||!p) return !msg;
+    var alan=el.closest('.hp-field');
+    if(alan) alan.classList.toggle('is-invalid', !!msg);
+    p.textContent = msg || '';
+    if(msg) el.setAttribute('aria-invalid','true'); else el.removeAttribute('aria-invalid');
+    return !msg;
+  }
+  function hkFlagli(ad){ var el=hkEl(ad); var a=el&&el.closest('.hp-field'); return !!a && a.classList.contains('is-invalid'); }
+  /* ---- Doğrulamalar: beş Türkçe hata metni, maketten birebir ---- */
+  function hkVAd(){
+    var v=(hkEl('ad').value||'').trim().replace(/\s+/g,' ');
+    if(v.length<5 || v.indexOf(' ')<0) return hkFlag('ad','Ad ve soyadı kartta yazdığı gibi girin.');
+    return hkFlag('ad','');
+  }
+  function hkVNo(){
+    var d=hkDigits(hkEl('no').value), need = hkMarka(d)==='amex' ? 15 : 16;
+    if(d.length<need) return hkFlag('no','Kart numarası eksik, '+need+' hanenin tamamını girin.');
+    if(!hkLuhn(d)) return hkFlag('no','Kart numarası geçersiz, haneleri kontrol edin.');
+    return hkFlag('no','');
+  }
+  function hkVSkt(){
+    var d=hkDigits(hkEl('skt').value), simdi=new Date(), a, y;
+    if(d.length<4) return hkFlag('skt','Tarihi AA / YY olarak girin.');
+    a=+d.slice(0,2); y=2000+(+d.slice(2,4));
+    if(a<1 || a>12) return hkFlag('skt','Ay 01 ile 12 arasında olmalı.');
+    if(y<simdi.getFullYear() || (y===simdi.getFullYear() && a<simdi.getMonth()+1)) return hkFlag('skt','Kartın son kullanma tarihi geçmiş.');
+    return hkFlag('skt','');
+  }
+  function hkVCvv(){
+    var need = hkMarka(hkDigits(hkEl('no').value))==='amex' ? 4 : 3;
+    if(hkDigits(hkEl('cvv').value).length!==need)
+      return hkFlag('cvv', need===4 ? 'Kartın ön yüzündeki 4 haneli kodu girin.' : 'Kartın arkasındaki 3 haneli kodu girin.');
+    return hkFlag('cvv','');
   }
   function renderHalkodeForm(){
     if(hkEl('form')) return;
     var c=$('#iyzico-container'); c.classList.add('is-hk');
-    var w=document.createElement('div'); w.className='vco-hk'; w.setAttribute('data-hk','form'); w.setAttribute('data-clarity-mask','True');
+    var w=document.createElement('div'); w.className='vco-hk hp'; w.setAttribute('lang','tr');
+    w.setAttribute('data-hk','form'); w.setAttribute('data-clarity-mask','True');
+    w.setAttribute('aria-label','HalkÖde güvenli kart ödemesi');
+    w.setAttribute('aria-busy','false');   // gönderimde 'true' olur (hkYukleniyor)
     w.innerHTML = hkFormHtml();
     c.appendChild(w);
-    var no=hkEl('no'), skt=hkEl('skt'), cvv=hkEl('cvv');
+    var ad=hkEl('ad'), no=hkEl('no'), skt=hkEl('skt'), cvv=hkEl('cvv');
+    ad.addEventListener('input', function(){ ad.value=ad.value.replace(/[0-9]/g,''); if(hkFlagli('ad')) hkVAd(); });
+    ad.addEventListener('blur', hkVAd);
     no.addEventListener('input', function(){
-      var d=hkDigits(no.value).slice(0,19);
-      no.value = d.replace(/(\d{4})(?=\d)/g,'$1 ');
+      var d=hkDigits(no.value), m=hkMarka(d);
+      d = d.slice(0, m==='amex' ? 15 : 16);
+      no.value = m==='amex'
+        ? [d.slice(0,4), d.slice(4,10), d.slice(10)].filter(Boolean).join(' ')
+        : d.replace(/(\d{4})(?=\d)/g,'$1 ');
+      hkMarkaCiz(m);
+      if(hkFlagli('no')) hkVNo();
       var b=d.slice(0,6);
-      if(b.length<6){ hk.bin=''; hkTurCiz(''); hkTaksitGizle(); return; }
+      if(b.length<6){ hk.bin=''; hkTurCiz('',''); hkTaksitGizle(); return; }
       if(b!==hk.bin){ hk.bin=b; hkTaksitSorgu(); }
     });
+    no.addEventListener('blur', hkVNo);
     skt.addEventListener('input', function(){
       var d=hkDigits(skt.value).slice(0,4);
-      skt.value = d.length>2 ? d.slice(0,2)+'/'+d.slice(2) : d;
+      skt.value = d.length>2 ? d.slice(0,2)+' / '+d.slice(2) : d;
+      if(hkFlagli('skt')) hkVSkt();
     });
-    cvv.addEventListener('input', function(){ cvv.value=hkDigits(cvv.value).slice(0,4); });
+    skt.addEventListener('blur', hkVSkt);
+    cvv.addEventListener('input', function(){
+      cvv.value=hkDigits(cvv.value).slice(0, hkMarka(hkDigits(no.value))==='amex' ? 4 : 3);
+      if(hkFlagli('cvv')) hkVCvv();
+    });
+    cvv.addEventListener('blur', hkVCvv);
     hkEl('taksit-liste').addEventListener('change', function(e){
       var r=e.target; if(!r || r.name!=='vco-hk-taksit') return;
       hkEl('taksit').value = r.value;
-      root.querySelectorAll('.vco-hk-tk__s').forEach(function(x){ x.classList.toggle('is-sel', x.contains(r)); });
+      root.querySelectorAll('.hp-tile').forEach(function(x){ x.classList.toggle('is-selected', x.contains(r)); });
       hkTutarCiz();
     });
     hkEl('ode').addEventListener('click', hkOde);
-    hkTutarCiz();
+    hkBosCiz(); hkTutarCiz();
+    if(!hk.fitBagli){ hk.fitBagli=true; window.addEventListener('resize', function(){ clearTimeout(hk.fitTimer); hk.fitTimer=setTimeout(hkFitTiles, 120); }); }
   }
-  /* Kart türü işareti: getpos yanıtındaki card_type ("CREDIT CARD" / "DEBIT CARD").
-     Tanınmayan türde işaret HİÇ çizilmez (yanlış bilgi vermektense boş). */
-  function hkTurCiz(tip){
-    var c=hkEl('tur'); if(!c) return;
+  /* Kabul edilen kartlar yazısı, numara yazılınca tanınan markaya döner. */
+  function hkMarkaCiz(m){
+    var e=hkEl('marka'); if(!e) return;
+    e.textContent = m ? (HK_MARKALAR[m] || 'Visa, Mastercard, Troy') : 'Visa, Mastercard, Troy';
+    e.classList.toggle('is-brand', !!m);
+  }
+  /* Banka adı + kart türü: getpos yanıtındaki bank_name / card_type.
+     Tanınmayan değerde işaret HİÇ çizilmez (yanlış bilgi vermektense boş). */
+  function hkTurCiz(tip, banka){
+    var e=hkEl('banka'), a=hkEl('banka-ad'); if(!e||!a) return;
     var t=String(tip||'').toUpperCase();
-    var ad = /CREDIT|KRED/.test(t) ? 'Kredi kartı' : (/DEBIT|BANKA/.test(t) ? 'Banka kartı' : '');
-    c.textContent = ad; c.hidden = !ad;
-    c.parentNode.parentNode.classList.toggle('vco-hk__ici--cip', !!ad);
+    var tur = /CREDIT|KRED/.test(t) ? 'Kredi kartı' : (/DEBIT|BANKA/.test(t) ? 'Banka kartı' : '');
+    var ad = String(banka||'').trim() || tur;
+    a.textContent = ad; e.hidden = !ad;
+    var bas=hkEl('taksit-banka');
+    if(bas) bas.textContent = String(banka||'').trim() ? String(banka).trim()+' kartı' : 'Kartınızın bankasına göre listelenir';
+    hk.debit = /DEBIT|BANKA/.test(t);
+  }
+  /* Kutu görünümü: en geniş yazı kutuya sığmıyorsa tüm kutuların yazısını aynı oranda küçült. */
+  function hkFitTiles(){
+    var l=hkEl('taksit-liste'); if(!l) return;
+    l.style.removeProperty('--hp-fit');
+    var oran=1;
+    Array.prototype.forEach.call(l.querySelectorAll('.hp-tile'), function(t){
+      var yer=t.clientWidth-8;
+      Array.prototype.forEach.call(t.querySelectorAll('span'), function(sp){
+        var g=sp.getBoundingClientRect().width;
+        if(g>0 && yer/g<oran) oran=yer/g;
+      });
+    });
+    if(oran<1) l.style.setProperty('--hp-fit', Math.max(oran,.8).toFixed(3));
   }
   function hkTaksitSatir(n, amount, sec){
-    return '<label class="vco-hk-tk__s'+(sec?' is-sel':'')+'"><input type="radio" name="vco-hk-taksit" value="'+n+'"'+(sec?' checked':'')+'><span class="vco-hk-tk__rd"></span>'
-      + '<span>'+(n===1 ? 'Tek çekim' : n+' taksit')+'</span>'
-      + '<span class="vco-hk-tk__ay">'+(n===1 ? '' : n+' × '+money(Math.round(amount/n)))+'</span>'
-      + '<span class="vco-hk-tk__top">'+money(amount)+'</span></label>';
+    var her=money(Math.round(amount/n)).replace(' TL','');
+    return '<label class="hp-tile is-free'+(sec?' is-selected':'')+'"><input type="radio" name="vco-hk-taksit" value="'+n+'"'+(sec?' checked':'')+'>'
+      + (n===1
+          ? '<span class="hp-tile__n hp-tile__n--tek">Tek çekim</span><span class="hp-tile__tek">'+money(amount)+'</span>'
+          : '<span class="hp-tile__n"><b>'+n+'</b>taksit</span>'
+            + '<span class="hp-tile__each">'+money(amount)+'</span>'
+            + '<span class="hp-tile__total">'+n+' × '+her+'</span>'
+            + '<span class="hp-tile__note">vade farksız</span>')
+      + '</label>';
   }
   /* "Ödenecek Tutar" + düğmedeki tutar. Tutar sepetten CANLI hesaplanır (hkTotalKurus);
      taksit tablosu başka bir tutar için sorulduysa yeniden sorulur. */
@@ -1222,12 +1468,32 @@
     var t=hkTotalKurus();
     if(hk.bin && t!==hk.amountKurus) hkTaksitSorgu();
     var r=hkEl('taksit-satir'), n=parseInt((hkEl('taksit')||{}).value,10)||1, not=hkEl('tutar-not');
-    hkEl('tutar').textContent = money(t);
-    if(r && !r.hidden){ not.textContent = n===1 ? 'Tek çekim' : n+' taksit × '+money(Math.round(t/n)); not.hidden=false; }
-    else { not.textContent=''; not.hidden=true; }
-    if(!hk.busy) hkEl('ode').innerHTML = hkIc('kilit',16)+' '+money(t)+' Öde';
+    hkEl('tutar').textContent = money(t).replace(' TL','');
+    not.textContent = (r && !r.hidden && n>1) ? (n+' taksit × '+money(Math.round(t/n))) : 'Tek çekim';
+    if(!hk.busy) hkEl('ode-metin').textContent = money(t)+' Öde';
   }
-  function hkTaksitGizle(){ var r=hkEl('taksit-satir'), l=hkEl('taksit-liste'), s=hkEl('taksit'); if(l) l.innerHTML=''; if(s) s.value='1'; if(r) r.hidden=true; hkTutarCiz(); }
+  function hkTaksitGizle(){
+    var r=hkEl('taksit-satir'), l=hkEl('taksit-liste'), s=hkEl('taksit');
+    if(l) l.innerHTML=''; if(s) s.value='1'; if(r) r.hidden=true;
+    hkBosCiz(); hkPerkCiz(0, false); hkTutarCiz();
+  }
+  /* Taksit kutuları kapalıyken açıklama satırı — maketin hp-inst__empty metinleri. */
+  function hkBosCiz(){
+    var e=hkEl('taksit-bos'), r=hkEl('taksit-satir'); if(!e) return;
+    var acik = r && !r.hidden;
+    e.hidden = !!acik;
+    e.textContent = !hk.bin
+      ? 'Kart numaranızın ilk 6 hanesini girince taksit seçenekleri burada açılır.'
+      : (hk.debit ? 'Banka kartlarına taksit yapılamaz, ödemeniz tek çekim alınır.'
+                  : 'Bu kartla taksit yapılamıyor, ödemeniz tek çekim alınır.');
+  }
+  /* Avantaj şeridi. Listelenen her seçenek vade farksızdır (aşağıdaki süzgeç bunu garanti eder),
+     bu yüzden en yüksek taksit sayısı doğrudan şeride yazılır. */
+  function hkPerkCiz(enCok, coklu){
+    var p=hkEl('perk'), m=hkEl('perk-metin'); if(!p||!m) return;
+    p.hidden = enCok<2 || !coklu;
+    m.innerHTML = enCok+' taksite kadar vade farksız. <span>Peşin fiyatına bölün.</span>';
+  }
   /* Taksit tablosu yalnız BIN (ilk 6 hane) ile sorulur — tam kart numarası gönderilmez.
      Yalnız müşterinin ödeyeceği TOPLAMI sepet tutarına EŞİT olan seçenekler listelenir:
      vade farklı bir seçenek sipariş tutarından farklı çekim yapar ve dönüşte tutar
@@ -1241,18 +1507,19 @@
       .then(function(d){
         if(my!==hk.seq) return;
         var hepsi = (d && d.ok && d.installments) ? d.installments : [];
-        hkTurCiz(hepsi.length ? hepsi[0].card_type : '');
+        hkTurCiz(hepsi.length ? hepsi[0].card_type : '', hepsi.length ? (hepsi[0].bank_name || hepsi[0].bank || '') : '');
         var list = hepsi.filter(function(i){ return Math.round(parseFloat(i.amount_to_be_paid)*100)===amount; });
-        if(!list.length){ hkTaksitGizle(); return; }
+        if(list.length<2){ hkTaksitGizle(); return; }
         var ns = list.map(function(i){ return Number(i.installments_number)||1; });
         var secili = Number((hkEl('taksit')||{}).value)||1;
         if(ns.indexOf(secili)<0) secili = ns[0];
         hkEl('taksit-liste').innerHTML = ns.map(function(n){ return hkTaksitSatir(n, amount, n===secili); }).join('');
         hkEl('taksit').value = String(secili);
         hkEl('taksit-satir').hidden = false;
-        hkTutarCiz();
+        hkPerkCiz(Math.max.apply(null, ns), true);
+        hkBosCiz(); hkTutarCiz(); hkFitTiles();
       })
-      .catch(function(){ if(my===hk.seq){ hkTurCiz(''); hkTaksitGizle(); } });
+      .catch(function(){ if(my===hk.seq){ hkTurCiz('',''); hkTaksitGizle(); } });
   }
   function startPaymentHalkode(opts){
     opts = opts || {};
@@ -1272,22 +1539,31 @@
     updateCta();
     if(!opts.auto) scrollToPay();
   }
+  /* Gönderim sırasında geri bildirim (#102-a): kapsayıcıya aria-busy, düğmede görünür spinner,
+     alanlar readOnly. Çift gönderim iki kapıdan yutulur: hk.busy bayrağı ve düğmenin disabled'ı. */
+  function hkYukleniyor(on){
+    var f=hkEl('form'), b=hkEl('ode'); if(!f||!b) return;
+    hk.busy = !!on;
+    f.setAttribute('aria-busy', on ? 'true' : 'false');
+    b.disabled = !!on;
+    b.classList.toggle('is-loading', !!on);
+    ['ad','no','skt','cvv'].forEach(function(a){ var e=hkEl(a); if(e) e.readOnly=!!on; });
+    if(on) hkEl('ode-metin').textContent='Bankaya yönlendiriliyor…'; else hkTutarCiz();
+  }
   function hkOde(){
-    if(hk.busy) return;
+    if(hk.busy) return;                                  // çift gönderim: ikinci tıklama yutulur
     hkErr('');
     if(!addrValid()){ hkErr(address1Sorun() || 'Lütfen adres bilgilerini eksiksiz doldurun.'); return; }
     if(!state.carrier){ hkErr('Lütfen kargo firması seçin.'); return; }
-    var ad=(hkEl('ad').value||'').trim(), no=hkDigits(hkEl('no').value), skt=hkDigits(hkEl('skt').value), cvv=hkDigits(hkEl('cvv').value);
-    if(!ad){ hkErr('Kart üzerindeki ad soyadı yazın.'); return; }
-    if(no.length<15 || no.length>19 || !hkLuhn(no)){ hkErr('Kart numarasını kontrol edin.'); return; }
+    var kontrol=[['ad',hkVAd()],['no',hkVNo()],['skt',hkVSkt()],['cvv',hkVCvv()]];
+    var kotu=kontrol.filter(function(k){ return !k[1]; })[0];
+    if(kotu){ hkEl(kotu[0]).focus(); return; }
+    var ad=(hkEl('ad').value||'').trim().replace(/\s+/g,' ');
+    var no=hkDigits(hkEl('no').value), skt=hkDigits(hkEl('skt').value), cvv=hkDigits(hkEl('cvv').value);
     var ay=parseInt(skt.slice(0,2),10), yil=parseInt(skt.slice(2,4),10);
-    var simdi=new Date(), buYil=simdi.getFullYear()%100, buAy=simdi.getMonth()+1;
-    if(skt.length!==4 || !(ay>=1 && ay<=12) || yil<buYil || (yil===buYil && ay<buAy)){ hkErr('Son kullanma tarihini AA/YY biçiminde kontrol edin.'); return; }
-    if(cvv.length<3){ hkErr('CVV kodunu kontrol edin.'); return; }
     var taksit=parseInt((hkEl('taksit')||{}).value,10)||1;
-    hk.busy=true;
-    var b=hkEl('ode'); b.disabled=true; b.textContent='Bankaya yönlendiriliyor…';
-    var geri=function(){ hk.busy=false; b.disabled=false; hkTutarCiz(); };
+    hkYukleniyor(true);
+    var geri=function(){ hkYukleniyor(false); };
     saveAttrs().then(function(){ return fetch('/cart.js').then(function(r){ return r.json(); }); }).then(function(cart){
       var p = buildPayload(cart);
       p.cc_holder_name = ad; p.cc_no = no; p.expiry_month = ('0'+ay).slice(-2); p.expiry_year = String(2000+yil); p.cvv = cvv;
@@ -1360,7 +1636,7 @@
     }).then(function(r){ return r.json(); }).then(function(d){
       state.orderBusy = false;
       if(!d.ok){ if(!kuponReddedildi(d)) status('⛔ '+(d.message||d.detail||d.error||'Sipariş oluşturulamadı.')); btn.disabled=false; updateCta(); return; }
-      renderHavaleResult(d); goStep(3);
+      renderHavaleResult(d); vmTesekkureGit(d, 'havale');
     }).catch(function(err){ state.orderBusy=false; status('⛔ Bağlantı hatası: '+(err.message||err)); btn.disabled=false; updateCta(); });
   }
   // Sipariş başarıyla oluştu → Shopify sepetini temizle + üstteki sayacı sıfırla
@@ -1377,6 +1653,27 @@
     // balon gizlenince delik kalıyor → çanta ikonu bozuk görünüyordu. Class'ı da kaldır.
     document.querySelectorAll('cart-icon').forEach(function(e){ e.classList.remove('header-actions__cart-icon--has-cart'); });
   }
+  /* ---- MADDE 10+13: odeme bitince AYRI URL'e gercek yonlendirme ----
+     Yunus 17 Eyl: "farkli url konusunda israr ettiler".
+     renderX() sonuc blogunu DOM'a cizdi; onu oldugu gibi tasiyip
+     /pages/siparis-alindi'ye gidiyoruz. Boylece hem adres benzersiz olur
+     (dönüşüm ölçülebilir) hem havale IBAN ekrani kaybolmaz. */
+  function vmTesekkureGit(d, yontem){
+    var kod = String(d.order_code || d.order_name || '').replace('#','');
+    try {
+      var kutu = $('[data-vco-result]');
+      if (kutu && kod) {
+        sessionStorage.setItem('vm_siparis_sonuc_' + kod, JSON.stringify({
+          html: kutu.innerHTML, yontem: yontem, ts: Date.now()
+        }));
+      }
+    } catch(e){ /* sessionStorage kapali olabilir — yonlendirme yine de yapilir */ }
+    var q = '/pages/siparis-alindi?order=' + encodeURIComponent(kod) + '&yontem=' + encodeURIComponent(yontem);
+    if (d.total != null) q += '&total=' + encodeURIComponent(d.total);
+    // replace(): geri tusuyla odeme formuna donup ikinci siparis acilmasin.
+    window.location.replace(q);
+  }
+
   function renderHavaleResult(d){
     clearCartAfterOrder();
     var banks = (d.vendors||[]).filter(function(v){ return v.iban; });
@@ -1408,7 +1705,7 @@
     }).then(function(r){ return r.json(); }).then(function(d){
       state.orderBusy = false;
       if(!d.ok){ if(!kuponReddedildi(d)) status('⛔ '+(d.message||d.detail||d.error||'Sipariş oluşturulamadı.')); btn.disabled=false; updateCta(); return; }
-      renderCodResult(d); goStep(3);
+      renderCodResult(d); vmTesekkureGit(d, 'kapida');
     }).catch(function(err){ state.orderBusy=false; status('⛔ Bağlantı hatası: '+(err.message||err)); btn.disabled=false; updateCta(); });
   }
   function renderCodResult(d){

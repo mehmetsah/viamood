@@ -12,14 +12,14 @@
  *  2) YÖNLENDİRME: startKart'ın paytr/iyzico dalları değişmedi.
  *  3) SÖZLEŞME: initialize'ın zorunlu tuttuğu her alan temanın gönderdiği gövdede var.
  *  4) Kart alanları console/localStorage/sepet özniteliğine yazılmaz. Formun BÖLGE KİLİDİ
- *     (onaylı Seçenek B maketi ↔ ürün) ayrı dosyada: tests/halkode-form-b.test.ts.
+ *     (onaylı maket ↔ ürün) ayrı dosyada: tests/halkode-form-hp.test.ts.
  */
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 
 const KOK = path.resolve(__dirname, '..');
-const TEMA = readFileSync(path.join(KOK, 'tema-yamalari/via-checkout.liquid.halkode-form-b'), 'utf8');
+const TEMA = readFileSync(path.join(KOK, 'tema-yamalari/via-checkout.liquid.halkode-form-hp'), 'utf8');
 const ROUTE = readFileSync(path.join(KOK, 'src/app/api/v1/payment/halkode/initialize/route.ts'), 'utf8');
 
 /** Çapanın tam 1 kez geçtiğini iddia ederek dilim alır (CLAUDE.md §3c: sınır yapıyla çizilir). */
@@ -136,12 +136,16 @@ describe('3) initialize sözleşmesi', () => {
 describe('4) kart verisi — kart formu', () => {
   const FORM = islev(TEMA, 'renderHalkodeForm');
   // Formun iskeleti saf bir işlevde: çalıştırıp ÜRETİLEN HTML ölçülür (kaynak metni değil).
-  const MARKUP: string = new Function(`${islev(TEMA, 'hkIc')}\n${islev(TEMA, 'hkFormHtml')}\nreturn hkFormHtml();`)();
+  // hkFormHtml, modül düzeyindeki HK_LOGO'yu (HalkÖde markası) okur; onu da kapsama al.
+  const LOGO = (TEMA.match(/var HK_LOGO = '[^']*';/) ?? [])[0];
+  expect(LOGO, 'HK_LOGO tanımı bulunamadı').toBeTruthy();
+  const MARKUP: string = new Function(`${LOGO}\n${islev(TEMA, 'hkIc')}\n${islev(TEMA, 'hkFormHtml')}\nreturn hkFormHtml();`)();
 
   it('iskelet üretildi ve kart alanlarının rolleri yerinde', () => {
     expect(MARKUP.length).toBeGreaterThan(1500);
     const roller = [...MARKUP.matchAll(/data-hk="([a-z-]+)"/g)].map((m) => m[1]).sort();
-    expect(roller).toEqual(['ad', 'cvv', 'no', 'ode', 'skt', 'taksit', 'taksit-liste', 'taksit-satir', 'tur', 'tutar', 'tutar-not'].sort());
+    // Onaylı maketin rol listesi (Yunus 23 Eyl · Ayşe #76/#102). Fazladan bir rol eklenirse bu satır kırılır.
+    expect(roller).toEqual(['ad', 'ad-err', 'banka', 'banka-ad', 'cvv', 'cvv-err', 'marka', 'no', 'no-err', 'ode', 'ode-metin', 'perk', 'perk-metin', 'skt', 'skt-err', 'taksit', 'taksit-banka', 'taksit-bos', 'taksit-liste', 'taksit-satir', 'tutar', 'tutar-not'].sort());
   });
 
   it('emoji yok', () => {
