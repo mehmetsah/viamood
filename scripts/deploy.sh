@@ -70,11 +70,35 @@ done
 # Build
 echo ""
 echo "▸ Next.js build..."
+# ÖLÇÜLMÜŞ ARIZA (25 Eyl 2026): build TS hatasıyla düştü, burada `exit 1` verildi ve
+# YARIM KALAN .next öylece bırakıldı. Next build çıktı ağacını önce siler; çalışan pm2
+# süreci silinmiş inode'da asılı kaldı (cwd=…/.next/standalone (deleted)) ve tüm istekler
+# 502 almaya başladı. Kapı vardı, GERİ DÖNÜŞ yoktu.
+#
+# Yedek yöntemi `cp -al` (hardlink): 68 MB'lık ağacı saniyeler yerine anlık kopyalar ve
+# disk yemez — dosya içerikleri paylaşılır, yalnız dizin girdileri çoğalır. Next build
+# dosyaları SİLİP yeniden yazdığı için (üzerine yazmaz) hardlink'ler bozulmaz.
+# `mv` seçilmedi: build sırasında .next yolu tümden kaybolur ve çalışan süreç lazy chunk
+# okuyamaz. Hardlink'te orijinal yol build bitene kadar yerinde kalır.
+YEDEK=".next.onceki-$(date +%H%M%S)"
+if [ -d .next ]; then
+  cp -al .next "$YEDEK" 2>/dev/null || cp -r .next "$YEDEK"
+fi
 if ! NEXT_TELEMETRY_DISABLED=1 npm run build > /tmp/viamood-build.log 2>&1; then
-  echo "  ✗ BUILD FAİL"
+  echo "  ✗ BUILD FAİL — eski .next geri konuyor"
   tail -20 /tmp/viamood-build.log
+  if [ -d "$YEDEK" ]; then
+    rm -rf .next && mv "$YEDEK" .next
+    # Süreç yarım ağaçta asılı kalmasın diye sağlam .next ile yeniden bağlanır.
+    pm2 restart viamood-web --update-env > /dev/null 2>&1
+    sleep 3
+    echo "  ↩ eski .next geri kondu · BUILD_ID=$(cat .next/BUILD_ID 2>/dev/null || echo YOK) · health=$(curl -s -o /dev/null -m 5 -w '%{http_code}' http://localhost/api/health)"
+  else
+    echo "  ⚠ geri konacak yedek YOK — .next hiç yoktu"
+  fi
   exit 1
 fi
+rm -rf "$YEDEK"          # başarılı build: yedek birikmesin
 echo "  ✓ Build OK"
 
 # Standalone bundle'a static + public kopyala
