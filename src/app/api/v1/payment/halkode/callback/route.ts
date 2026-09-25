@@ -37,8 +37,37 @@ export const runtime = 'nodejs';
 
 const STOREFRONT = env.STOREFRONT_URL;
 
+/**
+ * Sonuç sayfasına çıkış.
+ *
+ * 3D adımı artık SİTE İÇİ ÇERÇEVEDE açılıyor (Yunus kararı, 25 Eyl 2026). Banka bu uca
+ * döndüğünde istek çerçevenin İÇİNDE olur; düz 303 verilirse müşteri sonuç sayfasını
+ * çerçevenin içinde görür, yani çerçevede hapis kalır. Bu yüzden düz yönlendirme yerine
+ * üç ayaklı bir çıkış sayfası dönülür — biri tutmazsa öteki tutar:
+ *   1) window.top.location.replace  → üst pencereyi sonuç sayfasına taşır
+ *   2) postMessage                  → ana sayfa (Halkode3DCerceve) yönlendirir
+ *   3) <meta refresh> + görünür bağlantı → script çalışmazsa bile çıkış var
+ * Çerçeve DIŞINDA da aynı sayfa çalışır: window.top === window.self olduğu için
+ * doğrudan yönlendirir. Davranış değişmez, yalnız çerçeve durumu eklenir.
+ */
 function redirect(url: string): NextResponse {
-  return NextResponse.redirect(url, { status: 303 });
+  const guvenli = url.replace(/[<>"']/g, '');
+  const js = JSON.stringify(guvenli);
+  return new NextResponse(
+    `<!DOCTYPE html><html lang="tr"><head><meta charset="utf-8">` +
+      `<meta http-equiv="refresh" content="0;url=${guvenli}">` +
+      `<title>Yönlendiriliyor…</title></head>` +
+      `<body style="font-family:system-ui,sans-serif;padding:24px;text-align:center;color:#10263D">` +
+      `<p>Ödeme sonucuna yönlendiriliyorsunuz…</p>` +
+      `<p><a href="${guvenli}" target="_top">Devam etmek için tıklayın</a></p>` +
+      `<script>(function(){var u=${js};` +
+      `try{if(window.top&&window.top!==window.self){` +
+      `try{window.parent.postMessage({vmHalkode:"sonuc",url:u},"*");}catch(e){}` +
+      `window.top.location.replace(u);return;}}catch(e){` +
+      `try{window.parent.postMessage({vmHalkode:"sonuc",url:u},"*");}catch(e2){}}` +
+      `window.location.replace(u);})();</script></body></html>`,
+    { status: 200, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } },
+  );
 }
 function failPage(reason: string, invoiceId?: string): NextResponse {
   const q = new URLSearchParams({ reason: `halkode:${reason}` });

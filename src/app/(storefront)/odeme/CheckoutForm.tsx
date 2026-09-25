@@ -301,31 +301,76 @@ export function CheckoutForm({ payment }: { payment: VitrinOdemeAyarlari }) {
                   </span>
                 </label>
                 {method === 'card' && (
+                  /* Kart alanları — Yunus'un 23 Eyl örneği ÜST SINIR (Ayşe kararı #76).
+                     Örnekte olmayan düğme/alan EKLENMEZ: yalnız ad soyad, kart no,
+                     son kullanma, CVV, taksit ve 3D Secure güvencesi var.
+                     Satır yükseklikleri leading-relaxed (1.625) — #102 eşiği 1.3. */
                   <div className="px-4 pb-4 pt-1 border-t bg-neutral-50/60 flex flex-col gap-3">
-                    <input className={inputCls} placeholder="Kart üzerindeki isim" autoComplete="cc-name"
-                      value={card.holder} onChange={(e) => setCard({ ...card, holder: e.target.value })} />
-                    <input className={inputCls} placeholder="Kart numarası" inputMode="numeric" autoComplete="cc-number"
-                      value={card.no} onChange={(e) => setCard({ ...card, no: e.target.value })} />
+                    <div>
+                      <label htmlFor="vm-kart-ad" className="mb-1 block text-xs font-medium leading-relaxed text-neutral-700">
+                        Kart Üzerindeki Ad Soyad
+                      </label>
+                      <input id="vm-kart-ad" className={inputCls} placeholder="Ad Soyad" autoComplete="cc-name"
+                        value={card.holder} onChange={(e) => setCard({ ...card, holder: e.target.value })} />
+                    </div>
+                    <div>
+                      <label htmlFor="vm-kart-no" className="mb-1 block text-xs font-medium leading-relaxed text-neutral-700">
+                        Kart Numarası
+                      </label>
+                      <input id="vm-kart-no" className={inputCls} placeholder="0000 0000 0000 0000" inputMode="numeric"
+                        autoComplete="cc-number" value={card.no}
+                        onChange={(e) => setCard({ ...card, no: e.target.value })} />
+                    </div>
                     <div className="grid grid-cols-3 gap-3">
-                      <input className={inputCls} placeholder="Ay (12)" inputMode="numeric" autoComplete="cc-exp-month"
-                        value={card.month} onChange={(e) => setCard({ ...card, month: e.target.value })} />
-                      <input className={inputCls} placeholder="Yıl (2028)" inputMode="numeric" autoComplete="cc-exp-year"
-                        value={card.year} onChange={(e) => setCard({ ...card, year: e.target.value })} />
-                      <input className={inputCls} placeholder="CVV" inputMode="numeric" autoComplete="cc-csc"
-                        value={card.cvv} onChange={(e) => setCard({ ...card, cvv: e.target.value })} />
+                      <div className="col-span-2">
+                        <label htmlFor="vm-kart-ay" className="mb-1 block text-xs font-medium leading-relaxed text-neutral-700">
+                          Son Kullanma
+                        </label>
+                        <div className="grid grid-cols-2 gap-2">
+                          <input id="vm-kart-ay" className={inputCls} placeholder="AA" inputMode="numeric" autoComplete="cc-exp-month"
+                            value={card.month} onChange={(e) => setCard({ ...card, month: e.target.value })} />
+                          <input className={inputCls} placeholder="YYYY" inputMode="numeric" autoComplete="cc-exp-year"
+                            value={card.year} onChange={(e) => setCard({ ...card, year: e.target.value })} />
+                        </div>
+                      </div>
+                      <div>
+                        <label htmlFor="vm-kart-cvv" className="mb-1 block text-xs font-medium leading-relaxed text-neutral-700">
+                          Güvenlik Kodu
+                        </label>
+                        <input id="vm-kart-cvv" className={inputCls} placeholder="CVV" inputMode="numeric" autoComplete="cc-csc"
+                          value={card.cvv} onChange={(e) => setCard({ ...card, cvv: e.target.value })} />
+                      </div>
                     </div>
                     {installments.length > 1 && (
-                      <div>
-                        <label className="text-xs font-medium block mb-1">Taksit</label>
-                        <select className={inputCls} value={selectedInstallment}
-                          onChange={(e) => setSelectedInstallment(Number(e.target.value))}>
-                          {installments.map((i) => (
-                            <option key={i.installments_number} value={i.installments_number}>
-                              {i.installments_number === 1 ? 'Tek çekim' : `${i.installments_number} taksit`} — {i.amount_to_be_paid} ₺
-                            </option>
-                          ))}
-                        </select>
-                      </div>
+                      /* TAKSİT — örnekteki KARE IZGARA (ölçülen tek yapısal fark, kart #990862).
+                         Liste /api/v1/payment/halkode/installments ucundan gelir; sabit
+                         kodlama YOK, adet ve tutar bankadan ne gelirse o çizilir. */
+                      <fieldset>
+                        <legend className="mb-2 block text-xs font-medium leading-relaxed text-neutral-700">Taksit</legend>
+                        <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+                          {installments.map((i) => {
+                            const secili = selectedInstallment === i.installments_number;
+                            return (
+                              <label key={i.installments_number}
+                                className={`flex cursor-pointer flex-col items-center justify-center rounded-lg border px-2 py-2 text-center leading-relaxed transition ${
+                                  secili
+                                    ? 'border-neutral-900 bg-neutral-900 text-white'
+                                    : 'border-neutral-200 bg-white text-neutral-800 hover:border-neutral-400'
+                                }`}>
+                                <input type="radio" name="vm-taksit" className="sr-only"
+                                  checked={secili} value={i.installments_number}
+                                  onChange={() => setSelectedInstallment(i.installments_number)} />
+                                <span className="text-xs font-semibold leading-relaxed">
+                                  {i.installments_number === 1 ? 'Tek çekim' : `${i.installments_number} taksit`}
+                                </span>
+                                <span className={`text-[11px] leading-relaxed ${secili ? 'text-white/80' : 'text-neutral-500'}`}>
+                                  {i.amount_to_be_paid} ₺
+                                </span>
+                              </label>
+                            );
+                          })}
+                        </div>
+                      </fieldset>
                     )}
                     <p className="text-xs text-neutral-500">
                       Ödeme, bankanın 3D Secure sayfasına yönlendirilerek tamamlanır. Kart bilgileriniz saklanmaz.
@@ -368,6 +413,7 @@ export function CheckoutForm({ payment }: { payment: VitrinOdemeAyarlari }) {
         <button
           onClick={submit}
           disabled={!valid || status === 'submitting'}
+          aria-busy={status === 'submitting'}
           className="mt-5 w-full px-6 py-3.5 rounded-full bg-[var(--color-brand-orange)] text-white font-semibold disabled:opacity-50"
         >
           {status === 'submitting' ? 'İşleniyor…' : 'Siparişi Tamamla'}
