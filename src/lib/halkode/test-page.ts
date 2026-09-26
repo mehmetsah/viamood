@@ -34,13 +34,25 @@ export const TEST_TUTAR_TL = 10.0;
  * 25 Eyl'de 10 kez düşen `status_code=13` ("items price ... not equal to the invoice
  * total") tam da çok kalemli sepette çıkıyordu; bu sepet onun kanıt fikstürüdür:
  * adet>1 · kuruşlu fiyat · kargo kalemi · NEGATİF indirim kalemi.
- *   2 × 3,49 = 6,98 · 1 × 2,75 = 2,75 · kargo 1,50 · indirim −1,00  →  10,23 TL
+ *   2 × 1,25 = 2,50 · 1 × 1,10 = 1,10 · 1 × 1,00 = 1,00 · kargo 0,50 · indirim −1,00
+ *   →  4,10 TL
  * Tutar buradan TÜRETİLİR (elle yazılmaz): sapma olursa test kırılır.
+ *
+ * 🔴 TUTAR 26 EYL 2026'DA KÜÇÜLTÜLDÜ (10,23 → 4,10 TL) ve ürün adları TÜRKÇE
+ * KARAKTERLİ yapıldı. İki gerekçe, ikisi de ölçülmüş:
+ *  (1) Bu sayfa CANLI ortamda GERÇEK PARA çekiyor. Yunus'un denemesi için 10,23 TL
+ *      gereksiz yüksekti; her deneme iade kararı doğuruyor ve iade PARA kararıdır
+ *      (Mehmet ŞAH onayı ister). 4,10 TL aynı sınıfı ölçer: üç ürün kalemi, adet>1,
+ *      kuruşlu fiyat, kargo kalemi, NEGATİF indirim kalemi.
+ *  (2) Eski adlar ('Demo ürün A') Türkçe karakter içermiyordu, yani POS gövdesinde
+ *      ı/ş/ğ/ç/ö/ü yolunu HİÇ ölçmüyordu. Şimdi ölçüyor — kalem adı kesme kapısı
+ *      `kalemAdiKirp` (src/lib/halkode/kalem-adi.ts) ve onun HEX çivisiyle birlikte.
  */
 export const COKLU_SEPET: ReadonlyArray<{ name: string; price: number; quantity: number }> = [
-  { name: 'Demo ürün A', price: 3.49, quantity: 2 },
-  { name: 'Demo ürün B', price: 2.75, quantity: 1 },
-  { name: 'Kargo', price: 1.5, quantity: 1 },
+  { name: 'Kırılmaz Saklama Kabı — Şeffaf', price: 1.25, quantity: 2 },
+  { name: 'Çöp Poşeti Büyük Boy (Güçlü)', price: 1.1, quantity: 1 },
+  { name: 'Peçete Şeffaf Ağızlı Poşet', price: 1.0, quantity: 1 },
+  { name: 'Kargo', price: 0.5, quantity: 1 },
   { name: 'İndirim', price: -1.0, quantity: 1 },
 ];
 /** Kalemlerden türetilir — kuruş üzerinden toplanır ki ondalık sapma doğmasın. */
