@@ -16,6 +16,7 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { kalemAdiKirp } from '../src/lib/halkode/kalem-adi';
+import { kalemleriHizala } from '../src/lib/halkode/kalem-hizala';
 
 const KAYNAK = readFileSync(
   path.resolve(__dirname, '../src/app/api/v1/payment/halkode/initialize/route.ts'),
@@ -53,13 +54,15 @@ function hesapla(line_items: Kalem[], shipKurus: number, discKurus: number): Cik
     'discKurus',
     'totalKurus',
     'kalemAdiKirp',
-    `${BLOK}\nreturn { items, totalKurus };`,
+    'kalemleriHizala',
+    `${BLOK}\nreturn { items: gonderilecekItems, totalKurus, duzeltildi: hiza.duzeltildi };`,
   );
-  const r = fn({ line_items }, shipKurus, discKurus, totalKurus, kalemAdiKirp) as {
+  const r = fn({ line_items }, shipKurus, discKurus, totalKurus, kalemAdiKirp, kalemleriHizala) as {
     items: Cikti['items'];
     totalKurus: number;
+    duzeltildi: boolean;
   };
-  return { items: r.items, duzeltildi: false };
+  return { items: r.items, duzeltildi: r.duzeltildi };
 }
 
 /** Kuruş kapısına giren sapma — ürün kodundaki hesabın aynısı, kapı UYGULANMADAN önce. */
