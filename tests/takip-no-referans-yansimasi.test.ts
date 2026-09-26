@@ -42,6 +42,14 @@ describe('gercekTakipNo — referans yansımasını eler', () => {
     // Sipariş no "#" olmadan gönderilirse (orderNumber geri düşüşü) değer
     // rakamdan oluşur ve format kapısı YETMEZ — referans karşılaştırması şart.
     expect(gercekTakipNo('1056', ['1056', null, undefined])).toBeNull();
+    // ⚠ ÖLÇÜLDÜ (26 Eyl 2026, Yunus · #990623): ÜSTTEKİ satır bu tuzağı ÖLÇMÜYOR —
+    // '1056' dört hanedir, referans kapısı kaldırılsa bile `{6,}` format kapısı
+    // onu zaten eliyor. Mutasyon kanıtı: `if (ref.has(v)) return null;` satırı
+    // silindiğinde çivi 7/7 YEŞİL kalıyordu (çıkış 0), yani kapı korumasızdı.
+    // Asıl arıza sınıfı BARKOD BİÇİMİNDE bir referanstır: fulfillment `waybill`
+    // ya da `tracking_number` alanına 13 haneli bir değer koyduğunda format
+    // kapısı geçer, yalnız referans karşılaştırması eler.
+    expect(gercekTakipNo('2784027344450', ['2784027344450'])).toBeNull();
   });
 
   it('çok kısa rakam dizisi barkod sayılmaz', () => {
