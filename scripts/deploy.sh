@@ -141,7 +141,8 @@ if ! NEXT_TELEMETRY_DISABLED=1 npm run build > "$BUILD_LOG" 2>&1; then
   if [ -d "$YEDEK" ]; then
     rm -rf .next && mv "$YEDEK" .next
     # Süreç yarım ağaçta asılı kalmasın diye sağlam .next ile yeniden bağlanır.
-    pm2 restart viamood-web --update-env > /dev/null 2>&1
+    NEXT_BUILD_ID="$(git rev-parse --short HEAD 2>/dev/null || echo bilinmiyor)" \
+      pm2 restart viamood-web --update-env > /dev/null 2>&1
     sleep 3
     echo "  ↩ eski .next geri kondu · BUILD_ID=$(cat .next/BUILD_ID 2>/dev/null || echo YOK) · health=$(curl -s -o /dev/null -m 5 -w '%{http_code}' http://localhost/api/health)"
   else
@@ -167,7 +168,14 @@ fi
 
 echo ""
 echo "▸ PM2 restart..."
-pm2 restart viamood-web --update-env > /dev/null
+# BUILD_ID — hangi commit canlıda, ÖLÇÜLEBİLİR olsun.
+# ÖLÇÜLEN ARIZA (25 Eyl 2026): /api/health `buildId: null` dönüyordu; bu yüzden
+# "main'de var ama canlıda yok" hâli günlerce görünmedi — merge kanıtı teslim
+# kanıtı sanıldı. Commit SHA'yı pm2'ye --update-env ile geçiriyoruz; sağlık ucu
+# zaten process.env.NEXT_BUILD_ID okuyor (health/route.ts:56).
+# .env.production'a YAZILMIYOR: o dosya sır taşıyor, deploy'un ona dokunması istenmez.
+NEXT_BUILD_ID="$(git rev-parse --short HEAD 2>/dev/null || echo bilinmiyor)" \
+  pm2 restart viamood-web --update-env > /dev/null
 sleep 2
 
 # ÖLÇÜLDÜ (25 Eyl 2026): bu kapı SESSİZCE HİÇ ÇALIŞMIYORDU.
