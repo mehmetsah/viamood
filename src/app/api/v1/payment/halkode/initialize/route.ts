@@ -37,6 +37,7 @@ import {
 } from '@/lib/halkode/client';
 import { halkodeOnizlemeOrtami } from '@/lib/halkode/preview';
 import { kalemAdiKirp } from '@/lib/halkode/kalem-adi';
+import { kalemleriHizala } from '@/lib/halkode/kalem-hizala';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -288,12 +289,18 @@ export async function POST(req: NextRequest) {
   // İKİNCİ KAPI — kuruş sapması. Yukarıdaki düzeltme çarpımı hizalar ama ondalık
   // toplama hâlâ 1 kuruş kayabilir (ör. 2699,99 × 3). Sapma varsa son kaleme
   // yazılır; böylece Halköde'ye giden items toplamı total'a KURUŞU KURUŞUNA eşit olur.
-  const itemsToplamKurus = items.reduce((s, it) => s + Math.round(it.price * 100) * it.quantity, 0);
-  const sapmaKurus = totalKurus - itemsToplamKurus;
-  const son = items.at(-1);
-  if (sapmaKurus !== 0 && son) {
-    son.price = Math.round(son.price * 100 + sapmaKurus / son.quantity) / 100;
-    console.warn('[halkode/initialize] kalem toplamı düzeltildi', { sapmaKurus, totalKurus });
+  // Kapı artık SAF bir fonksiyonda (src/lib/halkode/kalem-hizala.ts) — burada
+  // gömülü olduğu sürece ÇİVİLENEMİYORDU: sapma bugünkü girdi uzayında matematiksel
+  // olarak doğmadığı için ürün kodu yoluyla tetiklenemiyor, dolayısıyla Okan'ın
+  // `sapmaKurus = 0` mutasyonu hiçbir iddiayı kırmıyordu (26 Eyl denetimi, MUT-E).
+  // Davranış AYNI; değişen tek şey ölçülebilirlik.
+  const hiza = kalemleriHizala(items, totalKurus);
+  const gonderilecekItems = hiza.items;
+  if (hiza.duzeltildi) {
+    console.warn('[halkode/initialize] kalem toplamı düzeltildi', {
+      sapmaKurus: hiza.sapmaKurus,
+      totalKurus,
+    });
   }
 
   await ensureTrCustomer(body.customer_email || body.email);
@@ -323,7 +330,10 @@ export async function POST(req: NextRequest) {
       invoiceDescription: `Via Mood siparişi`,
       name: body.first_name,
       surname: body.last_name,
-      items,
+      // ⚠ HİZALANMIŞ dizi gider. Eski kod `items`'ı YERİNDE değiştiriyordu; saf
+      // fonksiyon kopya döndürdüğü için burada `items` bırakmak sapma düzeltmesini
+      // SESSİZCE düşürürdü (status 13 geri gelir). Ölçüldü ve yakalandı.
+      items: gonderilecekItems,
       returnUrl: `${env.APP_URL}/api/v1/payment/halkode/callback`,
       cancelUrl: `${env.APP_URL}/api/v1/payment/halkode/callback`,
     },
