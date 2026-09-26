@@ -15,6 +15,7 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
+import { kalemAdiKirp } from '../src/lib/halkode/kalem-adi';
 
 const KAYNAK = readFileSync(
   path.resolve(__dirname, '../src/app/api/v1/payment/halkode/initialize/route.ts'),
@@ -43,14 +44,18 @@ type Cikti = { items: Array<{ name: string; price: number; quantity: number }>; 
 function hesapla(line_items: Kalem[], shipKurus: number, discKurus: number): Cikti {
   const itemsKurus = line_items.reduce((s, li) => s + Math.round(li.price ?? 0) * li.quantity, 0);
   const totalKurus = itemsKurus + shipKurus - discKurus;
+  // ⚠ 26 Eyl 2026 (#991458): ürün kodu artık kalem adını `kalemAdiKirp` ile kırpıyor
+  // (BAYT sınırlı kesme). Blok GERÇEK kaynaktan alındığı için bağımlılığı da
+  // sandbox'a VERİLİR — sahte bir kopya yazmak çiviyi gerçek koddan koparırdı.
   const fn = new Function(
     'body',
     'shipKurus',
     'discKurus',
     'totalKurus',
+    'kalemAdiKirp',
     `${BLOK}\nreturn { items, totalKurus };`,
   );
-  const r = fn({ line_items }, shipKurus, discKurus, totalKurus) as {
+  const r = fn({ line_items }, shipKurus, discKurus, totalKurus, kalemAdiKirp) as {
     items: Cikti['items'];
     totalKurus: number;
   };

@@ -36,9 +36,11 @@ describe('çok kalemli demo sepet', () => {
   });
 
   it('toplam 10,00–15,00 TL aralığında (gerçek çekim, düşük tutulmalı)', () => {
-    expect(COKLU_TUTAR_TL).toBeGreaterThanOrEqual(10);
-    expect(COKLU_TUTAR_TL).toBeLessThanOrEqual(15);
-    expect(COKLU_TUTAR_TL).toBeCloseTo(10.23, 2);
+    // 26 Eyl 2026: CANLI deneme gerçek para çekiyor → tutar 3–5 TL bandına indi.
+    // Üst sınır ZORUNLU: bant genişletilerek "geçirmek" iade kararı doğurur.
+    expect(COKLU_TUTAR_TL).toBeGreaterThanOrEqual(3);
+    expect(COKLU_TUTAR_TL).toBeLessThanOrEqual(5);
+    expect(COKLU_TUTAR_TL).toBeCloseTo(4.1, 2);
   });
 
   it('NEGATİF: satır toplamı yazılsaydı eşitlik BOZULURDU (arızanın kendisi)', () => {
@@ -51,7 +53,7 @@ describe('çok kalemli demo sepet', () => {
   it('tutar kalemlerden TÜRETİLİYOR, elle yazılmıyor', () => {
     const kaynak = readFileSync(path.join(KOK, 'src/lib/halkode/test-page.ts'), 'utf8');
     expect(kaynak).toMatch(/COKLU_TUTAR_TL\s*=\s*\n?\s*COKLU_SEPET\.reduce/);
-    expect(kaynak, 'tutar sabit sayı olarak yazılmış').not.toMatch(/COKLU_TUTAR_TL\s*=\s*10\.23/);
+    expect(kaynak, 'tutar sabit sayı olarak yazılmış').not.toMatch(/COKLU_TUTAR_TL\s*=\s*4\.1/);
   });
 
   it('test-initialize istemciden KALEM almıyor (yalnız seçim)', () => {
@@ -86,5 +88,41 @@ describe('çok kalemli demo sepet', () => {
       /price:\s*\(\(?li\.price[^)]*\)\s*\*\s*li\.quantity\)?\s*\/\s*100/,
     );
     expect(INIT, 'kuruş sapması kapısı düşmüş').toContain('sapmaKurus');
+  });
+});
+
+describe('CANLI deneme sepeti — Yunus\'un çok kalemli denemesi için (#991458)', () => {
+  const urunler = COKLU_SEPET.filter((k) => k.name !== 'Kargo' && k.name !== 'İndirim');
+
+  it('EN AZ 3 ürün kalemi var (kargo/indirim sayılmaz)', () => {
+    expect(urunler.length).toBeGreaterThanOrEqual(3);
+  });
+
+  it('HER ürün kalemi TÜRKÇE KARAKTER içeriyor — POS yolu ölçülsün', () => {
+    // ⚠ ÖLÇÜLDÜ (26 Eyl 2026): bu iddia önce kalemleri BİRLEŞTİRİP ölçüyordu ve
+    // KÖRDÜ — bir kalemin adı Türkçesini kaybettiğinde diğer iki kalem eşleşmeyi
+    // taşıyor, mutasyon çıkış 0 veriyordu. Kalem BAZINDA ölçülür.
+    for (const k of urunler) {
+      expect(k.name, `"${k.name}" Türkçe karakter içermiyor — ı/ş/ğ/ç/ö/ü yolu ölçülmüyor`).toMatch(
+        /[ıİşŞğĞçÇöÖüÜ]/,
+      );
+      // Negatif: eski 'Demo ürün A' kalıbı (aksanlı ya da aksansız) geri gelirse kırılsın.
+      expect(k.name).not.toMatch(/demo\s*[uü]r[uü]n/i);
+    }
+  });
+
+  it('kalem başına tutar 1,00–2,00 TL bandında (gerçek para)', () => {
+    for (const k of urunler) {
+      expect(k.price, `${k.name} bandın dışında`).toBeGreaterThanOrEqual(1);
+      expect(k.price, `${k.name} bandın dışında`).toBeLessThanOrEqual(2);
+    }
+  });
+
+  it('adet>1 olan en az bir kalem var (status 13 sınıfı ölçülsün)', () => {
+    expect(COKLU_SEPET.some((k) => k.quantity > 1)).toBe(true);
+  });
+
+  it('NEGATİF indirim kalemi duruyor', () => {
+    expect(COKLU_SEPET.some((k) => k.price < 0)).toBe(true);
   });
 });
