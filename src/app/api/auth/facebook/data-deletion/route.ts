@@ -16,14 +16,14 @@
  *  · imza tutmadı / signed_request bozuk  → 400, DB'ye KAYIT YAZILMAZ (kimliksiz
  *    uçta koşulsuz insert = flood kapısı; Meta'nın gerçek istekleri her zaman
  *    geçerli imza taşır).
- *  · imza doğrulandı → önce talep kaydı ('alindi'), sonra silme, sonra durum
+ *  · imza doğrulandı → talep kaydı ('alindi'/'onay-bekliyor'); SİLME YAPILMAZ
  *    güncelle; 200 + confirmation_code yalnız bu dalda döner.
  *
  * SECRET KAYNAĞI: login akışıyla AYNI çözümleme — getFacebookCreds()
  * (env AUTH_FACEBOOK_SECRET öncelikli, yoksa panel/DB; trim'li). İki ucun
  * farklı kaynak okuması sessiz arıza üretirdi (inceleme bulgusu).
  *
- * NE SİLİNİR: accounts satırı (provider='facebook' — token'lar/bağlantı) ve
+ * NE SİLİNİR: HİÇBİR ŞEY — uç yalnız talebi kaydeder, silme manuel onayda. Eski:
  * users.image (saf Facebook verisi). Hesap, sipariş ve fatura kayıtları yasal
  * saklama yükümlülüğü gereği durur; tam hesap kapatma destek kanalından yapılır.
  */
@@ -31,7 +31,7 @@ import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
 import { NextResponse, type NextRequest } from 'next/server';
 import { and, eq } from 'drizzle-orm';
 import { db } from '@/db/client';
-import { accounts, users } from '@/db/schema';
+import { accounts } from '@/db/schema';
 import { veriSilmeTalepleri } from '@/db/schema/veri-silme';
 import { getFacebookCreds } from '@/lib/auth/social';
 
@@ -106,6 +106,14 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     await db.insert(veriSilmeTalepleri).values({ kod, providerUserId: userId });
   }
 
+  // 🔴 KIRMIZI ÇİZGİ — BU UÇ VERİ SİLMEZ, YALNIZ TALEBİ KAYDEDER.
+  // Kalıcı silme geri alınamaz bir işlemdir ve Meta'dan gelen bir HTTP
+  // isteğiyle tetiklenmesi yanlıştır: imza doğrulansa bile silinen satır geri
+  // gelmez. Bu yüzden uç yalnızca EŞLEŞME ARAR (okuma) ve talebi insan onayına
+  // bırakır. Silmeyi yapan taraf operatördür.
+  //
+  // ⚠ ÖNCEKİ SÜRÜM GERÇEKTEN SİLİYORDU: accounts satırını `db.delete` ile
+  // kaldırıyor, users.image alanını null'lıyordu. 25 Eyl 2026'da kaldırıldı.
   let durum = 'kayit-bulunamadi';
   let detay: string | null = 'Bu Facebook hesabıyla bağlı kullanıcı yok (daha önce silinmiş olabilir)';
   let bizdekiUserId: string | null = null;
@@ -117,27 +125,19 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       .limit(1);
     if (acc) {
       bizdekiUserId = acc.userId;
-      await db
-        .delete(accounts)
-        .where(and(eq(accounts.provider, 'facebook'), eq(accounts.providerAccountId, userId)));
-      // Profil fotoğrafı saf Facebook verisidir — bağlantıyla birlikte temizlenir.
-      await db.update(users).set({ image: null }).where(eq(users.id, acc.userId));
-      durum = 'baglanti-silindi';
-      detay = null;
+      durum = 'onay-bekliyor';
+      detay = 'Facebook bağlantısı bulundu. Kalıcı silme manuel onay bekliyor — bu uç veri SİLMEZ.';
     }
   } catch (e) {
     durum = 'alindi';
-    detay = `silme sırasında hata: ${e instanceof Error ? e.message : 'bilinmiyor'}`;
+    detay = `kayıt aranırken hata: ${e instanceof Error ? e.message : 'bilinmiyor'}`;
   }
 
+  // completedAt hiçbir durumda doldurulmaz: silme yapılmadığı için talep
+  // tamamlanmış değildir. Operatör silmeyi uyguladığında işaretler.
   await db
     .update(veriSilmeTalepleri)
-    .set({
-      durum,
-      detay,
-      userId: bizdekiUserId,
-      completedAt: durum === 'alindi' ? null : new Date(),
-    })
+    .set({ durum, detay, userId: bizdekiUserId, completedAt: null })
     .where(eq(veriSilmeTalepleri.kod, kod));
 
   // Meta'nın beklediği sözleşme: url + confirmation_code.

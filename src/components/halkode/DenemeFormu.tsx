@@ -14,6 +14,7 @@
  * yine 10 TL olur. Canlı ortamda bu tek başına en önemli koruma.
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
+import Halkode3DCerceve from './Halkode3DCerceve';
 
 interface Taksit {
   installments_number: number;
@@ -31,10 +32,13 @@ export default function DenemeFormu({
   anahtar,
   tutar,
   ortam,
+  sepet,
   testKarti,
 }: {
   anahtar: string;
   tutar: number;
+  /** Yalnız SEÇİM: 'coklu' → sunucudaki sabit çok kalemli sepet. */
+  sepet?: 'coklu';
   ortam: 'test' | 'canli';
   /** Yalnız TEST sayfasında verilir — canlı POS test kartını tanımaz. */
   testKarti?: { no: string; sahip: string; ay: string; yil: string; cvv: string };
@@ -51,6 +55,8 @@ export default function DenemeFormu({
   const [secili, setSecili] = useState(1);
   const [gonderiliyor, setGonderiliyor] = useState(false);
   const [hata, setHata] = useState<string | null>(null);
+  // Yunus aynı deneyimi görsün: 3D burada da site içi çerçevede açılır.
+  const [uc3d, setUc3d] = useState<string | null>(null);
   const sonBin = useRef('');
 
   const rakam = (v: string) => v.replace(/\D/g, '');
@@ -120,6 +126,7 @@ export default function DenemeFormu({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          ...(sepet ? { sepet } : {}),
           anahtar,
           installments_number: secili,
           cc_holder_name: sahip,
@@ -139,10 +146,10 @@ export default function DenemeFormu({
         setGonderiliyor(false);
         return;
       }
-      // Bankanın auto-submit formu — olduğu gibi yazılır, tarayıcı 3D'ye gider.
-      document.open();
-      document.write(j.html);
-      document.close();
+      // ESKİDEN: document.write tüm sayfayı eziyordu. ARTIK: site içi çerçeve
+      // (Halkode3DCerceve). Banka çerçeveyi reddederse bileşen tam sayfaya düşer.
+      setUc3d(j.html);
+      setGonderiliyor(false);
     } catch {
       setHata('Sunucuya ulaşılamadı.');
       setGonderiliyor(false);
@@ -150,6 +157,11 @@ export default function DenemeFormu({
   }
 
   const hazir = rakam(kartNo).length >= 15 && sahip.trim().length >= 3 && ay.length === 2 && yil.length === 4 && cvv.length >= 3;
+
+  // 3D açıldığında form yerine çerçeve gösterilir; sayfanın kendisi (başlık, tutar) kalır.
+  if (uc3d) {
+    return <Halkode3DCerceve formHtml={uc3d} iz={{ kaynak: 'deneme' }} baslik="Ödemenizi doğrulayın" />;
+  }
 
   return (
     <form onSubmit={ode} className="mt-4 rounded-xl border border-neutral-200 bg-white p-4">
@@ -213,24 +225,29 @@ export default function DenemeFormu({
           </p>
         )}
         {taksitler && taksitler.length > 0 && (
-          <ul className="mt-2 grid gap-2">
+          /* TAKSİT — örnekteki KARE IZGARA (Ayşe #76; ölçülen tek yapısal fark, kart #990862).
+             Liste get-installments ucundan gelir, sabit kodlama YOK.
+             Satır yükseklikleri leading-relaxed — #102 eşiği 1.3. */
+          /* Ayşe hükümleri ayse:121/122/123 — kırılım kapsayıcıya bağlı, kutu min-h 72px,
+             köşe 8px (referanstaki 10px'e bilinçli uyulmuyor). Bkz. CheckoutForm. */
+          <ul className="@container mt-2 grid grid-cols-3 gap-2 p-3 @[300px]:grid-cols-4 @[500px]:grid-cols-6">
             {taksitler.map((t) => {
               const n = t.installments_number;
               const toplam = parseFloat(t.amount_to_be_paid) || tutar;
               const aylik = n > 1 ? toplam / n : toplam;
               return (
                 <li key={`${n}-${t.card_program ?? ''}`}>
-                  <label className={`flex cursor-pointer items-center justify-between gap-3 rounded-lg border px-3 py-2.5 ${
-                    secili === n ? 'border-[var(--color-brand-orange,#f25334)] bg-orange-50' : 'border-neutral-200'
+                  <label className={`flex h-full min-h-[72px] cursor-pointer flex-col items-center justify-center gap-0.5 rounded-lg border px-2 py-2 text-center leading-relaxed ${
+                    secili === n
+                      ? 'border-[var(--color-brand-orange,#f25334)] bg-orange-50'
+                      : 'border-neutral-200 hover:border-neutral-400'
                   }`}>
-                    <span className="flex items-center gap-2.5">
-                      <input type="radio" name="taksit" checked={secili === n} onChange={() => setSecili(n)} />
-                      <span className="text-sm font-semibold">
-                        {n === 1 ? 'Tek çekim' : `${n} taksit`}
-                      </span>
-                      {n > 1 && <span className="text-xs text-neutral-500">{tl(aylik)} × {n}</span>}
+                    <input type="radio" name="taksit" className="sr-only" checked={secili === n} onChange={() => setSecili(n)} />
+                    <span className="text-xs font-semibold leading-relaxed">
+                      {n === 1 ? 'Tek çekim' : `${n} taksit`}
                     </span>
-                    <span className="text-sm font-bold">{tl(toplam)}</span>
+                    <span className="text-[11px] font-bold leading-relaxed">{tl(toplam)}</span>
+                    {n > 1 && <span className="text-[11px] leading-relaxed text-neutral-500">{tl(aylik)} × {n}</span>}
                   </label>
                 </li>
               );
@@ -246,7 +263,7 @@ export default function DenemeFormu({
         <p className="mt-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">{hata}</p>
       )}
 
-      <button type="submit" disabled={!hazir || gonderiliyor}
+      <button type="submit" disabled={!hazir || gonderiliyor} aria-busy={gonderiliyor}
               className={`mt-5 w-full rounded-full px-6 py-3 font-semibold text-white disabled:opacity-40 ${
                 canli ? 'bg-red-700' : 'bg-neutral-900'
               }`}>

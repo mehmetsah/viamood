@@ -28,6 +28,25 @@ export { HALKODE_TEST_ANAHTAR as TEST_ANAHTAR, HALKODE_CANLI_ANAHTAR as CANLI_AN
  */
 export const TEST_TUTAR_TL = 10.0;
 
+/**
+ * ÇOK KALEMLİ DEMO SEPET — sunucu sabiti, istemciden kalem ALINMAZ.
+ * Neden: tek kalemli 10 TL denemesi çok kalemli akışı hiç ölçmüyordu (Yunus, 25 Eyl).
+ * 25 Eyl'de 10 kez düşen `status_code=13` ("items price ... not equal to the invoice
+ * total") tam da çok kalemli sepette çıkıyordu; bu sepet onun kanıt fikstürüdür:
+ * adet>1 · kuruşlu fiyat · kargo kalemi · NEGATİF indirim kalemi.
+ *   2 × 3,49 = 6,98 · 1 × 2,75 = 2,75 · kargo 1,50 · indirim −1,00  →  10,23 TL
+ * Tutar buradan TÜRETİLİR (elle yazılmaz): sapma olursa test kırılır.
+ */
+export const COKLU_SEPET: ReadonlyArray<{ name: string; price: number; quantity: number }> = [
+  { name: 'Demo ürün A', price: 3.49, quantity: 2 },
+  { name: 'Demo ürün B', price: 2.75, quantity: 1 },
+  { name: 'Kargo', price: 1.5, quantity: 1 },
+  { name: 'İndirim', price: -1.0, quantity: 1 },
+];
+/** Kalemlerden türetilir — kuruş üzerinden toplanır ki ondalık sapma doğmasın. */
+export const COKLU_TUTAR_TL =
+  COKLU_SEPET.reduce((s, k) => s + Math.round(k.price * 100) * k.quantity, 0) / 100;
+
 /** Adresteki anahtarı ortama çevirir. Tanınmayan/boş anahtar → null. */
 export function anahtardanOrtam(anahtar: string | undefined): HalkodeOrtam | null {
   if (!anahtar) return null;

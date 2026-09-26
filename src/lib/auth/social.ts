@@ -11,6 +11,7 @@
  * (auth.config.ts) ÇAĞIRMA — bcrypt/DB edge'de çalışmaz.
  */
 import { getStoreSettings } from '@/lib/settings/store';
+import { appleClientSecret } from './apple-secret';
 
 export type SocialCreds = { clientId: string; clientSecret: string } | null;
 
@@ -62,10 +63,61 @@ export async function getFacebookCreds(): Promise<SocialCreds> {
   return null;
 }
 
+/**
+ * Apple — ÜÇ kimlik + bir `.p8` anahtarı ister; clientSecret ÜRETİLİR.
+ *
+ * Dördünden biri eksikse null döner ve provider hiç yüklenmez: yarım kimlikle
+ * açılan bir Apple girişi, kullanıcıyı Apple'a gönderip anlaşılmaz bir hata
+ * ekranında bırakır. Anahtar bozuksa da (createPrivateKey fırlatır) sessizce
+ * kapalı kalır — parola girişi ve diğer sağlayıcılar çalışmaya devam eder.
+ */
+export async function getAppleCreds(): Promise<SocialCreds> {
+  const envId = temiz(process.env.AUTH_APPLE_ID);
+  const envTeam = temiz(process.env.AUTH_APPLE_TEAM_ID);
+  const envKeyId = temiz(process.env.AUTH_APPLE_KEY_ID);
+  const envKey = temiz(process.env.AUTH_APPLE_PRIVATE_KEY);
+  if (envId && envTeam && envKeyId && envKey) {
+    try {
+      return {
+        clientId: envId,
+        clientSecret: appleClientSecret({
+          clientId: envId,
+          teamId: envTeam,
+          keyId: envKeyId,
+          privateKey: envKey,
+        }),
+      };
+    } catch {
+      return null; // anahtar okunamadı → Apple kapalı, diğer girişler etkilenmez
+    }
+  }
+
+  try {
+    const { auth } = await getStoreSettings();
+    if (auth.apple_enabled !== true) return null;
+    const id = temiz(auth.apple_client_id);
+    const team = temiz(auth.apple_team_id);
+    const keyId = temiz(auth.apple_key_id);
+    const key = temiz(auth.apple_private_key);
+    if (!id || !team || !keyId || !key) return null;
+    return {
+      clientId: id,
+      clientSecret: appleClientSecret({ clientId: id, teamId: team, keyId, privateKey: key }),
+    };
+  } catch {
+    /* yoksay */
+  }
+  return null;
+}
+
 /** Giriş ekranı için: hangi sosyal sağlayıcılar kullanılabilir? (secret DÖNMEZ) */
-export async function getEnabledSocialProviders(): Promise<{ google: boolean; facebook: boolean }> {
-  const [g, f] = await Promise.all([getGoogleCreds(), getFacebookCreds()]);
-  return { google: Boolean(g), facebook: Boolean(f) };
+export async function getEnabledSocialProviders(): Promise<{
+  google: boolean;
+  facebook: boolean;
+  apple: boolean;
+}> {
+  const [g, f, a] = await Promise.all([getGoogleCreds(), getFacebookCreds(), getAppleCreds()]);
+  return { google: Boolean(g), facebook: Boolean(f), apple: Boolean(a) };
 }
 
 /** Maskeleme tek yerde yaşar (saf modül) — eski import yolu bozulmasın diye yeniden dışa verilir. */

@@ -14,7 +14,15 @@ cd /var/www/viamood
 # FD 9 re-exec'e miras kalır (lock korunur); flock yalnız ilk (re-exec öncesi) çağrıda alınır.
 # ──────────────────────────────────────────────────────────────────────────
 if [ -z "$DEPLOY_LOCK_HELD" ] && [ -z "$DEPLOY_REEXEC" ]; then
-  exec 9>/tmp/viamood-autodeploy.lock
+  # Kilit dosyası bilerek PAYLAŞILAN /tmp yolunda: iki süreç AYNI kilidi görmeli,
+  # kullanıcıya özel yapmak kilidi işlevsiz bırakır. Ama `exec 9>` de açılamazsa
+  # sessizce düşer — log tuzağının kardeşi. Açıkça söylenir ve ayrı kodla çıkılır.
+  if ! exec 9>/tmp/viamood-autodeploy.lock 2>/dev/null; then
+    echo "  ✗ KİLİT DOSYASI AÇILAMADI: /tmp/viamood-autodeploy.lock"
+    echo "    sahip : $(stat -c '%U:%G %a' /tmp/viamood-autodeploy.lock 2>/dev/null || echo '(yok)')"
+    echo "    koşan : $(id -un)"
+    exit 4
+  fi
   if ! flock -w 600 9; then echo "⚠ Başka bir deploy (cron) sürüyor — atlandı."; exit 1; fi
 fi
 
@@ -67,14 +75,82 @@ for m in 0008_customers 0009_native_orders 0010_carts 0011_store_settings 0011_a
   fi
 done
 
+# Tip kapısı — build'den ÖNCE. `next build` zaten tip denetimi yapar ama 129 sn sürer ve
+# o süre boyunca .next ağacına dokunulmuş olur. `tsc --noEmit` aynı hatayı diske HİÇ
+# dokunmadan yakalar; 25 Eyl'de canlıyı 502'ye düşüren hata tam buydu
+# (route.ts:294 'son' is possibly 'undefined').
+# Kapsam tsconfig.deploy.json: tests/ HARİÇ — `next build` de testleri derlemez, kapı
+# build'den daha sıkı olursa deploy edilmeyen kod yüzünden yayın durur (ölçüldü: kök
+# yapılandırmayla 11 hata, hepsi tests/ içinde).
+# ─────────────────────────────────────────────────────────────────────────────
+# LOG YOLU — 25 Eyl 2026'da ÜÇ SAAT KAYBETTİREN TUZAK BURADAYDI.
+# Loglar sabit /tmp/viamood-*.log yollarına yazılıyordu. Makinede hem root hem
+# ubuntu deploy koşturabiliyor; dosyayı ilk kim yaratırsa sahibi o oluyor (644).
+# Sonra diğer kullanıcı `> /tmp/viamood-build.log` yazmaya kalkınca BASH KOMUTU
+# HİÇ ÇALIŞTIRMIYOR — yönlendirme açılamadığı için doğrudan hata dalına giriyor.
+# Ölçüldü: build.log root:root, ubuntu "Permission denied"; deploy 13 sn'de
+# "BUILD FAİL" yazıyordu ama `npm run build` hiç koşmamıştı ve ekrana ÜÇ SAAT
+# ÖNCEKİ bayat log basılıyordu. Hata gerçek değildi, ETİKETİ yanlıştı.
+LOG_DIR="${LOG_DIR:-$HOME/.viamood-log}"
+mkdir -p "$LOG_DIR" 2>/dev/null
+TSC_LOG="$LOG_DIR/tsc.log"
+BUILD_LOG="$LOG_DIR/build.log"
+
+# Yazılabilirlik ÖNCEDEN sınanır: sessizce "build başarısız" demek yerine
+# sorunun LOG olduğunu açıkça söyler ve AYRI çıkış koduyla (3) çıkar.
+for _l in "$TSC_LOG" "$BUILD_LOG"; do
+  if ! : > "$_l" 2>/dev/null; then
+    echo "  ✗ BUILD LOGU AÇILAMADI: $_l"
+    echo "    sahip : $(stat -c '%U:%G %a' "$_l" 2>/dev/null || echo '(dosya yok — dizin yazılamıyor)')"
+    echo "    koşan : $(id -un) ($(id -u))"
+    echo "    ÇÖZÜM : bu dosyayı silin ya da LOG_DIR=<yazılabilir-dizin> ile koşun."
+    exit 3
+  fi
+done
+
+echo ""
+echo "▸ Tip denetimi (tsc --noEmit)..."
+TSC_BAS=$(date +%s)
+if ! npx tsc --noEmit -p tsconfig.deploy.json > "$TSC_LOG" 2>&1; then
+  echo "  ✗ TİP HATASI — build'e hiç girilmedi, .next'e DOKUNULMADI ($(( $(date +%s) - TSC_BAS ))s)"
+  grep -E 'error TS' "$TSC_LOG" | head -10
+  exit 1
+fi
+echo "  ✓ Tip denetimi temiz ($(( $(date +%s) - TSC_BAS ))s)"
+
 # Build
 echo ""
 echo "▸ Next.js build..."
-if ! NEXT_TELEMETRY_DISABLED=1 npm run build > /tmp/viamood-build.log 2>&1; then
-  echo "  ✗ BUILD FAİL"
-  tail -20 /tmp/viamood-build.log
+# ÖLÇÜLMÜŞ ARIZA (25 Eyl 2026): build TS hatasıyla düştü, burada `exit 1` verildi ve
+# YARIM KALAN .next öylece bırakıldı. Next build çıktı ağacını önce siler; çalışan pm2
+# süreci silinmiş inode'da asılı kaldı (cwd=…/.next/standalone (deleted)) ve tüm istekler
+# 502 almaya başladı. Kapı vardı, GERİ DÖNÜŞ yoktu.
+#
+# Yedek yöntemi `cp -al` (hardlink): 68 MB'lık ağacı saniyeler yerine anlık kopyalar ve
+# disk yemez — dosya içerikleri paylaşılır, yalnız dizin girdileri çoğalır. Next build
+# dosyaları SİLİP yeniden yazdığı için (üzerine yazmaz) hardlink'ler bozulmaz.
+# `mv` seçilmedi: build sırasında .next yolu tümden kaybolur ve çalışan süreç lazy chunk
+# okuyamaz. Hardlink'te orijinal yol build bitene kadar yerinde kalır.
+YEDEK=".next.onceki-$(date +%H%M%S)"
+if [ -d .next ]; then
+  cp -al .next "$YEDEK" 2>/dev/null || cp -r .next "$YEDEK"
+fi
+if ! NEXT_TELEMETRY_DISABLED=1 npm run build > "$BUILD_LOG" 2>&1; then
+  echo "  ✗ BUILD FAİL — eski .next geri konuyor"
+  tail -20 "$BUILD_LOG"
+  if [ -d "$YEDEK" ]; then
+    rm -rf .next && mv "$YEDEK" .next
+    # Süreç yarım ağaçta asılı kalmasın diye sağlam .next ile yeniden bağlanır.
+    NEXT_BUILD_ID="$(git rev-parse --short HEAD 2>/dev/null || echo bilinmiyor)" \
+      pm2 restart viamood-web --update-env > /dev/null 2>&1
+    sleep 3
+    echo "  ↩ eski .next geri kondu · BUILD_ID=$(cat .next/BUILD_ID 2>/dev/null || echo YOK) · health=$(curl -s -o /dev/null -m 5 -w '%{http_code}' http://localhost/api/health)"
+  else
+    echo "  ⚠ geri konacak yedek YOK — .next hiç yoktu"
+  fi
   exit 1
 fi
+rm -rf "$YEDEK"          # başarılı build: yedek birikmesin
 echo "  ✓ Build OK"
 
 # Standalone bundle'a static + public kopyala
@@ -92,14 +168,38 @@ fi
 
 echo ""
 echo "▸ PM2 restart..."
-pm2 restart viamood-web --update-env > /dev/null
+# BUILD_ID — hangi commit canlıda, ÖLÇÜLEBİLİR olsun.
+# ÖLÇÜLEN ARIZA (25 Eyl 2026): /api/health `buildId: null` dönüyordu; bu yüzden
+# "main'de var ama canlıda yok" hâli günlerce görünmedi — merge kanıtı teslim
+# kanıtı sanıldı. Commit SHA'yı pm2'ye --update-env ile geçiriyoruz; sağlık ucu
+# zaten process.env.NEXT_BUILD_ID okuyor (health/route.ts:56).
+# .env.production'a YAZILMIYOR: o dosya sır taşıyor, deploy'un ona dokunması istenmez.
+NEXT_BUILD_ID="$(git rev-parse --short HEAD 2>/dev/null || echo bilinmiyor)" \
+  pm2 restart viamood-web --update-env > /dev/null
 sleep 2
 
-STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost/api/health)
+# ÖLÇÜLDÜ (25 Eyl 2026): bu kapı SESSİZCE HİÇ ÇALIŞMIYORDU.
+#   http://localhost/api/health            → 404   (nginx'in varsayılan sunucusu)
+#   https://hesap.viamood.com.tr/api/health → 200   (uç ÇALIŞIYOR)
+# `localhost` isteği uygulamanın sanal sunucusuna değil, varsayılan server bloğuna
+# düşüyordu; uç sağlamken kapı 404 görüp `exit 1` veriyor, auto-deploy.sh ise
+# deploy.sh'ın çıkış kodunu kontrol etmediği için log'a "deploy bitti" yazıyordu.
+# Sessiz geçen sağlık kapısı, olmayan kapıdan kötüdür: deploy "başarılı" derken
+# site ölü olabilirdi. Artık DOĞRUDAN uygulama portuna soruluyor.
+# Port pm2 ortamından okunur; bulunamazsa 4001 (ölçülen canlı port).
+SAGLIK_PORT="${PORT:-$(sudo -u ubuntu pm2 jlist 2>/dev/null | python3 -c "import json,sys
+try:
+    for p in json.load(sys.stdin):
+        if p.get('name')=='viamood-web':
+            print(p['pm2_env'].get('env',{}).get('PORT') or p['pm2_env'].get('PORT') or '')
+except Exception: pass" 2>/dev/null)}"
+SAGLIK_PORT="${SAGLIK_PORT:-4001}"
+SAGLIK_URL="http://127.0.0.1:${SAGLIK_PORT}/api/health"
+STATUS=$(curl -s -o /dev/null -m 10 -w "%{http_code}" "$SAGLIK_URL")
 if [ "$STATUS" = "200" ]; then
-  echo "  ✓ Health: $STATUS"
+  echo "  ✓ Health: $STATUS ($SAGLIK_URL)"
 else
-  echo "  ✗ Health: $STATUS"
+  echo "  ✗ Health: $STATUS ($SAGLIK_URL) — deploy BAŞARISIZ sayılıyor"
   pm2 logs viamood-web --lines 10 --nostream
   exit 1
 fi

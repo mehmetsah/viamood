@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { ILLER, getIlceler } from '@/lib/tr-addresses';
+import Halkode3DCerceve from '@/components/halkode/Halkode3DCerceve';
 // ⚠️ PaymentSettings DEĞİL: bu bileşen istemcide çalışıyor ve prop'u RSC yüküyle
 // HTML'e gömülüyor. Tip daraltıldı ki sır içeren bir alan buraya kazara geçmesin
 // (bkz. lib/settings/store.ts → vitrinOdemeAyarlari).
@@ -15,7 +16,28 @@ interface CartView {
   items_subtotal_cents: number;
 }
 
-const tl = (c: number) => (c / 100).toLocaleString('tr-TR', { minimumFractionDigits: 2 }) + ' ₺';
+/** Kuruş → Türkçe para metni. Sonlu olmayan girdide "NaN ₺" basmaz: API sözleşmesi
+ *  bir gün değişip alan eksik gelirse müşteri anlamsız bir sayı yerine "—" görür. */
+const tl = (c: number) =>
+  Number.isFinite(c) ? (c / 100).toLocaleString('tr-TR', { minimumFractionDigits: 2 }) + ' ₺' : '—';
+
+/** Taksit tutarı → Türkçe para metni.
+ *  ⚠ `amount_to_be_paid` bankadan TL cinsinden STRING gelir (kuruş DEĞİL), bu yüzden
+ *  tl() ile basılamaz — tl() kuruş beklediği için değer 100'e bölünürdü.
+ *  ÖLÇÜLEN KUSUR (25 Eyl 2026, taksit-1280.png): ham basıldığı için kutularda
+ *  "2499.00 ₺ / 833.00 ₺" görünüyordu — ondalık ayırıcı nokta, binlik ayırıcı yok;
+ *  aynı ekranın Özet panelinde ise "2.499,00 ₺" yazıyordu. Tek ekranda iki ayrı
+ *  para biçimi, biri Türkçe değil. Sonlu değilse tutar HİÇ basılmaz (boş bırakılır). */
+const tlTutar = (v: string | number | null | undefined) => {
+  // ÖLÇÜLDÜ: yalnız Number.isFinite yetmiyor — Number(null) === 0 olduğu için null bir
+  // tutar ekranda "0,00 ₺" görünüyordu; müşteri bunu "bedava" diye okur. Boş/null/boş
+  // metin önce elenir, sonra sonluluk bakılır.
+  if (v === null || v === undefined || (typeof v === 'string' && v.trim() === '')) return '';
+  const n = Number(v);
+  return Number.isFinite(n)
+    ? n.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ₺'
+    : '';
+};
 const inputCls =
   'h-11 w-full px-3 rounded-lg border border-neutral-300 text-sm outline-none focus:border-[var(--color-brand-orange)]';
 
@@ -53,6 +75,8 @@ export function CheckoutForm({ payment }: { payment: VitrinOdemeAyarlari }) {
   const [card, setCard] = useState({ holder: '', no: '', month: '', year: '', cvv: '' });
   const [installments, setInstallments] = useState<{ installments_number: number; amount_to_be_paid: string }[]>([]);
   const [selectedInstallment, setSelectedInstallment] = useState(1);
+  // 3D formu artık sayfayı ezmiyor; site içi çerçevede açılıyor (Yunus kararı, 25 Eyl 2026).
+  const [uc3d, setUc3d] = useState<{ html: string; invoiceId?: string } | null>(null);
 
   const ilceler = useMemo(() => (il ? getIlceler(il) : []), [il]);
 
@@ -176,12 +200,13 @@ export function CheckoutForm({ payment }: { payment: VitrinOdemeAyarlari }) {
         });
         const d = await res.json();
         if (d.ok && d.form_html) {
-          // 3D formu kendi kendine banka sayfasına POST eder — innerHTML script çalıştırmaz,
-          // bu yüzden belge doğrudan yazılır (PSP entegrasyonlarının standart yolu).
-          document.open();
-          document.write(d.form_html);
-          document.close();
-          return; // sayfa bankaya gidiyor
+          // ESKİDEN: document.write ile TÜM sayfa eziliyordu, müşteri siteden çıkmış gibi
+          // oluyordu. ARTIK: sepet özeti/başlık ekranda kalır, doğrulama aşağıdaki
+          // çerçevede açılır. Banka çerçeveyi reddederse Halkode3DCerceve kendiliğinden
+          // tam sayfaya düşer (emniyet subabı) — müşteri boş ekranda kalmaz.
+          setUc3d({ html: d.form_html, invoiceId: typeof d.invoice_id === 'string' ? d.invoice_id : undefined });
+          setStatus('idle');
+          return;
         }
         setResult({ ok: false, error: d.detail || d.error || 'Kart ödemesi başlatılamadı' });
         return;
@@ -237,6 +262,16 @@ export function CheckoutForm({ payment }: { payment: VitrinOdemeAyarlari }) {
     <div className="grid md:grid-cols-[1fr_320px] gap-8 items-start">
       {/* Sol: adres + ödeme */}
       <div className="flex flex-col gap-6">
+        {/* 3D doğrulama açıkken form gizlenir ama SAYFA KALIR: başlık, sepet özeti,
+            marka yerinde. Eskiden document.write tüm belgeyi eziyordu. */}
+        {uc3d && (
+          <Halkode3DCerceve
+            formHtml={uc3d.html}
+            iz={{ invoiceId: uc3d.invoiceId, kaynak: 'odeme' }}
+            baslik="Ödemenizi doğrulayın"
+          />
+        )}
+        <div className={uc3d ? 'hidden' : 'flex flex-col gap-6'}>
         <section className="bg-white rounded-2xl border p-6">
           <h2 className="font-bold border-b pb-2 mb-4">Teslimat adresi</h2>
           <div className="grid grid-cols-2 gap-3">
@@ -287,31 +322,85 @@ export function CheckoutForm({ payment }: { payment: VitrinOdemeAyarlari }) {
                   </span>
                 </label>
                 {method === 'card' && (
+                  /* Kart alanları — Yunus'un 23 Eyl örneği ÜST SINIR (Ayşe kararı #76).
+                     Örnekte olmayan düğme/alan EKLENMEZ: yalnız ad soyad, kart no,
+                     son kullanma, CVV, taksit ve 3D Secure güvencesi var.
+                     Satır yükseklikleri leading-relaxed (1.625) — #102 eşiği 1.3. */
                   <div className="px-4 pb-4 pt-1 border-t bg-neutral-50/60 flex flex-col gap-3">
-                    <input className={inputCls} placeholder="Kart üzerindeki isim" autoComplete="cc-name"
-                      value={card.holder} onChange={(e) => setCard({ ...card, holder: e.target.value })} />
-                    <input className={inputCls} placeholder="Kart numarası" inputMode="numeric" autoComplete="cc-number"
-                      value={card.no} onChange={(e) => setCard({ ...card, no: e.target.value })} />
+                    <div>
+                      <label htmlFor="vm-kart-ad" className="mb-1 block text-xs font-medium leading-relaxed text-neutral-700">
+                        Kart Üzerindeki Ad Soyad
+                      </label>
+                      <input id="vm-kart-ad" className={inputCls} placeholder="Ad Soyad" autoComplete="cc-name"
+                        value={card.holder} onChange={(e) => setCard({ ...card, holder: e.target.value })} />
+                    </div>
+                    <div>
+                      <label htmlFor="vm-kart-no" className="mb-1 block text-xs font-medium leading-relaxed text-neutral-700">
+                        Kart Numarası
+                      </label>
+                      <input id="vm-kart-no" className={inputCls} placeholder="0000 0000 0000 0000" inputMode="numeric"
+                        autoComplete="cc-number" value={card.no}
+                        onChange={(e) => setCard({ ...card, no: e.target.value })} />
+                    </div>
                     <div className="grid grid-cols-3 gap-3">
-                      <input className={inputCls} placeholder="Ay (12)" inputMode="numeric" autoComplete="cc-exp-month"
-                        value={card.month} onChange={(e) => setCard({ ...card, month: e.target.value })} />
-                      <input className={inputCls} placeholder="Yıl (2028)" inputMode="numeric" autoComplete="cc-exp-year"
-                        value={card.year} onChange={(e) => setCard({ ...card, year: e.target.value })} />
-                      <input className={inputCls} placeholder="CVV" inputMode="numeric" autoComplete="cc-csc"
-                        value={card.cvv} onChange={(e) => setCard({ ...card, cvv: e.target.value })} />
+                      <div className="col-span-2">
+                        <label htmlFor="vm-kart-ay" className="mb-1 block text-xs font-medium leading-relaxed text-neutral-700">
+                          Son Kullanma
+                        </label>
+                        <div className="grid grid-cols-2 gap-2">
+                          <input id="vm-kart-ay" className={inputCls} placeholder="AA" inputMode="numeric" autoComplete="cc-exp-month"
+                            value={card.month} onChange={(e) => setCard({ ...card, month: e.target.value })} />
+                          <input className={inputCls} placeholder="YYYY" inputMode="numeric" autoComplete="cc-exp-year"
+                            value={card.year} onChange={(e) => setCard({ ...card, year: e.target.value })} />
+                        </div>
+                      </div>
+                      <div>
+                        <label htmlFor="vm-kart-cvv" className="mb-1 block text-xs font-medium leading-relaxed text-neutral-700">
+                          Güvenlik Kodu
+                        </label>
+                        <input id="vm-kart-cvv" className={inputCls} placeholder="CVV" inputMode="numeric" autoComplete="cc-csc"
+                          value={card.cvv} onChange={(e) => setCard({ ...card, cvv: e.target.value })} />
+                      </div>
                     </div>
                     {installments.length > 1 && (
-                      <div>
-                        <label className="text-xs font-medium block mb-1">Taksit</label>
-                        <select className={inputCls} value={selectedInstallment}
-                          onChange={(e) => setSelectedInstallment(Number(e.target.value))}>
-                          {installments.map((i) => (
-                            <option key={i.installments_number} value={i.installments_number}>
-                              {i.installments_number === 1 ? 'Tek çekim' : `${i.installments_number} taksit`} — {i.amount_to_be_paid} ₺
-                            </option>
-                          ))}
-                        </select>
-                      </div>
+                      /* TAKSİT IZGARASI — Ayşe Demiröz hükümleri (25 Eyl 2026):
+                         · ayse:123 — kırılım VIEWPORT'a değil KAPSAYICIYA bağlı (container query):
+                           <300px → 3 sütun · 300–499px → 4 · ≥500px → 6  (eşik 340 DEĞİL 300 — referansın
+                           ölçülmüş değeri; ayse:123 metninde 340 yazıyor ama aynı kararda
+                           "kapsayıcı ~307px → 4 sütun" deniyor, ikisi çelişiyordu). Ölçüldü: bizim kapsayıcı
+                           1280 ve 768'de ~436px olduğu için ikisinde de 4 sütun çıkar (sapma DEĞİL,
+                           referansın kendi kuralı 436px'te zaten 4 verir); 430px'te ~307px → 4.
+                         · ayse:122 — kare (aspect-ratio) İSTENMEDİ; kutuya min-h-[72px] tabanı.
+                           Referansın karesi 4 satır metin içindi, bizim kutuda 3 satır var.
+                         · ayse:121 — köşe yarıçapı 8px (rounded-lg) ONAYLANDI; referanstaki 10px'e
+                           bilinçli olarak uyulmuyor, ekranın diğer kutuları da 8px.
+                         Liste /api/v1/payment/halkode/installments ucundan gelir; sabit kodlama YOK. */
+                      <fieldset className="@container">
+                        <legend className="mb-2 block text-xs font-medium leading-relaxed text-neutral-700">Taksit</legend>
+                        <div className="grid grid-cols-3 gap-2 p-3 @[300px]:grid-cols-4 @[500px]:grid-cols-6">
+                          {installments.map((i) => {
+                            const secili = selectedInstallment === i.installments_number;
+                            return (
+                              <label key={i.installments_number}
+                                className={`flex min-h-[72px] cursor-pointer flex-col items-center justify-center rounded-lg border px-2 py-2 text-center leading-relaxed transition ${
+                                  secili
+                                    ? 'border-neutral-900 bg-neutral-900 text-white'
+                                    : 'border-neutral-200 bg-white text-neutral-800 hover:border-neutral-400'
+                                }`}>
+                                <input type="radio" name="vm-taksit" className="sr-only"
+                                  checked={secili} value={i.installments_number}
+                                  onChange={() => setSelectedInstallment(i.installments_number)} />
+                                <span className="text-xs font-semibold leading-relaxed">
+                                  {i.installments_number === 1 ? 'Tek çekim' : `${i.installments_number} taksit`}
+                                </span>
+                                <span className={`text-[11px] leading-relaxed ${secili ? 'text-white/80' : 'text-neutral-500'}`}>
+                                  {tlTutar(i.amount_to_be_paid)}
+                                </span>
+                              </label>
+                            );
+                          })}
+                        </div>
+                      </fieldset>
                     )}
                     <p className="text-xs text-neutral-500">
                       Ödeme, bankanın 3D Secure sayfasına yönlendirilerek tamamlanır. Kart bilgileriniz saklanmaz.
@@ -327,6 +416,7 @@ export function CheckoutForm({ payment }: { payment: VitrinOdemeAyarlari }) {
             )}
           </div>
         </section>
+      </div>
       </div>
 
       {/* Sağ: özet */}
@@ -353,6 +443,7 @@ export function CheckoutForm({ payment }: { payment: VitrinOdemeAyarlari }) {
         <button
           onClick={submit}
           disabled={!valid || status === 'submitting'}
+          aria-busy={status === 'submitting'}
           className="mt-5 w-full px-6 py-3.5 rounded-full bg-[var(--color-brand-orange)] text-white font-semibold disabled:opacity-50"
         >
           {status === 'submitting' ? 'İşleniyor…' : 'Siparişi Tamamla'}

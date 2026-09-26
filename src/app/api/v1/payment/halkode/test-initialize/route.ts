@@ -31,7 +31,7 @@ import {
   halkodeConfigured,
   halkodeEnabled,
 } from '@/lib/halkode/client';
-import { TEST_TUTAR_TL, anahtardanOrtam } from '@/lib/halkode/test-page';
+import { TEST_TUTAR_TL, COKLU_SEPET, COKLU_TUTAR_TL, anahtardanOrtam } from '@/lib/halkode/test-page';
 import { halkodeOnizlemeOrtami } from '@/lib/halkode/preview';
 import { env } from '@/lib/env';
 
@@ -40,6 +40,8 @@ export const runtime = 'nodejs';
 
 interface Govde {
   anahtar?: string;
+  /** Yalnız SEÇİM: 'coklu' → sunucudaki çok kalemli demo sepet. Kalem/fiyat GELMEZ. */
+  sepet?: 'coklu';
   installments_number?: number;
   cc_holder_name?: string;
   cc_no?: string;
@@ -108,6 +110,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, error: 'Taksit seçimi geçersiz.' }, { status: 422, headers: h });
   }
 
+  // ⚠️ İstemciden KALEM ALINMAZ — yalnız "hangi sabit sepet" seçilir (coklu|tek).
+  // Tutar da o sabitten türetilir; istemcinin gönderdiği hiçbir fiyat kullanılmaz.
+  const coklu = b.sepet === 'coklu';
+  const tutar = coklu ? COKLU_TUTAR_TL : TEST_TUTAR_TL;
+
   const t = await getToken();
   if (!t.ok) {
     return NextResponse.json({ ok: false, error: `Halköde jetonu alınamadı: ${t.error}` }, { status: 502, headers: h });
@@ -124,14 +131,17 @@ export async function POST(req: NextRequest) {
       expiryMonth: ay,
       expiryYear: yil,
       cvv,
-      total: TEST_TUTAR_TL,
+      total: tutar,
       installmentsNumber: taksit,
       invoiceId,
-      invoiceDescription: `Via Mood Halköde ${ortam === 'canli' ? 'canlı deneme' : 'test'} — ${TEST_TUTAR_TL.toFixed(2)} TL`,
+      invoiceDescription: `Via Mood Halköde ${ortam === 'canli' ? 'canlı deneme' : 'test'} — ${tutar.toFixed(2)} TL${coklu ? ' (çok kalemli)' : ''}`,
       name: sahip.split(/\s+/)[0] || 'Test',
       surname: sahip.split(/\s+/).slice(1).join(' ') || 'Kullanici',
       // items toplamı total ile EŞİT olmalı — yoksa Halköde status 13 döner.
-      items: [{ name: 'Halkode test islemi', price: TEST_TUTAR_TL, quantity: 1 }],
+      // Çok kalemli seçimde SUNUCU SABİTİ sepet gider; istemci kalem gönderemez.
+      items: coklu
+        ? COKLU_SEPET.map((k) => ({ ...k }))
+        : [{ name: 'Halkode test islemi', price: TEST_TUTAR_TL, quantity: 1 }],
       returnUrl: donus,
       cancelUrl: donus,
     },

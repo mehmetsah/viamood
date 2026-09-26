@@ -1,0 +1,23 @@
+{
+  "// NEDEN AYRI DOSYA": [
+    "deploy kapısı DEPLOY EDİLEN kodu ölçmeli. `next build` tests/ dizinini derlemez;",
+    "kök tsconfig.json ise '**/*.ts' ile testleri de kapsar. Ölçüldü (25 Eyl 2026, prod):",
+    "`npx tsc --noEmit` 28 sn sürüyor ve 11 hata veriyor — HEPSİ tests/ içinde",
+    "(apple-giris-iskeleti 4, halkode-form-hp 5, halkode-kalem-tutari 2).",
+    "Kök yapılandırmayla kurulan bir deploy kapısı bu yüzden HER deploy'u kırardı,",
+    "oysa o hatalar canlıya hiç çıkmıyor. Bu dosya kapıyı build'in kapsamına hizalar.",
+    "Testlerdeki 11 hata ayrı bir kalemdir ve kapatılmalıdır — susturulmuyor, ertelendi."
+  ],
+  "extends": "./tsconfig.json",
+  "exclude": [
+    "node_modules",
+    ".next",
+    "tests",
+    "scripts/halkode-test.ts",
+    "scripts/halkode-probe.ts",
+    "scripts/halkode-3d-flow.ts",
+    "scripts/halkode-cards.ts",
+    "scripts/halkode-refund.ts",
+    "scripts/halkode-taksit-olc.ts"
+  ]
+}

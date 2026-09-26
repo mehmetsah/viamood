@@ -268,13 +268,32 @@ export async function POST(req: NextRequest) {
   const totalTl = totalKurus / 100;
 
   // items TOPLAMI total'a EŞİT olmalı (yoksa Halköde status 13 döner).
+  //
+  // 🔴 ÖLÇÜLMÜŞ ARIZA (25 Eyl 2026, 10 başarısız / 3 başarılı ödeme):
+  // `price` alanına SATIR TOPLAMI yazılıp `quantity` de ayrıca gönderiliyordu.
+  // Halköde kalem tutarını `price × quantity` olarak hesapladığı için adet 1'den
+  // büyük her sepette toplam şişiyor ve status 13 dönüyordu:
+  //   "The total of your items price 8100.0000 is not equal to the invoice total (8100.0000)"
+  // (iki sayı mesajda aynı görünür — Halköde ham toplamı basar, kendi çarpımını değil.)
+  // Doğrusu: price = BİRİM fiyat. Böylece Halköde'nin çarpımı itemsKurus ile örtüşür.
   const items: HalkodeItem[] = body.line_items.map((li) => ({
     name: (li.title || `Ürün ${li.variant_id}`).slice(0, 100),
-    price: ((li.price ?? 0) * li.quantity) / 100,
+    price: Math.round(li.price ?? 0) / 100,
     quantity: li.quantity,
   }));
   if (shipKurus > 0) items.push({ name: 'Kargo', price: shipKurus / 100, quantity: 1 });
   if (discKurus > 0) items.push({ name: 'İndirim', price: -discKurus / 100, quantity: 1 });
+
+  // İKİNCİ KAPI — kuruş sapması. Yukarıdaki düzeltme çarpımı hizalar ama ondalık
+  // toplama hâlâ 1 kuruş kayabilir (ör. 2699,99 × 3). Sapma varsa son kaleme
+  // yazılır; böylece Halköde'ye giden items toplamı total'a KURUŞU KURUŞUNA eşit olur.
+  const itemsToplamKurus = items.reduce((s, it) => s + Math.round(it.price * 100) * it.quantity, 0);
+  const sapmaKurus = totalKurus - itemsToplamKurus;
+  const son = items.at(-1);
+  if (sapmaKurus !== 0 && son) {
+    son.price = Math.round(son.price * 100 + sapmaKurus / son.quantity) / 100;
+    console.warn('[halkode/initialize] kalem toplamı düzeltildi', { sapmaKurus, totalKurus });
+  }
 
   await ensureTrCustomer(body.customer_email || body.email);
 

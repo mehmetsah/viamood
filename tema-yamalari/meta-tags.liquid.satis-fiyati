@@ -1,0 +1,215 @@
+{% doc %}
+  Renders all meta tags for the page including Open Graph, Twitter Cards, and SEO tags.
+
+  @param {object} [product] - The product object, available on product pages for price meta tags.
+{% enddoc %}
+
+<meta charset="utf-8">
+<meta
+  http-equiv="X-UA-Compatible"
+  content="IE=edge"
+>
+<meta
+  name="viewport"
+  content="width=device-width,initial-scale=1"
+>
+<meta
+  name="view-transition"
+  content="same-origin"
+>
+<meta
+  name="theme-color"
+  content=""
+>
+
+{%- liquid
+  assign og_title = page_title | default: shop.name
+  assign og_url = canonical_url | default: request.origin
+  assign og_type = 'website'
+  assign og_description = page_description | default: shop.description | default: shop.name
+
+  if request.page_type == 'product'
+    assign og_type = 'product'
+  elsif request.page_type == 'article'
+    assign og_type = 'article'
+  elsif request.page_type == 'password'
+    assign og_url = request.origin
+  endif
+%}
+
+<meta
+  property="og:site_name"
+  content="{{ shop.name }}"
+>
+<meta
+  property="og:url"
+  content="{{ og_url }}"
+>
+<meta
+  property="og:title"
+  content="{{ og_title | escape }}"
+>
+<meta
+  property="og:type"
+  content="{{ og_type }}"
+>
+<meta
+  property="og:description"
+  content="{{ og_description | escape }}"
+>
+
+{%- if page_image -%}
+  <meta
+    property="og:image"
+    content="http:{{ page_image | image_url }}"
+  >
+  <meta
+    property="og:image:secure_url"
+    content="https:{{ page_image | image_url }}"
+  >
+  <meta
+    property="og:image:width"
+    content="{{ page_image.width }}"
+  >
+  <meta
+    property="og:image:height"
+    content="{{ page_image.height }}"
+  >
+{%- endif -%}
+
+{%- if request.page_type == 'product' -%}
+  {%- comment -%}
+    MADDE 9 — "Meta ads fiyatı okuyamıyor" ARIZASININ KÖKÜ BURASI.
+
+    ÖLÇÜLDÜ (17 Eyl, canlı sayfa): og:price:amount değerleri şöyle çıkıyordu —
+        500,00   ·   600,00   ·   280,00   ·   2.600,00
+    `money_without_currency` mağazanın YEREL biçimini uygular: ondalık ayırıcı
+    VİRGÜL, binlik ayırıcı NOKTA. Meta/Google katalog ayrıştırıcısı ise düz
+    makine sayısı bekler (nokta ondalık, binlik ayırıcı YOK).
+    En kötüsü dört haneli fiyatlar: "2.600,00" karşı tarafta 2,6 olarak
+    okunabiliyor — yani fiyat yanlış çekiliyor, eksik değil.
+
+    ⚠ JSON-LD'DE SORUN YOK, KONTROL EDİLDİ: tek varyantlı üründe
+    Product.offers.price "500.00", çok varyantlıda ProductGroup.hasVariant[]
+    .offers.price "600.00" — ikisi de zaten NOKTALI ve geçerli. Arıza yalnız
+    og/meta katmanında; bu yüzden düzeltme de yalnız burada.
+
+    divided_by: 100.0 — kuruş tabanlı tamsayıyı ondalığa çevirir ve yerel
+    biçimlendirmeye hiç uğramaz. `money_without_currency`'ye dönmek arızayı
+    geri getirir.
+  {%- endcomment -%}
+  {%- assign og_fiyat = product.price | divided_by: 100.0 -%}
+  {%- assign og_stok = 'out of stock' -%}
+  {%- if product.available -%}{%- assign og_stok = 'in stock' -%}{%- endif -%}
+  {%- comment -%}
+    FİYAT ALANI = ÖDENECEK FİYAT (25 Eyl 2026 · #990684, Mehmet Şah talimatı).
+
+    ⚠ 22 Eyl'deki kurulum TERSİNE ÇEVRİLDİ ve sebebi ölçüldü. O gün Meta'nın
+    feed şemasına uyulmuştu: price = liste (750), sale_price = indirimli (500).
+    Şema açısından doğruydu AMA CANLIDA ÇALIŞMADI — katalogda/reklamda 750 TL
+    göründü, yani okuyan taraf `sale_price`ı almadı, `price`ı aldı. Aynı
+    sayfadaki JSON-LD (Shopify'ın `structured_data` filtresi) 500,00 diyordu;
+    iki kaynak ÇELİŞİYORDU ve müşteriye yanlış fiyat gösteren taraf bu etiketti.
+
+    YENİ KURAL — tek ve tartışmasız: `price` alanı HER ZAMAN müşterinin
+    ÖDEYECEĞİ fiyattır. Böylece og etiketi, JSON-LD ve sepetteki tutar aynı
+    sayıyı söyler; hangi ayrıştırıcı gelirse gelsin yanlış fiyat gösteremez.
+    Üstü çizili (compare-at) fiyat SİLİNMEZ, kendi alanına taşınır:
+    `og:price:standard_amount` — Facebook'un liste fiyatı alanı.
+
+    ⚠ `product:sale_price:*` ARTIK YAZILMIYOR: `price` zaten indirimli tutarı
+    taşıdığı için sale_price onu tekrarlar ve "%0 indirim" üretir — 22 Eyl'deki
+    yorumda boş sale_price için yazılan uyarının aynısı, bu kez eşit değer için.
+    Bedeli kayıt altında: Meta'nın indirim rozeti bu kurulumda çıkmayabilir.
+    Yanlış fiyat göstermektense rozeti kaybetmek tercih edildi.
+
+    ⚠ compare_at_price YOKSA (indirimsiz ürün) standard_amount HİÇ yazılmaz —
+    o üründe og ile JSON-LD birebir eşit çıkar (düzeltmenin sağlam fiyatı
+    bozmadığının kanıtı budur).
+  {%- endcomment -%}
+  {%- assign liste_fiyat = og_fiyat -%}
+  {%- assign indirimde = false -%}
+  {%- if product.compare_at_price > product.price -%}
+    {%- assign liste_fiyat = product.compare_at_price | divided_by: 100.0 -%}
+    {%- assign indirimde = true -%}
+  {%- endif -%}
+  <meta property="og:price:amount" content="{{ og_fiyat }}">
+  <meta property="og:price:currency" content="{{ cart.currency.iso_code }}">
+  {%- if indirimde -%}
+    <meta property="og:price:standard_amount" content="{{ liste_fiyat }}">
+  {%- endif -%}
+  {%- comment -%}
+    product:* ad alanı Meta katalog tarafının BİRİNCİL okuduğu yer; og:price
+    eski Facebook alanı. İkisi de yazılıyor ki hangi ayrıştırıcı gelirse gelsin
+    aynı sayıyı görsün (ikisi çeliştiğinde kaynağı bulmak saatler alıyor).
+  {%- endcomment -%}
+  <meta property="product:price:amount" content="{{ og_fiyat }}">
+  <meta property="product:price:currency" content="{{ cart.currency.iso_code }}">
+  <meta property="product:availability" content="{{ og_stok }}">
+  {%- comment -%}
+    ZORUNLU İKİ ETİKET — 22 Eyl ölçümünde CANLI SAYFADA HİÇ YOKTU.
+    Meta'nın zorunlu OG listesi (aynı reference sayfası): og:title, og:description,
+    og:url, og:image, og:price:amount, og:price:currency, product:brand,
+    product:availability, product:condition. Bizde ilk altısı vardı; brand ve
+    condition eksikti — eksik zorunlu alan öğenin katalogda reddedilmesine ya da
+    eksik işlenmesine yol açıyor.
+
+    condition sabit 'new': Via Mood sıfır ürün satıyor, mağazada ikinci el/
+    yenilenmiş kalem yok. Shopify'da bunu taşıyan bir alan da bulunmadığı için
+    üretilmiş bir değer değil, mağazanın gerçeği yazılıyor.
+  {%- endcomment -%}
+  {%- if product.vendor != blank -%}
+    <meta property="product:brand" content="{{ product.vendor | escape }}">
+  {%- endif -%}
+  <meta property="product:condition" content="new">
+  {%- if product.selected_or_first_available_variant.sku != blank -%}
+    <meta property="product:retailer_item_id" content="{{ product.selected_or_first_available_variant.sku }}">
+  {%- endif -%}
+  {%- comment -%}
+    item_group_id — çok varyantlı üründe varyantları TEK ürün altında toplar.
+    Yoksa Meta her varyantı ayrı ürün sanar (arama sonucunu 4 renkle kaplayan
+    #990335/#990336 arızasının reklam tarafındaki karşılığı). Tek varyantlı
+    üründe yazılmaz: gruplanacak bir şey yok.
+  {%- endcomment -%}
+  {%- if product.variants.size > 1 -%}
+    <meta property="product:item_group_id" content="{{ product.id }}">
+  {%- endif -%}
+{%- endif -%}
+
+{%- if settings.social_twitter_link != blank -%}
+  <meta
+    name="twitter:site"
+    content="{{ settings.social_twitter_link | split: 'twitter.com/' | last | prepend: '@' }}"
+  >
+{%- endif -%}
+<meta
+  name="twitter:card"
+  content="summary_large_image"
+>
+<meta
+  name="twitter:title"
+  content="{{ og_title | escape }}"
+>
+<meta
+  name="twitter:description"
+  content="{{ og_description | escape }}"
+>
+
+<title>
+  {{ page_title }}
+  {%- if current_tags %} &ndash; tagged "{{ current_tags | join: ', ' }}"{% endif -%}
+  {%- if current_page != 1 %} &ndash; Page {{ current_page }}{% endif -%}
+  {%- unless page_title contains shop.name %} &ndash; {{ shop.name }}{% endunless -%}
+</title>
+
+<link
+  rel="canonical"
+  href="{{ canonical_url }}"
+>
+
+{% if page_description %}
+  <meta
+    name="description"
+    content="{{ page_description | escape }}"
+  >
+{% endif %}

@@ -19,7 +19,7 @@
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import DenemeSayfasi from '@/components/halkode/DenemeSayfasi';
-import { CANLI_ANAHTAR, TEST_TUTAR_TL } from '@/lib/halkode/test-page';
+import { CANLI_ANAHTAR, TEST_TUTAR_TL, COKLU_SEPET, COKLU_TUTAR_TL } from '@/lib/halkode/test-page';
 import { getStoreSettings } from '@/lib/settings/store';
 
 export const dynamic = 'force-dynamic';
@@ -49,5 +49,16 @@ export default async function Sayfa({
   const { payment } = await getStoreSettings();
   if (payment.halkode_canli_deneme !== true) notFound();
 
-  return <DenemeSayfasi ortam="canli" anahtar={CANLI_ANAHTAR} tutar={TEST_TUTAR_TL} sp={sp} />;
+  // ?sepet=coklu → sunucudaki SABİT çok kalemli demo sepet (2×3,49 + 2,75 + kargo − indirim).
+  // Anahtar yoksa davranış AYNEN eskisi: tek kalem, 10 TL. Geriye dönük kırılma yok.
+  const coklu = sp?.sepet === 'coklu';
+  return (
+    <DenemeSayfasi
+      ortam="canli"
+      anahtar={CANLI_ANAHTAR}
+      tutar={coklu ? COKLU_TUTAR_TL : TEST_TUTAR_TL}
+      kalemler={coklu ? COKLU_SEPET : undefined}
+      sp={sp}
+    />
+  );
 }
