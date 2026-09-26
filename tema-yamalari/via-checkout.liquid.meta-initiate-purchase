@@ -1,0 +1,88 @@
+{%- comment -%}
+  META PIXEL — InitiateCheckout + Purchase · ÖNERİ YAMASI, CANLI TEMAYA UYGULANMADI
+  Hazırlayan: Elif (Viamood) · 26 Eyl 2026 · konu: "Meta ürün fiyatını okuyamıyor"
+
+  ⚠ BU DOSYA CANLI TEMADA DEĞİL. Tema/uygulama erişimi Mehmet Şah ve Yunus'un
+  kararıdır (26 Eyl talimatı: "Shopify tarafı gerekiyorsa değişikliği YAPMA").
+
+  ÖLÇÜLEN EKSİK (canlı Chrome, viamood.com.tr, çerez onayı kabul edilmiş):
+    ürün sayfası → PageView + ViewContent(value=500, currency=TRY) ✅
+    sepete ekle  → AddToCart(value=500, currency=TRY) ✅
+    /pages/odeme → YALNIZ PageView · InitiateCheckout YOK · Purchase YOK ❌
+  Sepet dolu olmasına rağmen (/cart.js → 1 kalem, 500 TL).
+
+  KÖK NEDEN: Shopify'ın kendi checkout'u kullanılmıyor; ödeme tema içi
+  /pages/odeme sayfasında (via-checkout.liquid) yürüyor. Shopify Web Pixel
+  `checkout_started` / `checkout_completed` olaylarını YALNIZ kendi checkout'unda
+  yayar → iki olay hiç doğmaz → Meta'ya DÖNÜŞÜM DEĞERİ hiç ulaşmaz. Katalog ya da
+  Event Setup Tool bunu kurtarmaz; değer olayın İÇİNDE gitmek zorundadır.
+
+  NEREYE: via-checkout.liquid'in en altına, kapanış </script> sonrası.
+  ÖN KOŞUL: `fbq` sayfada tanımlı (Shopify Web Pixel yüklüyor; ölçüldü:
+  `typeof window.fbq === 'function'`). Tanımsızsa yama sessizce hiçbir şey yapmaz.
+
+  DEĞER KURALI (src/lib/meta/pixel-olay.ts ile BİREBİR aynı):
+    value      = ÖDENECEK toplam (kargo dâhil, indirim düşülmüş), TL, 2 ondalık
+    currency   = 'TRY' sabit
+    content_ids= VARYANT kimliği (katalog retailer_id varyant bazlıdır)
+    contents   = [{ id, quantity, item_price }] · item_price BİRİM fiyat
+  ⚠ item_price'a SATIR TOPLAMI yazma. Halköde'de tam bu hata `status_code=13`
+  ("items price not equal to the invoice total") üretti; burada ödeme reddedilmez
+  ama Meta'ya YANLIŞ CİRO gider — ikisi de sessiz hatadır.
+{%- endcomment -%}
+<script>
+(function () {
+  if (typeof window.fbq !== 'function') return;
+
+  function yuk(sepet, odenecekKurus) {
+    var contents = (sepet.items || []).filter(function (i) { return i.quantity > 0; }).map(function (i) {
+      return {
+        id: String(i.variant_id),
+        quantity: i.quantity,
+        // BİRİM fiyat: Shopify `line_price` SATIR toplamıdır, adede bölünür.
+        item_price: Math.round(i.line_price / i.quantity) / 100
+      };
+    });
+    if (!contents.length) return null;
+    var value = Math.round(odenecekKurus) / 100;
+    if (!isFinite(value) || value <= 0) return null;   // değersiz olay GİTMEZ
+    return {
+      value: value,
+      currency: 'TRY',
+      content_type: 'product',
+      content_ids: contents.map(function (c) { return c.id; }),
+      contents: contents,
+      num_items: contents.reduce(function (s, c) { return s + c.quantity; }, 0)
+    };
+  }
+
+  // 1) InitiateCheckout — /pages/odeme yüklendiğinde, sepet okunduktan SONRA.
+  fetch('/cart.js', { credentials: 'same-origin' })
+    .then(function (r) { return r.json(); })
+    .then(function (sepet) {
+      // Kargo bu noktada seçilmemiş olabilir; value ara toplamla kurulur ve
+      // Purchase'ta kesin tutarla düzeltilir (Meta son olayı esas alır).
+      var y = yuk(sepet, sepet.total_price);
+      if (y) window.fbq('track', 'InitiateCheckout', y);
+    })
+    .catch(function () { /* ölçüm ödemeyi ASLA bozmaz */ });
+
+  // 2) Purchase — sipariş oluştuğunda, ÖDENEN kesin tutarla.
+  //    via-checkout.liquid'de siparişi başarıyla kapatan yer neresiyse orada
+  //    çağrılır (tek sayfa akışında sonuç adımı). `window.viaSiparisTamam`
+  //    ödeme akışının mevcut başarı kancasına bağlanır; ikinci kez ateşlenmesin
+  //    diye sipariş numarası damgalanır.
+  window.viaSiparisTamam = function (siparis) {
+    try {
+      if (!siparis || !siparis.order_number) return;
+      var anahtar = 'via_fb_purchase_' + siparis.order_number;
+      if (sessionStorage.getItem(anahtar)) return;      // çift sayım kapısı
+      var y = yuk({ items: siparis.items || [] }, siparis.total_paid_cents);
+      if (!y) return;
+      y.order_id = String(siparis.order_number);
+      window.fbq('track', 'Purchase', y);
+      sessionStorage.setItem(anahtar, '1');
+    } catch (e) { /* sessiz — sipariş akışı önce gelir */ }
+  };
+})();
+</script>
