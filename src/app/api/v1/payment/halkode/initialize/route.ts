@@ -36,6 +36,7 @@ import {
   odemeOrtami,
 } from '@/lib/halkode/client';
 import { halkodeOnizlemeOrtami } from '@/lib/halkode/preview';
+import { kalemAdiKirp } from '@/lib/halkode/kalem-adi';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -277,7 +278,7 @@ export async function POST(req: NextRequest) {
   // (iki sayı mesajda aynı görünür — Halköde ham toplamı basar, kendi çarpımını değil.)
   // Doğrusu: price = BİRİM fiyat. Böylece Halköde'nin çarpımı itemsKurus ile örtüşür.
   const items: HalkodeItem[] = body.line_items.map((li) => ({
-    name: (li.title || `Ürün ${li.variant_id}`).slice(0, 100),
+    name: kalemAdiKirp(li.title || `Ürün ${li.variant_id}`),
     price: Math.round(li.price ?? 0) / 100,
     quantity: li.quantity,
   }));

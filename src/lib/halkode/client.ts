@@ -24,6 +24,7 @@
  *   yoksa hash tutmaz ve Halköde 68 (hash uyuşmazlığı) döner.
  */
 import crypto from 'node:crypto';
+import { kalemAdiKirp } from './kalem-adi';
 
 /**
  * Not: bu modül bilerek `src/lib/env.ts`'i İTHAL ETMEZ, process.env'i doğrudan okur.
@@ -497,10 +498,11 @@ export async function paySmart3D(
     invoice_description: p.invoiceDescription ?? `Via Mood #${p.invoiceId}`,
     total: Number(total),
     items: p.items.map((i) => ({
-      name: i.name.slice(0, 100),
+      // BAYT sınırlı, karakteri ortadan bölmeyen kesme (bkz. kalem-adi.ts).
+      name: kalemAdiKirp(i.name),
       price: i.price,
       quantity: i.quantity,
-      description: i.description ?? i.name.slice(0, 100),
+      description: kalemAdiKirp(i.description ?? i.name),
     })),
     name: p.name,
     surname: p.surname,
