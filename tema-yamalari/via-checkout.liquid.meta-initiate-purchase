@@ -1,41 +1,57 @@
 {%- comment -%}
   META PIXEL — InitiateCheckout + Purchase · ÖNERİ YAMASI, CANLI TEMAYA UYGULANMADI
-  Hazırlayan: Elif (Viamood) · 26 Eyl 2026 · konu: "Meta ürün fiyatını okuyamıyor"
+  #991406 · 27 Eyl 2026 · hazırlayan Elif · karar Mehmet Şah'ta (o yüzden yayınlanmadı)
 
-  ⚠ BU DOSYA CANLI TEMADA DEĞİL. Tema/uygulama erişimi Mehmet Şah ve Yunus'un
-  kararıdır (26 Eyl talimatı: "Shopify tarafı gerekiyorsa değişikliği YAPMA").
+  ⚠ BU DOSYA CANLI TEMADA DEĞİL. Tema düzenleme erişimi Mehmet Şah / Yunus kararı.
 
-  ÖLÇÜLEN EKSİK (canlı Chrome, viamood.com.tr, çerez onayı kabul edilmiş):
-    ürün sayfası → PageView + ViewContent(value=500, currency=TRY) ✅
-    sepete ekle  → AddToCart(value=500, currency=TRY) ✅
-    /pages/odeme → YALNIZ PageView · InitiateCheckout YOK · Purchase YOK ❌
-  Sepet dolu olmasına rağmen (/cart.js → 1 kalem, 500 TL).
+  ── ÖLÇÜLEN EKSİK (canlı Chrome, Yunus 26 Eyl + Elif 27 Eyl doğrulaması) ─────
+    ürün sayfası   → PageView + ViewContent(value=500, currency=TRY)  ✅
+    sepete ekle    → AddToCart(value=500, currency=TRY)               ✅
+    /pages/odeme   → YALNIZ PageView · InitiateCheckout YOK · Purchase YOK  ❌
+  Kök neden: Shopify'ın kendi checkout'u kullanılmıyor (tema içi ödeme sayfası),
+  Web Pixel `checkout_started`/`checkout_completed`'ı yalnız kendi checkout'unda
+  yayıyor. Ölçüm: temada `fbq('track',…)` çağrısı sayısı 0.
 
-  KÖK NEDEN: Shopify'ın kendi checkout'u kullanılmıyor; ödeme tema içi
-  /pages/odeme sayfasında (via-checkout.liquid) yürüyor. Shopify Web Pixel
-  `checkout_started` / `checkout_completed` olaylarını YALNIZ kendi checkout'unda
-  yayar → iki olay hiç doğmaz → Meta'ya DÖNÜŞÜM DEĞERİ hiç ulaşmaz. Katalog ya da
-  Event Setup Tool bunu kurtarmaz; değer olayın İÇİNDE gitmek zorundadır.
+  ── PURCHASE'IN YERİ: ÖLÇÜLDÜ, TAHMİN EDİLMEDİ ──────────────────────────────
+  /pages/odeme içindeki gerçek başarı fonksiyonu:
+      function vmTesekkureGit(d, yontem){
+        var kod = String(d.order_code || d.order_name || '').replace('#','');
+        sessionStorage.setItem('vm_siparis_sonuc_' + kod, JSON.stringify({html, yontem, ts}));
+        → /pages/siparis-alindi?order=<kod>&yontem=<yontem>
+      }
+  Yani başarı anı BU SAYFADA doğuyor, gösterim AYRI sayfada.
+  ⚠ Purchase'ı yalnız /pages/siparis-alindi'ye koymak YANLIŞ olurdu, iki ölçüm:
+    (a) o sayfada `fbq` geçişi 0 — pixel orada tanımlı değil;
+    (b) sessionStorage yalnız {html, yontem, ts} taşıyor — TUTAR yok.
+  Bu yüzden Purchase yönlendirmeden ÖNCE, tutarın elde olduğu yerde ateşlenir.
 
-  NEREYE: via-checkout.liquid'in en altına, kapanış </script> sonrası.
-  ÖN KOŞUL: `fbq` sayfada tanımlı (Shopify Web Pixel yüklüyor; ölçüldü:
-  `typeof window.fbq === 'function'`). Tanımsızsa yama sessizce hiçbir şey yapmaz.
+  ── NEREYE ───────────────────────────────────────────────────────────────────
+  1) InitiateCheckout bloğu: dosyanın en altına (kapanış </script> sonrası).
+  2) Purchase çağrısı: `vmTesekkureGit` gövdesinin İLK satırına, `kod` hesaplandıktan
+     hemen sonra — `window.vmMetaPurchase(kod, d)`.
 
-  DEĞER KURALI (src/lib/meta/pixel-olay.ts ile BİREBİR aynı):
-    value      = ÖDENECEK toplam (kargo dâhil, indirim düşülmüş), TL, 2 ondalık
-    currency   = 'TRY' sabit
-    content_ids= VARYANT kimliği (katalog retailer_id varyant bazlıdır)
-    contents   = [{ id, quantity, item_price }] · item_price BİRİM fiyat
-  ⚠ item_price'a SATIR TOPLAMI yazma. Halköde'de tam bu hata `status_code=13`
-  ("items price not equal to the invoice total") üretti; burada ödeme reddedilmez
-  ama Meta'ya YANLIŞ CİRO gider — ikisi de sessiz hatadır.
+  ── DEĞER KURALI (src/lib/meta/pixel-olay.ts ile BİREBİR, commit 3c3b6f1) ────
+    value       = ÖDENECEK toplam (kargo dâhil, indirim düşülmüş), TL, 2 ondalık
+    currency    = 'TRY' sabit
+    content_ids = VARYANT kimliği · contents = [{id, quantity, item_price}]
+    item_price  = BİRİM fiyat (satır toplamı DEĞİL)
+  ⚠ item_price'a satır toplamı yazma: Halköde'de tam bu hata `status_code=13`
+  üretti; burada ödeme reddedilmez ama Meta'ya YANLIŞ CİRO gider.
+
+  ── TEKİLLEŞTİRME (görev şartı) ─────────────────────────────────────────────
+  · `eventID: 'vmp-' + kod` — Meta deduplication anahtarı. İleride CAPI sunucu
+    olayı aynı id ile gönderilirse Meta ikisini TEK sayar.
+  · Damga `localStorage['vm_fb_purchase_' + kod]` — sessionStorage DEĞİL:
+    kullanıcı sekmeyi kapatıp aynı adrese dönerse sessionStorage silinir ve olay
+    ikinci kez doğardı, ciro iki katı görünürdü.
+  · Saf karşılığı ve çivisi: src/lib/meta/purchase-tekil.ts + tests/meta-purchase-tekil.test.ts
 {%- endcomment -%}
 <script>
 (function () {
   if (typeof window.fbq !== 'function') return;
 
-  function yuk(sepet, odenecekKurus) {
-    var contents = (sepet.items || []).filter(function (i) { return i.quantity > 0; }).map(function (i) {
+  function yuk(items, odenecekKurus) {
+    var contents = (items || []).filter(function (i) { return i && i.quantity > 0; }).map(function (i) {
       return {
         id: String(i.variant_id),
         quantity: i.quantity,
@@ -56,32 +72,49 @@
     };
   }
 
-  // 1) InitiateCheckout — /pages/odeme yüklendiğinde, sepet okunduktan SONRA.
+  // ── 1) InitiateCheckout — ödeme sayfası açıldığında, sepet okunduktan SONRA.
   fetch('/cart.js', { credentials: 'same-origin' })
     .then(function (r) { return r.json(); })
     .then(function (sepet) {
       // Kargo bu noktada seçilmemiş olabilir; value ara toplamla kurulur ve
       // Purchase'ta kesin tutarla düzeltilir (Meta son olayı esas alır).
-      var y = yuk(sepet, sepet.total_price);
+      var y = yuk(sepet.items, sepet.total_price);
       if (y) window.fbq('track', 'InitiateCheckout', y);
     })
     .catch(function () { /* ölçüm ödemeyi ASLA bozmaz */ });
 
-  // 2) Purchase — sipariş oluştuğunda, ÖDENEN kesin tutarla.
-  //    via-checkout.liquid'de siparişi başarıyla kapatan yer neresiyse orada
-  //    çağrılır (tek sayfa akışında sonuç adımı). `window.viaSiparisTamam`
-  //    ödeme akışının mevcut başarı kancasına bağlanır; ikinci kez ateşlenmesin
-  //    diye sipariş numarası damgalanır.
-  window.viaSiparisTamam = function (siparis) {
+  // ── 2) Purchase — vmTesekkureGit içinden çağrılır (yönlendirmeden ÖNCE).
+  //    `d` sunucunun döndürdüğü sipariş nesnesi; tutar oradan gelir.
+  window.vmMetaPurchase = function (kod, d) {
     try {
-      if (!siparis || !siparis.order_number) return;
-      var anahtar = 'via_fb_purchase_' + siparis.order_number;
-      if (sessionStorage.getItem(anahtar)) return;      // çift sayım kapısı
-      var y = yuk({ items: siparis.items || [] }, siparis.total_paid_cents);
-      if (!y) return;
-      y.order_id = String(siparis.order_number);
-      window.fbq('track', 'Purchase', y);
-      sessionStorage.setItem(anahtar, '1');
+      var k = String(kod || '').replace('#', '').trim();
+      if (!k) return;
+
+      // Ödenecek kuruş: sunucu alanları sırayla denenir; hiçbiri yoksa sepete düşülmez
+      // (yanlış tutarlı Purchase, hiç Purchase'tan kötüdür).
+      var kurus = null;
+      if (d) {
+        if (typeof d.total_paid_cents === 'number') kurus = d.total_paid_cents;
+        else if (typeof d.total_price_cents === 'number') kurus = d.total_price_cents;
+        else if (d.total_price != null) kurus = Math.round(Number(d.total_price) * 100);
+      }
+      if (kurus == null || !isFinite(kurus) || kurus <= 0) return;
+
+      // TEKİLLEŞTİRME — localStorage damgası (bkz. purchase-tekil.ts).
+      var damga = 'vm_fb_purchase_' + k;
+      try { if (localStorage.getItem(damga)) return; } catch (e) { /* depo kapalı: eventID'ye güven */ }
+
+      var y = yuk((d && d.items) || [], kurus);
+      if (!y) {
+        // Kalem listesi gelmediyse yalnız toplamla gönderilir: dönüşüm değeri
+        // kaybolmasın. content_ids olmadan Meta katalog eşleşmesi yapmaz ama
+        // ciro ölçümü çalışır.
+        y = { value: Math.round(kurus) / 100, currency: 'TRY' };
+      }
+      y.order_id = k;
+
+      window.fbq('track', 'Purchase', y, { eventID: 'vmp-' + k });
+      try { localStorage.setItem(damga, String(Date.now())); } catch (e) {}
     } catch (e) { /* sessiz — sipariş akışı önce gelir */ }
   };
 })();

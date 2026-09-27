@@ -127,8 +127,14 @@ describe('Shopify tema yaması — saf katmanla aynı kuralı yazıyor mu', () =
     expect(YAMA).toMatch(/value <= 0\) return null/);
   });
 
-  it('Purchase çift sayım kapısı var', () => {
-    expect(YAMA).toMatch(/sessionStorage\.getItem\(anahtar\)/);
+  it('Purchase çift sayım kapısı var — ve localStorage\'da (#991406 ile GÜÇLENDİ)', () => {
+    // 27 Eyl 2026: kapı sessionStorage'dan localStorage'a taşındı. Sebep ölçüldü:
+    // sessionStorage sekme kapanınca silinir, kullanıcı aynı adrese dönünce
+    // Purchase İKİNCİ kez doğar ve Meta'da ciro iki katı görünür.
+    expect(YAMA).toMatch(/localStorage\.getItem\(damga\)/);
+    expect(YAMA, 'kapı sessionStorage\'a geri dönmüş — yenilemede mükerrer Purchase').not.toMatch(
+      /sessionStorage\.(get|set)Item\(damga/,
+    );
   });
 
   it('yama CANLI TEMAYA UYGULANMADI diye işaretli (erişim Mehmet Şah/Yunus kararı)', () => {
