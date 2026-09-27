@@ -153,6 +153,9 @@ async function previewOrtami(): Promise<'test' | 'canli' | null> {
   }
 }
 
+/** `paymentSettings()` dönüşü — kimlik yuvası okuyucularının girdi tipi. */
+type PaymentAyar = Partial<import('@/db/schema').PaymentSettings>;
+
 interface Kimlik {
   appId: string;
   appSecret: string;
@@ -160,6 +163,36 @@ interface Kimlik {
 }
 
 const kimlikDolu = (k: Kimlik) => !!(k.appId && k.appSecret && k.merchantKey);
+
+/* ── KİMLİK YUVASI OKUMA — TEK KAYNAK (#990861-vpos, 27 Eyl 2026) ───────────
+   ÖLÇÜLEN BORÇ: aynı altı satırlık okuma İKİ yerde yazılıydı — `cfg()` ve
+   `odemeOrtami()`. Bu deponun ölçülmüş "kopya = sessiz kayma" sınıfı: yuva adı
+   ya da geri düşüş sırası bir yerde değişince öteki sessizce ayrışır ve sonuç
+   CANLI PARA yolunda yanlış ortam/kimlik seçimidir (`status 30` sınıfı: test
+   ucuna canlı kimlikle gitmek). Mevcut çivi `tests/halkode-kimlik-secimi.test.ts`
+   yalnız `cfg()` yolunu tutuyordu; `odemeOrtami()` ÇİVİSİZDİ.
+
+   SIRA ÖNEMLİ ve korunuyor: DB yuvası önce, ortam değişkeni sonra. Sebep —
+   panelden girilen kimlik operatörün son kararıdır; env dosyası makinede kalmış
+   eski bir değer olabilir. */
+
+/** CANLI kimlik yuvası. Okuma sırası: DB → env → boş. */
+export function canliKimlikOku(ps: PaymentAyar): Kimlik {
+  return {
+    appId: ps.halkode_live_app_id || process.env.HALKODE_LIVE_APP_ID || '',
+    appSecret: ps.halkode_live_app_secret || process.env.HALKODE_LIVE_APP_SECRET || '',
+    merchantKey: ps.halkode_live_merchant_key || process.env.HALKODE_LIVE_MERCHANT_KEY || '',
+  };
+}
+
+/** TEST kimlik yuvası. Okuma sırası: DB → env → boş. */
+export function testKimlikOku(ps: PaymentAyar): Kimlik {
+  return {
+    appId: ps.halkode_app_id || process.env.HALKODE_APP_ID || '',
+    appSecret: ps.halkode_app_secret || process.env.HALKODE_APP_SECRET || '',
+    merchantKey: ps.halkode_merchant_key || process.env.HALKODE_MERCHANT_KEY || '',
+  };
+}
 
 /**
  * Ortam nasıl belirlenir?
@@ -223,16 +256,8 @@ async function cfg(ortamZorla?: HalkodeOrtamSecimi): Promise<HalkodeCfg> {
   // Tek yuva olsaydı canlı anahtarları girmek test sayfasını sessizce bozardı:
   // test sayfası testapp'e gider ama elinde canlı kimlik olurdu → status 30.
   // İki sayfa yan yana yaşayabilsin diye ayrıldı.
-  const canliKimlik: Kimlik = {
-    appId: ps.halkode_live_app_id || process.env.HALKODE_LIVE_APP_ID || '',
-    appSecret: ps.halkode_live_app_secret || process.env.HALKODE_LIVE_APP_SECRET || '',
-    merchantKey: ps.halkode_live_merchant_key || process.env.HALKODE_LIVE_MERCHANT_KEY || '',
-  };
-  const testKimlik: Kimlik = {
-    appId: ps.halkode_app_id || process.env.HALKODE_APP_ID || '',
-    appSecret: ps.halkode_app_secret || process.env.HALKODE_APP_SECRET || '',
-    merchantKey: ps.halkode_merchant_key || process.env.HALKODE_MERCHANT_KEY || '',
-  };
+  const canliKimlik: Kimlik = canliKimlikOku(ps);
+  const testKimlik: Kimlik = testKimlikOku(ps);
 
   // Geri uyum: canlı yuvalar boşken canlı ortamda eski tek-yuva davranışı sürer.
   // `scripts/halkode-*.ts` HALKODE_BASE_URL + HALKODE_APP_ID ile canlıya bağlanıyor;
@@ -292,19 +317,8 @@ export async function odemeOrtami(): Promise<'test' | 'canli' | null> {
   if (ps.halkode_test_mode === 0) return 'canli';
   if (ps.halkode_test_mode === 1) return 'test';
 
-  const canliDolu = kimlikDolu({
-    appId: ps.halkode_live_app_id || process.env.HALKODE_LIVE_APP_ID || '',
-    appSecret: ps.halkode_live_app_secret || process.env.HALKODE_LIVE_APP_SECRET || '',
-    merchantKey: ps.halkode_live_merchant_key || process.env.HALKODE_LIVE_MERCHANT_KEY || '',
-  });
-  if (canliDolu) return 'canli';
-
-  const testDolu = kimlikDolu({
-    appId: ps.halkode_app_id || process.env.HALKODE_APP_ID || '',
-    appSecret: ps.halkode_app_secret || process.env.HALKODE_APP_SECRET || '',
-    merchantKey: ps.halkode_merchant_key || process.env.HALKODE_MERCHANT_KEY || '',
-  });
-  return testDolu ? 'test' : null;
+  if (kimlikDolu(canliKimlikOku(ps))) return 'canli';
+  return kimlikDolu(testKimlikOku(ps)) ? 'test' : null;
 }
 
 /** Kill switch — kimlik bilgileri dolu olsa bile bu açık değilse ödeme başlatılmaz. */
