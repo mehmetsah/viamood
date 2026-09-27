@@ -43,14 +43,23 @@ type Ayar = Record<string, string | undefined>;
 function secim(baseUrl: string, ps: Ayar, env: Ayar): Kimlik & { canliMi: boolean } {
   const kod = [
     dilim('const canliMi = ', ';'),
-    dilim('const canliKimlik: Kimlik = {', '};'),
-    dilim('const testKimlik: Kimlik = {', '};'),
+    // ⚠ 27 Eyl 2026: kimlik okuma İKİ yerden TEK KAYNAĞA indi
+    // (`canliKimlikOku` / `testKimlikOku`, client.ts). Eskiden buradaki çapalar
+    // `const canliKimlik: Kimlik = {` bloklarıydı; refactor onları kaldırdığı
+    // için bu çivi 8 iddiayla KIRILDI ve refactor'ı yakaladı — görevini yaptı.
+    // Çivi ZAYIFLATILMADI: hâlâ ÜRÜN KAYNAĞINDAN çıkarılan gerçek satırları
+    // koşturuyor, yalnız çapa artık fonksiyon gövdesi. Kopya mantık yazmak
+    // (kaynak değişince sessizce yeşil kalır) hâlâ yasak.
+    dilim('export function canliKimlikOku', '\n}'),
+    dilim('export function testKimlikOku', '\n}'),
+    'const canliKimlik = canliKimlikOku(ps);',
+    'const testKimlik = testKimlikOku(ps);',
     dilim('const kimlikDolu = ', ';'),
     dilim('const k = canliMi && ', ';'),
     'return { ...k, canliMi };',
   ]
     .join('\n')
-    .replace(/: Kimlik/g, '');
+    .replace(/: Kimlik/g, '').replace(/\(ps: PaymentAyar\)/g, '(ps)').replace(/export function /g, 'function ');
   return new Function('baseUrl', 'ps', 'process', kod)(baseUrl, ps, { env }) as Kimlik & {
     canliMi: boolean;
   };
