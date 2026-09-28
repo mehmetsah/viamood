@@ -10,6 +10,7 @@ import { and, asc, eq, max } from 'drizzle-orm';
 import { db } from '@/db/client';
 import { urunSss } from '@/db/schema/urun-sss';
 import { handleTemizle, sssDogrula } from '@/lib/urun-sss';
+import { sssSenkronla } from '@/lib/urun-sss-shopify';
 
 /**
  * Form eylemleri `Promise<void>` döner (React `action=` sözleşmesi). Hata,
@@ -29,6 +30,30 @@ function yenile(handle: string) {
   revalidatePath(`/magaza/${handle}`);
 }
 
+/**
+ * DB yazımından SONRA Shopify metafield'ını tazeler (#991833-C).
+ *
+ * Kill switch kapalıysa `sssSenkronla` ilk satırda döner, ağ çağrısı olmaz.
+ * ⚠ HATA YUTULMAZ: senkron başarısızsa kullanıcı `?hata=` ile sebebi görür.
+ * Sessiz geçmek "admin'e girdim ama ürün sayfasında yok" hâlini teşhis edilemez
+ * kılardı — bu turun bütün sebebi o.
+ * ⚠ AÇIK kayıtların TAMAMI gönderilir (tek kayıt değil): metafield bir LİSTEdir,
+ * kısmi yazım listeyi kırpar. Boş küme metafield'ı boşaltır.
+ */
+async function shopifyTazele(handle: string): Promise<string | null> {
+  try {
+    const kayitlar = await db
+      .select({ soru: urunSss.soru, cevap: urunSss.cevap, sira: urunSss.sira })
+      .from(urunSss)
+      .where(and(eq(urunSss.urunHandle, handle), eq(urunSss.acik, true)))
+      .orderBy(asc(urunSss.sira));
+    const r = await sssSenkronla(handle, kayitlar);
+    return r.ok ? null : r.hata;
+  } catch (e) {
+    return 'Shopify tazelenemedi: ' + ((e as Error)?.name ?? 'bilinmeyen');
+  }
+}
+
 export async function sssEkle(fd: FormData): Promise<void> {
   const handle = handleTemizle(String(fd.get('handle') ?? ''));
   if (!handle) geriDon('', 'ürün handle gerekli');
@@ -41,7 +66,7 @@ export async function sssEkle(fd: FormData): Promise<void> {
     const sira = (m?.enBuyuk ?? -1) + 1;
     await db.insert(urunSss).values({ urunHandle: handle, soru: d.kayit.soru, cevap: d.kayit.cevap, sira });
     yenile(handle);
-    geriDon(handle);
+    geriDon(handle, (await shopifyTazele(handle)) ?? undefined);
   } catch (e) {
     geriDon(handle, 'kaydedilemedi: ' + ((e as Error)?.name ?? 'bilinmeyen'));
   }
@@ -59,7 +84,7 @@ export async function sssGuncelle(fd: FormData): Promise<void> {
       .set({ soru: d.kayit.soru, cevap: d.kayit.cevap, acik: fd.get('acik') === 'on', updatedAt: new Date() })
       .where(eq(urunSss.id, id));
     yenile(handle);
-    geriDon(handle);
+    geriDon(handle, (await shopifyTazele(handle)) ?? undefined);
   } catch (e) {
     geriDon(handle, 'güncellenemedi: ' + ((e as Error)?.name ?? 'bilinmeyen'));
   }
@@ -88,7 +113,7 @@ export async function sssSil(fd: FormData): Promise<void> {
       await db.update(urunSss).set({ sira: i }).where(eq(urunSss.id, idler[i]!));
     }
     yenile(handle);
-    geriDon(handle);
+    geriDon(handle, (await shopifyTazele(handle)) ?? undefined);
   } catch (e) {
     geriDon(handle, 'silinemedi: ' + ((e as Error)?.name ?? 'bilinmeyen'));
   }
@@ -114,7 +139,7 @@ export async function sssTasi(fd: FormData): Promise<void> {
     await db.update(urunSss).set({ sira: a.sira }).where(eq(urunSss.id, b.id));
     await db.update(urunSss).set({ sira: b.sira }).where(eq(urunSss.id, a.id));
     yenile(handle);
-    geriDon(handle);
+    geriDon(handle, (await shopifyTazele(handle)) ?? undefined);
   } catch (e) {
     geriDon(handle, 'taşınamadı: ' + ((e as Error)?.name ?? 'bilinmeyen'));
   }
