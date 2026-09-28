@@ -37,6 +37,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           <Link href="/admin/shipping-rates" className="px-3 py-2 rounded-lg hover:bg-white/10">🚚 Kargo Tarifeleri</Link>
           <Link href="/admin/mikro" className="px-3 py-2 rounded-lg hover:bg-white/10">📦 Mikro V17</Link>
           <Link href="/admin/audit-log" className="px-3 py-2 rounded-lg hover:bg-white/10">📜 Audit Log</Link>
+          {/* #991833: emoji BİLEREK konmadı (Mehmet Şah kalıcı kuralı). */}
+          <Link href="/admin/urun-sss" className="px-3 py-2 rounded-lg hover:bg-white/10">Ürün SSS</Link>
           <Link href="/admin/settings" className="px-3 py-2 rounded-lg hover:bg-white/10">⚙️ Ayarlar</Link>
           <Link href="/admin/theme" className="px-3 py-2 rounded-lg hover:bg-white/10">🎨 Tema Editörü</Link>
           <Link href="/admin/pages" className="px-3 py-2 rounded-lg hover:bg-white/10">📄 İçerik Sayfaları</Link>

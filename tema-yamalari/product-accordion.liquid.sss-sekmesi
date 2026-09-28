@@ -1,0 +1,77 @@
+{%- comment -%}
+  ÜRÜN SSS SEKMESİ — accordion'un EN SONUNA · #991833 (Yunus, 27 Eyl 2026 23:16)
+  ÖNERİ YAMASI · CANLI TEMAYA UYGULANMADI (tema Shopify'da, erişim Yunus/Mehmet Şah kararı)
+
+  ── ÖLÇÜM (canlı ürün sayfası, 28 Eyl 2026) ────────────────────────────────
+  Accordion BİZİM depoda DEĞİL: `accordion-custom` ve `details__header` aramaları
+  origin/main'de 0 dosya. Pozitif kontrol: aynı yöntem `price-item--sale` için 2,
+  `neutral-500` için 66 dosya buluyor → arama kör değil, yapı gerçekten temada.
+
+  ⚠ TALEPTEKİ SEKME LİSTESİ ÜRÜNDE FARKLI: istekte "Ürün detayları / Kargo / İade"
+  deniyor; canlıda ölçülen GERÇEK hâl İKİ sekme —
+      <summary class="details__header"> Ürün detayları
+      <summary class="details__header"> Kargo ve iade      ← Kargo ve İade BİRLEŞİK
+  Yani SSS ÜÇÜNCÜ sekme olur, dördüncü değil. (2 accordion-custom kapsayıcısı ölçüldü.)
+
+  ── NEREYE ─────────────────────────────────────────────────────────────────
+  Son `</accordion-custom>` etiketinin HEMEN ARDINA. Desen birebir kopyalandı:
+  aynı `<accordion-custom>` + `<details class="details" data-testid="accordion-details">`
+  + `<summary class="details__header">` + aynı caret SVG. Yeni sınıf, yeni renk,
+  yeni tipografi ÜRETİLMEDİ — mevcut accordion stili kullanılıyor.
+
+  ── BOŞ VERİDE SEKME ÇİZİLMEZ ──────────────────────────────────────────────
+  İstek şartı: soru yoksa sekme görünmesin. Boş bir accordion kullanıcıya kusur
+  gibi görünür. Kapı `{% if vm_sss != blank %}` ile en dışta — sekmenin kabuğu
+  bile üretilmez.
+{%- endcomment -%}
+
+{%- liquid
+  comment
+    Veri kaynağı: ürün metafield'ı `custom.sss` (JSON liste).
+    Biçim: [{"soru":"...","cevap":"..."}, ...]  — sıra listedeki sıradır.
+    Admin ekranı (hesap.viamood.com.tr/admin/urun-sss) bu listeyi yazar.
+  endcomment
+  assign vm_sss = product.metafields.custom.sss.value
+-%}
+
+{%- if vm_sss != blank and vm_sss.size > 0 -%}
+  <accordion-custom>
+    <details class="details" data-testid="accordion-details">
+      <summary class="details__header">
+        Sıkça Sorulan Sorular
+        <span class="svg-wrapper icon-caret icon-animated">
+          <svg aria-hidden="true" width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M11 5.5L7 9.5L3 5.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </span>
+      </summary>
+      <div class="details__content">
+        {%- for vm_k in vm_sss -%}
+          {%- if vm_k.soru != blank and vm_k.cevap != blank -%}
+            <div class="vm-sss-oge">
+              {%- comment -%}
+                Soru <strong>, cevap <p> — tema tipografisi neyse o. `| escape`
+                ZORUNLU: admin düz metin kabul ediyor, HTML kaçırmak ürün
+                sayfasına script sokulabilmesi demektir (stored XSS).
+              {%- endcomment -%}
+              <p class="vm-sss-soru"><strong>{{ vm_k.soru | escape }}</strong></p>
+              <p class="vm-sss-cevap">{{ vm_k.cevap | escape | newline_to_br }}</p>
+            </div>
+          {%- endif -%}
+        {%- endfor -%}
+      </div>
+    </details>
+  </accordion-custom>
+
+  {%- comment -%}
+    Tek ek stil: sorular arası nefes. Yeni RENK/TİPOGRAFİ yok — yalnız boşluk,
+    4px ızgarasında ve satır yüksekliği ≥1.3 (nefes eşiği kuralı).
+    Bundan fazlası (renk, kenarlık, ikon) gerekirse AYŞE KAPISI — uygulanmaz.
+  {%- endcomment -%}
+  <style>
+    .vm-sss-oge { margin-block-end: 16px; }
+    .vm-sss-oge:last-child { margin-block-end: 0; }
+    .vm-sss-soru { margin-block-end: 4px; line-height: 1.4; }
+    .vm-sss-cevap { margin: 0; line-height: 1.5; }
+  </style>
+{%- endif -%}
