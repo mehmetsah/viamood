@@ -1251,7 +1251,10 @@
   /* Taksit tablosu yalnız BIN (ilk 6 hane) ile sorulur — tam kart numarası gönderilmez.
      Yalnız müşterinin ödeyeceği TOPLAMI sepet tutarına EŞİT olan seçenekler listelenir:
      vade farklı bir seçenek sipariş tutarından farklı çekim yapar ve dönüşte tutar
-     uyuşmazlığına düşer (ödeme alınır, sipariş tamamlanmaz). Bugün hepsi eşit (ölçüldü). */
+     uyuşmazlığına düşer (ödeme alınır, sipariş tamamlanmaz). Bugün hepsi eşit (ölçüldü).
+     29 Eyl 2026: POS tanımı 12 seçeneğin HEPSİNİ vade farksız döndürüyor, bu yüzden eşitlik
+     süzgeci tek başına 12 satır çiziyordu (Yunus'un ekranı: Tek çekim + 2…12). Artık ikinci
+     süzgeç var: taksit sayısı <= 3 (sunucu tarafı: src/lib/halkode/taksit-tavan.ts). */
   function hkTaksitSorgu(){
     var amount=hkTotalKurus(); hk.amountKurus=amount;
     if(!hk.bin || amount<=0){ hkTaksitGizle(); return; }
@@ -1262,7 +1265,13 @@
         if(my!==hk.seq) return;
         var hepsi = (d && d.ok && d.installments) ? d.installments : [];
         hkTurCiz(hepsi.length ? hepsi[0].card_type : '');
-        var list = hepsi.filter(function(i){ return Math.round(parseFloat(i.amount_to_be_paid)*100)===amount; });
+        /* İKİ süzgeç: (a) vade farksız — ödenecek tutar sepet tutarına EŞİT,
+           (b) taksit sayısı TAVANI aşmasın (Yunus 29 Eyl 2026: "maksimum 3").
+           Liste yine API'den gelir; süzgeç yalnız DARALTIR, satır uydurmaz. */
+        var list = hepsi.filter(function(i){
+          return Math.round(parseFloat(i.amount_to_be_paid)*100)===amount
+              && (Number(i.installments_number)||1) <= 3;
+        });
         if(!list.length){ hkTaksitGizle(); return; }
         var ns = list.map(function(i){ return Number(i.installments_number)||1; });
         var secili = Number((hkEl('taksit')||{}).value)||1;

@@ -16,6 +16,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { getAllowedOrigins } from '@/lib/cors';
 import { env } from '@/lib/env';
 import { getToken, getPos, halkodeConfigured, halkodeEnabled, odemeOrtami } from '@/lib/halkode/client';
+import { taksitGecerli } from '@/lib/halkode/taksit-tavan';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';

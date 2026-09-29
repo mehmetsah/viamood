@@ -15,6 +15,7 @@
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Halkode3DCerceve from './Halkode3DCerceve';
+import { taksitGecerli } from '@/lib/halkode/taksit-tavan';
 
 interface Taksit {
   installments_number: number;
@@ -84,7 +85,11 @@ export default function DenemeFormu({
           );
           return;
         }
-        const liste = (j.installments ?? []).slice().sort((a, b) => a.installments_number - b.installments_number);
+        // Tavan (Yunus 29 Eyl): API 12 seçenek döndürse de en fazla 3 gösterilir.
+        const liste = (j.installments ?? [])
+          .filter((i) => taksitGecerli(i.installments_number))
+          .slice()
+          .sort((a, b) => a.installments_number - b.installments_number);
         setTaksitler(liste);
         setSecili(liste[0]?.installments_number ?? 1);
       } catch {

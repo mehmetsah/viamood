@@ -38,6 +38,7 @@ import {
 import { halkodeOnizlemeOrtami } from '@/lib/halkode/preview';
 import { kalemAdiKirp } from '@/lib/halkode/kalem-adi';
 import { kalemleriHizala } from '@/lib/halkode/kalem-hizala';
+import { MAKS_TAKSIT, taksitGecerli } from '@/lib/halkode/taksit-tavan';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -294,6 +295,16 @@ export async function POST(req: NextRequest) {
   // olarak doğmadığı için ürün kodu yoluyla tetiklenemiyor, dolayısıyla Okan'ın
   // `sapmaKurus = 0` mutasyonu hiçbir iddiayı kırmıyordu (26 Eyl denetimi, MUT-E).
   // Davranış AYNI; değişen tek şey ölçülebilirlik.
+  // Taksit tavanı — Yunus 29 Eyl (acil). 3'ten büyük gelirse SESSİZCE 3'e düşürmüyoruz:
+  // müşteri 12 taksit seçtiğini sanıp 3 taksitlik tutarla karşılaşırdı. Açıkça reddediyoruz.
+  // Bu kapı, listeyi süzen installments ucunun YEDEĞİ — istemci elle 12 gönderebilir.
+  if (body.installments_number != null && !taksitGecerli(body.installments_number)) {
+    return NextResponse.json(
+      { ok: false, error: 'gecersiz_taksit_sayisi', detail: `Taksit sayısı en fazla ${MAKS_TAKSIT} olabilir.` },
+      { status: 422 },
+    );
+  }
+
   const hiza = kalemleriHizala(items, totalKurus);
   const gonderilecekItems = hiza.items;
   if (hiza.duzeltildi) {

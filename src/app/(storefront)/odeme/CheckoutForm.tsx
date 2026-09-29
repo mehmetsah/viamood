@@ -8,6 +8,7 @@ import Halkode3DCerceve from '@/components/halkode/Halkode3DCerceve';
 // HTML'e gömülüyor. Tip daraltıldı ki sır içeren bir alan buraya kazara geçmesin
 // (bkz. lib/settings/store.ts → vitrinOdemeAyarlari).
 import type { VitrinOdemeAyarlari } from '@/lib/settings/store';
+import { taksitGecerli } from '@/lib/halkode/taksit-tavan';
 
 interface CartView {
   token: string;
@@ -132,7 +133,14 @@ export function CheckoutForm({ payment }: { payment: VitrinOdemeAyarlari }) {
     })
       .then((r) => r.json())
       .then((d) => {
-        if (!iptal) setInstallments(d.ok && Array.isArray(d.installments) ? d.installments : []);
+        // Tavan burada da uygulanır: sunucu süzse bile iki yüz (storefront + deneme
+        // formu) aynı listeyi göstermeli. Yunus 29 Eyl: "maksimum 3".
+        if (!iptal)
+          setInstallments(
+            d.ok && Array.isArray(d.installments)
+              ? d.installments.filter((i: { installments_number: number }) => taksitGecerli(i.installments_number))
+              : [],
+          );
       })
       .catch(() => !iptal && setInstallments([]));
     return () => {
