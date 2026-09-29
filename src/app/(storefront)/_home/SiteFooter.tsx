@@ -44,7 +44,7 @@ export const DEFAULT_FOOTER_COLS: FooterCol[] = [
   },
 ];
 
-const PAYMENTS = ['VISA', 'MasterCard', 'Troy', 'PayTR', 'Kapıda Ödeme', 'Havale/EFT'];
+const PAYMENTS = ['VISA', 'MasterCard', 'Troy', 'Kapıda Ödeme', 'Havale/EFT'];
 
 const DEF_DESC = 'Mutfak, banyo, dolap içi ve günlük yaşam alanlarınız için pratik düzenleyici ve saklama çözümleri. İstanbul / Beyoğlu’ndan tüm Türkiye’ye.';
 const DEF_PHONE = '0553 170 71 32';
