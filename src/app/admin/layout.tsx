@@ -8,9 +8,10 @@ import { sssYonetebilirMi, tamAdminMi } from '@/lib/yetki';
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const session = await auth();
   const role = session?.user?.role;
+  const yetkiler = (session?.user as { yetkiler?: string[] } | undefined)?.yetkiler ?? [];
   // KAPI 2/3 — layout. sss_editor buraya girebilir ama yalnız SSS ekranı için;
   // yol denetimi middleware'de (KAPI 1/3). Burası doğrudan render denemesine karşı.
-  if (!sssYonetebilirMi(role)) {
+  if (!sssYonetebilirMi(role, yetkiler)) {
     redirect('/dashboard');
   }
   const yalnizSss = !tamAdminMi(role);

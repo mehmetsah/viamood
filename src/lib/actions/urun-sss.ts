@@ -66,7 +66,7 @@ async function shopifyTazele(handle: string): Promise<string | null> {
  */
 async function yetkiKapisi(): Promise<void> {
   const session = await auth();
-  if (!sssYonetebilirMi(session?.user?.role)) {
+  if (!sssYonetebilirMi(session?.user?.role, (session?.user as { yetkiler?: string[] } | undefined)?.yetkiler)) {
     // Sessizce yutmuyoruz: yetkisiz çağrı görünür bir hata bırakır.
     throw new Error('yetkisiz: SSS düzenleme yetkiniz yok');
   }

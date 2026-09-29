@@ -21,6 +21,7 @@ declare module 'next-auth' {
     user: {
       id: string;
       role: 'customer' | 'vendor' | 'vendor_admin' | 'admin' | 'super_admin' | 'sss_editor';
+      yetkiler?: string[];
     } & DefaultSession['user'];
   }
 }
@@ -31,6 +32,22 @@ declare module 'next-auth' {
  * istek anında kuruyoruz — panelden kimlik girilince YENİDEN DEPLOY GEREKMEZ.
  * (Sunucuya SSH kapalı olduğundan .env yolu zaten kapalı.)
  */
+/**
+ * Kullanıcının yetki kayıtları (#992119-B). Rol enum'u değiştirilemediği için yetki BURADAN gelir.
+ * Tablo yoksa (göç henüz uygulanmamışsa) sessizce boş döner — giriş akışı bu yüzden kırılmaz.
+ */
+async function kullaniciYetkileri(userId: string): Promise<string[]> {
+  try {
+    const satirlar = await db
+      .select({ yetki: schema.userYetkileri.yetki })
+      .from(schema.userYetkileri)
+      .where(eq(schema.userYetkileri.userId, userId));
+    return satirlar.map((s) => s.yetki);
+  } catch {
+    return [];
+  }
+}
+
 export const { handlers, auth, signIn, signOut } = NextAuth(async () => {
   const google = await getGoogleCreds();
   // Facebook — Google ile BİREBİR aynı kalıp: kimlik yoksa getFacebookCreds()
@@ -158,6 +175,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth(async () => {
           .where(eq(schema.users.id, user.id))
           .limit(1);
         token.role = u?.role ?? 'customer';
+        // Yetkiler token'a konur: middleware Edge runtime'da DB sorgusu yapamaz.
+        token.yetkiler = await kullaniciYetkileri(user.id);
       }
 
       if (trigger === 'update' && token.userId) {
@@ -167,6 +186,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth(async () => {
           .where(eq(schema.users.id, token.userId as string))
           .limit(1);
         if (u) token.role = u.role;
+        token.yetkiler = await kullaniciYetkileri(token.userId as string);
       }
 
       return token;
@@ -176,6 +196,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth(async () => {
         session.user.id = (token.userId as string) ?? session.user.id;
         // @ts-expect-error — role kolonu var, default tipte yok
         session.user.role = (token.role as string) ?? 'customer';
+        session.user.yetkiler = (token.yetkiler as string[]) ?? [];
       }
       return session;
     },

@@ -28,17 +28,37 @@ export function tamAdminMi(rol: unknown): boolean {
   return TAM_ADMIN_ROLLER.includes(rol as (typeof TAM_ADMIN_ROLLER)[number]);
 }
 
-/** SSS verisini okuyup yazabilir mi? (server action + sayfa kapısı) */
-export function sssYonetebilirMi(rol: unknown): boolean {
-  return SSS_ROLLER.includes(rol as (typeof SSS_ROLLER)[number]);
+/**
+ * SSS verisini okuyup yazabilir mi? — **TEK KARAR NOKTASI**.
+ *
+ * İKİ kaynaktan biri yeterli:
+ *   (a) rol `admin` / `super_admin` / `sss_editor`
+ *   (b) `user_yetkileri` tablosunda `sss_editor` kaydı (B şıkkı — GERİ ALINABİLİR)
+ *
+ * (a)'daki `sss_editor` rolü BİLEREK duruyor: `user_role` enum'u ileride genişletilirse
+ * (A şıkkı) bu kod kırılmasın. Bugün enum'da yok, ölçüldü — o yüzden (b) var.
+ *
+ * Üç kapı (middleware · admin layout · server action) bu AYNI fonksiyonu çağırır;
+ * kapı sayısı artmadı, karar noktası tek.
+ */
+export function sssYonetebilirMi(rol: unknown, yetkiler?: readonly string[] | null): boolean {
+  if (SSS_ROLLER.includes(rol as (typeof SSS_ROLLER)[number])) return true;
+  return Array.isArray(yetkiler) && yetkiler.includes(SSS_EDITOR);
 }
 
 /**
  * Bu rol, istenen /admin yoluna girebilir mi?
  * sss_editor için SSS_YOL ve alt yolları dışında her şey KAPALI.
  */
-export function adminYoluAcikMi(rol: unknown, pathname: string): boolean {
+export function adminYoluAcikMi(
+  rol: unknown,
+  pathname: string,
+  yetkiler?: readonly string[] | null,
+): boolean {
   if (tamAdminMi(rol)) return true;
-  if (rol === SSS_EDITOR) return pathname === SSS_YOL || pathname.startsWith(`${SSS_YOL}/`);
+  // Rolden ya da yetki kaydından gelsin, karar AYNI fonksiyondan çıkar.
+  if (sssYonetebilirMi(rol, yetkiler)) {
+    return pathname === SSS_YOL || pathname.startsWith(`${SSS_YOL}/`);
+  }
   return false;
 }
