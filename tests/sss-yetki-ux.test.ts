@@ -44,8 +44,22 @@ describe('"kaydedilemedi" yalanı bitti', () => {
   });
 
   it('başarı ve senkron hatası AYRI mesajlar', () => {
-    expect(src).toContain("'Kaydedildi.'");
-    expect(src).toContain('Kaydedildi, ancak Shopify senkronu yapılamadı');
+    // #992119-I: metin artık basariMetni() ile üretiliyor, fiil eylemden geliyor
+    expect(src).toContain('function basariMetni(fiil: string, senkron: string | null)');
+    expect(src).toContain('ancak Shopify senkronu yapılamadı');
+  });
+
+  it('her eylem KENDİ fiilini kullanıyor — silme "Kaydedildi" demez (#992119-I)', () => {
+    for (const fiil of ['Kaydedildi', 'Güncellendi', 'Silindi', 'Sıra değiştirildi']) {
+      expect(src, `${fiil} metni olmalı`).toContain(`basariMetni('${fiil}'`);
+    }
+    // eski tek-tip metin geri gelmesin
+    expect(src).not.toContain('senkron ? `Kaydedildi, ancak Shopify');
+  });
+
+  it('sıra taşıma sınırda SESSİZ dönmüyor (#992119-I)', () => {
+    expect(src).toContain('Sıra değişmedi: kayıt zaten listenin ucunda.');
+    expect(src).not.toContain('geriDon(handle); // sınırda');
   });
 
   it('ham Error dizesi ekrana basılmıyor', () => {

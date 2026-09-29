@@ -48,4 +48,24 @@ describe('middleware yetki reddi anlaşılır', () => {
     expect((blok.match(/NextResponse\.redirect/g) ?? []).length).toBe(1);
     expect((blok.match(/return yanit;/g) ?? []).length).toBe(1);
   });
+
+  it('anahtar SABİTTEN geliyor, elle yazılmış dize değil', () => {
+    expect(mw).toContain("from '@/lib/ret-bildirim'");
+    expect(mw).not.toMatch(/hata:\s*'yetkisiz'/); // kopya dize kalmasın
+  });
+
+  it('üç hedefin ÜÇÜ de aynı yönlendirmeden geçiyor (customer/sss_editor/diğer)', () => {
+    const blok = mw.slice(mw.indexOf('if (!adminYoluAcikMi'));
+    expect(blok).toContain("role === 'customer' ? '/hesabim'");
+    expect(blok).toContain('role === SSS_EDITOR ? SSS_YOL');
+    expect(blok).toContain("'/dashboard'");
+  });
+
+  it('çerez ayarı yönlendirme yanıtının ÜSTÜNE kuruluyor (kaybolmasın)', () => {
+    const i = mw.indexOf('const yanit = NextResponse.redirect');
+    const j = mw.indexOf('return yanit;', i);
+    expect(i).toBeGreaterThan(-1);
+    expect(j).toBeGreaterThan(i);
+    expect(mw.slice(i, j)).toContain('yanit.cookies.set(');
+  });
 });

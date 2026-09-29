@@ -37,6 +37,16 @@ function yonlendirmeMi(e: unknown): boolean {
   return typeof d === 'string' && d.startsWith('NEXT_REDIRECT');
 }
 
+/**
+ * Başarı metni — eylem başına DOĞRU fiil (#992119-I).
+ *
+ * ⚠ 29 Eyl H turunda ÖLÇÜLDÜ: dört eylem de "Kaydedildi." diyordu; silme işleminde
+ * kullanıcı "Kaydedildi" okuyordu. Fiil eylemden gelmeli.
+ */
+function basariMetni(fiil: string, senkron: string | null): string {
+  return senkron ? `${fiil}, ancak Shopify senkronu yapılamadı: ${senkron}` : `${fiil}.`;
+}
+
 function geriDon(handle: string, hata?: string): never {
   const q = new URLSearchParams({ handle });
   if (hata) q.set('hata', hata);
@@ -115,7 +125,7 @@ export async function sssEkle(fd: FormData): Promise<void> {
     await db.insert(urunSss).values({ urunHandle: handle, soru: d.kayit.soru, cevap: d.kayit.cevap, sira });
     yenile(handle);
     const senkron = await shopifyTazele(handle);
-      geriDon(handle, senkron ? `Kaydedildi, ancak Shopify senkronu yapılamadı: ${senkron}` : 'Kaydedildi.');
+      geriDon(handle, basariMetni('Kaydedildi', senkron));
   } catch (e) {
       if (yonlendirmeMi(e)) throw e; // Next yönlendirmesi — yutma
     geriDon(handle, 'Kaydedilemedi. Sebep sunucu kaydına yazıldı.');
@@ -136,7 +146,7 @@ export async function sssGuncelle(fd: FormData): Promise<void> {
       .where(eq(urunSss.id, id));
     yenile(handle);
     const senkron = await shopifyTazele(handle);
-      geriDon(handle, senkron ? `Kaydedildi, ancak Shopify senkronu yapılamadı: ${senkron}` : 'Kaydedildi.');
+      geriDon(handle, basariMetni('Güncellendi', senkron));
   } catch (e) {
       if (yonlendirmeMi(e)) throw e; // Next yönlendirmesi — yutma
     geriDon(handle, 'İşlem tamamlanamadı. Sebep sunucu kaydına yazıldı.');
@@ -168,7 +178,7 @@ export async function sssSil(fd: FormData): Promise<void> {
     }
     yenile(handle);
     const senkron = await shopifyTazele(handle);
-      geriDon(handle, senkron ? `Kaydedildi, ancak Shopify senkronu yapılamadı: ${senkron}` : 'Kaydedildi.');
+      geriDon(handle, basariMetni('Silindi', senkron));
   } catch (e) {
       if (yonlendirmeMi(e)) throw e; // Next yönlendirmesi — yutma
     geriDon(handle, 'İşlem tamamlanamadı. Sebep sunucu kaydına yazıldı.');
@@ -190,14 +200,16 @@ export async function sssTasi(fd: FormData): Promise<void> {
       .orderBy(asc(urunSss.sira));
     const i = liste.findIndex((k) => k.id === id);
     const j = i + yon;
-    if (i < 0 || j < 0 || j >= liste.length) geriDon(handle); // sınırda: sessizce hiçbir şey
+    // ⚠ Eskiden sessizce dönüyordu (#992119-H ölçümü: kullanıcı hiçbir mesaj görmüyor,
+    //   "tıkladım bir şey olmadı" hissi). Artık neden olmadığı söyleniyor.
+    if (i < 0 || j < 0 || j >= liste.length) geriDon(handle, 'Sıra değişmedi: kayıt zaten listenin ucunda.');
     const a = liste[i]!, b = liste[j]!;
     await db.update(urunSss).set({ sira: -9999 }).where(eq(urunSss.id, a.id));
     await db.update(urunSss).set({ sira: a.sira }).where(eq(urunSss.id, b.id));
     await db.update(urunSss).set({ sira: b.sira }).where(eq(urunSss.id, a.id));
     yenile(handle);
     const senkron = await shopifyTazele(handle);
-      geriDon(handle, senkron ? `Kaydedildi, ancak Shopify senkronu yapılamadı: ${senkron}` : 'Kaydedildi.');
+      geriDon(handle, basariMetni('Sıra değiştirildi', senkron));
   } catch (e) {
       if (yonlendirmeMi(e)) throw e; // Next yönlendirmesi — yutma
     geriDon(handle, 'İşlem tamamlanamadı. Sebep sunucu kaydına yazıldı.');
