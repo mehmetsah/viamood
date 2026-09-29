@@ -28,9 +28,11 @@ describe('POST yolunda yetki reddi bildirimi', () => {
     expect(RET_ANAHTARI).not.toContain(' ');
   });
 
-  it('çerez kısa ömürlü (≤60 sn) ve HttpOnly değil', () => {
+  it('çerez kısa ömürlü (≤60 sn) ve #992119-L ile httpOnly OLDU', () => {
     expect(RET_CEREZ_OMRU).toBeLessThanOrEqual(60);
-    expect(mw).toContain('httpOnly: false');
+    // K turunda httpOnly YOKTU; L turunda XSS yüzeyi kapatıldı.
+    const i = mw.indexOf('yanit.cookies.set(RET_CEREZI, RET_ANAHTARI');
+    expect(mw.slice(i, i + 320)).toContain('httpOnly: true');
     expect(mw).toContain('maxAge: RET_CEREZ_OMRU');
   });
 
@@ -42,9 +44,11 @@ describe('POST yolunda yetki reddi bildirimi', () => {
     expect(retMetni(RET_ANAHTARI)).toBeTruthy();
   });
 
-  it('sayfa çerezi okuyor ve TEK SEFERLİK siler', () => {
-    expect(hes).toContain('kutu.get(RET_CEREZI)?.value');
-    expect(hes).toContain('Max-Age=0');
+  it('#992119-L: okuma ve TEK SEFERLİK silme MIDDLEWARE de, sayfa başlıktan okuyor', () => {
+    expect(mw).toContain('req.cookies.get(RET_CEREZI)?.value');
+    expect(mw).toMatch(/res\.cookies\.set\(RET_CEREZI, '', \{ path: '\/', maxAge: 0 \}\)/);
+    expect(hes).toContain('h.get(RET_BASLIGI)');
+    expect(hes).not.toContain('document.cookie'); // tarayıcı JS ile silme kalktı
   });
 
   it('metin TEK KAYNAK: action ile sayfa aynı dizeyi kullanıyor', () => {

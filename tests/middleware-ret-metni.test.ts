@@ -20,7 +20,7 @@ describe('middleware yetki reddi anlaşılır', () => {
   });
 
   it('metin hedef sayfada SABİT, URL den gelmiyor', () => {
-    expect(hes).toContain('retMetni(anahtar) ?? retMetni(cerezAnahtari)');
+    expect(hes).toContain('retMetni(anahtar) ?? retMetni(h.get(RET_BASLIGI))');
     expect(hes).toContain('if (!metin) return null');
   });
 

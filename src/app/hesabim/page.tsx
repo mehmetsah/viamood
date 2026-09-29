@@ -6,8 +6,8 @@ import { getSessionCustomer } from '@/lib/customers/session';
 import { CopyButton } from './_components/CopyButton';
 import { Pagination, parsePage } from './_components/Pagination';
 import { koridor, pul, siparisDurumu, tarih, tl, type Durum } from './_lib/format';
-import { cookies } from 'next/headers';
-import { RET_CEREZI, retMetni } from '@/lib/ret-bildirim';
+import { headers } from 'next/headers';
+import { RET_BASLIGI, retMetni } from '@/lib/ret-bildirim';
 
 /**
  * Yetki reddi bildirimi (#992119-G).
@@ -28,27 +28,16 @@ import { RET_CEREZI, retMetni } from '@/lib/ret-bildirim';
  * Çerez okunduğu anda silinir — bildirim tek seferliktir.
  */
 async function RetBildirimi({ anahtar }: { anahtar?: string }) {
-  const kutu = await cookies();
-  const cerezAnahtari = kutu.get(RET_CEREZI)?.value;
-  const metin = retMetni(anahtar) ?? retMetni(cerezAnahtari);
+  // Çerez artık `httpOnly` (#992119-L): sayfa onu okuyamaz. Middleware okuyup
+  // `x-vm-ret` başlığına koyuyor ve AYNI yanıtta siliyor — tek seferlik davranış
+  // sunucuda garanti altında, tarayıcı JS'ine hiç gerek yok.
+  const h = await headers();
+  const metin = retMetni(anahtar) ?? retMetni(h.get(RET_BASLIGI));
   if (!metin) return null;
   return (
     <div className="vh-kart" role="status" style={{ marginBottom: 12 }}>
       {metin}
-      {/* Tek seferlik: çerez okundu, hemen düşsün. */}
-      <CerezDus />
     </div>
-  );
-}
-
-/** Çerezi tarayıcı tarafında hemen siler — bildirim ikinci kez görünmesin. */
-function CerezDus() {
-  return (
-    <script
-      dangerouslySetInnerHTML={{
-        __html: `document.cookie=${JSON.stringify(RET_CEREZI)}+"=; Max-Age=0; path=/";`,
-      }}
-    />
   );
 }
 
