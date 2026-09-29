@@ -62,7 +62,6 @@ export const authConfig: NextAuthConfig = {
         session.user.role = (token.role as string) ?? 'customer';
         // ⚠ MIDDLEWARE BU DOSYAYI KULLANIYOR. auth.ts'teki session callback'i middleware'e
         //   ULAŞMIYOR — yetkiler burada kopyalanmazsa kapı 1 yetkiyi hiç GÖRMEZ (ölçüldü).
-        // @ts-expect-error — yetkiler custom alan (#992119-B)
         session.user.yetkiler = (token.yetkiler as string[]) ?? [];
       }
       return session;
