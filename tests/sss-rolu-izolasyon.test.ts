@@ -59,8 +59,8 @@ describe('sss_editor izolasyonu', () => {
     expect(oku('src/middleware.ts')).toContain('adminYoluAcikMi(role, pathname, yetkiler)');
     expect(oku('src/app/admin/layout.tsx')).toContain('sssYonetebilirMi(role, yetkiler)');
     const act = oku('src/lib/actions/urun-sss.ts');
-    expect(act).toContain('async function yetkiKapisi()');
+    expect(act).toContain('async function yetkiKapisi(handle: string)');
     // dört eylemin DÖRDÜ de kapıdan geçmeli
-    expect(act.match(/await yetkiKapisi\(\);/g)?.length).toBe(4);
+    expect(act.match(/await yetkiKapisi\(handle\);/g)?.length).toBe(4); // #992119-F: handle parametresi eklendi
   });
 });

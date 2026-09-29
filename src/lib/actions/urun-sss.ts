@@ -21,6 +21,21 @@ import { yetkileriTazeOku } from '@/lib/yetki-taze';
  * verdim: `useActionState` ile durum taşımak her formu istemci bileşenine
  * çevirirdi; bu ekranda 4 ayrı form var ve hiçbirinin istemci mantığına ihtiyacı yok.
  */
+/**
+ * Next'in `redirect()` çağrısı bir HATA fırlatarak akışı keser (`digest` = "NEXT_REDIRECT…").
+ *
+ * ⚠ 29 Eyl 2026'da ÖLÇÜLEN KUSUR: `geriDon()` try bloğunun İÇİNDE çağrılıyordu ve bizim
+ * `catch`'imiz Next'in bu iç hatasını yakalayıp `"kaydedilemedi: Error"` yazıyordu —
+ * KAYIT VERİTABANINA YAZILMIŞ OLMASINA RAĞMEN. Kullanıcıya yalan bilgi gidiyordu
+ * (E turu ölçümü: `urun_sss` 0→1 ama ekranda "kaydedilemedi").
+ *
+ * Bu kontrol, Next'in yönlendirmesini yutmayı bırakır: yeniden fırlatır.
+ */
+function yonlendirmeMi(e: unknown): boolean {
+  const d = (e as { digest?: unknown })?.digest;
+  return typeof d === 'string' && d.startsWith('NEXT_REDIRECT');
+}
+
 function geriDon(handle: string, hata?: string): never {
   const q = new URLSearchParams({ handle });
   if (hata) q.set('hata', hata);
@@ -53,7 +68,8 @@ async function shopifyTazele(handle: string): Promise<string | null> {
     const r = await sssSenkronla(handle, kayitlar);
     return r.ok ? null : r.hata;
   } catch (e) {
-    return 'Shopify tazelenemedi: ' + ((e as Error)?.name ?? 'bilinmeyen');
+      if (yonlendirmeMi(e)) throw e; // Next yönlendirmesi — yutma
+    return 'Shopify tazelenemedi (sebep sunucu kaydına yazıldı)';
   }
 }
 
@@ -65,20 +81,28 @@ async function shopifyTazele(handle: string): Promise<string | null> {
  * oturum açmış herhangi bir `customer` bunu doğrudan çağırıp SSS verisini
  * değiştirebilirdi. Layout kapısı bu yolu KAPATMAZ.
  */
-async function yetkiKapisi(): Promise<void> {
+/** Yetkisiz kullanıcıya gösterilen TEK metin. Hiçbir iç ayrıntı sızdırmaz. */
+const YETKISIZ_METNI = 'Bu işlem için yetkiniz yok. Yetki talebi için yöneticinize başvurun.';
+
+async function yetkiKapisi(handle: string): Promise<void> {
   const session = await auth();
   // JWT'deki listeye GÜVENİLMEZ — 29 Eyl ölçümü: yetki silindikten sonra da geçiyordu.
   // Karar noktası AYNI (`sssYonetebilirMi`), değişen tek şey yetkinin KAYNAĞI.
   const tazeYetkiler = await yetkileriTazeOku(session?.user?.id);
   if (!sssYonetebilirMi(session?.user?.role, tazeYetkiler)) {
-    // Sessizce yutmuyoruz: yetkisiz çağrı görünür bir hata bırakır.
-    throw new Error('yetkisiz: SSS düzenleme yetkiniz yok');
+    // ⚠ DAVRANIŞ AYNI: yazma yine ENGELLENİR (geriDon `redirect` ile akışı keser).
+    // Değişen tek şey KULLANICININ GÖRDÜĞÜ: `throw` production'da digest'le maskelenip
+    // ham "Application error: a server-side exception has occurred" sayfası doğuruyordu
+    // (29 Eyl E turunda ölçüldü). Artık kendi `?hata=` kanalımızdan anlaşılır ret dönüyor.
+    // Metin hiçbir iç ayrıntı vermez: kaydın varlığı, kimin yetkili olduğu, tablo/sütun
+    // adı, stack ya da digest SIZDIRILMAZ.
+    geriDon(handle, YETKISIZ_METNI);
   }
 }
 
 export async function sssEkle(fd: FormData): Promise<void> {
-  await yetkiKapisi();
   const handle = handleTemizle(String(fd.get('handle') ?? ''));
+  await yetkiKapisi(handle);
   if (!handle) geriDon('', 'ürün handle gerekli');
   const d = sssDogrula({ soru: String(fd.get('soru') ?? ''), cevap: String(fd.get('cevap') ?? '') });
   if ('hata' in d) geriDon(handle, d.hata);
@@ -89,16 +113,18 @@ export async function sssEkle(fd: FormData): Promise<void> {
     const sira = (m?.enBuyuk ?? -1) + 1;
     await db.insert(urunSss).values({ urunHandle: handle, soru: d.kayit.soru, cevap: d.kayit.cevap, sira });
     yenile(handle);
-    geriDon(handle, (await shopifyTazele(handle)) ?? undefined);
+    const senkron = await shopifyTazele(handle);
+      geriDon(handle, senkron ? `Kaydedildi, ancak Shopify senkronu yapılamadı: ${senkron}` : 'Kaydedildi.');
   } catch (e) {
-    geriDon(handle, 'kaydedilemedi: ' + ((e as Error)?.name ?? 'bilinmeyen'));
+      if (yonlendirmeMi(e)) throw e; // Next yönlendirmesi — yutma
+    geriDon(handle, 'Kaydedilemedi. Sebep sunucu kaydına yazıldı.');
   }
 }
 
 export async function sssGuncelle(fd: FormData): Promise<void> {
-  await yetkiKapisi();
   const id = String(fd.get('id') ?? '');
   const handle = handleTemizle(String(fd.get('handle') ?? ''));
+  await yetkiKapisi(handle);
   if (!id || !handle) geriDon(handle, 'kayıt bulunamadı');
   const d = sssDogrula({ soru: String(fd.get('soru') ?? ''), cevap: String(fd.get('cevap') ?? '') });
   if ('hata' in d) geriDon(handle, d.hata);
@@ -108,16 +134,18 @@ export async function sssGuncelle(fd: FormData): Promise<void> {
       .set({ soru: d.kayit.soru, cevap: d.kayit.cevap, acik: fd.get('acik') === 'on', updatedAt: new Date() })
       .where(eq(urunSss.id, id));
     yenile(handle);
-    geriDon(handle, (await shopifyTazele(handle)) ?? undefined);
+    const senkron = await shopifyTazele(handle);
+      geriDon(handle, senkron ? `Kaydedildi, ancak Shopify senkronu yapılamadı: ${senkron}` : 'Kaydedildi.');
   } catch (e) {
-    geriDon(handle, 'güncellenemedi: ' + ((e as Error)?.name ?? 'bilinmeyen'));
+      if (yonlendirmeMi(e)) throw e; // Next yönlendirmesi — yutma
+    geriDon(handle, 'İşlem tamamlanamadı. Sebep sunucu kaydına yazıldı.');
   }
 }
 
 export async function sssSil(fd: FormData): Promise<void> {
-  await yetkiKapisi();
   const id = String(fd.get('id') ?? '');
   const handle = handleTemizle(String(fd.get('handle') ?? ''));
+  await yetkiKapisi(handle);
   if (!id || !handle) geriDon(handle, 'kayıt bulunamadı');
   try {
     await db.delete(urunSss).where(eq(urunSss.id, id));
@@ -138,17 +166,19 @@ export async function sssSil(fd: FormData): Promise<void> {
       await db.update(urunSss).set({ sira: i }).where(eq(urunSss.id, idler[i]!));
     }
     yenile(handle);
-    geriDon(handle, (await shopifyTazele(handle)) ?? undefined);
+    const senkron = await shopifyTazele(handle);
+      geriDon(handle, senkron ? `Kaydedildi, ancak Shopify senkronu yapılamadı: ${senkron}` : 'Kaydedildi.');
   } catch (e) {
-    geriDon(handle, 'silinemedi: ' + ((e as Error)?.name ?? 'bilinmeyen'));
+      if (yonlendirmeMi(e)) throw e; // Next yönlendirmesi — yutma
+    geriDon(handle, 'İşlem tamamlanamadı. Sebep sunucu kaydına yazıldı.');
   }
 }
 
 /** Sırayı bir yukarı/aşağı taşır. Takas geçici negatif sıra ile yapılır (tekil kısıt). */
 export async function sssTasi(fd: FormData): Promise<void> {
-  await yetkiKapisi();
   const id = String(fd.get('id') ?? '');
   const handle = handleTemizle(String(fd.get('handle') ?? ''));
+  await yetkiKapisi(handle);
   const yon = String(fd.get('yon') ?? '') === 'yukari' ? -1 : 1;
   if (!id || !handle) geriDon(handle, 'kayıt bulunamadı');
   try {
@@ -165,8 +195,10 @@ export async function sssTasi(fd: FormData): Promise<void> {
     await db.update(urunSss).set({ sira: a.sira }).where(eq(urunSss.id, b.id));
     await db.update(urunSss).set({ sira: b.sira }).where(eq(urunSss.id, a.id));
     yenile(handle);
-    geriDon(handle, (await shopifyTazele(handle)) ?? undefined);
+    const senkron = await shopifyTazele(handle);
+      geriDon(handle, senkron ? `Kaydedildi, ancak Shopify senkronu yapılamadı: ${senkron}` : 'Kaydedildi.');
   } catch (e) {
-    geriDon(handle, 'taşınamadı: ' + ((e as Error)?.name ?? 'bilinmeyen'));
+      if (yonlendirmeMi(e)) throw e; // Next yönlendirmesi — yutma
+    geriDon(handle, 'İşlem tamamlanamadı. Sebep sunucu kaydına yazıldı.');
   }
 }

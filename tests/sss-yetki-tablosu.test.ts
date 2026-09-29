@@ -54,7 +54,7 @@ describe('B şıkkı — yetki kaydıyla SSS yönetimi', () => {
     // #992119-D: kaynak JWT değil DB oldu — karar noktası AYNI, argüman TAZE liste.
     expect(act).toContain('sssYonetebilirMi(session?.user?.role, tazeYetkiler)');
     expect(act).toContain('yetkileriTazeOku(session?.user?.id)');
-    expect(act.match(/await yetkiKapisi\(\);/g)?.length).toBe(4);
+    expect(act.match(/await yetkiKapisi\(handle\);/g)?.length).toBe(4); // #992119-F: handle parametresi eklendi
   });
 
   it('GÖÇ geri alınabilir: down bloğu DROP TABLE içeriyor, enum genişletilmiyor', () => {
