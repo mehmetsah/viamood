@@ -46,6 +46,9 @@ describe('B şıkkı — yetki kaydıyla SSS yönetimi', () => {
   it('ÜÇ KAPI da AYNI fonksiyonu çağırıyor ve yetkileri GEÇİYOR', () => {
     const oku = (p: string) => readFileSync(join(process.cwd(), p), 'utf8');
     expect(oku('src/middleware.ts')).toContain('adminYoluAcikMi(role, pathname, yetkiler)');
+    // ⚠ middleware auth.config.ts'i kullanır — yetkiler ORADA da session'a kopyalanmalı,
+    //   yoksa kapı 1 yetkiyi hiç görmez (29 Eyl'de canlıda ölçülen kusur).
+    expect(oku('src/lib/auth.config.ts')).toContain('session.user.yetkiler');
     expect(oku('src/app/admin/layout.tsx')).toContain('sssYonetebilirMi(role, yetkiler)');
     const act = oku('src/lib/actions/urun-sss.ts');
     expect(act).toMatch(/sssYonetebilirMi\(session\?\.user\?\.role,[\s\S]{0,90}yetkiler/);
