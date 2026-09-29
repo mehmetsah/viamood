@@ -55,8 +55,9 @@ describe('sss_editor izolasyonu', () => {
 
   it('(f) ÜÇ KAPI da kaynakta bağlı — menü gizlemek yetmez', () => {
     const oku = (p: string) => readFileSync(join(process.cwd(), p), 'utf8');
-    expect(oku('src/middleware.ts')).toContain('adminYoluAcikMi(role, pathname)');
-    expect(oku('src/app/admin/layout.tsx')).toContain('sssYonetebilirMi(role)');
+    // #992119-B: imzaya yetkiler eklendi — kapı hâlâ AYNI fonksiyondan geçiyor.
+    expect(oku('src/middleware.ts')).toContain('adminYoluAcikMi(role, pathname, yetkiler)');
+    expect(oku('src/app/admin/layout.tsx')).toContain('sssYonetebilirMi(role, yetkiler)');
     const act = oku('src/lib/actions/urun-sss.ts');
     expect(act).toContain('async function yetkiKapisi()');
     // dört eylemin DÖRDÜ de kapıdan geçmeli

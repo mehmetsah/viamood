@@ -160,12 +160,13 @@ export default auth((req) => {
     );
   }
 
-  const role = (session.user as { role?: string }).role;
+  const role = (session.user as { role?: string; yetkiler?: string[] }).role;
+  const yetkiler = (session.user as { yetkiler?: string[] }).yetkiler ?? [];
 
   if (pathname.startsWith(ADMIN_PREFIX)) {
     // KAPI 1/3 — yol bazlı. sss_editor YALNIZ /admin/urun-sss görebilir; menüden
     // gizlemek yetmez, adres çubuğuna başka yol yazan da buradan döner.
-    if (!adminYoluAcikMi(role, pathname)) {
+    if (!adminYoluAcikMi(role, pathname, yetkiler)) {
       return NextResponse.redirect(buildRedirectUrl(req, role === 'customer' ? '/hesabim' : role === SSS_EDITOR ? SSS_YOL : '/dashboard'));
       return NextResponse.redirect(buildRedirectUrl(req, role === 'customer' ? '/hesabim' : '/dashboard'));
     }
