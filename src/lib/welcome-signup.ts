@@ -171,7 +171,11 @@ export async function deliverDiscountEmail(
 
   try {
     const mail = welcomeDiscountEmail({ name, code });
-    const res = await sendEmail({ to: email, subject: mail.subject, html: mail.html, text: mail.text });
+    const res = await sendEmail({
+      // #991691: hoş geldin indirimi PAZARLAMA mailidir — çıkış linki ZORUNLU
+      // ve abonelikten çıkmış adrese gönderilmez (KVKK).
+      tip: 'pazarlama' as const,
+      sablon: 'welcomeDiscountEmail', to: email, subject: mail.subject, html: mail.html, text: mail.text });
     await db
       .update(welcomeSignups)
       .set(
