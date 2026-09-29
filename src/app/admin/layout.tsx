@@ -4,11 +4,13 @@ import { auth } from '@/lib/auth';
 import { Logo } from '@/components/ui/Logo';
 import { signOutAction } from '@/lib/actions/auth';
 import { sssYonetebilirMi, tamAdminMi } from '@/lib/yetki';
+import { yetkileriTazeOku } from '@/lib/yetki-taze';
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const session = await auth();
   const role = session?.user?.role;
-  const yetkiler = (session?.user as { yetkiler?: string[] } | undefined)?.yetkiler ?? [];
+  // JWT'deki liste DEĞİL, DB'den TAZE okunur (#992119-D): yetki silinince ekran da kapansın.
+  const yetkiler = await yetkileriTazeOku(session?.user?.id);
   // KAPI 2/3 — layout. sss_editor buraya girebilir ama yalnız SSS ekranı için;
   // yol denetimi middleware'de (KAPI 1/3). Burası doğrudan render denemesine karşı.
   if (!sssYonetebilirMi(role, yetkiler)) {

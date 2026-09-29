@@ -51,7 +51,9 @@ describe('B şıkkı — yetki kaydıyla SSS yönetimi', () => {
     expect(oku('src/lib/auth.config.ts')).toContain('session.user.yetkiler');
     expect(oku('src/app/admin/layout.tsx')).toContain('sssYonetebilirMi(role, yetkiler)');
     const act = oku('src/lib/actions/urun-sss.ts');
-    expect(act).toMatch(/sssYonetebilirMi\(session\?\.user\?\.role,[\s\S]{0,90}yetkiler/);
+    // #992119-D: kaynak JWT değil DB oldu — karar noktası AYNI, argüman TAZE liste.
+    expect(act).toContain('sssYonetebilirMi(session?.user?.role, tazeYetkiler)');
+    expect(act).toContain('yetkileriTazeOku(session?.user?.id)');
     expect(act.match(/await yetkiKapisi\(\);/g)?.length).toBe(4);
   });
 

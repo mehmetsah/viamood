@@ -13,6 +13,7 @@ import { handleTemizle, sssDogrula } from '@/lib/urun-sss';
 import { sssSenkronla } from '@/lib/urun-sss-shopify';
 import { auth } from '@/lib/auth';
 import { sssYonetebilirMi } from '@/lib/yetki';
+import { yetkileriTazeOku } from '@/lib/yetki-taze';
 
 /**
  * Form eylemleri `Promise<void>` döner (React `action=` sözleşmesi). Hata,
@@ -66,7 +67,10 @@ async function shopifyTazele(handle: string): Promise<string | null> {
  */
 async function yetkiKapisi(): Promise<void> {
   const session = await auth();
-  if (!sssYonetebilirMi(session?.user?.role, (session?.user as { yetkiler?: string[] } | undefined)?.yetkiler)) {
+  // JWT'deki listeye GÜVENİLMEZ — 29 Eyl ölçümü: yetki silindikten sonra da geçiyordu.
+  // Karar noktası AYNI (`sssYonetebilirMi`), değişen tek şey yetkinin KAYNAĞI.
+  const tazeYetkiler = await yetkileriTazeOku(session?.user?.id);
+  if (!sssYonetebilirMi(session?.user?.role, tazeYetkiler)) {
     // Sessizce yutmuyoruz: yetkisiz çağrı görünür bir hata bırakır.
     throw new Error('yetkisiz: SSS düzenleme yetkiniz yok');
   }
