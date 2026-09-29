@@ -7,6 +7,30 @@ import { CopyButton } from './_components/CopyButton';
 import { Pagination, parsePage } from './_components/Pagination';
 import { koridor, pul, siparisDurumu, tarih, tl, type Durum } from './_lib/format';
 
+/**
+ * Yetki reddi bildirimi (#992119-G).
+ *
+ * ⚠ Middleware yalnız `?hata=yetkisiz` ANAHTARINI gönderir; metin BURADA sabittir.
+ * Sebep: URL'den gelen metni ekrana basmak hem sızdırma hem içerik enjeksiyonu yolu
+ * olurdu. Anahtar tanınmıyorsa hiçbir şey gösterilmez.
+ *
+ * Metin, server action'daki ret metniyle AYNI dilde (src/lib/actions/urun-sss.ts).
+ * Hiçbir iç ayrıntı vermez: tablo/sütun adı, rol adı, kaydın varlığı, stack, digest YOK.
+ */
+const RET_METINLERI: Record<string, string> = {
+  yetkisiz: 'Bu işlem için yetkiniz yok. Yetki talebi için yöneticinize başvurun.',
+};
+
+function RetBildirimi({ anahtar }: { anahtar?: string }) {
+  const metin = anahtar ? RET_METINLERI[anahtar] : undefined;
+  if (!metin) return null;
+  return (
+    <div className="vh-kart" role="status" style={{ marginBottom: 12 }}>
+      {metin}
+    </div>
+  );
+}
+
 export const dynamic = 'force-dynamic';
 
 const PAGE = 6;
@@ -110,6 +134,7 @@ export default async function SiparislerimPage({
   if (toplam === 0) {
     return (
       <>
+        <RetBildirimi anahtar={typeof sp.hata === 'string' ? sp.hata : undefined} />
         <Baslik ozet={{ toplam: 0, yolda: 0, teslim: 0 }} />
         <div className="vh-kart vh-bos">
           <span className="vh-cati" aria-hidden="true" />
@@ -125,6 +150,7 @@ export default async function SiparislerimPage({
 
   return (
     <>
+      <RetBildirimi anahtar={typeof sp.hata === 'string' ? sp.hata : undefined} />
       <Baslik ozet={{ toplam, yolda, teslim }} />
 
       {list.map((o, idx) => {

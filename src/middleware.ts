@@ -167,8 +167,11 @@ export default auth((req) => {
     // KAPI 1/3 — yol bazlı. sss_editor YALNIZ /admin/urun-sss görebilir; menüden
     // gizlemek yetmez, adres çubuğuna başka yol yazan da buradan döner.
     if (!adminYoluAcikMi(role, pathname, yetkiler)) {
-      return NextResponse.redirect(buildRedirectUrl(req, role === 'customer' ? '/hesabim' : role === SSS_EDITOR ? SSS_YOL : '/dashboard'));
-      return NextResponse.redirect(buildRedirectUrl(req, role === 'customer' ? '/hesabim' : '/dashboard'));
+      // Sessiz yönlendirme YOK: kullanıcı "tıkladım, hiçbir şey olmadı" demesin.
+      // ⚠ Parametre bir ANAHTAR ('yetkisiz'), metnin kendisi DEĞİL — hedef sayfa sabit
+      //   metni basar. Böylece URL üzerinden hiçbir iç ayrıntı taşınmaz/sızmaz.
+      const hedef = role === 'customer' ? '/hesabim' : role === SSS_EDITOR ? SSS_YOL : '/dashboard';
+      return NextResponse.redirect(buildRedirectUrl(req, hedef, { hata: 'yetkisiz' }));
     }
     return NextResponse.next();
   }
