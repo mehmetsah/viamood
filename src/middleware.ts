@@ -2,6 +2,7 @@ import NextAuth from 'next-auth';
 import { NextResponse, type NextRequest } from 'next/server';
 import { authConfig } from '@/lib/auth.config';
 import { adminYoluAcikMi, SSS_EDITOR, SSS_YOL } from '@/lib/yetki';
+import { RET_ANAHTARI, RET_CEREZI, RET_CEREZ_OMRU } from '@/lib/ret-bildirim';
 import {
   HALKODE_PREVIEW_COOKIE,
   HALKODE_PREVIEW_MAX_AGE,
@@ -171,7 +172,20 @@ export default auth((req) => {
       // ⚠ Parametre bir ANAHTAR ('yetkisiz'), metnin kendisi DEĞİL — hedef sayfa sabit
       //   metni basar. Böylece URL üzerinden hiçbir iç ayrıntı taşınmaz/sızmaz.
       const hedef = role === 'customer' ? '/hesabim' : role === SSS_EDITOR ? SSS_YOL : '/dashboard';
-      return NextResponse.redirect(buildRedirectUrl(req, hedef, { hata: 'yetkisiz' }));
+      const yanit = NextResponse.redirect(buildRedirectUrl(req, hedef, { hata: RET_ANAHTARI }));
+      // ⚠ POST (server action) yolunda sorgu parametresi KAYBOLUYOR — 29 Eyl G turunda
+      //   ölçüldü: GET'te /hesabim?hata=yetkisiz geliyor, form gönderiminde gelmiyor
+      //   (Next yönlendirme yanıtını kendi protokolüyle işliyor). Anahtar bu yüzden
+      //   AYRICA tek seferlik çerezle taşınır; hedef sayfa okur, sabit metne çevirir,
+      //   çerezi HEMEN siler. Çerez METİN TAŞIMAZ, yalnız anahtar.
+      yanit.cookies.set(RET_CEREZI, RET_ANAHTARI, {
+        httpOnly: false,
+        sameSite: 'lax',
+        secure: process.env.NODE_ENV === 'production',
+        path: '/',
+        maxAge: RET_CEREZ_OMRU,
+      });
+      return yanit;
     }
     return NextResponse.next();
   }

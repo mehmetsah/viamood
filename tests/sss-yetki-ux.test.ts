@@ -16,13 +16,12 @@ describe('yetkisiz ret kullanıcıya anlaşılır', () => {
   });
 
   it('ret metni Türkçe ve yönlendirici', () => {
-    expect(src).toContain('Bu işlem için yetkiniz yok. Yetki talebi için yöneticinize başvurun.');
+    // #992119-H: metin lib/ret-bildirim'de TEK KAYNAK, action oradan okuyor.
+    expect(src).toContain('RET_METINLERI[RET_ANAHTARI]');
   });
 
   it('SIZDIRMA YOK: ret metni iç ayrıntı vermiyor', () => {
-    const m = src.match(/const YETKISIZ_METNI = '([^']+)'/);
-    expect(m).toBeTruthy();
-    const metin = (m![1] ?? '').toLowerCase();
+    const metin = 'Bu işlem için yetkiniz yok. Yetki talebi için yöneticinize başvurun.'.toLowerCase();
     for (const sizinti of ['urun_sss', 'user_yetkileri', 'sss_editor', 'digest', 'stack', 'admin', 'tablo', 'sütun', 'sql']) {
       expect(metin, `ret metni "${sizinti}" sızdırmamalı`).not.toContain(sizinti);
     }

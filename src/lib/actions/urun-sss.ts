@@ -14,6 +14,7 @@ import { sssSenkronla } from '@/lib/urun-sss-shopify';
 import { auth } from '@/lib/auth';
 import { sssYonetebilirMi } from '@/lib/yetki';
 import { yetkileriTazeOku } from '@/lib/yetki-taze';
+import { RET_ANAHTARI, RET_METINLERI } from '@/lib/ret-bildirim';
 
 /**
  * Form eylemleri `Promise<void>` döner (React `action=` sözleşmesi). Hata,
@@ -82,7 +83,7 @@ async function shopifyTazele(handle: string): Promise<string | null> {
  * değiştirebilirdi. Layout kapısı bu yolu KAPATMAZ.
  */
 /** Yetkisiz kullanıcıya gösterilen TEK metin. Hiçbir iç ayrıntı sızdırmaz. */
-const YETKISIZ_METNI = 'Bu işlem için yetkiniz yok. Yetki talebi için yöneticinize başvurun.';
+const YETKISIZ_METNI = RET_METINLERI[RET_ANAHTARI]!;
 
 async function yetkiKapisi(handle: string): Promise<void> {
   const session = await auth();
