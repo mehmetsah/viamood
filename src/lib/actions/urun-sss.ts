@@ -11,6 +11,8 @@ import { db } from '@/db/client';
 import { urunSss } from '@/db/schema/urun-sss';
 import { handleTemizle, sssDogrula } from '@/lib/urun-sss';
 import { sssSenkronla } from '@/lib/urun-sss-shopify';
+import { auth } from '@/lib/auth';
+import { sssYonetebilirMi } from '@/lib/yetki';
 
 /**
  * Form eylemleri `Promise<void>` döner (React `action=` sözleşmesi). Hata,
@@ -54,7 +56,24 @@ async function shopifyTazele(handle: string): Promise<string | null> {
   }
 }
 
+/**
+ * KAPI 3/3 — server action'ların KENDİ kapısı.
+ *
+ * ⚠ 29 Eyl 2026'da ölçüldü: bu dosyadaki dört eylemin HİÇBİRİNDE yetki denetimi
+ * yoktu. Sayfayı `admin/layout` koruyordu ama server action ayrı bir POST ucudur:
+ * oturum açmış herhangi bir `customer` bunu doğrudan çağırıp SSS verisini
+ * değiştirebilirdi. Layout kapısı bu yolu KAPATMAZ.
+ */
+async function yetkiKapisi(): Promise<void> {
+  const session = await auth();
+  if (!sssYonetebilirMi(session?.user?.role)) {
+    // Sessizce yutmuyoruz: yetkisiz çağrı görünür bir hata bırakır.
+    throw new Error('yetkisiz: SSS düzenleme yetkiniz yok');
+  }
+}
+
 export async function sssEkle(fd: FormData): Promise<void> {
+  await yetkiKapisi();
   const handle = handleTemizle(String(fd.get('handle') ?? ''));
   if (!handle) geriDon('', 'ürün handle gerekli');
   const d = sssDogrula({ soru: String(fd.get('soru') ?? ''), cevap: String(fd.get('cevap') ?? '') });
@@ -73,6 +92,7 @@ export async function sssEkle(fd: FormData): Promise<void> {
 }
 
 export async function sssGuncelle(fd: FormData): Promise<void> {
+  await yetkiKapisi();
   const id = String(fd.get('id') ?? '');
   const handle = handleTemizle(String(fd.get('handle') ?? ''));
   if (!id || !handle) geriDon(handle, 'kayıt bulunamadı');
@@ -91,6 +111,7 @@ export async function sssGuncelle(fd: FormData): Promise<void> {
 }
 
 export async function sssSil(fd: FormData): Promise<void> {
+  await yetkiKapisi();
   const id = String(fd.get('id') ?? '');
   const handle = handleTemizle(String(fd.get('handle') ?? ''));
   if (!id || !handle) geriDon(handle, 'kayıt bulunamadı');
@@ -121,6 +142,7 @@ export async function sssSil(fd: FormData): Promise<void> {
 
 /** Sırayı bir yukarı/aşağı taşır. Takas geçici negatif sıra ile yapılır (tekil kısıt). */
 export async function sssTasi(fd: FormData): Promise<void> {
+  await yetkiKapisi();
   const id = String(fd.get('id') ?? '');
   const handle = handleTemizle(String(fd.get('handle') ?? ''));
   const yon = String(fd.get('yon') ?? '') === 'yukari' ? -1 : 1;
