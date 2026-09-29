@@ -1,6 +1,7 @@
 import NextAuth from 'next-auth';
 import { NextResponse, type NextRequest } from 'next/server';
 import { authConfig } from '@/lib/auth.config';
+import { adminYoluAcikMi, SSS_EDITOR, SSS_YOL } from '@/lib/yetki';
 import {
   HALKODE_PREVIEW_COOKIE,
   HALKODE_PREVIEW_MAX_AGE,
@@ -162,7 +163,10 @@ export default auth((req) => {
   const role = (session.user as { role?: string }).role;
 
   if (pathname.startsWith(ADMIN_PREFIX)) {
-    if (role !== 'admin' && role !== 'super_admin') {
+    // KAPI 1/3 — yol bazlı. sss_editor YALNIZ /admin/urun-sss görebilir; menüden
+    // gizlemek yetmez, adres çubuğuna başka yol yazan da buradan döner.
+    if (!adminYoluAcikMi(role, pathname)) {
+      return NextResponse.redirect(buildRedirectUrl(req, role === 'customer' ? '/hesabim' : role === SSS_EDITOR ? SSS_YOL : '/dashboard'));
       return NextResponse.redirect(buildRedirectUrl(req, role === 'customer' ? '/hesabim' : '/dashboard'));
     }
     return NextResponse.next();

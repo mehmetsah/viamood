@@ -20,7 +20,7 @@ declare module 'next-auth' {
   interface Session {
     user: {
       id: string;
-      role: 'customer' | 'vendor' | 'vendor_admin' | 'admin' | 'super_admin';
+      role: 'customer' | 'vendor' | 'vendor_admin' | 'admin' | 'super_admin' | 'sss_editor';
     } & DefaultSession['user'];
   }
 }
