@@ -77,7 +77,11 @@ export async function POST(req: NextRequest) {
   return NextResponse.json(
     {
       ok: true,
-      installments: pos.installments.map((i) => ({
+      // Tavan BURADA uygulanır (otorite uç). Yunus 29 Eyl: "3 taksit ile sınırlayalım".
+      // Süzgeç listeyi yalnız DARALTIR — API'de olmayan taksit üretilmez.
+      installments: pos.installments
+        .filter((i) => taksitGecerli(i.installments_number))
+        .map((i) => ({
         installments_number: i.installments_number,
         amount_to_be_paid: i.amount_to_be_paid,
         payable_amount: i.payable_amount,

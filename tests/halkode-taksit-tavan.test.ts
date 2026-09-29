@@ -40,3 +40,29 @@ describe('halkode taksit tavanı', () => {
     expect(taksitGecerli(-5)).toBe(false);
   });
 });
+
+/**
+ * SÖZLEŞME ÇİVİSİ — 29 Eyl 2026'da ölçülen gerçek kaza:
+ * Tavan sabiti yazıldı, import satırı route'a girdi, AMA `.filter()` çağrısı girinti
+ * uyuşmazlığı yüzünden hiç eklenmedi ve bu fark edilmedi. Tema süzgeci ekranı
+ * düzelttiği için kusur görünmez oldu; uç hâlâ 12 seçenek döndürüyordu.
+ * Bu test, süzgecin KAYNAKTA durduğunu doğrular — "import var" yetmez.
+ */
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
+describe('taksit tavanı uçlarda GERÇEKTEN bağlı', () => {
+  it('installments ucu listeyi taksitGecerli ile süzüyor', () => {
+    const src = readFileSync(join(process.cwd(), 'src/app/api/v1/payment/halkode/installments/route.ts'), 'utf8');
+    expect(src).toContain("from '@/lib/halkode/taksit-tavan'");
+    expect(src).toMatch(/\.filter\(\s*\(i\)\s*=>\s*taksitGecerli\(i\.installments_number\)\s*\)/);
+  });
+
+  it('initialize ucu tavanı aşan isteği reddediyor', () => {
+    const src = readFileSync(join(process.cwd(), 'src/app/api/v1/payment/halkode/initialize/route.ts'), 'utf8');
+    expect(src).toContain("from '@/lib/halkode/taksit-tavan'");
+    expect(src).toContain('gecersiz_taksit_sayisi');
+    expect(src).toMatch(/!taksitGecerli\(body\.installments_number\)/);
+    expect(src).toContain('status: 422');
+  });
+});
