@@ -33,6 +33,7 @@ import { pushFulfillmentToShopify } from '@/lib/shopify/fulfillment-push';
 import { notifyNativeOrderShipped } from '@/lib/orders/lifecycle';
 import { syncOrderToMikro } from '@/lib/server/mikro-sync';
 import { quoteShipmentRate } from '@/lib/kargolab/rates';
+import { ilFromIlce, isValidIl, normalizeIl } from '@/lib/tr-addresses';
 import { env } from '@/lib/env';
 
 interface CreateOk {
@@ -79,10 +80,51 @@ const TR_STATE_CODE: Record<string, string> = {
   'düzce': '81',
 };
 
-function stateCodeFromName(state: string | null | undefined): string {
-  if (!state) return '34';
+/**
+ * İl adı → KargoLab/PTT il (plaka) kodu.
+ *
+ * ⚠️ 07 Eyl 2026 DÜZELTME: bu fonksiyon eskiden il boş ya da tanınmaz olduğunda
+ * SESSİZCE '34' (İstanbul) dönüyordu. Sonuç: Shopify native checkout'tan gelen
+ * (province'i boş) siparişlerde PTT'ye il=ilçe adı + il_kodu=34 gidiyordu →
+ * adres PTT tarafında tutarsız kalıyor, gönderi ÇIKIŞ YAPAMIYORDU.
+ * Artık null döner; çağıran net hata verir, uydurma il kodu gönderilmez.
+ */
+function stateCodeFromName(state: string | null | undefined): string | null {
+  if (!state) return null;
   const key = state.toLocaleLowerCase('tr-TR').trim();
-  return TR_STATE_CODE[key] ?? '34';
+  return TR_STATE_CODE[key] ?? null;
+}
+
+/**
+ * Sipariş teslimat adresinden (İL, İLÇE) çözer.
+ *
+ * order-ingest'teki TERS İSİMLENDİRME: `ship.district` = İL (Shopify province),
+ * `ship.city` = İLÇE. Shopify native TR checkout province TOPLAMADIĞI için
+ * `ship.district` çoğu siparişte BOŞ gelir — o durumda ilçeden il'i geri çözeriz.
+ */
+function resolveIlIlce(ship: Record<string, string | undefined>): {
+  il: string | null;
+  ilce: string | null;
+} {
+  const rawIl = ship.district?.trim() || null;
+  const rawIlce = ship.city?.trim() || null;
+
+  // 1) İl alanı doluysa onu normalize et (kısaltma/yanlış yazım dahil)
+  let il = normalizeIl(rawIl) ?? rawIl;
+  let ilce = rawIlce;
+
+  // 2) İl boş ama ilçe alanına aslında bir İL adı yazılmışsa (tek alanlı adres formu)
+  if (!il && ilce && isValidIl(ilce)) {
+    il = normalizeIl(ilce) ?? ilce;
+  }
+  // 3) İl hâlâ boşsa ilçeden geri çöz (tek eşleşme varsa)
+  if (!il && ilce) {
+    il = ilFromIlce(ilce);
+  }
+  // 4) İl var ama ilçe yoksa, ilçeyi il ile doldurma — merkez ilçe belirsiz kalır
+  if (il && !ilce) ilce = null;
+
+  return { il, ilce };
 }
 
 /**

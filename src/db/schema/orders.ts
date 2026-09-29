@@ -43,6 +43,8 @@ export const mikroSyncStatus = pgEnum('mikro_sync_status', [
 export const orderLineItemStatus = pgEnum('order_line_item_status', [
   'pending',         // Henüz routing yapılmadı
   'awaiting_pickup', // Vendor'a atandı, etiket bekliyor
+  'collected',       // Tedarikçiden toplandı (hibrit toplama)
+  'received',        // Depoya giriş yapıldı (hibrit toplama)
   'shipped',         // Kargoya verildi
   'delivered',       // Teslim edildi
   'cancelled',

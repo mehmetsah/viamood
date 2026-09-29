@@ -21,6 +21,19 @@ export const productStatus = pgEnum('product_status', [
 ]);
 
 /**
+ * Stok konumu (FAZ 3.1) — ürünün fiziksel stoğu nerede?
+ * Sipariş toplama/rota ve fulfillment kararını besler.
+ *  - own_warehouse:     Bizim depomuzda. Direkt gönderilir (varsayılan; mevcut auto-fulfill davranışı).
+ *  - supplier_pickup:    Tedarikçide. Sipariş sonrası toplanır → depoya gelir → oradan gönderilir (hibrit).
+ *  - supplier_dropship:  Tedarikçi kendi deposundan direkt gönderir (Senaryo 2 — şimdilik pasif, otomasyon kapalı).
+ */
+export const stockLocation = pgEnum('stock_location', [
+  'own_warehouse',
+  'supplier_pickup',
+  'supplier_dropship',
+]);
+
+/**
  * Product — Shopify ürünü ile 1:1 eşleşir.
  * Yetkili vendor bilgisi `vendor_id`.
  * Ürün denormalizasyonu: `vendor_slug`, `vendor_name` read perf için.
@@ -43,6 +56,9 @@ export const products = pgTable(
     productType: text('product_type'),
     tags: jsonb('tags').$type<string[]>().default([]),
     status: productStatus('status').notNull().default('draft'),
+
+    // FAZ 3.1 — stok konumu (toplama/rota + fulfillment kararını besler)
+    stockLocation: stockLocation('stock_location').notNull().default('own_warehouse'),
 
     // Denormalized vendor fields (read perf, JOIN'siz)
     vendorSlug: text('vendor_slug').notNull(),

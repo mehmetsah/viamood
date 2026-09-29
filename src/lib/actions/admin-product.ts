@@ -31,6 +31,9 @@ const productSchema = z.object({
   productType: z.string().max(120).optional().or(z.literal('')),
   tags: z.string().max(500).optional().or(z.literal('')),
   status: z.enum(['draft', 'active', 'archived']),
+  stockLocation: z
+    .enum(['own_warehouse', 'supplier_pickup', 'supplier_dropship'])
+    .default('own_warehouse'),
   sku: z.string().max(120).optional().or(z.literal('')),
   barcode: z.string().max(60).optional().or(z.literal('')),
   priceCents: z.number().int().min(0).max(10_000_000_00),
@@ -86,6 +89,10 @@ function readProductForm(formData: FormData) {
     productType: String(formData.get('productType') ?? '').trim(),
     tags: String(formData.get('tags') ?? ''),
     status: String(formData.get('status') ?? 'draft') as 'draft' | 'active' | 'archived',
+    stockLocation: String(formData.get('stockLocation') ?? 'own_warehouse') as
+      | 'own_warehouse'
+      | 'supplier_pickup'
+      | 'supplier_dropship',
     sku: String(formData.get('sku') ?? '').trim(),
     barcode: String(formData.get('barcode') ?? '').trim(),
     priceCents: moneyToCents(String(formData.get('price') ?? '0')),
@@ -144,6 +151,7 @@ export async function adminCreateProductAction(formData: FormData): Promise<Acti
         productType: data.productType || null,
         tags: parseTags(data.tags || ''),
         status: data.status,
+        stockLocation: data.stockLocation,
         vendorSlug: vendor.slug,
         vendorName: vendor.name,
         minPriceCents: BigInt(data.priceCents),
@@ -227,6 +235,7 @@ export async function adminUpdateProductAction(
         productType: data.productType || null,
         tags: parseTags(data.tags || ''),
         status: data.status,
+        stockLocation: data.stockLocation,
         minPriceCents: BigInt(data.priceCents),
         maxPriceCents: BigInt(data.priceCents),
         featuredImageUrl: (imagesArr[0] || data.featuredImageUrl) || null,

@@ -32,9 +32,14 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           <Link href="/admin/calculator" className="px-3 py-2 rounded-lg hover:bg-white/10">🧮 Fiyat Hesap</Link>
           <Link href="/admin/profitability" className="px-3 py-2 rounded-lg hover:bg-white/10">📈 Kârlılık Raporu</Link>
           <Link href="/admin/routing-rules" className="px-3 py-2 rounded-lg hover:bg-white/10">🔀 Routing</Link>
+          <Link href="/admin/toplama" className="px-3 py-2 rounded-lg hover:bg-white/10">🚚 Toplama</Link>
+          <Link href="/admin/reklam" className="px-3 py-2 rounded-lg hover:bg-white/10">📣 Reklam Önerileri</Link>
+          <Link href="/admin/influencers" className="px-3 py-2 rounded-lg hover:bg-white/10">⭐ Influencer&apos;lar</Link>
           <Link href="/admin/shopify" className="px-3 py-2 rounded-lg hover:bg-white/10">🛒 Shopify</Link>
+          <Link href="/admin/kargo" className="px-3 py-2 rounded-lg hover:bg-white/10">📦 Kargo &amp; Cari</Link>
           <Link href="/admin/shipping-rates" className="px-3 py-2 rounded-lg hover:bg-white/10">🚚 Kargo Tarifeleri</Link>
           <Link href="/admin/mikro" className="px-3 py-2 rounded-lg hover:bg-white/10">📦 Mikro V17</Link>
+          <Link href="/admin/entegrasyonlar" className="px-3 py-2 rounded-lg hover:bg-white/10">🔌 Entegrasyonlar</Link>
           <Link href="/admin/audit-log" className="px-3 py-2 rounded-lg hover:bg-white/10">📜 Audit Log</Link>
           <Link href="/admin/settings" className="px-3 py-2 rounded-lg hover:bg-white/10">⚙️ Ayarlar</Link>
           <Link href="/admin/theme" className="px-3 py-2 rounded-lg hover:bg-white/10">🎨 Tema Editörü</Link>

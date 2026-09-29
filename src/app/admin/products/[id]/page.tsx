@@ -32,6 +32,7 @@ export default async function AdminEditProductPage({
     productType: product.productType ?? '',
     tags: (product.tags ?? []).join(', '),
     status: product.status,
+    stockLocation: product.stockLocation,
     sku: variant?.sku ?? '',
     barcode: variant?.barcode ?? '',
     price: centsToTL(variant?.priceCents),

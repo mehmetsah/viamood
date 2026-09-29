@@ -14,6 +14,7 @@ interface ProductFormDefaults {
   productType?: string;
   tags?: string;
   status?: 'draft' | 'active' | 'archived';
+  stockLocation?: 'own_warehouse' | 'supplier_pickup' | 'supplier_dropship';
   sku?: string;
   barcode?: string;
   price?: string;
@@ -109,6 +110,24 @@ export function ProductForm({ defaults = {}, action, submitLabel, showInitialSto
               <option value="archived">Arşiv</option>
             </select>
           </div>
+        </div>
+        <div>
+          <label htmlFor="stockLocation" className="text-sm font-medium text-neutral-800 block mb-1.5">
+            Stok konumu
+          </label>
+          <select
+            id="stockLocation"
+            name="stockLocation"
+            defaultValue={defaults.stockLocation ?? 'own_warehouse'}
+            className="h-11 w-full px-4 rounded-lg border border-neutral-300 bg-white text-[15px] outline-none focus:border-[var(--color-brand-orange)] focus:ring-2 focus:ring-[var(--color-brand-orange)]/20"
+          >
+            <option value="own_warehouse">Bizim depomuzda (direkt gönderilir)</option>
+            <option value="supplier_pickup">Tedarikçide — toplanacak (hibrit)</option>
+            <option value="supplier_dropship">Tedarikçi direkt gönderir (yakında)</option>
+          </select>
+          <p className="text-xs text-neutral-500 mt-1">
+            Tedarikçide olan ürünler sipariş sonrası toplama listesine düşer; bizim depodakiler direkt gönderilir.
+          </p>
         </div>
         <Input
           name="tags"

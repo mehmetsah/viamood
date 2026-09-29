@@ -32,6 +32,31 @@ export function getIlceler(ilAdi: string): string[] {
   return [];
 }
 
+/**
+ * İLÇE adından İL'i geri çözer.
+ *
+ * Neden: Shopify'ın native TR checkout'unda İL (province) alanı YOK — müşteri ilçeyi
+ * `city` alanına yazıyor, `province` boş geliyor. Bu yüzden kargo tarafına (KargoLab →
+ * PTT) il bilgisi hiç gitmiyordu. Bu fonksiyon ilçeden il'i geri çıkarır.
+ *
+ * Yalnız TEK il eşleşmesi varsa döner; "Merkez" gibi birden çok ilde geçen ilçe
+ * adlarında null döner (yanlış il yazmaktansa hata vermek doğrusu).
+ */
+export function ilFromIlce(ilceAdi: string | null | undefined): string | null {
+  const t = ilceAdi?.trim();
+  if (!t) return null;
+  const hits: string[] = [];
+  for (const [, rec] of Object.entries(TYPED.iller)) {
+    for (const ilce of rec.ilceler) {
+      if (ilce.localeCompare(t, 'tr', { sensitivity: 'base' }) === 0) {
+        if (!hits.includes(rec.ad)) hits.push(rec.ad);
+        break;
+      }
+    }
+  }
+  return hits.length === 1 ? hits[0] : null;
+}
+
 export function isValidIl(name: string): boolean {
   return ILLER.some((i) => i.ad.localeCompare(name, 'tr', { sensitivity: 'base' }) === 0);
 }
