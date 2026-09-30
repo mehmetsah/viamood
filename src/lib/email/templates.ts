@@ -160,6 +160,52 @@ export function passwordResetEmail(p: {
   };
 }
 
+/**
+ * DAVET (ilk giriş) e-postası — #992317 / #992334.
+ *
+ * `passwordResetEmail`in kardeşi; bilinçli İKİ FARK var:
+ *   1) Metin "şifreni sıfırla" demez — davet edilen kişinin HENÜZ hesabı yoktur,
+ *      "sıfırlama" ifadesi yanıltır ve kişi "ben hesap açmadım ki" diye eler.
+ *   2) "Bu isteği siz yapmadıysanız yok sayın" cümlesi KORUNUR ama farklı gerekçeyle:
+ *      orada şifre değişmez, burada hesap hiç açılmaz.
+ *
+ * ⚠ Süre metni parametreden gelir, koda GÖMÜLMEZ — `DAVET_OMRU_SAAT` tek kaynak.
+ *   Sabit yazılsaydı ömür değiştiğinde mail yalan söylerdi.
+ */
+export function daveteEmail(p: {
+  davetUrl: string;
+  saat: number;
+  rolAciklama?: string;
+}): { subject: string; html: string; text: string } {
+  const ne = p.rolAciklama ? ` (${p.rolAciklama})` : '';
+  return {
+    subject: `${BRAND_NAME}: Hesabın hazır — parolanı belirle`,
+    html: wrap(`
+      <p>Merhaba,</p>
+      <p>${BRAND_NAME} yönetim paneli için sana bir hesap${ne} açıldı.
+         Parolanı <strong>kendin</strong> belirleyeceksin — biz sana parola göndermiyoruz.</p>
+      ${button(p.davetUrl, 'Parolamı belirle')}
+      <p style="margin-top:24px;font-size:14px;color:#6b6660;">
+        Bu bağlantı <strong>${p.saat} saat</strong> geçerlidir ve yalnızca
+        <strong>bir kez</strong> kullanılabilir. Parolanı belirlediğin anda bağlantı kapanır.
+      </p>
+      <p style="font-size:14px;color:#6b6660;">
+        Buton çalışmazsa bu adresi tarayıcına yapıştır:<br>
+        <span class="em-mono" style="font-size:13px;">${p.davetUrl}</span>
+      </p>
+      <p style="font-size:14px;color:#6b6660;">
+        Bu daveti <strong>beklemiyorsanız</strong> maili yok sayabilirsiniz —
+        bağlantı kullanılmadan süresi dolar ve hesap açılmaz.
+      </p>
+    `),
+    text:
+      `${BRAND_NAME} — hesabın hazır\n\n` +
+      `Parolanı belirlemek için: ${p.davetUrl}\n\n` +
+      `Bağlantı ${p.saat} saat geçerlidir ve bir kez kullanılabilir.\n` +
+      `Bu daveti beklemiyorsanız maili yok sayabilirsiniz — hesap açılmaz.`,
+  };
+}
+
 export function vendorWelcomeEmail(vendorName: string): { subject: string; html: string; text: string } {
   return {
     subject: `${BRAND_NAME}: Tedarikçi başvurun alındı`,

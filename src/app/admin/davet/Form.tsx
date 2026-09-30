@@ -24,6 +24,10 @@ export function DavetOlusturForm({ roller }: { roller: string[] }) {
             {roller.map((r) => <option key={r} value={r}>{r}</option>)}
           </select>
         </div>
+        <label className="flex items-center gap-2 text-sm leading-relaxed">
+          <input type="checkbox" name="mailGonder" defaultChecked className="h-4 w-4" />
+          Davet e-postasını da gönder
+        </label>
         <button type="submit" disabled={pending}
                 className="rounded-lg bg-neutral-900 px-4 py-2 text-sm font-medium leading-relaxed text-white disabled:opacity-60">
           {pending ? 'Üretiliyor…' : 'Davet linki üret'}
@@ -39,6 +43,12 @@ export function DavetOlusturForm({ roller }: { roller: string[] }) {
             Link bir kez gösterilir — şimdi kopyala. Geçerlilik: {new Date(durum.expiresAt).toLocaleString('tr-TR')}
           </p>
           <textarea readOnly rows={3} className={`${girdiCls} font-mono`} value={durum.link} />
+          <p className="mt-3 text-xs leading-relaxed text-neutral-600">
+            {durum.mail === 'gonderildi' && 'E-posta gönderildi.'}
+            {durum.mail === 'gonderilmedi' && 'E-posta gönderilmedi — linki elden ilet.'}
+            {durum.mail === 'basarisiz' &&
+              `E-posta GÖNDERİLEMEDİ${durum.mailNot ? ` (${durum.mailNot})` : ''} — link yine de geçerli, elden ilet.`}
+          </p>
         </div>
       )}
     </div>

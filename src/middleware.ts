@@ -24,6 +24,12 @@ const PUBLIC_PATHS = new Set([
   // Şifre sıfırlama — kullanıcı buraya giriş YAPMAMIŞ hâlde gelir.
   '/auth/sifremi-unuttum',
   '/auth/sifre-sifirla',
+  // Davet linki — ÖLÇÜLEN KIRIK (#992334, 30 Eyl 2026). Buraya eklenmediği için
+  // `/auth/davet?token=…` oturumsuz istekte sign-in'e 307 atıyordu: davet edilen
+  // kişi HENÜZ hesabı olmadığı için giriş de yapamaz ⇒ parola formunu hiç göremez,
+  // token boşa harcanır. Kardeş yol `/auth/sifre-sifirla` listedeydi, bu değildi —
+  // kusur sayfanın kendisinde değil, tam olarak BU LİSTEDE.
+  '/auth/davet',
   // Google OAuth dönüş yolu — OTURUM ARANMAZ. Kullanıcı buraya henüz
   // giriş yapmamış hâlde döner; public olmazsa sign-in'e atılır ve
   // `code`/`state` kaybolur, giriş tamamlanamaz.
