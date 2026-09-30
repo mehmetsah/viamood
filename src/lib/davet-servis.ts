@@ -23,10 +23,11 @@
  */
 import { and, eq, isNull } from 'drizzle-orm';
 import { db } from '@/db/client';
-import { inviteTokens, sessions, users } from '@/db/schema';
+import { inviteTokens, sessions, userYetkileri, users } from '@/db/schema';
 import { DAVET_OMRU_MS, davetHukmu, davetTokenUret, tokenOzeti } from '@/lib/davet';
 import { env } from '@/lib/env';
 import { hashPassword } from '@/lib/password';
+import { SSS_EDITOR } from '@/lib/yetki';
 
 /**
  * Davet linkiyle VERİLEBİLEN roller.
@@ -39,6 +40,25 @@ import { hashPassword } from '@/lib/password';
  */
 export const DAVET_EDILEBILIR_ROLLER = ['customer', 'vendor', 'vendor_admin', 'sss_editor'] as const;
 export type DavetEdilebilirRol = (typeof DAVET_EDILEBILIR_ROLLER)[number];
+
+/**
+ * B ŞIKKI — davet rolünü "DB'ye yazılabilir rol" + "ek yetki satırı"na ayırır.
+ *
+ * ÖLÇÜLEN KISIT: `sss_editor` `user_role` ENUM'unda YOK ve o göç geri alınamaz
+ * olduğu için onay bekliyor (drizzle/MANUEL-A-SIKKI-user_role-enum.sql).
+ * Enum'a yazmayı denemek DB düzeyinde düşer. Çözüm: `users.role` güvenli bir
+ * değerde (`customer`) kalır, yetki `user_yetkileri` tablosuna satır olarak
+ * yazılır. `sssYonetebilirMi()` zaten hem rolü hem yetki kaydını kabul ediyor,
+ * yani erişim aynı; fark GERİ ALINABİLİRLİK: enum değeri silinemez, satır tek
+ * DELETE ile kalkar.
+ */
+export function davetRolAyristir(rol: DavetEdilebilirRol): {
+  dbRol: 'customer' | 'vendor' | 'vendor_admin';
+  ekYetki: string | null;
+} {
+  if (rol === 'sss_editor') return { dbRol: 'customer', ekYetki: SSS_EDITOR };
+  return { dbRol: rol, ekYetki: null };
+}
 
 export function davetRoluGecerliMi(rol: string): rol is DavetEdilebilirRol {
   return (DAVET_EDILEBILIR_ROLLER as readonly string[]).includes(rol);
@@ -161,6 +181,51 @@ export async function davetTuket(params: { token: string; newPassword: string })
       .where(and(eq(inviteTokens.userId, kayit.userId), isNull(inviteTokens.usedAt)));
     // Parola belirlendi ⇒ eski oturumlar geçersiz.
     await db.delete(sessions).where(eq(sessions.userId, kayit.userId));
+  } else {
+    // ── YENİ KİŞİ ────────────────────────────────────────────────────────────
+    // ÖLÇÜLEN KUSUR (#992317): burada eskiden HİÇBİR ŞEY yoktu. `userId` NULL ise
+    // parola yazılmıyor, `users` satırı açılmıyor, ama fonksiyon yine `{ok:true}`
+    // dönüyordu — yani davet edilen kişi "parolan kuruldu" ekranını görüyor, hesabı
+    // ise hiç doğmuyordu. Sessiz başarı, başarısızlıktan beterdir.
+    const { dbRol, ekYetki } = davetRolAyristir(kayit.role as DavetEdilebilirRol);
+    try {
+      await db.transaction(async (tx) => {
+        // E-posta çakışması: kişi arada kendi kaydını açmış olabilir (yarış).
+        // Yeni satır açmak `users.email` UNIQUE kısıtına takılırdı; o yüzden
+        // ÖNCE bak, varsa MEVCUT kullanıcıya bağlan.
+        const mevcut = await tx.select({ id: users.id }).from(users)
+          .where(eq(users.email, kayit.email)).limit(1);
+
+        const userId = mevcut[0]?.id ?? (
+          await tx.insert(users)
+            .values({ email: kayit.email, passwordHash, role: dbRol })
+            .returning({ id: users.id })
+        )[0]!.id;
+
+        if (mevcut[0]) {
+          await tx.update(users).set({ passwordHash }).where(eq(users.id, userId));
+        }
+
+        if (ekYetki) {
+          // onConflictDoNothing: aynı yetki iki kez verilirse UNIQUE kısıtı
+          // işlemin TAMAMINI düşürürdü — yetki zaten varsa sessizce geçilir.
+          await tx.insert(userYetkileri)
+            .values({ userId, yetki: ekYetki })
+            .onConflictDoNothing();
+        }
+
+        // Bu e-postaya ait bekleyen DİĞER davetleri kapat — eski bir mail hâlâ
+        // kutudaysa ikinci bir hesap/parola yolu açmasın.
+        await tx.update(inviteTokens).set({ usedAt: new Date() })
+          .where(and(eq(inviteTokens.email, kayit.email), isNull(inviteTokens.usedAt)));
+      });
+    } catch (e) {
+      // Mevcut koddaki davranış KORUNDU: işlem düşerse damga geri alınır, yoksa
+      // link ölür ve kişi parolasını bir daha hiç belirleyemez.
+      await db.update(inviteTokens).set({ usedAt: null }).where(eq(inviteTokens.tokenHash, ozet));
+      console.error(`[davet] yeni kullanıcı açılamadı, damga geri alındı · rol=${kayit.role}`);
+      return { ok: false };
+    }
   }
 
   return { ok: true, email: kayit.email };
