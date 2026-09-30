@@ -16,12 +16,9 @@
  *   sızıntı bu satırdan geri açılır).
  */
 import type { ActionResult } from '@/lib/actions/auth';
-import { DAVET_OMRU_SAAT } from '@/lib/davet';
+import { DAVET_GECERSIZ_METNI } from '@/lib/davet';
 import { validatePassword } from '@/lib/password';
 
-/** Davet linkinde dönen TEK hata cümlesi — sebebe göre DEĞİŞMEZ. */
-export const DAVET_GECERSIZ_METNI =
-  `Bu davet bağlantısı geçersiz ya da süresi dolmuş (${DAVET_OMRU_SAAT} saat geçerlidir). Seni davet eden kişiden yeni bir bağlantı iste.`;
 
 /**
  * Parola formunu göstermeden önce token'ı doğrular — TÜKETMEZ.

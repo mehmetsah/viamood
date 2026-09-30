@@ -16,6 +16,20 @@ export const DAVET_OMRU_SAAT = 24;
 export const DAVET_OMRU_MS = DAVET_OMRU_SAAT * 60 * 60 * 1000;
 
 /**
+ * Davet linkinde dışarıya dönen TEK hata cümlesi — sebebe göre DEĞİŞMEZ.
+ *
+ * ⚠ NEDEN BU DOSYADA: burası SAF bir modül. Eskiden `lib/actions/davet.ts`
+ * içindeydi, ama o dosya `'use server'` ile başlıyor ve Next kuralı gereği bir
+ * `'use server'` modülü **yalnız async fonksiyon** export edebilir. Oradan bir
+ * `string` export etmek `next build`i "A 'use server' file can only export async
+ * functions, found string" ile DÜŞÜRÜYORDU (#992334 · ölçüldü 30 Eyl). `tsc` ve
+ * `vitest` bu sınıfı YAKALAMAZ — yalnız `next build` yakalar.
+ */
+export const DAVET_GECERSIZ_METNI =
+  `Bu davet bağlantısı geçersiz ya da süresi dolmuş (${DAVET_OMRU_SAAT} saat geçerlidir). Seni davet eden kişiden yeni bir bağlantı iste.`;
+
+
+/**
  * Yeni davet token'ı üretir.
  * Dönen `ham` YALNIZ linke konur ve bir daha asla elde edilemez; DB'ye `ozet` gider.
  */
