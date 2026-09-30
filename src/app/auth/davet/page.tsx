@@ -1,6 +1,6 @@
 import Link from 'next/link';
-import { DAVET_GECERSIZ_METNI, davetKontrolAction } from '@/lib/actions/davet';
-import { DAVET_OMRU_SAAT } from '@/lib/davet';
+import { davetKontrolAction } from '@/lib/actions/davet';
+import { DAVET_GECERSIZ_METNI, DAVET_OMRU_SAAT } from '@/lib/davet';
 import { Logo } from '@/components/ui/Logo';
 import { DavetForm } from './Form';
 
