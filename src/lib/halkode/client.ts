@@ -162,6 +162,49 @@ interface Kimlik {
 const kimlikDolu = (k: Kimlik) => !!(k.appId && k.appSecret && k.merchantKey);
 
 /**
+ * Halköde kimlik ÇİFTİ — TEK OKUMA NOKTASI (#991347).
+ *
+ * ÖLÇÜLEN KUSUR (2 Eki 2026): bu altı satır bu dosyada İKİ KEZ yazılıydı —
+ * `cfg()` (ödemede hangi kimliğin kullanılacağını seçen yol) ve `odemeOrtami()`
+ * (ekrana hangi ortamda olduğumuzu söyleyen yol). Kopya olduğu ölçüldü: TEK bir
+ * mutasyon iki yeri birden değiştiriyordu.
+ *
+ * NİYE TEHLİKELİYDİ: biri güncellenip öteki unutulsaydı `cfg()` CANLI kimliği
+ * seçerken `odemeOrtami()` 'test' diyebilirdi ⇒ paranın geçtiği yol ile ekranın
+ * söylediği ortam AYRIŞIRDI. Kullanıcı "test" yazısına bakıp gerçek kart çeker.
+ * 17 Eyl'deki sessiz tutarsızlığın aynı ailesinden.
+ *
+ * ⚠ İFADELER BİLEREK AÇIK YAZILDI, şablon dizgeyle (`ps[`${onek}_app_id`]`)
+ * üretilmedi. İki sebep: (a) `halkode-kimlik-secimi.test.js` bir BÖLGE KİLİDİ ve
+ * `ps.halkode_live_app_id || process.env.HALKODE_LIVE_APP_ID` ifadesinin kaynakta
+ * BİREBİR durmasını şart koşuyor — para yolunu koruyan bu çivi gevşetilmez;
+ * (b) açık yazım, hangi DB alanının hangi ortam değişkenine eşlendiğini okurken
+ * tek bakışta gösterir. Tekilleştirme kopyayı kaldırır, OKUNURLUĞU düşürmez.
+ *
+ * SIRA DEĞİŞMEDİ: DB (`store_settings.payment`) → ortam değişkeni → boş dize.
+ * Boş dize bilerek `undefined` değil; `kimlikDolu()` onu "eksik" sayıyor.
+ */
+function kimlikCifti(ps: Partial<import('@/db/schema').PaymentSettings>): {
+  canliKimlik: Kimlik;
+  testKimlik: Kimlik;
+} {
+  // ⚠️ CANLI ve TEST kimlikleri AYRI YUVALARDA durur — biri diğerini EZMEZ.
+  // Tek yuva olsaydı canlı anahtarları girmek test sayfasını sessizce bozardı:
+  // test sayfası testapp'e gider ama elinde canlı kimlik olurdu → status 30.
+  const canliKimlik: Kimlik = {
+    appId: ps.halkode_live_app_id || process.env.HALKODE_LIVE_APP_ID || '',
+    appSecret: ps.halkode_live_app_secret || process.env.HALKODE_LIVE_APP_SECRET || '',
+    merchantKey: ps.halkode_live_merchant_key || process.env.HALKODE_LIVE_MERCHANT_KEY || '',
+  };
+  const testKimlik: Kimlik = {
+    appId: ps.halkode_app_id || process.env.HALKODE_APP_ID || '',
+    appSecret: ps.halkode_app_secret || process.env.HALKODE_APP_SECRET || '',
+    merchantKey: ps.halkode_merchant_key || process.env.HALKODE_MERCHANT_KEY || '',
+  };
+  return { canliKimlik, testKimlik };
+}
+
+/**
  * Ortam nasıl belirlenir?
  *
  * 🔴 17 Eyl 2026 arızasının kök sebebi: ortam YALNIZ önizleme çerezinden
@@ -219,20 +262,8 @@ async function cfg(ortamZorla?: HalkodeOrtamSecimi): Promise<HalkodeCfg> {
 
   const canliMi = /(^|\/\/)app\.halkode\./i.test(baseUrl);
 
-  // ⚠️ CANLI ve TEST kimlikleri AYRI YUVALARDA durur — biri diğerini EZMEZ.
-  // Tek yuva olsaydı canlı anahtarları girmek test sayfasını sessizce bozardı:
-  // test sayfası testapp'e gider ama elinde canlı kimlik olurdu → status 30.
-  // İki sayfa yan yana yaşayabilsin diye ayrıldı.
-  const canliKimlik: Kimlik = {
-    appId: ps.halkode_live_app_id || process.env.HALKODE_LIVE_APP_ID || '',
-    appSecret: ps.halkode_live_app_secret || process.env.HALKODE_LIVE_APP_SECRET || '',
-    merchantKey: ps.halkode_live_merchant_key || process.env.HALKODE_LIVE_MERCHANT_KEY || '',
-  };
-  const testKimlik: Kimlik = {
-    appId: ps.halkode_app_id || process.env.HALKODE_APP_ID || '',
-    appSecret: ps.halkode_app_secret || process.env.HALKODE_APP_SECRET || '',
-    merchantKey: ps.halkode_merchant_key || process.env.HALKODE_MERCHANT_KEY || '',
-  };
+  // İki yuva da TEK OKUMA NOKTASINDAN gelir (bkz. kimlikCifti) — #991347.
+  const { canliKimlik, testKimlik } = kimlikCifti(ps);
 
   // Geri uyum: canlı yuvalar boşken canlı ortamda eski tek-yuva davranışı sürer.
   // `scripts/halkode-*.ts` HALKODE_BASE_URL + HALKODE_APP_ID ile canlıya bağlanıyor;
@@ -292,19 +323,10 @@ export async function odemeOrtami(): Promise<'test' | 'canli' | null> {
   if (ps.halkode_test_mode === 0) return 'canli';
   if (ps.halkode_test_mode === 1) return 'test';
 
-  const canliDolu = kimlikDolu({
-    appId: ps.halkode_live_app_id || process.env.HALKODE_LIVE_APP_ID || '',
-    appSecret: ps.halkode_live_app_secret || process.env.HALKODE_LIVE_APP_SECRET || '',
-    merchantKey: ps.halkode_live_merchant_key || process.env.HALKODE_LIVE_MERCHANT_KEY || '',
-  });
-  if (canliDolu) return 'canli';
-
-  const testDolu = kimlikDolu({
-    appId: ps.halkode_app_id || process.env.HALKODE_APP_ID || '',
-    appSecret: ps.halkode_app_secret || process.env.HALKODE_APP_SECRET || '',
-    merchantKey: ps.halkode_merchant_key || process.env.HALKODE_MERCHANT_KEY || '',
-  });
-  return testDolu ? 'test' : null;
+  // ⚠️ `cfg()` ile AYNI okuma noktası — ayrışma buradan doğuyordu (#991347).
+  const { canliKimlik, testKimlik } = kimlikCifti(ps);
+  if (kimlikDolu(canliKimlik)) return 'canli';
+  return kimlikDolu(testKimlik) ? 'test' : null;
 }
 
 /** Kill switch — kimlik bilgileri dolu olsa bile bu açık değilse ödeme başlatılmaz. */
