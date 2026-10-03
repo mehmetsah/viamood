@@ -79,3 +79,41 @@ describe('temizleme mantığı — davranış', () => {
     expect(dusurulurMu('')).toBe(false);
   });
 });
+
+/**
+ * #992111 — iki ucun oturumsuz erişilebilir kalması.
+ *
+ * ÖLÇÜLEN KIRIK (3 Eki 2026, canlı): ikisi de `307 → /auth/sign-in` veriyordu.
+ * Sebep koda değil LİSTEYE bağlıydı — `src/middleware.ts` PUBLIC_PATHS'te yoklardı.
+ *
+ * ⚠ HANGİ LİSTE: `src/lib/auth.config.ts` içinde İKİNCİ bir PUBLIC_PATHS kopyası
+ * var ama ETKİN KAPI O DEĞİL. Deneyle saptandı: `/veri-silme-durumu`,
+ * `/auth/davet` ve `/auth/customer-sign-up` üçü de yalnız middleware listesinde
+ * olmasına rağmen canlıda **200** dönüyor. Bu yüzden kapsam dar tutuldu ve
+ * yalnız middleware listesi güncellendi.
+ */
+describe('#992111 — oturumsuz erişilmesi ZORUNLU iki uç', () => {
+  const blok = (() => {
+    const src = oku('src/middleware.ts');
+    const i = src.indexOf('const PUBLIC_PATHS');
+    return src.slice(i, src.indexOf(']);', i));
+  })();
+
+  it('unsubscribe ucu PUBLIC_PATHS içinde', () => {
+    expect(blok, 'çıkış bağlantısına tıklayanın hesabı olmayabilir').toContain("'/api/email/abonelik-cik'");
+  });
+
+  it('ürün SSS ucu PUBLIC_PATHS içinde', () => {
+    expect(blok, 'ucun kendi yorumu "herkese açık" diyor; tema bu uçtan çeker').toContain("'/api/v1/urun-sss'");
+  });
+
+  it('iki uç da gerçekten var (yol yanlış yazılmadı)', () => {
+    expect(() => oku('src/app/api/email/abonelik-cik/route.ts')).not.toThrow();
+    expect(() => oku('src/app/api/v1/urun-sss/route.ts')).not.toThrow();
+  });
+
+  it('NEGATİF: kapsam dar kaldı — PUBLIC_PATHS\'e başka /api yolu sızmadı', () => {
+    const apiYollari = [...blok.matchAll(/'(\/api\/[^']+)'/g)].map((m) => m[1]).sort();
+    expect(apiYollari).toEqual(['/api/email/abonelik-cik', '/api/v1/urun-sss']);
+  });
+});
