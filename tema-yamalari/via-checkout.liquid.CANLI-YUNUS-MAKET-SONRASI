@@ -430,16 +430,25 @@
   .vco-hk-tk__bas small { font-size:12px; color:var(--muted); }
   /* .vco-hk öneki şart: tema genelindeki label:has(input[type="radio"]) kuralı (özgüllük 0,1,2)
      tek sınıflı satırı ezip display/gap'i inline-flex'e çeviriyordu (test temasında ölçüldü). */
-  .vco-hk .vco-hk-tk__s { display:grid; grid-template-columns:22px 1fr auto auto; align-items:center; gap:12px; margin:0; padding:11px 14px; border-top:1px solid #efe9e0; font-size:14px; font-weight:400; color:var(--ink); cursor:pointer; position:relative; }
+  /* YAN YANA KUTUCUK — Yunus 29 Eyl 2026: "taksitleri yanyana kutucuk halinde
+     gösterebilirmiyiz, aşağı doğru gitmesi sorun yaratabiliyor". Alt alta liste
+     yerine tek satırda üç kutu. Yeni renk/jeton YOK: --o, --ink, --line, --muted
+     ve seçili arka #fff6f3 zaten bu ekranın dilinden. */
+  [data-hk="taksit-liste"]:not(:empty) { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; padding:12px 14px; }
+  .vco-hk .vco-hk-tk__s { display:flex; flex-direction:column; align-items:center; text-align:center; gap:5px; margin:0; padding:10px 6px; border:1px solid var(--line); border-radius:9px; background:#fff; font-size:13px; font-weight:400; color:var(--ink); cursor:pointer; position:relative; min-width:0; }
   .vco-hk-tk__s:first-child { border-top:0; }
-  .vco-hk-tk__s.is-sel { background:#fff6f3; }
+  .vco-hk-tk__s.is-sel { background:#fff6f3; border-color:var(--o); }
+  .vco-hk-tk__s > span:nth-of-type(2) { font-weight:600; line-height:1.3; }
   .vco-hk-tk__s input { position:absolute; opacity:0; width:1px; height:1px; margin:0; pointer-events:none; }
   .vco-hk-tk__rd { width:18px; height:18px; border-radius:50%; border:2px solid #cfc7ba; display:grid; place-items:center; }
   .vco-hk-tk__s.is-sel .vco-hk-tk__rd { border-color:var(--o); }
   .vco-hk-tk__s.is-sel .vco-hk-tk__rd::after { content:""; width:8px; height:8px; border-radius:50%; background:var(--o); }
   .vco-hk-tk__s input:focus-visible + .vco-hk-tk__rd { box-shadow:0 0 0 3px rgba(242,83,52,.25); }
-  .vco-hk-tk__ay { color:var(--muted); font-variant-numeric:tabular-nums; }
-  .vco-hk-tk__top { font-weight:700; font-variant-numeric:tabular-nums; min-width:86px; text-align:right; }
+  /* Klavyeyle gezerken odak KUTUNUN kendisinde görünür — kutucukta radyo dairesi
+     küçük kaldığı için tek başına yeterli bir odak işareti değil. */
+  .vco-hk-tk__s:focus-within { border-color:var(--o); box-shadow:0 0 0 3px rgba(242,83,52,.25); }
+  .vco-hk-tk__ay { color:var(--muted); font-variant-numeric:tabular-nums; font-size:11.5px; line-height:1.35; min-height:1.35em; }
+  .vco-hk-tk__top { font-weight:700; font-variant-numeric:tabular-nums; font-size:13px; line-height:1.3; }
   .vco-hk__tutar { display:flex; justify-content:space-between; align-items:baseline; gap:10px; padding:14px 2px 12px; border-top:1px solid var(--line); margin-top:4px; }
   .vco-hk__tutar span { font-size:14px; color:#3d3833; }
   .vco-hk__tutar small { display:block; color:var(--muted); font-size:12px; }
@@ -452,9 +461,13 @@
   .vco-hk__guven li > span:first-child { color:var(--ok); display:inline-flex; margin-top:1px; flex:0 0 auto; }
   .vco-hk__guven b { font-weight:700; color:var(--ink); }
   @media (max-width:560px){
-    .vco-hk .vco-hk-tk__s { grid-template-columns:20px 1fr auto; gap:10px; }
-    .vco-hk-tk__ay { grid-column:2/3; grid-row:2; margin-top:-6px; font-size:12.5px; }
-    .vco-hk-tk__top { min-width:0; }
+    /* Kutucuk düzeni mobilde de KORUNUR (Yunus'un istediği bu). Dar ekranda yalnız
+       boşluk ve punto küçülür; 360px'te üç kutu taşmadan sığar. Punto tabanı 11px'in
+       altına İNMEZ — okunmaz metin çözüm değildir. */
+    [data-hk="taksit-liste"]:not(:empty) { gap:6px; padding:10px; }
+    .vco-hk .vco-hk-tk__s { padding:9px 4px; font-size:12px; gap:4px; border-radius:8px; }
+    .vco-hk-tk__ay { font-size:11px; }
+    .vco-hk-tk__top { font-size:12px; }
   }
   .vco-iyzico.is-hk .vco-err { margin-bottom:10px; }
   .vco-loading { text-align:center; padding:60px 20px; color:var(--muted); }
