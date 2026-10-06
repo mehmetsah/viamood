@@ -176,8 +176,12 @@ export default auth((req) => {
   }
 
   if (!session?.user) {
+    // callbackUrl'e SORGU DİZESİ de girer (#991987). Yalnız `pathname` yazılınca
+    // mailden gelen `/hesabim?siparis=VM1234` girişten sonra çıplak `/hesabim`e
+    // dönüyordu ve hangi siparişe bakıldığı KAYBOLUYORDU. Hâlâ göreli yol —
+    // `//baska.site` gibi mutlak adres üretmediği için açık-yönlendirme yok.
     return NextResponse.redirect(
-      buildRedirectUrl(req, '/auth/sign-in', { callbackUrl: pathname }),
+      buildRedirectUrl(req, '/auth/sign-in', { callbackUrl: `${pathname}${req.nextUrl.search}` }),
     );
   }
 
