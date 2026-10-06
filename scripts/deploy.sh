@@ -135,6 +135,29 @@ YEDEK=".next.onceki-$(date +%H%M%S)"
 if [ -d .next ]; then
   cp -al .next "$YEDEK" 2>/dev/null || cp -r .next "$YEDEK"
 fi
+# ── SAĞLIK ADRESİ — TEK KAYNAK (#991394) ─────────────────────────────────────
+# ÖLÇÜLEN KUSUR (2 Eki 2026): rollback log satırı `http://localhost/api/health`
+# kullanıyordu. O adres nginx'in VARSAYILAN sunucusuna gider ve uygulama sapasağlam
+# olsa bile **404** döner (betiğin kendi notu da bunu söylüyor, aşağıdaki açıklama
+# bloğuna bak). Yani bir deploy geri alındığında log'a yanlış teşhis düşüyordu —
+# 25 Eyl'de kapatılan "yanlış hedefi ölçen kontrol" arızasının artığı.
+#
+# ⚠ DÜZELTME NEDEN BURAYA TAŞINDI: `SAGLIK_URL` eskiden build'den SONRA (197. satır
+# civarı) tanımlıydı; rollback satırı ondan ÖNCE koşuyor. Oraya `$SAGLIK_URL` yazmak
+# arızayı değiştirirdi, çözmezdi — boş adrese curl atardı. Tanım build'den ÖNCEye
+# alındı; hem rollback hem sağlık kapısı AYNI değişkeni okuyor, kopya kalmadı.
+#
+# Port pm2 ortamından okunur; bulunamazsa 4001 (ölçülen canlı port).
+# Port pm2 ortamından okunur; bulunamazsa 4001 (ölçülen canlı port).
+SAGLIK_PORT="${PORT:-$(sudo -u ubuntu pm2 jlist 2>/dev/null | python3 -c "import json,sys
+try:
+    for p in json.load(sys.stdin):
+        if p.get('name')=='viamood-web':
+            print(p['pm2_env'].get('env',{}).get('PORT') or p['pm2_env'].get('PORT') or '')
+except Exception: pass" 2>/dev/null)}"
+SAGLIK_PORT="${SAGLIK_PORT:-4001}"
+SAGLIK_URL="http://127.0.0.1:${SAGLIK_PORT}/api/health"
+
 if ! NEXT_TELEMETRY_DISABLED=1 npm run build > "$BUILD_LOG" 2>&1; then
   echo "  ✗ BUILD FAİL — eski .next geri konuyor"
   tail -20 "$BUILD_LOG"
@@ -144,7 +167,7 @@ if ! NEXT_TELEMETRY_DISABLED=1 npm run build > "$BUILD_LOG" 2>&1; then
     NEXT_BUILD_ID="$(git rev-parse --short HEAD 2>/dev/null || echo bilinmiyor)" \
       pm2 restart viamood-web --update-env > /dev/null 2>&1
     sleep 3
-    echo "  ↩ eski .next geri kondu · BUILD_ID=$(cat .next/BUILD_ID 2>/dev/null || echo YOK) · health=$(curl -s -o /dev/null -m 5 -w '%{http_code}' http://localhost/api/health)"
+    echo "  ↩ eski .next geri kondu · BUILD_ID=$(cat .next/BUILD_ID 2>/dev/null || echo YOK) · health=$(curl -s -o /dev/null -m 5 -w '%{http_code}' "$SAGLIK_URL")"
   else
     echo "  ⚠ geri konacak yedek YOK — .next hiç yoktu"
   fi
@@ -186,15 +209,8 @@ sleep 2
 # deploy.sh'ın çıkış kodunu kontrol etmediği için log'a "deploy bitti" yazıyordu.
 # Sessiz geçen sağlık kapısı, olmayan kapıdan kötüdür: deploy "başarılı" derken
 # site ölü olabilirdi. Artık DOĞRUDAN uygulama portuna soruluyor.
-# Port pm2 ortamından okunur; bulunamazsa 4001 (ölçülen canlı port).
-SAGLIK_PORT="${PORT:-$(sudo -u ubuntu pm2 jlist 2>/dev/null | python3 -c "import json,sys
-try:
-    for p in json.load(sys.stdin):
-        if p.get('name')=='viamood-web':
-            print(p['pm2_env'].get('env',{}).get('PORT') or p['pm2_env'].get('PORT') or '')
-except Exception: pass" 2>/dev/null)}"
-SAGLIK_PORT="${SAGLIK_PORT:-4001}"
-SAGLIK_URL="http://127.0.0.1:${SAGLIK_PORT}/api/health"
+# Sağlık adresi YUKARIDA, build'den ÖNCE kuruldu (#991394) — rollback yolu da
+# aynı değişkeni kullanıyor; iki yerde ayrı adres yazılmasın diye tek kaynak.
 STATUS=$(curl -s -o /dev/null -m 10 -w "%{http_code}" "$SAGLIK_URL")
 if [ "$STATUS" = "200" ]; then
   echo "  ✓ Health: $STATUS ($SAGLIK_URL)"
