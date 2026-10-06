@@ -40,6 +40,30 @@ type Ayar = Record<string, string | undefined>;
  * Ürün kodundaki seçim mantığını GERÇEK satırlarla çalıştırır.
  * TS tip notasyonları JS'te geçersiz olduğu için yalnız `: Kimlik` atılır.
  */
+/**
+ * `odemeOrtami()` kararını ÜRÜN KAYNAĞINDAN çıkarılan gerçek satırlarla koşturur
+ * (#991347). Kopya mantık yazılmadı — kaynak değişirse bu da değişir.
+ */
+function ortam(ps: Ayar, env: Ayar): 'test' | 'canli' | null {
+  // `secim()` ile AYNI yöntem: iddia kopya mantıkta değil, ÜRÜN KAYNAĞINDAN
+  // çıkarılan gerçek satırlarda koşar. Kimlik blokları artık `kimlikCifti()`
+  // içinde — yani bu test ile `secim()` **aynı iki satırı** paylaşıyor; #991347'nin
+  // tekilleştirmesi geri alınırsa ikisi birden ısırır.
+  const kod = [
+    dilim('const canliKimlik: Kimlik = {', '};'),
+    dilim('const testKimlik: Kimlik = {', '};'),
+    dilim('const kimlikDolu = ', ';'),
+    // odemeOrtami()'nin KARAR satırları (kaynaktan, birebir):
+    dilim("if (ps.halkode_test_mode === 0) return 'canli';", "return kimlikDolu(testKimlik) ? 'test' : null;"),
+  ]
+    .join('\n')
+    .replace(/: Kimlik/g, '')
+    // Çift ZATEN yukarıda bağlandı; kaynaktaki destructuring satırı burada
+    // yeniden tanımlama olurdu. Tekilleştirmenin kendisi ayrı iddiada ölçülüyor.
+    .replace('const { canliKimlik, testKimlik } = kimlikCifti(ps);', '');
+  return new Function('ps', 'process', kod)(ps, { env }) ?? null;
+}
+
 function secim(baseUrl: string, ps: Ayar, env: Ayar): Kimlik & { canliMi: boolean } {
   const kod = [
     dilim('const canliMi = ', ';'),
@@ -159,6 +183,71 @@ describe('Halköde kimlik seçimi — canlı paranın geçtiği yol', () => {
     // Kullanılan tüm kimlik değerleri bilerek okunur ve kısadır.
     for (const v of ['APPID-CANLI', 'APPID-TEST', 'APPID-ENV', 'MKEY-CANLI', 'MKEY-TEST']) {
       expect(kendi).toContain(v);
+    }
+  });
+});
+
+/**
+ * #991347 · GENİŞLETME — `odemeOrtami()` yolu da çiviye alındı.
+ *
+ * NEDEN: kimlik okuma kalıbı bu dosyada İKİ yerde kopyalanmıştı — `cfg()` (paranın
+ * geçtiği yol) ve `odemeOrtami()` (ekrana ortamı söyleyen yol). Üstteki çivi yalnız
+ * `cfg()` yolunu koruyordu; `odemeOrtami()` BEKÇİSİZDİ. Biri güncellenip öteki
+ * unutulsaydı ödeme CANLI kimlikle giderken ekran "test" derdi.
+ *
+ * Kopya 2 Eki 2026'da `kimlikCifti()` ile tek kaynağa indirildi. Bu blok o tekilliği
+ * ve iki yolun AYNI kaynaktan okuduğunu kilitler — bir daha ayrışamasın.
+ */
+describe('#991347 — iki yol TEK kaynaktan okur', () => {
+  it('DEĞİŞMEZ: kimlik ifadeleri kaynakta TEK nüsha (kopya geri gelmesin)', () => {
+    const say = (re: RegExp) => (KAYNAK.match(re) || []).length;
+    // Yorum satırlarını ayıkla — gerekçe metninde ifade geçebilir, o KOD değildir.
+    const kod = KAYNAK.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+    const kodSay = (re: RegExp) => (kod.match(re) || []).length;
+    expect(kodSay(/process\.env\.HALKODE_LIVE_APP_ID/g), 'canlı appId ifadesi kopyalanmış').toBe(1);
+    expect(kodSay(/process\.env\.HALKODE_APP_ID/g), 'test appId ifadesi kopyalanmış').toBe(1);
+    expect(kodSay(/process\.env\.HALKODE_LIVE_MERCHANT_KEY/g)).toBe(1);
+    expect(kodSay(/process\.env\.HALKODE_MERCHANT_KEY/g)).toBe(1);
+    expect(say(/function kimlikCifti/g), 'tek okuma noktası yok').toBe(1);
+  });
+
+  it('DEĞİŞMEZ: cfg() ve odemeOrtami() İKİSİ DE kimlikCifti çağırır', () => {
+    const cfgGovde = dilim('async function cfg(', '\n}');
+    const ortamGovde = dilim('export async function odemeOrtami(', '\n}');
+    expect(cfgGovde, 'cfg tek kaynaktan okumuyor').toContain('kimlikCifti(ps)');
+    expect(ortamGovde, 'odemeOrtami tek kaynaktan okumuyor').toContain('kimlikCifti(ps)');
+  });
+
+  it('odemeOrtami: test_mode açıkça verilmişse kimliğe BAKILMADAN o ortam döner', () => {
+    expect(ortam({ halkode_test_mode: 0 }, {})).toBe('canli');
+    expect(ortam({ halkode_test_mode: 1 }, {})).toBe('test');
+  });
+
+  it('odemeOrtami: test_mode yokken CANLI yuva doluysa canli', () => {
+    expect(ortam({ ...CANLI_DOLU }, {})).toBe('canli');
+  });
+
+  it('odemeOrtami: yalnız TEST yuvası doluysa test', () => {
+    expect(ortam({ ...TEST_DOLU }, {})).toBe('test');
+  });
+
+  it('odemeOrtami: iki yuva da boşsa null (sessizce bir ortam UYDURMAZ)', () => {
+    expect(ortam({}, {})).toBe(null);
+  });
+
+  it('🔴 AYRIŞMA KAPISI: cfg canlı kimlik seçerken odemeOrtami TEST diyemez', () => {
+    // Ödeme yolu ile ekranın söylediği ortam aynı girdide AYNI sonucu vermeli.
+    const k = secim(CANLI_UC, { ...CANLI_DOLU }, {});
+    expect(k.canliMi).toBe(true);
+    expect(k.appId).toBe('APPID-CANLI');
+    expect(ortam({ ...CANLI_DOLU }, {}), 'ödeme canlı, ekran test diyor — AYRIŞMA').toBe('canli');
+  });
+
+  it('kimlik DEĞERİ hiçbir yere yazılmıyor — yalnız ortam etiketi', () => {
+    // Bu testlerin ürettiği tek dışa dönük bilgi 'test' | 'canli' | null olmalı.
+    for (const g of [{ ...CANLI_DOLU }, { ...TEST_DOLU }, {}]) {
+      const e = ortam(g, {});
+      expect(['test', 'canli', null], 'ortam etiketi dışında bir şey döndü').toContain(e);
     }
   });
 });
