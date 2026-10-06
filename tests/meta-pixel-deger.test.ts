@@ -127,8 +127,22 @@ describe('Shopify tema yaması — saf katmanla aynı kuralı yazıyor mu', () =
     expect(YAMA).toMatch(/value <= 0\) return null/);
   });
 
-  it('Purchase çift sayım kapısı var', () => {
-    expect(YAMA).toMatch(/sessionStorage\.getItem\(anahtar\)/);
+  it('Purchase çift sayım kapısı var — ve KALICI depoda (#991406)', () => {
+    /**
+     * ÇİVİ GENİŞLETİLDİ, GEVŞETİLMEDİ (3 Eki 2026, Elif):
+     * eskiden `sessionStorage.getItem(anahtar)` aranıyordu. sessionStorage SEKME
+     * BAŞINA ayrıdır — müşteri teşekkür sayfasını yeni sekmede açarsa damga boş
+     * gelir ve Purchase İKİNCİ KEZ yayılır, Meta ciroyu iki kat sayar. Kapı
+     * kalktığı için değil, YETMEDİĞİ için değişti; iddia artık daha dar.
+     */
+    expect(YAMA).toMatch(/localStorage\.getItem\(anahtar\)/);
+    expect(YAMA).toMatch(/localStorage\.setItem\(anahtar/);
+  });
+
+  it('NEGATİF: fren sessionStorage ile KURULMAZ — sekme başına damga yetmez', () => {
+    const kodsuz = YAMA.replace(/\{%-?\s*comment[\s\S]*?endcomment\s*-?%\}/g, '').replace(/^\s*\/\/.*$/gm, '');
+    expect(kodsuz, 'yorumda anılabilir, KODDA fren olarak kullanılamaz')
+      .not.toMatch(/sessionStorage\.(get|set)Item/);
   });
 
   it('yama CANLI TEMAYA UYGULANMADI diye işaretli (erişim Mehmet Şah/Yunus kararı)', () => {
