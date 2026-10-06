@@ -184,7 +184,7 @@ const kimlikDolu = (k: Kimlik) => !!(k.appId && k.appSecret && k.merchantKey);
  * SIRA DEĞİŞMEDİ: DB (`store_settings.payment`) → ortam değişkeni → boş dize.
  * Boş dize bilerek `undefined` değil; `kimlikDolu()` onu "eksik" sayıyor.
  */
-function kimlikCifti(ps: Partial<import('@/db/schema').PaymentSettings>): {
+export function kimlikCifti(ps: Partial<import('@/db/schema').PaymentSettings>): {
   canliKimlik: Kimlik;
   testKimlik: Kimlik;
 } {
