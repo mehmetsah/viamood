@@ -182,16 +182,16 @@ export default function DenemeFormu({
 
       <div className="mt-3 grid gap-3">
         <label className="grid gap-1">
+          <span className="text-xs text-neutral-500">Kart üzerindeki isim</span>
+          <input value={sahip} onChange={(e) => setSahip(e.target.value)} autoComplete="off"
+                 className="rounded-lg border border-neutral-300 px-3 py-2" />
+        </label>
+        <label className="grid gap-1">
           <span className="text-xs text-neutral-500">Kart numarası</span>
           <input inputMode="numeric" autoComplete="off" value={kartNo} maxLength={19}
                  onChange={(e) => setKartNo(rakam(e.target.value))}
                  placeholder={canli ? 'Kendi kartının numarası' : '4155 6501 0041 6111'}
                  className="w-full min-w-0 rounded-lg border border-neutral-300 px-3 py-2 font-mono" />
-        </label>
-        <label className="grid gap-1">
-          <span className="text-xs text-neutral-500">Kart üzerindeki isim</span>
-          <input value={sahip} onChange={(e) => setSahip(e.target.value)} autoComplete="off"
-                 className="rounded-lg border border-neutral-300 px-3 py-2" />
         </label>
         {/* min-w-0: grid sutunlari varsayilan olarak min-content genisliginde
             kalmiyor; input'un kendi min genisligi sutunu tasiriyordu (420px'de
