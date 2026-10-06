@@ -75,13 +75,18 @@
   window.viaSiparisTamam = function (siparis) {
     try {
       if (!siparis || !siparis.order_number) return;
+      // ⚠ FREN localStorage (#991406, 3 Eki 2026): sessionStorage SEKME BAŞINA ayrıdır.
+      // Müşteri teşekkür sayfasını yeni sekmede açar ya da mailden tekrar tıklarsa
+      // sessionStorage BOŞ gelir ve Purchase İKİNCİ KEZ yayılır → Meta ciroyu iki kat
+      // sayar. Sipariş numarası kalıcı kimliktir; damgası da kalıcı olmalı.
+      // Kural src/lib/meta/pixel-yayim.ts ile BİREBİR aynı ve ORADA çivilidir.
       var anahtar = 'via_fb_purchase_' + siparis.order_number;
-      if (sessionStorage.getItem(anahtar)) return;      // çift sayım kapısı
+      if (localStorage.getItem(anahtar)) return;        // çift sayım kapısı
       var y = yuk({ items: siparis.items || [] }, siparis.total_paid_cents);
       if (!y) return;
       y.order_id = String(siparis.order_number);
       window.fbq('track', 'Purchase', y);
-      sessionStorage.setItem(anahtar, '1');
+      localStorage.setItem(anahtar, '1');
     } catch (e) { /* sessiz — sipariş akışı önce gelir */ }
   };
 })();

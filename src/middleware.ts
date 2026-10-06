@@ -1,6 +1,8 @@
 import NextAuth from 'next-auth';
 import { NextResponse, type NextRequest } from 'next/server';
 import { authConfig } from '@/lib/auth.config';
+import { adminYoluAcikMi, SSS_EDITOR, SSS_YOL } from '@/lib/yetki';
+import { RET_ANAHTARI, RET_CEREZI, RET_CEREZ_OMRU } from '@/lib/ret-bildirim';
 import {
   HALKODE_PREVIEW_COOKIE,
   HALKODE_PREVIEW_MAX_AGE,
@@ -22,6 +24,12 @@ const PUBLIC_PATHS = new Set([
   // Şifre sıfırlama — kullanıcı buraya giriş YAPMAMIŞ hâlde gelir.
   '/auth/sifremi-unuttum',
   '/auth/sifre-sifirla',
+  // Davet linki — ÖLÇÜLEN KIRIK (#992334, 30 Eyl 2026). Buraya eklenmediği için
+  // `/auth/davet?token=…` oturumsuz istekte sign-in'e 307 atıyordu: davet edilen
+  // kişi HENÜZ hesabı olmadığı için giriş de yapamaz ⇒ parola formunu hiç göremez,
+  // token boşa harcanır. Kardeş yol `/auth/sifre-sifirla` listedeydi, bu değildi —
+  // kusur sayfanın kendisinde değil, tam olarak BU LİSTEDE.
+  '/auth/davet',
   // Google OAuth dönüş yolu — OTURUM ARANMAZ. Kullanıcı buraya henüz
   // giriş yapmamış hâlde döner; public olmazsa sign-in'e atılır ve
   // `code`/`state` kaybolur, giriş tamamlanamaz.
@@ -29,6 +37,20 @@ const PUBLIC_PATHS = new Set([
   // Facebook veri silme durum sayfası (Meta protokolü) — kullanıcı bağlantıyı
   // SİLDİĞİ için artık giriş yapamayabilir; sayfa girişsiz açılmak ZORUNDA.
   '/veri-silme-durumu',
+  // E-posta abonelikten çıkış — ÖLÇÜLEN KIRIK (#992111, 3 Eki 2026, canlı):
+  // `GET /api/email/abonelik-cik` oturumsuz istekte sign-in'e **307** atıyordu.
+  // Çıkış bağlantısına tıklayan kişinin hesabı OLMAYABİLİR (mail listesine
+  // forma girip eklenmiş olabilir), hesabı olsa bile çıkmak için giriş yapmak
+  // zorunda bırakmak fiilen çalışmayan bir unsubscribe demektir — izin/İYS
+  // tarafında da savunulamaz. Jetonu uç kendi doğruluyor, kapı oturum aramamalı.
+  '/api/email/abonelik-cik',
+  // Ürün SSS ucu — ÖLÇÜLEN KIRIK (#992111, aynı ölçüm): `GET /api/v1/urun-sss`
+  // oturumsuz istekte (ve `Origin: https://viamood.com.tr` ile bile) sign-in'e
+  // **307** atıyordu. Oysa ucun kendi başlık yorumu (route.ts:1-9) birebir
+  // "Yanıt herkese açık … tema viamood.com.tr alanından çağıracak" diyor: veri
+  // bizde, tema dosyası değil. Kapı kapalı kaldığı sürece tema SSS'i HİÇ
+  // okuyamaz. Uç salt-okuma ve yalnız `acik=true` kayıtları döner.
+  '/api/v1/urun-sss',
 ]);
 
 const ADMIN_PREFIX = '/admin';
@@ -154,16 +176,40 @@ export default auth((req) => {
   }
 
   if (!session?.user) {
+    // callbackUrl'e SORGU DİZESİ de girer (#991987). Yalnız `pathname` yazılınca
+    // mailden gelen `/hesabim?siparis=VM1234` girişten sonra çıplak `/hesabim`e
+    // dönüyordu ve hangi siparişe bakıldığı KAYBOLUYORDU. Hâlâ göreli yol —
+    // `//baska.site` gibi mutlak adres üretmediği için açık-yönlendirme yok.
     return NextResponse.redirect(
-      buildRedirectUrl(req, '/auth/sign-in', { callbackUrl: pathname }),
+      buildRedirectUrl(req, '/auth/sign-in', { callbackUrl: `${pathname}${req.nextUrl.search}` }),
     );
   }
 
-  const role = (session.user as { role?: string }).role;
+  const role = (session.user as { role?: string; yetkiler?: string[] }).role;
+  const yetkiler = (session.user as { yetkiler?: string[] }).yetkiler ?? [];
 
   if (pathname.startsWith(ADMIN_PREFIX)) {
-    if (role !== 'admin' && role !== 'super_admin') {
-      return NextResponse.redirect(buildRedirectUrl(req, role === 'customer' ? '/hesabim' : '/dashboard'));
+    // KAPI 1/3 — yol bazlı. sss_editor YALNIZ /admin/urun-sss görebilir; menüden
+    // gizlemek yetmez, adres çubuğuna başka yol yazan da buradan döner.
+    if (!adminYoluAcikMi(role, pathname, yetkiler)) {
+      // Sessiz yönlendirme YOK: kullanıcı "tıkladım, hiçbir şey olmadı" demesin.
+      // ⚠ Parametre bir ANAHTAR ('yetkisiz'), metnin kendisi DEĞİL — hedef sayfa sabit
+      //   metni basar. Böylece URL üzerinden hiçbir iç ayrıntı taşınmaz/sızmaz.
+      const hedef = role === 'customer' ? '/hesabim' : role === SSS_EDITOR ? SSS_YOL : '/dashboard';
+      const yanit = NextResponse.redirect(buildRedirectUrl(req, hedef, { hata: RET_ANAHTARI }));
+      // ⚠ POST (server action) yolunda sorgu parametresi KAYBOLUYOR — 29 Eyl G turunda
+      //   ölçüldü: GET'te /hesabim?hata=yetkisiz geliyor, form gönderiminde gelmiyor
+      //   (Next yönlendirme yanıtını kendi protokolüyle işliyor). Anahtar bu yüzden
+      //   AYRICA tek seferlik çerezle taşınır; hedef sayfa okur, sabit metne çevirir,
+      //   çerezi HEMEN siler. Çerez METİN TAŞIMAZ, yalnız anahtar.
+      yanit.cookies.set(RET_CEREZI, RET_ANAHTARI, {
+        httpOnly: false,
+        sameSite: 'lax',
+        secure: process.env.NODE_ENV === 'production',
+        path: '/',
+        maxAge: RET_CEREZ_OMRU,
+      });
+      return yanit;
     }
     return NextResponse.next();
   }

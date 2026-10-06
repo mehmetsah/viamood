@@ -1,0 +1,135 @@
+{%- comment -%}
+  Via Mood — Y12-c: Ürün detay akordeonlarını SEKME'ye dönüştürür (additive enhancement).
+  Mevcut <details data-testid="accordion-details"> yapısını bozmaz; JS başarısız olursa akordeon kalır.
+  2'den az bölüm varsa hiç müdahale etmez.
+{%- endcomment -%}
+<style>
+  .vp-tabnav { display: flex; gap: 2px; border-bottom: 2px solid var(--color-border, #e7e3da); margin: 8px 0 22px; flex-wrap: wrap; }
+  .vp-tab {
+    padding: 13px 20px; background: none; border: none; border-bottom: 2px solid transparent;
+    margin-bottom: -2px; font-size: 15px; font-weight: 600; color: #9a948a; cursor: pointer;
+    transition: color .15s, border-color .15s; font-family: inherit;
+  }
+  .vp-tab:hover { color: var(--vp-accent, #f25334); }
+  .vp-tab.vp-active { color: var(--vp-accent, #f25334); border-bottom-color: var(--vp-accent, #f25334); }
+  .vp-tabbed details.details > summary.details__header,
+  .vp-tabbed details.details > summary { display: none !important; }
+  .vp-tabbed details.details { border: none !important; margin: 0 !important; padding: 0 !important; }
+  .vp-tabbed details.details > .details-content { display: none !important; }
+  .vp-tabbed details.details.vp-active > .details-content { display: block !important; height: auto !important; max-height: none !important; overflow: visible !important; }
+  @media (max-width: 600px) { .vp-tab { padding: 10px 13px; font-size: 13px; } }
+  /* Hepsiburada tarzı: sekmeler ürün grid'inin ALTINDA tam genişlik */
+  .vm-tabs-fw { width: 100%; max-width: 1180px; margin: 8px auto 48px; padding: 0 24px; box-sizing: border-box; }
+  .vm-tabs-fw .vp-tabnav { margin-top: 0; }
+  .vm-sss-oge { margin-block-end: 16px; }
+  .vm-sss-oge:last-child { margin-block-end: 0; }
+  .vm-sss-soru { margin-block-end: 4px; line-height: 1.4; }
+  .vm-sss-cevap { margin: 0; line-height: 1.5; }
+  .vm-tabs-fw > *, .vm-tabs-fw .group-block, .vm-tabs-fw accordion-custom, .vm-tabs-fw .accordion, .vm-tabs-fw .group-block-content { width: 100% !important; max-width: 100% !important; flex-basis: 100% !important; }
+</style>
+{%- assign vm_desc = product.description | default: closest.product.description -%}
+{%- comment -%}
+  ÜRÜN SSS SEKMESİ (#991833 · Yunus 27 Eyl 23:16) — accordion'un EN SONUNA.
+  Veri: ürün metafield'ı custom.sss (JSON liste, admin/urun-sss yazar).
+  Soru girilmemiş üründe HİÇBİR ŞEY üretilmez — boş sekme çıkmaz.
+{%- endcomment -%}
+{%- assign vm_sss = product.metafields.custom.sss.value | default: closest.product.metafields.custom.sss.value -%}
+{%- if vm_sss != blank and vm_sss.size > 0 -%}
+<script>window.__vmSSS = {{ vm_sss | json }};</script>
+{%- endif -%}
+<script>
+  window.__vmProdDesc = {{ vm_desc | json }};
+  window.__vmDescLen = {{ vm_desc | strip_html | strip | size }};
+</script>
+<script>
+(function(){
+  function init(){
+    var root = document.querySelector('[data-testid="product-information-details"]');
+    if (!root || root.classList.contains('vp-tabbed')) return;
+    // SSS sekmesi: veri varsa accordion listesinin SONUNA ekle (yoksa hic dokunma)
+    try {
+      var sss = window.__vmSSS;
+      if (sss && sss.length && !root.querySelector('[data-vm-sss]')) {
+        var last = root.querySelectorAll('details[data-testid="accordion-details"]');
+        if (last.length) {
+          var host = last[last.length - 1].closest('accordion-custom') || last[last.length - 1].parentNode;
+          var ac = document.createElement('accordion-custom');
+          var dt = document.createElement('details');
+          dt.className = 'details'; dt.setAttribute('data-testid', 'accordion-details'); dt.setAttribute('data-vm-sss', '1');
+          var sm = document.createElement('summary');
+          sm.className = 'details__header'; sm.textContent = 'Sıkça Sorulan Sorular';
+          var dc = document.createElement('div');
+          dc.className = 'details-content details__content';
+          sss.forEach(function (k) {
+            if (!k || !k.soru || !k.cevap) return;
+            var w = document.createElement('div'); w.className = 'vm-sss-oge';
+            var q = document.createElement('p'); q.className = 'vm-sss-soru';
+            var b = document.createElement('strong'); b.textContent = k.soru; q.appendChild(b);
+            var a = document.createElement('p'); a.className = 'vm-sss-cevap'; a.textContent = k.cevap;
+            w.appendChild(q); w.appendChild(a); dc.appendChild(w);
+          });
+          if (dc.children.length) {
+            dt.appendChild(sm); dt.appendChild(dc); ac.appendChild(dt);
+            host.parentNode.insertBefore(ac, host.nextSibling);
+          }
+        }
+      }
+    } catch (e) {}
+    var items = root.querySelectorAll('details[data-testid="accordion-details"]');
+    if (items.length < 2) return; // 0-1 bölüm → akordeon kalsın
+    var nav = document.createElement('div');
+    nav.className = 'vp-tabnav';
+    var tabs = [];
+    Array.prototype.forEach.call(items, function(d, i){
+      try { d.setAttribute('open', ''); } catch(e){}
+      var sum = d.querySelector('summary');
+      var label = sum ? (sum.textContent || '').replace(/\s+/g, ' ').trim() : ('Bölüm ' + (i + 1));
+      if (!label) label = 'Bölüm ' + (i + 1);
+      // "Ürün detayları" tab'ına gerçek ürün açıklamasını enjekte et (blok metni çeviriyle generic'e ezilmiş olabilir)
+      if (/detay/i.test(label) && window.__vmProdDesc && String(window.__vmProdDesc).replace(/<[^>]+>/g,'').trim().length > 20) {
+        var _dc = d.querySelector('.details-content');
+        if (_dc) { try { _dc.innerHTML = window.__vmProdDesc; } catch(e){} }
+      }
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'vp-tab' + (i === 0 ? ' vp-active' : '');
+      btn.textContent = label;
+      btn.addEventListener('click', function(){
+        Array.prototype.forEach.call(items, function(x){ x.classList.remove('vp-active'); });
+        tabs.forEach(function(t){ t.classList.remove('vp-active'); });
+        d.classList.add('vp-active');
+        btn.classList.add('vp-active');
+      });
+      if (i === 0) d.classList.add('vp-active');
+      nav.appendChild(btn);
+      tabs.push(btn);
+    });
+    items[0].parentNode.insertBefore(nav, items[0]);
+    root.classList.add('vp-tabbed');
+    // Full-width: sekmeleri ürün grid'inin ALTINA taşı (tam genişlik, Hepsiburada tarzı)
+    try {
+      var grid = document.querySelector('.product-information__grid');
+      var accWrap = items[0].closest('.accordion') || items[0].closest('accordion-custom') || nav.parentNode;
+      if (grid && accWrap && !document.querySelector('.vm-tabs-fw')) {
+        var fw = document.createElement('div'); fw.className = 'vm-tabs-fw vp-tabbed';
+        // Y-madde 7: "Ürün Yorumları" bölümü "Ürün Detayları"nın ÜSTÜNDE olmalı.
+        // Yorumlar ayrı bir section ve grid'in ALTINDA duruyor; bu yüzden sekmeleri
+        // grid'in hemen altına değil, yorum section'ının ALTINA taşıyoruz.
+        // Yorum bölümü bulunamazsa eski davranışa (grid'in altı) düşer.
+        var yorumSec = document.querySelector('.vuy');
+        if (yorumSec) yorumSec = yorumSec.closest('[id^="shopify-section-"]') || yorumSec;
+        if (yorumSec && yorumSec.parentNode) {
+          yorumSec.parentNode.insertBefore(fw, yorumSec.nextSibling);
+        } else {
+          (grid.parentNode || document.body).insertBefore(fw, grid.nextSibling);
+        }
+        fw.appendChild(accWrap);
+        setTimeout(function(){ Array.prototype.forEach.call(items, function(d){ try{ d.open = true; d.setAttribute('open',''); }catch(e){} }); }, 60);
+      }
+    } catch(e){}
+  }
+  if (document.readyState !== 'loading') init();
+  else document.addEventListener('DOMContentLoaded', init);
+  document.addEventListener('shopify:section:load', init);
+})();
+</script>

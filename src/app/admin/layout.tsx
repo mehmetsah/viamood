@@ -3,13 +3,20 @@ import { redirect } from 'next/navigation';
 import { auth } from '@/lib/auth';
 import { Logo } from '@/components/ui/Logo';
 import { signOutAction } from '@/lib/actions/auth';
+import { sssYonetebilirMi, tamAdminMi } from '@/lib/yetki';
+import { yetkileriTazeOku } from '@/lib/yetki-taze';
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const session = await auth();
   const role = session?.user?.role;
-  if (role !== 'admin' && role !== 'super_admin') {
+  // JWT'deki liste DEĞİL, DB'den TAZE okunur (#992119-D): yetki silinince ekran da kapansın.
+  const yetkiler = await yetkileriTazeOku(session?.user?.id);
+  // KAPI 2/3 — layout. sss_editor buraya girebilir ama yalnız SSS ekranı için;
+  // yol denetimi middleware'de (KAPI 1/3). Burası doğrudan render denemesine karşı.
+  if (!sssYonetebilirMi(role, yetkiler)) {
     redirect('/dashboard');
   }
+  const yalnizSss = !tamAdminMi(role);
 
   return (
     <div className="min-h-screen bg-neutral-50 flex">
@@ -21,6 +28,12 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           <div className="text-xs uppercase tracking-widest opacity-60 mt-3">Yönetim Paneli</div>
         </Link>
         <nav className="flex-1 min-h-0 overflow-y-auto p-3 flex flex-col gap-1 text-sm">
+          {/* sss_editor için menü YALNIZ SSS linkini gösterir. Bu bir GÖRÜNTÜ kolaylığı —
+              asıl kapı middleware + layout + action; menüyü gizlemek güvenlik DEĞİLDİR. */}
+          {yalnizSss ? (
+            <Link href="/admin/urun-sss" className="px-3 py-2 rounded-lg hover:bg-white/10">Ürün SSS</Link>
+          ) : (
+            <>
           <Link href="/admin" className="px-3 py-2 rounded-lg hover:bg-white/10">📊 Dashboard</Link>
           <Link href="/admin/vendors" className="px-3 py-2 rounded-lg hover:bg-white/10">🏢 Tedarikçiler</Link>
           <Link href="/admin/products" className="px-3 py-2 rounded-lg hover:bg-white/10">📦 Tüm Ürünler</Link>
@@ -37,9 +50,16 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           <Link href="/admin/shipping-rates" className="px-3 py-2 rounded-lg hover:bg-white/10">🚚 Kargo Tarifeleri</Link>
           <Link href="/admin/mikro" className="px-3 py-2 rounded-lg hover:bg-white/10">📦 Mikro V17</Link>
           <Link href="/admin/audit-log" className="px-3 py-2 rounded-lg hover:bg-white/10">📜 Audit Log</Link>
+          {/* #991833: emoji BİLEREK konmadı (Mehmet Şah kalıcı kuralı). */}
+          <Link href="/admin/urun-sss" className="px-3 py-2 rounded-lg hover:bg-white/10">Ürün SSS</Link>
+          {/* #991691: emoji BİLEREK konmadı (Mehmet Şah kalıcı kuralı: emoji/AI-kokan ikon yasak).
+              Komşu satırlardaki emojiler eski; yeni satır kurala uyuyor. */}
+          <Link href="/admin/mail-gecmisi" className="px-3 py-2 rounded-lg hover:bg-white/10">Mail Gönderim Geçmişi</Link>
           <Link href="/admin/settings" className="px-3 py-2 rounded-lg hover:bg-white/10">⚙️ Ayarlar</Link>
           <Link href="/admin/theme" className="px-3 py-2 rounded-lg hover:bg-white/10">🎨 Tema Editörü</Link>
           <Link href="/admin/pages" className="px-3 py-2 rounded-lg hover:bg-white/10">📄 İçerik Sayfaları</Link>
+            </>
+          )}
         </nav>
         <div className="p-3 border-t border-white/10 text-xs shrink-0">
           <div className="opacity-60">{session?.user?.email}</div>

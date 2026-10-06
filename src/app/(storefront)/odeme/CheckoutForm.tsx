@@ -8,6 +8,7 @@ import Halkode3DCerceve from '@/components/halkode/Halkode3DCerceve';
 // HTML'e gömülüyor. Tip daraltıldı ki sır içeren bir alan buraya kazara geçmesin
 // (bkz. lib/settings/store.ts → vitrinOdemeAyarlari).
 import type { VitrinOdemeAyarlari } from '@/lib/settings/store';
+import { taksitGecerli } from '@/lib/halkode/taksit-tavan';
 
 interface CartView {
   token: string;
@@ -73,7 +74,7 @@ export function CheckoutForm({ payment }: { payment: VitrinOdemeAyarlari }) {
 
   // Kart (Halköde) — SAKLANMAZ, yalnız initialize'a iletilir
   const [card, setCard] = useState({ holder: '', no: '', month: '', year: '', cvv: '' });
-  const [installments, setInstallments] = useState<{ installments_number: number; amount_to_be_paid: string }[]>([]);
+  const [installments, setInstallments] = useState<{ installments_number: number; amount_to_be_paid: string; payable_amount?: string }[]>([]);
   const [selectedInstallment, setSelectedInstallment] = useState(1);
   // 3D formu artık sayfayı ezmiyor; site içi çerçevede açılıyor (Yunus kararı, 25 Eyl 2026).
   const [uc3d, setUc3d] = useState<{ html: string; invoiceId?: string } | null>(null);
@@ -132,7 +133,14 @@ export function CheckoutForm({ payment }: { payment: VitrinOdemeAyarlari }) {
     })
       .then((r) => r.json())
       .then((d) => {
-        if (!iptal) setInstallments(d.ok && Array.isArray(d.installments) ? d.installments : []);
+        // Tavan burada da uygulanır: sunucu süzse bile iki yüz (storefront + deneme
+        // formu) aynı listeyi göstermeli. Yunus 29 Eyl: "maksimum 3".
+        if (!iptal)
+          setInstallments(
+            d.ok && Array.isArray(d.installments)
+              ? d.installments.filter((i: { installments_number: number }) => taksitGecerli(i.installments_number))
+              : [],
+          );
       })
       .catch(() => !iptal && setInstallments([]));
     return () => {
@@ -362,7 +370,7 @@ export function CheckoutForm({ payment }: { payment: VitrinOdemeAyarlari }) {
                           value={card.cvv} onChange={(e) => setCard({ ...card, cvv: e.target.value })} />
                       </div>
                     </div>
-                    {installments.length > 1 && (
+                    {installments.length > 0 && (
                       /* TAKSİT IZGARASI — Ayşe Demiröz hükümleri (25 Eyl 2026):
                          · ayse:123 — kırılım VIEWPORT'a değil KAPSAYICIYA bağlı (container query):
                            <300px → 3 sütun · 300–499px → 4 · ≥500px → 6  (eşik 340 DEĞİL 300 — referansın
@@ -382,7 +390,7 @@ export function CheckoutForm({ payment }: { payment: VitrinOdemeAyarlari }) {
                             const secili = selectedInstallment === i.installments_number;
                             return (
                               <label key={i.installments_number}
-                                className={`flex min-h-[72px] cursor-pointer flex-col items-center justify-center rounded-lg border px-2 py-2 text-center leading-relaxed transition ${
+                                className={`flex min-h-[72px] cursor-pointer flex-col items-center justify-center rounded-lg border px-2 py-2 text-center leading-relaxed transition has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-neutral-900 has-[:focus-visible]:ring-offset-2 ${
                                   secili
                                     ? 'border-neutral-900 bg-neutral-900 text-white'
                                     : 'border-neutral-200 bg-white text-neutral-800 hover:border-neutral-400'
@@ -394,7 +402,14 @@ export function CheckoutForm({ payment }: { payment: VitrinOdemeAyarlari }) {
                                   {i.installments_number === 1 ? 'Tek çekim' : `${i.installments_number} taksit`}
                                 </span>
                                 <span className={`text-[11px] leading-relaxed ${secili ? 'text-white/80' : 'text-neutral-500'}`}>
-                                  {tlTutar(i.amount_to_be_paid)}
+                                  {i.installments_number === 1
+                                    ? tlTutar(i.amount_to_be_paid)
+                                    : `${tlTutar(i.amount_to_be_paid)} × ${i.installments_number}`}
+                                </span>
+                                <span className={`text-[11px] leading-relaxed ${secili ? 'text-white/70' : 'text-neutral-400'}`}>
+                                  {i.installments_number === 1
+                                    ? 'Vade farksız'
+                                    : `Toplam ${tlTutar(i.payable_amount ?? i.amount_to_be_paid)}`}
                                 </span>
                               </label>
                             );

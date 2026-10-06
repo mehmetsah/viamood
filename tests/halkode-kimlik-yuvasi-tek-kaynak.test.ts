@@ -12,11 +12,21 @@
  * ⚠ BANKAYA HİÇBİR İSTEK ATILMAZ — okuma saf fonksiyon, girdi fixture.
  */
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { canliKimlikOku, testKimlikOku } from '../src/lib/halkode/client';
+import { kimlikCifti } from '../src/lib/halkode/client';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 
 const KAYNAK = readFileSync(path.join(__dirname, '..', 'src/lib/halkode/client.ts'), 'utf8');
+
+// ⚠ UYARLAMA (6 Eki 2026, Elif — main'e alma turu): bu çivi `canliKimlikOku()` /
+// `testKimlikOku()` diye İKİ ayrı okuyucuya yazılmıştı. main'de aynı borç #991347'de
+// BAŞKA bir biçimle kapandı: TEK okuma noktası `kimlikCifti(ps)`, iki yuvayı birlikte
+// döndürüyor. İmplementasyon main'in hâli KORUNDU (orada çivili ve yayında); bu çivinin
+// DAVRANIŞ iddiaları ise aynen geçerli, yalnız okuyucuya erişim buradan köprüleniyor.
+// Hiçbir iddia gevşetilmedi — 12 iddianın hepsi duruyor.
+type Ps = Parameters<typeof kimlikCifti>[0];
+const canliKimlikOku = (ps: Ps) => kimlikCifti(ps).canliKimlik;
+const testKimlikOku = (ps: Ps) => kimlikCifti(ps).testKimlik;
 // Sahte değerler — gerçek hiçbir kimlik taşımaz.
 const SAHTE = { canliId: 'CANLI-ID-FIXTURE', canliSecret: 'CANLI-SECRET-FIXTURE', canliMk: '$2y$10$fixtureCANLI',
                 testId: 'TEST-ID-FIXTURE', testSecret: 'TEST-SECRET-FIXTURE', testMk: '$2y$10$fixtureTEST' };
@@ -99,19 +109,19 @@ describe('TEK KAYNAK — kopya geri gelirse kırılır', () => {
     expect(n, 'kimlik okuma yine çoğaltılmış').toBe(1);
   });
 
-  it('odemeOrtami tek kaynak okuyucuları KULLANIYOR (kendi kopyasını yazmıyor)', () => {
+  it('odemeOrtami tek kaynak okuyucusunu KULLANIYOR (kendi kopyasını yazmıyor)', () => {
     const govde = yorumsuz.slice(yorumsuz.indexOf('export async function odemeOrtami'));
     const son = govde.slice(0, govde.indexOf('\n}') + 2);
-    expect(son).toMatch(/canliKimlikOku\(ps\)/);
-    expect(son).toMatch(/testKimlikOku\(ps\)/);
+    expect(son, 'odemeOrtami tek okuma noktasını kullanmıyor').toMatch(/kimlikCifti\(ps\)/);
     expect(son, 'odemeOrtami yine elle env okuyor').not.toMatch(/process\.env\.HALKODE/);
   });
 });
 
 describe('sır hijyeni', () => {
   it('okuyucular hiçbir şey LOGLAMAZ', () => {
-    const bolge = KAYNAK.slice(KAYNAK.indexOf('export function canliKimlikOku'),
-                               KAYNAK.indexOf('export function testKimlikOku') + 400);
+    const bas = KAYNAK.indexOf('export function kimlikCifti');
+    expect(bas, 'kimlikCifti kaynakta bulunamadı — çivi kör kalmasın').toBeGreaterThan(-1);
+    const bolge = KAYNAK.slice(bas, KAYNAK.indexOf('\n}', bas) + 2);
     expect(bolge).not.toMatch(/console\.(log|warn|error|info)/);
   });
 });

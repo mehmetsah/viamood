@@ -6,6 +6,51 @@ import { getSessionCustomer } from '@/lib/customers/session';
 import { CopyButton } from './_components/CopyButton';
 import { Pagination, parsePage } from './_components/Pagination';
 import { koridor, pul, siparisDurumu, tarih, tl, type Durum } from './_lib/format';
+import { cookies } from 'next/headers';
+import { RET_CEREZI, retMetni } from '@/lib/ret-bildirim';
+
+/**
+ * Yetki reddi bildirimi (#992119-G).
+ *
+ * ⚠ Middleware yalnız `?hata=yetkisiz` ANAHTARINI gönderir; metin BURADA sabittir.
+ * Sebep: URL'den gelen metni ekrana basmak hem sızdırma hem içerik enjeksiyonu yolu
+ * olurdu. Anahtar tanınmıyorsa hiçbir şey gösterilmez.
+ *
+ * Metin, server action'daki ret metniyle AYNI dilde (src/lib/actions/urun-sss.ts).
+ * Hiçbir iç ayrıntı vermez: tablo/sütun adı, rol adı, kaydın varlığı, stack, digest YOK.
+ */
+/**
+ * Yetki reddi bildirimi (#992119-G, #992119-H).
+ *
+ * İki kaynaktan gelir: `?hata=` (GET yolu) VEYA tek seferlik çerez (POST/server action
+ * yolu — sorgu parametresi orada kayboluyor, 29 Eyl ölçümü). İkisi de yalnız ANAHTAR
+ * taşır; metin `lib/ret-bildirim` içinde SABİTTİR, URL'den/çerezden gelmez.
+ * Çerez okunduğu anda silinir — bildirim tek seferliktir.
+ */
+async function RetBildirimi({ anahtar }: { anahtar?: string }) {
+  const kutu = await cookies();
+  const cerezAnahtari = kutu.get(RET_CEREZI)?.value;
+  const metin = retMetni(anahtar) ?? retMetni(cerezAnahtari);
+  if (!metin) return null;
+  return (
+    <div className="vh-kart" role="status" style={{ marginBottom: 12 }}>
+      {metin}
+      {/* Tek seferlik: çerez okundu, hemen düşsün. */}
+      <CerezDus />
+    </div>
+  );
+}
+
+/** Çerezi tarayıcı tarafında hemen siler — bildirim ikinci kez görünmesin. */
+function CerezDus() {
+  return (
+    <script
+      dangerouslySetInnerHTML={{
+        __html: `document.cookie=${JSON.stringify(RET_CEREZI)}+"=; Max-Age=0; path=/";`,
+      }}
+    />
+  );
+}
 
 export const dynamic = 'force-dynamic';
 
@@ -110,6 +155,7 @@ export default async function SiparislerimPage({
   if (toplam === 0) {
     return (
       <>
+        {await RetBildirimi({ anahtar: typeof sp.hata === 'string' ? sp.hata : undefined })}
         <Baslik ozet={{ toplam: 0, yolda: 0, teslim: 0 }} />
         <div className="vh-kart vh-bos">
           <span className="vh-cati" aria-hidden="true" />
@@ -125,6 +171,7 @@ export default async function SiparislerimPage({
 
   return (
     <>
+      {await RetBildirimi({ anahtar: typeof sp.hata === 'string' ? sp.hata : undefined })}
       <Baslik ozet={{ toplam, yolda, teslim }} />
 
       {list.map((o, idx) => {
