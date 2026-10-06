@@ -25,3 +25,4 @@ export * from './settings';
 export * from './reviews';
 export * from './ads';
 export * from './user-yetkileri';
+export * from './eposta-akis';
