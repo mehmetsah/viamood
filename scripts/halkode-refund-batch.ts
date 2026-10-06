@@ -4,11 +4,11 @@
  * ⛔ BU BETİK PARA İADE EDER. Mehmet Şah'ın açık onayı olmadan koşturulmaz.
  *
  *   kuru koşu (varsayılan — /api/refund'a TEK İSTEK BİLE gitmez):
- *       node --env-file=.env.local scripts/halkode-refund-batch.ts
+ *       node --import ./scripts/cli-alias.mjs --env-file=.env.local scripts/halkode-refund-batch.ts
  *
  *   gerçek iade (onay geldiyse):
  *       POS_IADE_ONAY="Mehmet onayladı <tarih>" \
- *       node --env-file=.env.local scripts/halkode-refund-batch.ts --uygula
+ *       node --import ./scripts/cli-alias.mjs --env-file=.env.local scripts/halkode-refund-batch.ts --uygula
  *
  *   ortam seçimi (varsayılan: yapılandırmanın kendi kararı):
  *       HALKODE_ORTAM=canli ...   # DB'deki canlı kimlikle app.halkode.com.tr
@@ -44,7 +44,7 @@
 import { appendFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
-import { getToken, checkStatus, refund, type HalkodeOrtamSecimi } from '../src/lib/halkode/client.ts';
+import { getToken, checkStatus, refund, type HalkodeOrtamSecimi } from '../src/lib/halkode/client';
 
 // ── İADE EDİLECEK KALEMLER (#991465 · kart, toplam 30,23 TL) ────────────────
 const KALEMLER: ReadonlyArray<{ ref: string; tutar: number }> = [

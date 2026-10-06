@@ -24,7 +24,7 @@
  *   yoksa hash tutmaz ve Halköde 68 (hash uyuşmazlığı) döner.
  */
 import crypto from 'node:crypto';
-import { kalemAdiKirp } from './kalem-adi.ts';
+import { kalemAdiKirp } from './kalem-adi';
 
 /**
  * Not: bu modül bilerek `src/lib/env.ts`'i İTHAL ETMEZ, process.env'i doğrudan okur.
