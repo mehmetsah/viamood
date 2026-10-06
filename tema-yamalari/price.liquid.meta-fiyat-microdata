@@ -1,0 +1,57 @@
+{%- comment -%}
+  META EVENT SETUP TOOL — fiyatı okuyabilsin diye MİKRODATA
+  Yunus, Viamood Proje Grubu, 28 Eyl 2026 11:50: "Meta'nın tool'u hâlâ ürün
+  fiyatını göremiyor". Hazırlayan: Elif · ÖNERİ YAMASI, CANLI TEMAYA UYGULANMADI.
+
+  ⚠ ÖNCE AYRIM — ölçüldü (canlı Chrome, 28 Eyl):
+     ViewContent → value=500 · currency=TRY · content_ids=[10325978808452]  ✅
+  Yani PİKSEL fiyatı GÖNDERİYOR. Yunus'un gördüğü araç (Event Setup Tool) ayrı
+  bir şey: tıklama-tabanlı, DOM'daki GÖRÜNÜR METİNDEN fiyat çıkarmaya çalışır ve
+  JSON-LD'ye BAKMAZ. Bu yama yalnız o aracın işini kolaylaştırır; pixel değerini
+  değiştirmez, fiyat gösterimini DEĞİŞTİRMEZ.
+
+  ── ÖLÇÜLEN DURUM ──────────────────────────────────────────────────────────
+  JSON-LD  : Product · offers.price "500.00" · priceCurrency "TRY"     ✅ tam
+  OpenGraph: product:price:amount 500.0 · product:price:currency TRY   ✅ tam
+  Mikrodata: itemprop="price" 0 · data-price 0 · itemtype 0            ❌ YOK
+  Görünür metin: "500,00TL" → ondalık ayıracı VİRGÜL, para birimi BİTİŞİK ve
+                 harf ("TL"), simge (₺) ya da ISO kodu (TRY) değil.
+  DOM: 55 fiyat elementi, yalnız 8'i görünür (47 gizli kopya) — araç tararken
+       hangi düğümün "asıl fiyat" olduğu belirsiz.
+  Görünür fiyat düğümlerinin HİÇBİRİNDE makine-okunur öznitelik yok (attr=[class]).
+
+  ── NEREYE ─────────────────────────────────────────────────────────────────
+  Fiyatı basan snippet'te (Horizon: snippets/price.liquid), fiyatı gösteren
+  <span class="price…"> ile AYNI kapsayıcının içine, GÖRÜNMEZ bir meta düğümü.
+  Ekranda hiçbir şey değişmez: <meta> render edilmez.
+{%- endcomment -%}
+
+{%- liquid
+  assign vm_fiyat = product.selected_or_first_available_variant.price | divided_by: 100.0
+  assign vm_para  = cart.currency.iso_code | default: shop.currency
+-%}
+<span itemprop="offers" itemscope itemtype="https://schema.org/Offer" style="display:contents">
+  {%- comment -%}
+    `content` NOKTA ondalıklı ve para birimi AYRI — makine bunu okur.
+    Ekrandaki "500,00TL" metni DEĞİŞMEZ; müşteri yine Türkçe biçimi görür.
+    `display:contents` yerleşimi etkilemez (kapsayıcı kutu üretmez).
+  {%- endcomment -%}
+  <meta itemprop="price" content="{{ vm_fiyat | round: 2 }}">
+  <meta itemprop="priceCurrency" content="{{ vm_para }}">
+  <meta itemprop="availability" content="{% if product.available %}https://schema.org/InStock{% else %}https://schema.org/OutOfStock{% endif %}">
+</span>
+
+{%- comment -%}
+  ── EK SEÇENEK (tek satır, aynı kapsayıcıya) ───────────────────────────────
+  Event Setup Tool bazı temalarda `data-price` özniteliğini de okuyabiliyor.
+  Fiyatı basan span'e eklenirse görünüm yine değişmez:
+      <span class="price" data-price="{{ vm_fiyat | round: 2 }}" data-currency="{{ vm_para }}">
+  ⚠ SINIF ADINA VE METNE DOKUNULMAZ — tema CSS'i `.price` üzerinden çalışıyor,
+  sınıfı değiştirmek fiyat gösterimini BOZAR.
+
+  ── UYGULANMADAN ÖNCE BİLİNMESİ GEREKEN ────────────────────────────────────
+  Bu yama aracın işini KOLAYLAŞTIRIR ama GARANTİ ETMEZ: Event Setup Tool'un
+  hangi ipucunu okuduğu Meta tarafında belgelenmiş değil ve sürüm sürüm değişiyor.
+  Ölçülebilir tek garanti zaten sağlanmış durumda: ViewContent value+currency
+  ile gidiyor, katalog eşleşmesi JSON-LD/OpenGraph üzerinden kuruluyor.
+{%- endcomment -%}
