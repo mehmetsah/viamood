@@ -276,7 +276,7 @@ export async function createFulfillmentForOrderVendor(
   if (!ship.city?.trim()) {
     return {
       ok: false,
-      error: 'Teslimat adresinde İL eksik — Shopify siparişinde il/ilçe alanlarını doldurun, etiket ondan sonra kesilir',
+      error: 'Teslimat adresinde İLÇE eksik — Shopify siparişinde il/ilçe alanlarını doldurun, etiket ondan sonra kesilir',
     };
   }
   // İlçe kayıtlı ilin listesinde değilse etiket KESİLMEZ (#1164 Ankara/Erbaa, #1169 Bingöl/Şişli:
@@ -289,6 +289,23 @@ export async function createFulfillmentForOrderVendor(
   });
   if (!kapi.ok) return { ok: false, error: kapi.error };
   ship = kapi.ship;
+  // İL (ship.district) AYRICA denetlenir — #993105 (Yunus, 7 Eki, sipariş 1206).
+  // ÖLÇÜLEN KUSUR: il boş gelince aşağıdaki `state` alanı `?? ship.city` ile İLÇEYE
+  // düşüyordu; etikette aynı ad hem il hem ilçe olarak basılıyordu ("Mersin Yenişehir"
+  // siparişinde etikette "Yenişehir / Yenişehir"). Üstüne `stateCodeFromName` eşleşmeyen
+  // adda '34' (İSTANBUL) döndüğü için Mersin gönderisi İstanbul plakasıyla çıkıyordu.
+  // Yanlış il = paket yanlış şehre gider; bu yüzden artık SESSİZCE TAHMİN ETMİYORUZ,
+  // açık hata dönüyoruz. İlçeden il TÜRETİLMEZ: "Yenişehir" Mersin'de de Bursa'da da
+  // Diyarbakır'da da var — tahmin ikinci bir yanlış etiket sınıfı doğurur.
+  if (!ship.district?.trim()) {
+    return {
+      ok: false,
+      error: 'Teslimat adresinde İL eksik — etiket kesilmedi (ilçe adı il olarak basılmasın diye). Shopify siparişinde il alanını doldurun.',
+    };
+  }
+  // Kapı yukarıda döndüğü için burada İL kesin dolu; tek değişkene alıyoruz ki
+  // aşağıda iki yerde tekrar edilmesin ve tip daraltması kapının ötesine taşınsın.
+  const ilAdi = ship.district.trim();
   const receiver: KargoLabAddress = {
     contact_name: ship.name ?? order.customerName ?? 'Müşteri',
     address1: ship.address1 ?? '-',
@@ -298,8 +315,10 @@ export async function createFulfillmentForOrderVendor(
     // ters isimlendirme: town/city = İLÇE (ship.city), state = İL (ship.district)
     town: ship.city ?? '',
     city: ship.city ?? '',
-    state: ship.district ?? ship.city ?? '',
-    state_code: stateCodeFromName(ship.district ?? ship.city),
+    // #993105: `?? ship.city` geri çekilmesi KALDIRILDI — il yoksa yukarıdaki kapı
+    // zaten durduruyor; ilçe adını il alanına yazmak yanlış etiket üretiyordu.
+    state: ilAdi,
+    state_code: stateCodeFromName(ilAdi),
     country: ship.countryCode ?? 'TR',
     email: order.customerEmail ?? undefined,
     phone: ship.phone ?? order.customerPhone ?? '',
