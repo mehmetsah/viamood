@@ -121,3 +121,79 @@ PTT etiketi ZPL olarak gelmediğine göre Zebra'ya giden şey PDF'tir; `~HI` ve
 `getvar`'ın düz metin basılması hâlâ **yazıcı/sürücü tarafı** bir durumdur —
 en olası neden tanılama (dump) modu. `zebra/` klasöründeki sıralı onarım
 dosyaları geçerliliğini koruyor.
+
+---
+
+## Ek ölçüm — 7 Ekim 2026: arıza TEKRARLADI (#993107) · neden tekrarladığı bulundu
+
+**Olay:** Yunus, 7 Eki 13:43, fotoğrafla: *"yazıcılardan device product name yazmaya başladı gene"*.
+Çıktı birebir iki satır:
+```
+~HI
+! U1 getvar "device.product_name"
+```
+
+### Yeni kanıt 1 — iki satır İKİ AYRI DİL, bu teşhisi kesinleştiriyor
+`~HI` bir **ZPL** komutudur (Host Identification). `! U1 getvar "..."` ise **CPCL/Link-OS SGD**
+söz dizimidir. Link-OS yazıcılar `! U1` SGD sorgusunu **dil kipinden bağımsız** yanıtlar.
+⇒ Yazıcı **ikisini birden** düz metin bastıysa sorun "yanlış dil kipi" (aday c) **değildir**:
+tek bir dil yanlış olsaydı öbürü yine yorumlanırdı. **Yorumlayıcı hiç çalışmıyor** demektir —
+yani **tanılama (dump) modu**, aday **(a)**. Önceki bölümün "en olası" dediği şey artık ölçülü.
+
+### Yeni kanıt 2 — bu dizeleri BİZ göndermiyoruz (7 Eki'de yeniden ölçüldü)
+```
+src/ + scripts/ içinde "~HI"                 → 0
+src/ + scripts/ içinde "getvar"              → 0
+src/ + scripts/ içinde "device.product_name" → 0
+\bepl\b / \bEPL\b (kelime sınırıyla)        → 0   (önceki "92 dosya" replace/helper yanlış pozitifiymiş)
+"zpl" geçen dosya → 2, ikisi de scripts/takip-no-zpl-*.mjs — ZPL'i OKUYOR, yazıcıya GÖNDERMİYOR
+```
+Etiket akışı hâlâ uçtan uca PDF: `src/app/api/labels/[id]/route.ts:59-63` base64 → Buffer →
+`Content-Type: application/pdf`.
+⇒ `~HI` + `getvar` ikilisi bir **Zebra keşif/tanıma el sıkışmasıdır** (Browser Print ·
+Setup Utilities · sürücü yoklaması). Bizim kodumuzda **yoklama/durum sorgusu yok** —
+yani aday **(b) "bizim sorgumuz baskı kuyruğuna karışıyor" da ELENDİ**.
+
+### Neden TEKRARLADI — eksik olan buydu
+`01-dump-modundan-cik.zpl` yalnız **`~JE`** gönderiyor. `~JE` **çalışma anı** komutudur:
+tanılama modunu kapatır ama **ayarı kalıcı yazmaz**. Yazıcı kapanıp açıldığında ya da
+açılışta FEED düğmesi kombinasyonuyla tanılama moduna yeniden düşüldüğünde **arıza geri gelir**.
+`04-zpl-diline-al.zpl` kalıcı yazıyor (`^JUS`) ama yalnız **dili** (`^SZ2`) ayarlıyor;
+dump modundan çıkışı içermiyor. İkisi **ayrı dosyada** olduğu için operatör genelde
+yalnız `01`'i gönderip bırakıyor — tekrarın yapısal sebebi bu.
+
+### Kalıcı onarım — `05-tanilama-kapat-ve-KALICI-yaz.zpl` (YENİ)
+Tek gönderimde: tanılama modundan çık **+** dili ZPL'e sabitle **+** ayarı kalıcı yaz.
+```
+~JE
+^XA
+^SZ2
+^JUS
+^XZ
+```
+⚠ `^JUS` yazıcı ayarını **kalıcı** yazar — geri alınabilir ama bilinçli yapılmalı.
+Tekrar eden arızada **`01` yerine `05`** gönderilmeli.
+
+### Yunus'a adım adım (model bilinmiyor — Zebra genel)
+1. Yazıcıyı **USB/ağ ile** bilgisayara bağla, **Zebra Setup Utilities**'i aç.
+2. *Open Communication With Printer* → **`05-tanilama-kapat-ve-KALICI-yaz.zpl`** içeriğini yapıştır → **Send**.
+   (Alternatif ham gönderim: `COPY /B 05-tanilama-kapat-ve-KALICI-yaz.zpl \\bilgisayar\yazici`)
+3. `02-yazici-bilgisi.zpl` (`~HI`) gönder → artık **tek satır model/firmware bilgisi** basmalı.
+   Hâlâ komut metni çıkıyorsa gönderim yolu metin sürücüsünden geçiyordur (aday b): sürücüyü
+   **"Generic / Text Only"**'den çıkar, Zebra ZPL sürücüsüne geç.
+4. `03-test-etiketi.zpl` gönder → düzgün test etiketi + barkod çıkmalı.
+5. Yazıcıyı **kapat-aç** ve 3. adımı **tekrarla** — kalıcılık böyle doğrulanır.
+   (Eski `01` ile bu adım geçilmiyordu; tekrarın yakalanmamasının sebebi buydu.)
+
+### Mehmet'in Yunus'a sorduğu iki soru neden önemli
+· **"Her baskıda mı, ilk baskıda mı?"** → her baskıda ise mod kalıcı; yalnız ilk baskıda ise
+  keşif el sıkışması baskı kuyruğuna karışıyordur (sürücü/Browser Print ayarı).
+· **Yazıcı modeli** → `^SZ2` ve `~JE` tüm ZPL yazıcılarda geçerli; ama ZD/ZT serisinde ön panelden
+  *Diagnostics Mode* doğrudan kapatılabilir, model gelince adım sayısı 5'ten 2'ye iner.
+
+### Hüküm
+Kök sebep **bizim kodumuzda DEĞİL** — üç adaydan **(a) yazıcı tanılama (dump) modu**.
+(b) elendi (bizde yoklama yok), (c) elendi (iki ayrı dil birden basılıyor).
+Kod değişikliği **yapılmadı**: olmayan bir kusura kod yazmak yanlış olurdu.
+Kalıcı kontrol **operatör tarafında**: `05` dosyası + kapat-aç doğrulama adımı.
+
