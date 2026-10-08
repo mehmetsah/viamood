@@ -197,3 +197,57 @@ Kök sebep **bizim kodumuzda DEĞİL** — üç adaydan **(a) yazıcı tanılama
 Kod değişikliği **yapılmadı**: olmayan bir kusura kod yazmak yanlış olurdu.
 Kalıcı kontrol **operatör tarafında**: `05` dosyası + kapat-aç doğrulama adımı.
 
+---
+
+## Ek ölçüm — 8 Ekim 2026: FOTOĞRAF OKUNDU · 7 Eki hükmü DÜZELTİLDİ (#993107)
+
+⚠ **7 Eki'de "aday (a) tanılama (dump) modu" demiştim. BU HÜKÜM YANLIŞTI** ve sebebi açıkça
+yazılmalı: o gün Yunus'un fotoğrafını **görmemiştim**, yalnız metin transkripsiyonundan akıl
+yürütmüştüm. Fotoğraf bugün okundu
+(`whatsapp/media/1791369810-AC52B07526A48D724D1F4FC4B3ADC138-image.jpeg`, 7 Eki 13:43).
+
+### Fotoğrafta görülenler
+1. **HEX SÜTUNU YOK.** Çıktıda yalnız iki düz satır var:
+   `~HI` ve `! U1 getvar "device.product_name"`. Satır başlarında onaltılık adres/hex dökümü yok.
+2. Metin sayfanın **sol üst köşesinde**, altında geniş boş alan; yazı tipi **eşaralıklı (Courier benzeri)**.
+3. Baskı, dar etiket şeridi görünümünde değil — geniş beyaz bir yaprağın üst kenarında duruyor.
+
+### Bu neden hükmü ters çevirir
+Bu belgenin **kendi ayırt etme ölçütü** (yukarıda §2, 15 Eyl'de yazılmış) şunu diyor:
+> *"satır başlarında onaltılık adres/hex sütunları varsa → (a) dump modu.
+> Sadece düz komut metni varsa ve hex yoksa → büyük olasılıkla (b) sürücü/gönderim yolu."*
+
+**Hex yok ⇒ (a) ELENDİ, (b) işaretleniyor.**
+
+7 Eki'deki gerekçem *"iki ayrı dil (ZPL + CPCL) birden metin basıldıysa yorumlayıcı hiç çalışmıyor"*
+idi. O akıl yürütme **çıktının Zebra'dan geldiğini varsayıyordu**. Çıktı bir **metin sürücüsünden /
+ofis yazıcısından** geçiyorsa iki dilin de düz basılması **beklenen** sonuçtur — çünkü o yol zaten
+hiçbir yazıcı dilini yorumlamaz. Yani gözlem (a)'yı değil (b)'yi destekliyor; 7 Eki'deki çıkarım
+eksik girdiyle yapılmış bir **aşırı yorumdu**.
+
+### Düzeltilmiş hüküm
+**Kök sebep: (b) — veri yazıcıya HAM (raw) değil METİN olarak gidiyor.**
+Yani `~HI` / `getvar` sorgusu, ZPL'i yorumlayacak bir yola değil, metni **sayfaya dizen** bir yola
+giriyor: "Generic / Text Only" sürücüsü · Not Defteri'nden `Yazdır` · ya da kuyruğun **Zebra olmayan
+bir yazıcıya** eşlenmiş olması.
+⚠ `~JE` (dosya `01`) ve `05-tanilama-kapat-ve-KALICI-yaz.zpl` bu durumda **İŞE YARAMAZ** — dump modu
+değilse kapatılacak bir mod yoktur. O dosyalar geçerliliğini korur ama **ikinci sıraya** düşer.
+
+### Yunus'a verilecek SIRA (düzeltildi — önce (b), sonra (a))
+1. **Hangi yazıcıya gitti?** Çıktıyı veren cihazı doğrula: Zebra mı, ofis/A4 yazıcısı mı?
+   Sorgu yanlış cihaza gidiyorsa sorun burada biter.
+2. **Sürücüyü denetle:** Windows → Yazıcılar → ilgili yazıcı → sürücü **"Generic / Text Only"
+   OLMAMALI**; Zebra ZPL sürücüsü seçili olmalı.
+3. **Ham gönderim kullan:** Zebra Setup Utilities → *Open Communication With Printer* → *Send File*
+   (ya da `COPY /B dosya.zpl \\bilgisayar\yazici`). Not Defteri'nden "Yazdır" **kullanılmaz** —
+   sürücü metni sayfaya dizer, komut çalışmaz.
+4. Ancak 1-3 temizse ve çıktıda **hex sütunu görülürse** `05-tanilama-kapat-ve-KALICI-yaz.zpl` gönder (dump modu).
+
+### Değişmeyen bulgular (7 Eki'den geçerliliğini koruyanlar)
+· Bu komutları **bizim kodumuz üretmiyor** — `src/`+`scripts/` içinde `~HI` **0**, `getvar` **0**,
+  `device.product_name` **0**. Etiket akışı uçtan uca PDF (`src/app/api/labels/[id]/route.ts:59-63`).
+· Dolayısıyla **aday (b) "bizim yoklamamız kuyruğa karışıyor" ELENİK kalır** — bizde yoklama yok;
+  sorgu Zebra Setup Utilities / Browser Print / sürücü keşfinden geliyor.
+· Tekrarın yapısal sebebi olarak yazdığım "`~JE` kalıcı değil" notu **doğru ama bu vakaya uygulanmıyor**;
+  dump modu vakaları için geçerliliğini korur.
+
