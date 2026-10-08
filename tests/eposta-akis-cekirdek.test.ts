@@ -207,9 +207,32 @@ describe('Şema çivisi — defter kuyruğa güvenmez', () => {
     for (const c of creates) expect(c, c).toMatch(/IF NOT EXISTS/i);
   });
 
-  it('göç deploy.sh elle listesine KAYITLI — yoksa prod’da hiç koşmaz', () => {
+  it('göç prod\'da GERÇEKTEN koşar — deploy.sh dizinden türetiyor ve 0031 dışlanmıyor', () => {
+    /**
+     * ÇİVİ GÜNCELLENDİ (8 Eki 2026, #992992) — GEVŞETİLMEDİ, MEKANİZMA DEĞİŞTİ.
+     * Eski iddia "deploy.sh içinde '0031_eposta_akis' metni geçsin" idi; o dönemde
+     * liste ELLE yazılıyordu. #992334 listeyi DİZİNDEN türetmeye geçirdi
+     * (`ls drizzle/*.sql | sort -V`), yani artık HİÇBİR göç adı deploy.sh'ta geçmez
+     * — eski iddia yapısal olarak imkânsız hâle geldi.
+     * Niyet aynı: "bu göç prod'da gerçekten koşmalı". Yeni iddia bunu ÜÇ ayakta ölçer
+     * ve eskisinden DAHA GÜÇLÜDÜR: (a) türetme yerinde mi, (b) dosya diskte mi,
+     * (c) üç dışlama kapısından birine takılıyor mu.
+     */
     const deploy = readFileSync(new URL('../scripts/deploy.sh', import.meta.url), 'utf8');
-    expect(deploy).toMatch(/0031_eposta_akis/);
+    // (a) liste dizinden türüyor
+    expect(deploy, 'göç listesi dizinden türetilmiyor').toMatch(/ls drizzle\/\*\.sql[\s\S]{0,40}sort -V/);
+    // (b) göç dosyası gerçekten var
+    expect(() => readFileSync(new URL('../drizzle/0031_eposta_akis.sql', import.meta.url), 'utf8')).not.toThrow();
+    // (c) hiçbir dışlama kapısına takılmıyor
+    const disla = (ad: string) => {
+      const m = deploy.match(new RegExp(`^${ad}='([^']*)'`, 'm'));
+      return m ? m[1] : '';
+    };
+    expect(disla('ELLE_DISLANAN')).not.toBe('0031_eposta_akis');
+    expect(disla('IDEMPOTENT_DEGIL')).not.toBe('0031_eposta_akis');
+    const journal = disla('JOURNAL_ARALIGI');
+    expect(journal, 'journal aralığı okunamadı').toBeTruthy();
+    expect(new RegExp(journal).test('0031_eposta_akis')).toBe(false);
   });
 
   it('kupon kodu ve e-posta 60 gün sorgusu için indekslidir', () => {
