@@ -66,14 +66,60 @@ npx drizzle-kit migrate || echo "  (drizzle-kit migrate uyarı/no-op)"
 
 # Elle yazılan idempotent migration'lar (journal'da YOK — db:generate kırıktı, ekip elle yazıyor).
 # HER deploy'da güvenle tekrar uygulanır (IF NOT EXISTS / DO-EXCEPTION guard). Build'den ÖNCE →
-# yeni kod eksik kolona/tabloya düşmez. Yeni elle migration eklenince listeye ekle.
+# yeni kod eksik kolona/tabloya düşmez.
+#
+# 🔴 30 EYL 2026 — ÖLÇÜLMÜŞ KUSUR: burada ELLE yazılmış bir liste vardı ve 0026_veri_silme'de
+# bitiyordu. Sonradan eklenen ALTI göç (0006, 0007, 0027_mail_log, 0028_urun_sss,
+# 0029_user_yetkileri, 0030_invite_tokens) listeye EKLENMEDİĞİ için HİÇ koşmadı ve
+# koşmayacaktı. Bedeli ölçüldü: canlıda invite_tokens tablosu olmadığı için
+# /auth/davet?token=... 500 döndü (#992334). Listenin KENDİSİ kusurun kaynağıydı —
+# artık DİZİNDEN türetiliyor, elle güncelleme gerektirmiyor.
+#
+# ⛔ DIŞLANANLAR — bilerek, gerekçesiyle:
+#   · MANUEL-A-SIKKI-user_role-enum.sql → "ALTER TYPE ... ADD VALUE" GERİ ALINAMAZ
+#     (enum değeri silinemez). Onay bekliyor; otomatiğe ASLA girmez.
+#   · 0000-0005 → drizzle-kit migrate zaten journal'dan uyguluyor; tek sahibi o olsun.
+#   · 0007_shipping_rates → İDEMPOTENT DEĞİL. ÖLÇÜLDÜ (30 Eyl, yerel geçici DB'de iki kez
+#     koşturarak): 2. koşuda `ERROR: type "shipping_rate_status" already exists` ile
+#     DÜŞÜYOR — 4. satırdaki `CREATE TYPE ... AS ENUM` guard'sız ve PostgreSQL'de
+#     `CREATE TYPE IF NOT EXISTS` YOK. Döngüye alınsaydı İLK deploy geçer, SONRAKİ HER
+#     deploy bu satırda `exit 1` ile dururdu — yani listeyi açmak deploy'u topyekûn
+#     kilitlerdi. Göç dosyasına DOKUNULMADI (başkasının göçü + prod'da uygulanmış olabilir);
+#     otomatikten çıkarıldı, gerekirse elle koşulur.
+ELLE_DISLANAN='MANUEL-A-SIKKI-user_role-enum'
+IDEMPOTENT_DEGIL='0007_shipping_rates'
+JOURNAL_ARALIGI='^000[0-5]_'
+
 echo ""
-echo "▸ Elle migration'lar (idempotent)..."
-for m in 0008_customers 0009_native_orders 0010_carts 0011_store_settings 0011_ads 0012_settings_backend_theme 0013_returns 0014_reviews 0015_goknil_admin 0016_goknil_pwreset 0017_goknil_upsert 0018_tenants 0019_kargolab_vendor_member 0020_kargolab_enabled 0024_password_reset 0023_auth_social 0022_welcome_signups 0025_payment_refunds 0026_veri_silme; do
-  if [ -f "drizzle/$m.sql" ]; then
-    psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -q -f "drizzle/$m.sql" && echo "  ✓ $m" || { echo "  ✗ $m FAİL"; exit 1; }
+echo "▸ Elle migration'lar (idempotent, DİZİNDEN türetiliyor)..."
+KOSULAN=0
+for f in $(ls drizzle/*.sql 2>/dev/null | sort -V); do
+  m=$(basename "$f" .sql)
+  if [ "$m" = "$ELLE_DISLANAN" ]; then
+    echo "  ⊘ $m (DIŞLANDI: geri alınamaz enum göçü, onay bekliyor)"; continue
+  fi
+  if [ "$m" = "$IDEMPOTENT_DEGIL" ]; then
+    echo "  ⊘ $m (DIŞLANDI: idempotent değil — guard'sız CREATE TYPE, 2. koşuda düşer)"; continue
+  fi
+  if echo "$m" | grep -qE "$JOURNAL_ARALIGI"; then
+    echo "  ⊘ $m (drizzle-kit journal'ında, orada koşuyor)"; continue
+  fi
+  if psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -q -f "$f"; then
+    echo "  ✓ $m"; KOSULAN=$((KOSULAN+1))
+  else
+    echo "  ✗ $m FAİL"; exit 1
   fi
 done
+
+# SESSİZ ATLAMA OLMASIN: dizindeki her .sql ya koştu ya da AÇIKÇA dışlandı.
+# Sayı tutmuyorsa deploy durmaz ama EKRANA BAĞIRIR — bir daha "listede yoktu" olmasın.
+TOPLAM=$(ls drizzle/*.sql 2>/dev/null | wc -l | tr -d ' ')
+BEKLENEN=$(ls drizzle/*.sql 2>/dev/null | xargs -n1 basename | sed 's/\.sql$//' \
+  | grep -vE "$JOURNAL_ARALIGI" | grep -vx "$ELLE_DISLANAN" | grep -vx "$IDEMPOTENT_DEGIL" | wc -l | tr -d ' ')
+echo "  → $KOSULAN göç koştu (beklenen $BEKLENEN · dizinde toplam $TOPLAM .sql)"
+if [ "$KOSULAN" != "$BEKLENEN" ]; then
+  echo "  ⚠️  UYARI: dizinde olup koşulmayan göç var — sessiz atlama şüphesi, kontrol et."
+fi
 
 # Tip kapısı — build'den ÖNCE. `next build` zaten tip denetimi yapar ama 129 sn sürer ve
 # o süre boyunca .next ağacına dokunulmuş olur. `tsc --noEmit` aynı hatayı diske HİÇ
