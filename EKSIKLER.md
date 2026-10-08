@@ -41,27 +41,30 @@ gerekmiyor. Kalan iş fiziksel cihazlarda, Yunus'ta.
 
 ---
 
-## ✅ Yunus'un 12 Maddesi — TİK DURUMU (6 Eki 2026 ölçümü, Elif)
-Kanıt: raporlar/viamood-12-madde-envanter-20261006.md (canlı curl/Playwright + depo taraması).
-⛔ ORTAK BLOKAJ (10/12 madde bunun arkasında bekliyor): via-mood Shopify mağazasına staff/collaborator erişimi yok → shopify theme list "you don't have access to this dev store" döner, theme pull/push yapılamaz. Tek açık: Mehmet'in via-mood mağazasına staff erişimi vermesi. Kod tarafı (Next app) bundan bağımsız, aşağıda ayrıca ilerliyor.
+## ✅ Yunus'un 12 Maddesi — TİK DURUMU (**8 Eki 2026** ölçümü, Elif)
+Kanıt: `~/asistan-veri/mehmet/raporlar/viamood-12-madde-envanter-20261008.md` (canlı curl + Playwright 430/1440px + `merge-base`).
+Önceki tablo (6 Eki) **BAYATLADI** — iki etiketi yanlıştı, aşağıdaki geçerli.
+⛔ ORTAK BLOKAJ (12 maddenin **8'i** bunun arkasında): via-mood Shopify mağazasına staff/collaborator erişimi yok → `shopify theme list` *"you don't have access to this dev store"*. `tema-yamalari/` altında **20 hazır yama** var, biri bile canlı temada değil. **Tek açık: Mehmet'in staff erişimi vermesi.**
+✅ İYİ HABER: 6 Eki'deki **17 açık `kod/*` dalı → 4'e** düştü (`991406-meta-odeme-olaylari`, `991676-eposta-otomasyon`, `992334-deploy-goc-listesi`, `meta-pixel-eksik-olaylar`).
 
-| # | Madde | Tik | Not / detay |
+| # | Madde | Tik | Kanıt / ne eksik |
 |---|---|---|---|
-| 1 | Hukuki sayfa tasarım bütünlüğü (İade/Mesafeli/KVKK/Gizlilik aynı şablon) | KISMİ 2/4 | İade+Mesafeli zaten aynı tasarımda; KVKK handle↔şablon uyuşmazlığı (admin, 30 sn), Gizlilik sistem sayfasına kaçıyor (içerik kararı) — bkz 13e |
-| 2 | SSS (ürün sayfası) | BİTTİ | ürün sayfasında sss/Sıkça/accordion canlı doğrulandı |
-| 3 | Otomatik e-posta sistemi | KISMİ | çekirdek+tablo yazıldı (kod/991676-eposta-otomasyon) ama main'de değil, zamanlayıcı stub — bkz madde 6 (Shopify'dan BAĞIMSIZ, kod işi, ilerletilebilir) |
-| 4 | Ürün detay boşluk/ortalama | ÖLÇÜLMEDİ | bütçe yetmedi, "bitti/eksik" denemez |
-| 5 | Kargo saat sayacı (15:00'a kadar aynı gün) | YOK | snippet yazılmış (via-kargo-kesim-sayac.liquid) ama hiçbir şablona bağlı değil — bkz 13f |
-| 6 | Ürün görseline rozet (ücretsiz kargo · vade farksız) | YOK | 0 eşleşme — bkz 13f |
-| 7 | Türkçe slug /urunler/... | YOK | hâlâ Shopify varsayılanı /products/ (116) |
-| 8 | Mobil sabit alt çubuk (WhatsApp+Sepete+Hemen Al) | KISMİ/ŞÜPHELİ | sticky+WhatsApp+Sepete var, Hemen Al 0 — bkz 13g |
-| 9 | Varyasyon kutucuğu (Trendyol tipi) | YOK | Horizon'un kendi web bileşeni, kutucuk değil — bkz madde 10 |
-| 10 | Footer ödeme yöntemi ikonları | YOK | hâlâ düz metin chip, svg/img 0 — bkz 13b |
-| 11 | Evin favorileri mobilde taşma | AÇIK | 430px'te 52px taşma, kök sebep ölçüldü — bkz 13c |
-| 12 | /pages/odeme taksit Tek çekim border-top | AÇIK | kök sebep bulundu, tek satır CSS fix hazır — bkz 13a |
-| — | (ekstra) Ürün sayfası güvence bloğu kaldırma | AÇIK | hâlâ canlıda — bkz 13d |
+| 1 | Hukuki sayfa tasarım bütünlüğü | KISMİ 3/4 | İade+KVKK+Mesafeli **200** ve ortak `__main` kabuğu (KVKK handle kusuru **DÜZELDİ**); Gizlilik **301 → /policies/privacy-policy**. ⚠ 6 Eki'nin "dördü de via-legal-page.liquid'den besleniyor" notu **yanlış**: canlıda `via-legal-page`/`vlp-` → **0**. KVKK'da fazladan `via_page_support` section'ı var |
+| 2 | SSS (ürün sayfası) | **KISMİ** ⛔ (6 Eki "BİTTİ" demişti, yanlıştı) | Canlı render: `window.__vmSSS` = **undefined**, `[data-vm-sss]` enjekte yok, gövde metninde "Sıkça Sorulan" **yok** (2 üründe). İki blokaj: (a) enjektör `vp-tabbed` sınıfı varsa **erken return** — canlı root `product-details sticky-content--desktop vp-tabbed`; (b) `__vmSSS`'i dolduran yok, temada `urun-sss` fetch'i 0, API ucu JSON değil HTML döndürüyor |
+| 3 | Otomatik e-posta sistemi | KISMİ | `kod/991676-eposta-otomasyon` `326d820` **hâlâ main'de değil**; koşucu stub (`src/worker/index.ts`), şablon + İYS kolonu yok. **Shopify'dan BAĞIMSIZ — ilerletilebilir** |
+| 4 | Ürün detay boşluk/ortalama | **AÇIK** (6 Eki'de ölçülmemişti) | 1440px: `.product-information` sol **0** / sağ **1440** / yatay padding **0**, grid `960px 480px` ⇒ max-width kapsayıcısı yok, yan nefes payı **sıfır** |
+| 5 | Kargo saat sayacı (15:00) | AÇIK | `kargo-kesim`/`countdown`/`geri sayım` → **0**. Snippet yazılmış, **hiçbir şablona bağlı değil** |
+| 6 | Ürün görseline rozet | AÇIK | "Vade farksız" **0**. "Ücretsiz kargo" 3 eşleşme ama hepsi **sepet çekmecesi ilerleme çubuğu**, görsel rozeti yok. ⚠ O çubuk emoji kullanıyor (🎁🚚) — emoji yasağına aykırı, ayrı iş |
+| 7 | Türkçe slug `/urunler/...` | AÇIK | `/urunler` → **404**, yollar hâlâ `/products/`, `next.config.ts`'te rewrite **yok**. **Yarısı bizde — ilerletilebilir** |
+| 8 | Mobil sabit alt çubuk | KISMİ | 430px: `sticky-add-to-cart__bar` fixed alt=0 h=79 ✓ · `wa-fab` ✓ · **"Hemen Al" yok**. 🔴 YENİ: `vm-bottom-nav` (fixed, alt=0, h=64) ile sepet çubuğu **üst üste biniyor** |
+| 9 | Varyasyon kutucuğu (Trendyol tipi) | AÇIK | Katalogda varyasyonlu **tek** ürün (250 ürün tarandı). Seçici Horizon değil özel `quantity-break`: `.vqb__group{display:block}` + `.vqb__card{width:100%}` ⇒ dikey tam genişlik. Düzeltme **salt CSS** (grid), seçim mantığına dokunmaz |
+| 10 | Footer ödeme ikonları | AÇIK | `vf-pay`: **6 `<span>` düz metin · svg 0 · img 0** — 6 Eki ile birebir aynı, sıfır ilerleme |
+| 11 | "Evin favorileri" mobilde taşma | AÇIK | 430px: ızgara 382px, `gtc: 220.641px 201.719px`, görünür kart **2/4**, **yatay taşma 52px** — 6 Eki sayılarıyla birebir aynı. ⚠ İKİNCİ taşma: `A.vmh2-quick-category` sağ kenar **448px** (18px dışarı) |
+| 12 | `/pages/odeme` taksit "Tek çekim" border-top | AÇIK (canlıda) · kod HAZIR | Kusurlu satır canlıda **aynen duruyor**: `.vco-hk-tk__s:first-child{border-top:0}`. Onarım `2e8287e` + yama main'de, **temaya uygulanmadı**. Yüzey belirsizliği **kapandı**: yüzey `.vco-hk-tk__s` (hp-tile değil). ⚠ "%1 padding" çözmez — kenarlık açıkça kapatılmış |
+| — | (ekstra) Ürün detay güvence bloğu kaldırılsın | **BİTTİ** ✅ | 11:4x curl 4/4 vardı (435.590 B) → 12:0x curl **0** (414.729 B, **−21 KB**) + render `false`. ⚠ Blok **ölçüm penceremde** düştü; kaldıran teyit etsin |
 
-Özet: 1/12 tam bitti, 3/12 kısmi, 7/12 açık/yok, 1/12 ölçülmedi. 10/12 Shopify erişimine kilitli.
+**Özet: 1/12 BİTTİ · 4/12 KISMİ · 7/12 AÇIK** (+ ekstra güvence bloğu bitti). 8/12 Shopify erişimine kilitli.
+Gerileyen iş **yok**; md.2'nin düşüşü **defter düzeltmesi**, iş kaybı değil.
 
 ## Durum özeti (bir bakışta)
 | Gösterge | Değer |
