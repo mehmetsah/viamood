@@ -270,6 +270,14 @@ async function pushToFirmaDb(params: {
       // sipariş aradepo'da kalıp Via'ya AKTARILAMIYORDU (#1045/1051/1053/1060-63/1066/1069). 50'ye kırp.
       // (Tam adres zaten EvrakDokumAciklamasi.svka + EvrakAciklama'da eksiksiz taşınıyor.)
       const cadde50 = [ship.address1, ship.address2].filter(Boolean).join(' ').slice(0, 50);
+      // #993105 (Mikro ayağı): `ship.district ?? ship.city` geri çekilmesi KALDIRILDI.
+      // Ters isimlendirme: ship.district = İL, ship.city = İLÇE (teslimat-adresi.ts:4-5).
+      // İl boş gelince eski kod İL alanına İLÇEYİ yazıyordu → cari "Yenişehir / Yenişehir"
+      // olarak açılıyor ve aynı kusur Mikro'daki fatura + sevk adresine de sızıyordu.
+      // İlçeden il TÜRETİLMEZ ("Yenişehir" Mersin'de de Bursa'da da Diyarbakır'da da var);
+      // il yoksa alan BOŞ kalır — yanlış il, boş ilden daha zararlı (paket yanlış şehre gider).
+      const ilAdi = ship.district?.trim() ?? '';
+      const ilceAdi = ship.city?.trim() ?? '';
       // MADDE-1: ödeme yöntemi + kargoya göre muhasebe kodu (PayTR P001 / PTT-COD P002 / Sürat-COD P003 / havale=cariKodu)
       const muhasebeKodu1 = muhasebeKodu1For(order.tags, params.courier, cariKodu);
       // Yunus'un Woo düzeni: tam ad tek alanda (cari_unvan1="Büşra Kaynak") — bölme
@@ -293,8 +301,8 @@ async function pushToFirmaDb(params: {
         Adres1: {
           Adres: cadde50,
           Ulke: ship.country ?? 'TURKEY',
-          Sehir: ship.district ?? ship.city ?? '',
-          Kasaba: ship.city ?? '',
+          Sehir: ilAdi,
+          Kasaba: ilceAdi,
           PostaKodu: ship.postalCode ?? '',
         },
         // Yunus: cari adres boş kalıyordu — fatura + sevk adresi de doldurulur
@@ -302,15 +310,15 @@ async function pushToFirmaDb(params: {
         FaturaAdresi: {
           Cadde: cadde50,
           Ulke: ship.country ?? 'TURKEY',
-          Sehir: ship.district ?? ship.city ?? '',
-          Kasaba: ship.city ?? '',
+          Sehir: ilAdi,
+          Kasaba: ilceAdi,
           PostaKodu: ship.postalCode ?? '',
         },
         SevkAdresi: {
           Cadde: cadde50,
           Ulke: ship.country ?? 'TURKEY',
-          Sehir: ship.district ?? ship.city ?? '',
-          Kasaba: ship.city ?? '',
+          Sehir: ilAdi,
+          Kasaba: ilceAdi,
           PostaKodu: ship.postalCode ?? '',
         },
       }, base);
