@@ -439,13 +439,9 @@
   /* #992950 — KALDIRILDI: `.vco-hk-tk__s:first-child { border-top:0; }`
      Bu kural taksitler ALT ALTA LİSTEYKEN vardı: ilk satırın üst çizgisi kapsayıcı
      `.vco-hk-tk` kenarlığıyla ÇİFT ÇİZGİ yapıyordu, o yüzden sıfırlanmıştı.
-     Yunus'un 29 Eyl isteğiyle liste YAN YANA KUTUCUĞA çevrildi (bir üstteki
-     `grid-template-columns:repeat(3,...)`), kutular artık dört kenarlı
-     (`border:1px solid var(--line)`) — ama bu satır silinmedi ve İLK kutunun,
-     yani "Tek çekim"in ÜST ÇİZGİSİNİ siliyordu. Ölçüldü: canlı /pages/odeme.
-     ⚠ Yunus'un önerdiği "biraz padding/margin" ÇÖZMEZ: sorun boşluk değil,
-     kenarlık açıkça kapatılmış. Sabit renk (#e0e0e0 vb.) de YAZILMADI —
-     diğer kutular `var(--line)` kullanıyor, sabit renk tek kutuyu ayrıştırırdı. */
+     Yunus'un 29 Eyl isteğiyle liste YAN YANA KUTUCUĞA çevrildi, kutular artık
+     dört kenarlı — ama bu satır silinmedi ve İLK kutunun, yani "Tek çekim"in
+     ÜST ÇİZGİSİNİ siliyordu. Ölçüldü: canlı /pages/odeme. */
   .vco-hk-tk__s.is-sel { background:#fff6f3; border-color:var(--o); }
   .vco-hk-tk__s > span:nth-of-type(2) { font-weight:600; line-height:1.3; }
   .vco-hk-tk__s input { position:absolute; opacity:0; width:1px; height:1px; margin:0; pointer-events:none; }

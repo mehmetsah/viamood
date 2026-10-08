@@ -224,8 +224,9 @@
   }
 
   /* #992998 — Kapıda Ödeme ve Havale/EFT MARKA DEĞİL, yöntemdir: ince çizgi (stroke)
-     SVG ikon + etiket. Marka çipleri (VISA/MasterCard/Troy/PayTR) metin kalır, onlar
-     gerçek marka varlığıdır ve logo işi ayrıdır. Emoji/AI-kokan ikon YASAK. */
+     SVG ikon + etiket. Marka çipleri METİN KALIR — onlar gerçek marka varlığıdır,
+     logo işi ayrıdır ve marka ADI DEĞİŞTİRİLMEZ (bayat yamada PayTR'ye dönüyordu,
+     8 Eki'de yakalandı). Emoji/AI-kokan ikon YASAK (CLAUDE.md tasarım kuralı). */
   #shopify-section-{{ section.id }} .vf-pay__chip--ikon {
     display: inline-flex;
     align-items: center;
@@ -378,7 +379,7 @@
         <span class="vf-pay__chip">VISA</span>
         <span class="vf-pay__chip">MasterCard</span>
         <span class="vf-pay__chip">Troy</span>
-        <span class="vf-pay__chip">PayTR</span>
+        <span class="vf-pay__chip">Halkbank</span>
         <span class="vf-pay__chip vf-pay__chip--ikon">
           <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
             <rect x="2" y="7" width="20" height="10" rx="2" />
