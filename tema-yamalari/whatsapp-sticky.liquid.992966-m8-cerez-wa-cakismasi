@@ -1,0 +1,417 @@
+{%- comment -%}
+  Sticky WhatsApp FAB — tüm sayfalarda sağ alt köşede sabit.
+  Tıklayınca quick-options panel açılır: önceden tanımlı mesajlarla
+  wa.me deep-link.
+{%- endcomment -%}
+
+{%- liquid
+  assign phone = section.settings.phone | replace: '+', '' | replace: ' ', '' | replace: '-', ''
+  assign brand = shop.name
+-%}
+
+{%- if phone != blank -%}
+<div class="wa-fab" id="wa-fab" data-wa-phone="{{ phone }}">
+  <button type="button" class="wa-fab__main" aria-label="WhatsApp ile iletişim" aria-expanded="false">
+    <svg class="wa-fab__icon" viewBox="0 0 32 32" fill="currentColor" aria-hidden="true" focusable="false">
+      <path d="M19.11 17.205c-.372 0-1.088 1.39-1.518 1.39-.054 0-.108-.022-.157-.057-.295-.157-1.135-.405-2.183-1.388-.815-.747-1.358-1.654-1.523-1.929-.165-.275-.029-.42.119-.563.131-.131.295-.34.443-.516.156-.18.21-.299.295-.487.084-.187.054-.36-.029-.495-.084-.135-.74-1.83-1.039-2.501-.299-.671-.595-.563-.778-.563-.187 0-.39-.029-.595-.029-.205 0-.539.075-.821.36-.282.285-1.075 1.05-1.075 2.555 0 1.505 1.1 2.96 1.255 3.165.157.205 2.16 3.301 5.23 4.629.728.314 1.301.495 1.755.638.733.234 1.405.198 1.93.12.59-.088 1.815-.74 2.077-1.46.255-.72.255-1.335.18-1.46-.075-.135-.27-.205-.566-.36zM16.011 4.667c-6.255 0-11.345 5.09-11.345 11.345 0 2.038.537 4.034 1.559 5.79l-1.62 5.916 6.06-1.589c1.693.926 3.605 1.414 5.346 1.414 6.255 0 11.345-5.09 11.345-11.345S22.266 4.667 16.011 4.667zm0 20.792c-1.625 0-3.224-.435-4.622-1.262l-.331-.197-3.43.9.916-3.346-.215-.342c-.91-1.448-1.392-3.117-1.392-4.83 0-5.012 4.078-9.09 9.095-9.09 5.012 0 9.09 4.078 9.09 9.09s-4.078 9.09-9.111 9.09z"/>
+    </svg>
+    <span class="wa-fab__pulse" aria-hidden="true"></span>
+  </button>
+
+  <div class="wa-fab__panel" id="wa-fab-panel" role="dialog" aria-label="WhatsApp iletişim seçenekleri" hidden>
+    <div class="wa-fab__header">
+      <div class="wa-fab__avatar">
+        <svg viewBox="0 0 32 32" fill="currentColor" aria-hidden="true">
+          <path d="M19.11 17.205c-.372 0-1.088 1.39-1.518 1.39-.054 0-.108-.022-.157-.057-.295-.157-1.135-.405-2.183-1.388-.815-.747-1.358-1.654-1.523-1.929-.165-.275-.029-.42.119-.563.131-.131.295-.34.443-.516.156-.18.21-.299.295-.487.084-.187.054-.36-.029-.495-.084-.135-.74-1.83-1.039-2.501-.299-.671-.595-.563-.778-.563-.187 0-.39-.029-.595-.029-.205 0-.539.075-.821.36-.282.285-1.075 1.05-1.075 2.555 0 1.505 1.1 2.96 1.255 3.165.157.205 2.16 3.301 5.23 4.629.728.314 1.301.495 1.755.638.733.234 1.405.198 1.93.12.59-.088 1.815-.74 2.077-1.46.255-.72.255-1.335.18-1.46-.075-.135-.27-.205-.566-.36zM16.011 4.667c-6.255 0-11.345 5.09-11.345 11.345 0 2.038.537 4.034 1.559 5.79l-1.62 5.916 6.06-1.589c1.693.926 3.605 1.414 5.346 1.414 6.255 0 11.345-5.09 11.345-11.345S22.266 4.667 16.011 4.667zm0 20.792c-1.625 0-3.224-.435-4.622-1.262l-.331-.197-3.43.9.916-3.346-.215-.342c-.91-1.448-1.392-3.117-1.392-4.83 0-5.012 4.078-9.09 9.095-9.09 5.012 0 9.09 4.078 9.09 9.09s-4.078 9.09-9.111 9.09z"/>
+        </svg>
+      </div>
+      <div class="wa-fab__meta">
+        <div class="wa-fab__brand">{{ brand }}</div>
+        <div class="wa-fab__status"><span class="wa-fab__dot"></span> Genelde 5 dk içinde yanıt</div>
+      </div>
+      <button type="button" class="wa-fab__close" aria-label="Kapat">×</button>
+    </div>
+
+    <div class="wa-fab__intro">{{ section.settings.intro_text | default: 'Merhaba 👋 Nasıl yardımcı olabiliriz?' }}</div>
+
+    <div class="wa-fab__options">
+      {%- for block in section.blocks -%}
+        {%- if block.type == 'option' -%}
+          {%- assign msg = block.settings.message | default: 'Merhaba' | url_encode -%}
+          <a href="https://wa.me/{{ phone }}?text={{ msg }}"
+             class="wa-fab__option"
+             target="_blank"
+             rel="noopener"
+             {% if block.settings.cart_aware %}data-wa-cart="1"{% endif %}
+             {{ block.shopify_attributes }}>
+            {%- if block.settings.icon != blank -%}
+              <span class="wa-fab__opt-ico">{{ block.settings.icon }}</span>
+            {%- else -%}
+              <span class="wa-fab__opt-ico">💬</span>
+            {%- endif -%}
+            <span class="wa-fab__opt-text">
+              <strong>{{ block.settings.title }}</strong>
+              {%- if block.settings.subtitle != blank -%}
+                <em>{{ block.settings.subtitle }}</em>
+              {%- endif -%}
+            </span>
+            <span class="wa-fab__opt-arrow">→</span>
+          </a>
+        {%- endif -%}
+      {%- endfor -%}
+    </div>
+
+    <div class="wa-fab__foot">
+      Powered by WhatsApp Business
+    </div>
+  </div>
+</div>
+
+<style>
+  .wa-fab{position:fixed;right:20px;bottom:20px;z-index:9998;font-family:inherit}
+  .wa-fab__main{position:relative;width:60px;height:60px;border-radius:50%;border:0;background:#25D366;color:#fff;cursor:pointer;box-shadow:0 4px 18px rgba(37,211,102,.45);display:flex;align-items:center;justify-content:center;transition:transform .25s ease,box-shadow .25s ease}
+  .wa-fab__main:hover{transform:scale(1.08);box-shadow:0 6px 22px rgba(37,211,102,.55)}
+  .wa-fab__icon{width:32px;height:32px}
+  .wa-fab__pulse{position:absolute;inset:0;border-radius:50%;background:#25D366;opacity:.35;animation:wa-pulse 2s infinite cubic-bezier(.66,0,.34,1)}
+  @keyframes wa-pulse{0%{transform:scale(1);opacity:.35}100%{transform:scale(1.6);opacity:0}}
+  .wa-fab__panel{position:absolute;right:0;bottom:74px;width:340px;max-width:calc(100vw - 40px);background:#fff;border-radius:14px;box-shadow:0 12px 40px rgba(0,0,0,.18);overflow:hidden;animation:wa-pop .2s ease-out}
+  @keyframes wa-pop{from{opacity:0;transform:translateY(8px) scale(.96)}to{opacity:1;transform:translateY(0) scale(1)}}
+  .wa-fab__header{display:flex;align-items:center;gap:12px;padding:14px 16px;background:#075E54;color:#fff;position:relative}
+  .wa-fab__avatar{width:38px;height:38px;border-radius:50%;background:#25D366;display:flex;align-items:center;justify-content:center}
+  .wa-fab__avatar svg{width:24px;height:24px;color:#fff}
+  .wa-fab__meta{flex:1;line-height:1.25}
+  .wa-fab__brand{font-weight:700;font-size:14px}
+  .wa-fab__status{font-size:11px;opacity:.85;display:flex;align-items:center;gap:4px}
+  .wa-fab__dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:#4ade80}
+  .wa-fab__close{position:absolute;top:6px;right:8px;background:none;border:0;color:#fff;font-size:22px;cursor:pointer;line-height:1;opacity:.7}
+  .wa-fab__close:hover{opacity:1}
+  .wa-fab__intro{padding:14px 16px !important;font-size:14px !important;background:#ECE5DD !important;color:#1a1a1a !important;font-weight:500 !important;line-height:1.4 !important}
+  .wa-fab__options{padding:10px;display:flex;flex-direction:column;gap:6px;max-height:340px;overflow-y:auto;background:#fff}
+  .wa-fab__option{display:flex !important;align-items:center !important;gap:12px !important;padding:12px 14px !important;border:1px solid #e5e5e5 !important;border-radius:10px !important;text-decoration:none !important;color:#1a1a1a !important;background:#fff !important;transition:background .15s,border-color .15s,transform .15s}
+  .wa-fab__option:hover{background:#f3fdf4 !important;border-color:#25D366 !important;transform:translateX(2px)}
+  .wa-fab__opt-ico{font-size:22px !important;width:32px;text-align:center;flex-shrink:0;color:#1a1a1a !important}
+  .wa-fab__opt-text{flex:1;font-size:14px !important;display:flex !important;flex-direction:column !important;line-height:1.3 !important}
+  .wa-fab__opt-text strong{font-weight:700 !important;color:#111 !important;font-size:14px !important;display:block !important}
+  .wa-fab__opt-text em{font-style:normal !important;font-size:12px !important;color:#666 !important;margin-top:3px !important;display:block !important;font-weight:400 !important}
+  .wa-fab__opt-arrow{color:#25D366 !important;font-size:18px !important;font-weight:700 !important}
+  .wa-fab__foot{padding:8px 16px;font-size:10px;color:#999 !important;text-align:center;background:#fafafa;border-top:1px solid #f0f0f0}
+  @media (max-width:749px){
+    /* Bottom nav (64px) üstünde dursun — çakışma yok */
+    .wa-fab{right:14px;bottom:80px}
+    .wa-fab__main{width:52px;height:52px}
+    .wa-fab__icon{width:26px;height:26px}
+    .wa-fab__panel{width:300px;bottom:64px}
+  }
+  /* Sürükleme sırasında geçiş kapansın (titreme olmasın) */
+  .wa-fab.wa-dragging{transition:none !important;cursor:grabbing}
+  .wa-fab.wa-dragging .wa-fab__main{transform:scale(1.1)}
+</style>
+
+<script>
+(function(){
+  var fab = document.getElementById('wa-fab');
+  if(!fab) return;
+  var btn = fab.querySelector('.wa-fab__main');
+  var panel = document.getElementById('wa-fab-panel');
+  var closeBtn = fab.querySelector('.wa-fab__close');
+  function toggle(open){
+    var willOpen = (typeof open === 'boolean') ? open : panel.hasAttribute('hidden');
+    if(willOpen){
+      panel.removeAttribute('hidden');
+      btn.setAttribute('aria-expanded','true');
+    } else {
+      panel.setAttribute('hidden','');
+      btn.setAttribute('aria-expanded','false');
+    }
+  }
+  btn.addEventListener('click', function(e){ e.stopPropagation(); toggle(); });
+  closeBtn.addEventListener('click', function(e){ e.stopPropagation(); toggle(false); });
+  document.addEventListener('click', function(e){
+    if(!fab.contains(e.target)) toggle(false);
+  });
+  document.addEventListener('keydown', function(e){
+    if(e.key === 'Escape') toggle(false);
+  });
+
+  /* ════════ BASILI TUTUNCA SÜRÜKLE (long-press drag) ════════ */
+  var pressTimer = null, dragging = false, moved = false;
+  var startX = 0, startY = 0, fabX = 0, fabY = 0;
+
+  // Kayıtlı konumu geri yükle
+  try {
+    var saved = JSON.parse(localStorage.getItem('viaWaFabPos') || 'null');
+    if (saved && typeof saved.left === 'number') {
+      fab.style.left = saved.left + 'px';
+      fab.style.top = saved.top + 'px';
+      fab.style.right = 'auto';
+      fab.style.bottom = 'auto';
+    }
+  } catch(_){}
+
+  function getPoint(e){
+    if (e.touches && e.touches[0]) return { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    return { x: e.clientX, y: e.clientY };
+  }
+
+  function startPress(e){
+    if (e.target.closest('.wa-fab__panel')) return; // panel içinde sürükleme yok
+    var p = getPoint(e);
+    startX = p.x; startY = p.y;
+    var rect = fab.getBoundingClientRect();
+    fabX = rect.left; fabY = rect.top;
+    moved = false;
+    // 350ms basılı tutarsa sürükleme moduna geç
+    pressTimer = setTimeout(function(){
+      dragging = true;
+      fab.classList.add('wa-dragging');
+      if (navigator.vibrate) navigator.vibrate(30); // hafif titreşim
+    }, 350);
+  }
+
+  function movePress(e){
+    var p = getPoint(e);
+    if (!dragging) {
+      // Henüz drag başlamadıysa, 8px'den fazla hareket = press iptal (scroll niyeti)
+      if (Math.abs(p.x - startX) > 8 || Math.abs(p.y - startY) > 8) {
+        clearTimeout(pressTimer);
+      }
+      return;
+    }
+    e.preventDefault();
+    moved = true;
+    var nx = fabX + (p.x - startX);
+    var ny = fabY + (p.y - startY);
+    // Ekran sınırları içinde tut
+    var maxX = window.innerWidth - fab.offsetWidth - 8;
+    var maxY = window.innerHeight - fab.offsetHeight - 8;
+    nx = Math.max(8, Math.min(nx, maxX));
+    ny = Math.max(8, Math.min(ny, maxY));
+    fab.style.left = nx + 'px';
+    fab.style.top = ny + 'px';
+    fab.style.right = 'auto';
+    fab.style.bottom = 'auto';
+  }
+
+  function endPress(){
+    clearTimeout(pressTimer);
+    if (dragging) {
+      dragging = false;
+      fab.classList.remove('wa-dragging');
+      // Konumu kaydet
+      var rect = fab.getBoundingClientRect();
+      try {
+        localStorage.setItem('viaWaFabPos', JSON.stringify({ left: rect.left, top: rect.top }));
+      } catch(_){}
+    }
+  }
+
+  // Touch
+  btn.addEventListener('touchstart', startPress, { passive: true });
+  document.addEventListener('touchmove', movePress, { passive: false });
+  document.addEventListener('touchend', endPress);
+  // Mouse (desktop)
+  btn.addEventListener('mousedown', startPress);
+  document.addEventListener('mousemove', movePress);
+  document.addEventListener('mouseup', endPress);
+
+  // Sürükleme yapıldıysa click'i engelle (panel açılmasın)
+  btn.addEventListener('click', function(e){
+    if (moved) { e.stopImmediatePropagation(); e.preventDefault(); moved = false; }
+  }, true);
+
+  // 🛒 Sepet-farkındalıklı "Sipariş Ver": tıklanınca sepeti okuyup mesajı doldurur;
+  // sepet boşsa ürün sayfasındaki ürünü yazar; o da yoksa bloktaki hazır şablon gider.
+  var waPhone = fab.getAttribute('data-wa-phone');
+  panel.addEventListener('click', function(e){
+    var a = e.target.closest && e.target.closest('a[data-wa-cart="1"]');
+    if(!a) return;
+    e.preventDefault();
+    var fallback = a.href;
+    function fmt(k){ return (k/100).toLocaleString('tr-TR', {minimumFractionDigits:2, maximumFractionDigits:2}); }
+    fetch('/cart.js').then(function(r){ return r.json(); }).then(function(c){
+      var msg = null;
+      if (c && c.items && c.items.length) {
+        var lines = c.items.map(function(it){
+          return '\u2022 ' + it.quantity + '\u00d7 ' + it.product_title + (it.sku ? ' (SKU ' + it.sku + ')' : '') + ' \u2014 ' + fmt(it.final_line_price) + '\u20ba';
+        });
+        msg = 'Merhaba, a\u015fa\u011f\u0131daki sipari\u015fi vermek istiyorum \ud83d\uded2\n' + lines.join('\n') + '\nToplam: ' + fmt(c.total_price) + '\u20ba';
+      } else if (location.pathname.indexOf('/products/') !== -1) {
+        var t = document.title.split('\u2013')[0].split('|')[0].trim();
+        msg = 'Merhaba, bu \u00fcr\u00fcn\u00fc sipari\u015f etmek istiyorum \ud83d\uded2\n' + t + '\n' + location.origin + location.pathname;
+      }
+      window.open(msg ? ('https://wa.me/' + waPhone + '?text=' + encodeURIComponent(msg)) : fallback, '_blank', 'noopener');
+    }).catch(function(){ window.open(fallback, '_blank', 'noopener'); });
+  });
+})();
+
+/* ── ★ #992966 madde 8 · ÇEREZ BANDI ↔ WHATSAPP DÜĞMESİ ÇAKIŞMASI ─────────
+   ÖLÇÜLEN KUSUR (Playwright, canlı, 390px, sayfa sonuna kaydırılmış):
+     #vm-cookie (.is-on, çerez onay bandı)  643→772px   z-index 99990
+     #wa-fab                                712→764px   z-index  9998
+   İkisi çakışıyor ve bant ÜSTTE olduğu için WhatsApp düğmesi görünür ama
+   TIKLANAMIYOR. DOM'da ortak ebeveyn yok (wa-fab footer'da, bant ürün
+   alanında) ⇒ CSS kardeş seçicisi kurulamaz, küçük bir JS gerekiyor.
+
+   ⛔ Z-INDEX YÜKSELTİLMEDİ — bilinçli. wa-fab'ı 99990'ın üstüne çekmek
+      WhatsApp düğmesini ÇEREZ ONAY BANDININ ÜSTÜNE koyardı; onay bandı
+      hukuki bir arayüzdür ve kapatılmamalı. Doğru çözüm düğmeyi geçici
+      olarak YUKARI almak.
+   ⛔ SABİT PİKSEL YAZILMADI (md.16: yeni tasarım değeri uydurulmaz) — kayma
+      miktarı bandın GERÇEK yüksekliğinden çalışma anında hesaplanır.
+   ⛔ GERİ DÖNÜŞ GARANTİLİ: bant kapanınca satır içi `bottom` SİLİNİR, düğme
+      kendi CSS değerine (mobil 80px / masaüstü 20px) döner — kalıcı bir
+      konum değişikliği YOK.
+   ⚠ Kusur GEÇİCİDİR: bant yalnız onay verilmeden önce durur. Yine de ilk
+      ziyarette WhatsApp'a ulaşılamıyor olması gerçek bir kayıptır. */
+(function(){
+  var fab = document.getElementById('wa-fab');
+  if (!fab) return;
+  var asil = null;                       /* null = henüz dokunulmadı */
+  function bandAktif(){
+    var e = document.getElementById('vm-cookie');
+    if (!e) return null;
+    var c = getComputedStyle(e);
+    if (c.position !== 'fixed' || c.display === 'none' || c.visibility === 'hidden' || c.opacity === '0') return null;
+    var r = e.getBoundingClientRect();
+    if (r.height < 10) return null;
+    return r;
+  }
+  function ayarla(){
+    var r = bandAktif();
+    if (!r) {
+      if (asil !== null) { fab.style.bottom = asil; asil = null; }   /* '' ⇒ CSS geri alır */
+      return;
+    }
+    if (asil === null) asil = fab.style.bottom || '';
+    var bandUstu = window.innerHeight - r.top;        /* bandın üst kenarı, tabandan */
+    var hedef = Math.round(bandUstu + 14);            /* 14px nefes payı */
+    if (fab.style.bottom !== hedef + 'px') fab.style.bottom = hedef + 'px';
+  }
+  ayarla();
+  document.addEventListener('DOMContentLoaded', ayarla);
+  window.addEventListener('load', ayarla);
+  window.addEventListener('resize', ayarla);
+  window.addEventListener('scroll', ayarla, { passive: true });
+  /* Bant JS ile eklenip kaldırılıyor; sınıf/varlık değişimini izle. */
+  if (window.MutationObserver) {
+    try {
+      new MutationObserver(ayarla).observe(document.body, {
+        childList: true, subtree: true, attributes: true, attributeFilter: ['class', 'style']
+      });
+    } catch (e) {}
+  }
+  setTimeout(ayarla, 400); setTimeout(ayarla, 1500);
+})();
+</script>
+{%- endif -%}
+
+{% schema %}
+{
+  "name": "WhatsApp Sticky FAB",
+  "tag": "section",
+  "class": "section-whatsapp-sticky",
+  "settings": [
+    {
+      "type": "header",
+      "content": "WhatsApp Bilgileri"
+    },
+    {
+      "type": "text",
+      "id": "phone",
+      "label": "WhatsApp numarası (uluslararası, + olmadan)",
+      "info": "Örn: 905531707132",
+      "default": "905531707132"
+    },
+    {
+      "type": "text",
+      "id": "intro_text",
+      "label": "Açılış mesajı",
+      "default": "Merhaba 👋 Nasıl yardımcı olabiliriz?"
+    }
+  ],
+  "blocks": [
+    {
+      "type": "option",
+      "name": "Hızlı seçenek",
+      "limit": 8,
+      "settings": [
+        {
+          "type": "text",
+          "id": "icon",
+          "label": "Emoji ikon",
+          "default": "💬"
+        },
+        {
+          "type": "text",
+          "id": "title",
+          "label": "Başlık",
+          "default": "Toplu Ürün Teklifi Al"
+        },
+        {
+          "type": "text",
+          "id": "subtitle",
+          "label": "Alt açıklama (opsiyonel)"
+        },
+        {
+          "type": "textarea",
+          "id": "message",
+          "label": "Ön-tanımlı mesaj",
+          "default": "Merhaba, toplu ürün teklifi almak istiyorum. Detayları paylaşır mısınız?"
+        },
+        {
+          "type": "checkbox",
+          "id": "cart_aware",
+          "label": "🛒 Sipariş modu — tıklanınca sepetteki ürünler mesaja otomatik eklenir",
+          "default": false
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "WhatsApp Sticky FAB",
+      "blocks": [
+        {
+          "type": "option",
+          "settings": {
+            "icon": "📦",
+            "title": "Toplu Ürün Teklifi Al",
+            "subtitle": "Bayi / toptan satış",
+            "message": "Merhaba, toplu ürün için teklif almak istiyorum. Ürün listesi ve adetleri paylaşabilir misiniz?"
+          }
+        },
+        {
+          "type": "option",
+          "settings": {
+            "icon": "📞",
+            "title": "Sipariş Takibi",
+            "subtitle": "Mevcut siparişim hakkında",
+            "message": "Merhaba, sipariş numaram hakkında bilgi alabilir miyim?"
+          }
+        },
+        {
+          "type": "option",
+          "settings": {
+            "icon": "🏬",
+            "title": "Bayilik / Toptan",
+            "subtitle": "İşletme satışı",
+            "message": "Merhaba, bayilik / toptan satış şartlarınız hakkında bilgi almak istiyorum."
+          }
+        },
+        {
+          "type": "option",
+          "settings": {
+            "icon": "❓",
+            "title": "Genel Sorular",
+            "subtitle": "Ürün, kargo, iade",
+            "message": "Merhaba, bir konuda bilgi almak istiyorum:"
+          }
+        }
+      ]
+    }
+  ],
+  "enabled_on": {
+    "groups": ["header", "footer", "custom.overlay"]
+  }
+}
+{% endschema %}
