@@ -1,0 +1,14 @@
+{
+  "sections": {
+    "main": {
+      "type": "via-legal-page",
+      "settings": {
+        "doc_handle": "sayfa",
+        "updated_date": "Mayıs 2026"
+      }
+    }
+  },
+  "order": [
+    "main"
+  ]
+}

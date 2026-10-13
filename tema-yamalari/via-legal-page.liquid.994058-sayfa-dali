@@ -1,0 +1,423 @@
+{%- assign company_phone_intl = settings.company_phone | remove: ' ' | remove_first: '0' -%}
+{%- liquid
+  assign doc = section.settings.doc_handle | default: 'custom'
+  assign updated = section.settings.updated_date | default: 'Mayıs 2026'
+
+  case doc
+    when 'mesafeli'
+      assign doc_title = 'Mesafeli Satış Sözleşmesi'
+    when 'gizlilik'
+      assign doc_title = 'Gizlilik ve Güvenlik Politikası'
+    when 'iade'
+      assign doc_title = 'Teslimat, İptal ve İade Koşulları'
+    when 'kvkk'
+      assign doc_title = 'Kişisel Verilerin Korunması Kanunu'
+    when 'hakkimizda'
+      assign doc_title = 'Hakkımızda'
+    when 'sayfa'
+      assign doc_title = page.title
+    else
+      assign doc_title = section.settings.title | default: page.title
+  endcase
+-%}
+
+<style>
+  #shopify-section-{{ section.id }} {
+    --vl-ink: #14201d;
+    --vl-muted: #5d6458;
+    --vl-line: #d9dfd1;
+    --vl-cream: #faf6ec;
+    --vl-clay: #b66c55;
+    --vl-mint: #eef5ec;
+  }
+
+  #shopify-section-{{ section.id }} .vl-page {
+    color: var(--vl-ink);
+    background: #fff;
+    padding-block: clamp(36px, 6vw, 80px);
+  }
+
+  #shopify-section-{{ section.id }} .vl-wrap {
+    width: min(900px, calc(100% - 32px));
+    margin-inline: auto;
+  }
+
+  #shopify-section-{{ section.id }} .vl-eyebrow {
+    margin: 0 0 12px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--vl-clay);
+  }
+
+  #shopify-section-{{ section.id }} .vl-title {
+    margin: 0 0 12px;
+    font-size: clamp(2rem, 4vw, 3.4rem);
+    line-height: 1.05;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+  }
+
+  #shopify-section-{{ section.id }} .vl-meta {
+    margin: 0 0 36px;
+    color: var(--vl-muted);
+    font-size: 0.92rem;
+  }
+
+  #shopify-section-{{ section.id }} .vl-body {
+    background: var(--vl-cream);
+    border: 1px solid var(--vl-line);
+    border-radius: 18px;
+    padding: clamp(24px, 4vw, 48px);
+    line-height: 1.7;
+    font-size: 0.98rem;
+    color: var(--vl-ink);
+  }
+
+  #shopify-section-{{ section.id }} .vl-body h2 {
+    margin-top: 28px;
+    margin-bottom: 12px;
+    font-size: 1.25rem;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+  }
+
+  #shopify-section-{{ section.id }} .vl-body h2:first-child { margin-top: 0; }
+
+  #shopify-section-{{ section.id }} .vl-body h3 {
+    margin-top: 22px;
+    margin-bottom: 10px;
+    font-size: 1.05rem;
+    font-weight: 700;
+  }
+
+  #shopify-section-{{ section.id }} .vl-body p { margin: 0 0 14px; }
+
+  #shopify-section-{{ section.id }} .vl-body ul,
+  #shopify-section-{{ section.id }} .vl-body ol {
+    margin: 0 0 16px;
+    padding-left: 22px;
+  }
+
+  #shopify-section-{{ section.id }} .vl-body li { margin-bottom: 6px; }
+
+  #shopify-section-{{ section.id }} .vl-body strong { color: var(--vl-ink); }
+
+  #shopify-section-{{ section.id }} .vl-body a {
+    color: var(--vl-clay);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  #shopify-section-{{ section.id }} .vl-contact {
+    margin-top: 32px;
+    padding: 24px;
+    background: #fff;
+    border: 1px solid var(--vl-line);
+    border-radius: 14px;
+    font-size: 0.95rem;
+    line-height: 1.65;
+  }
+
+  #shopify-section-{{ section.id }} .vl-contact strong {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 1rem;
+  }
+
+  #shopify-section-{{ section.id }} .vl-contact a {
+    color: var(--vl-clay);
+    text-decoration: underline;
+  }
+
+  /* Hakkimizda özel */
+  #shopify-section-{{ section.id }} .vl-about-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin: 24px 0;
+  }
+
+  #shopify-section-{{ section.id }} .vl-about-grid > div {
+    background: #fff;
+    border: 1px solid var(--vl-line);
+    border-radius: 14px;
+    padding: 20px;
+  }
+
+  #shopify-section-{{ section.id }} .vl-about-grid h3 {
+    margin: 0 0 8px;
+    font-size: 1rem;
+    color: var(--vl-clay);
+  }
+
+  #shopify-section-{{ section.id }} .vl-about-grid p { margin: 0; font-size: 0.92rem; }
+
+  @media (max-width: 720px) {
+    #shopify-section-{{ section.id }} .vl-about-grid { grid-template-columns: 1fr; }
+  }
+</style>
+
+<section class="vl-page">
+  <div class="vl-wrap">
+    <p class="vl-eyebrow">{% if doc == 'hakkimizda' %}Via Mood{% else %}Yasal · Via Mood{% endif %}</p>
+    <h1 class="vl-title">{{ doc_title }}</h1>
+    <p class="vl-meta">Son güncelleme: {{ updated }} · {{ settings.company_title }}</p>
+    <div class="vl-body">
+
+{%- case doc -%}
+
+{%- when 'mesafeli' -%}
+<h2>Madde 1 — Taraflar</h2>
+<p><strong>1.1 Satıcı:</strong></p>
+<ul>
+  <li><strong>Unvan:</strong> {{ settings.company_title }}</li>
+  <li><strong>Adres:</strong> {{ settings.company_address }}</li>
+  <li><strong>Vergi Dairesi:</strong> Beyoğlu</li>
+  <li><strong>Vergi No:</strong> {{ settings.company_vkn }}</li>
+  <li><strong>E-posta:</strong> {{ settings.company_email }}</li>
+  <li><strong>Telefon:</strong> {{ settings.company_phone }}</li>
+</ul>
+<p><strong>1.2 Alıcı:</strong> Sipariş formunda ve fatura bilgilerinde belirtilen kişi.</p>
+
+<h2>Madde 2 — Konu</h2>
+<p>İşbu sözleşmenin konusu, alıcının satıcıya ait <a href="https://viamood.com">viamood.com</a> internet sitesinden elektronik ortamda siparişini verdiği aşağıda nitelikleri ve satış fiyatı belirtilen ürünün satışı ve teslimi ile ilgili olarak 6502 sayılı Tüketicinin Korunması Hakkındaki Kanun ve Mesafeli Sözleşmeler Yönetmeliği hükümleri gereğince tarafların hak ve yükümlülüklerinin saptanmasıdır.</p>
+
+<h2>Madde 3 — Sözleşme Konusu Ürün</h2>
+<p>Ürünün cinsi, türü, miktarı, marka/modeli, satış bedeli, ödeme şekli, teslim alacak kişi, teslimat adresi, fatura bilgileri ve kargo ücreti sipariş onayı ekranında belirtildiği gibidir. Faturası kesilecek kişi sözleşmeyi yapan kişi ile aynı olmak zorundadır.</p>
+
+<h2>Madde 4 — Genel Hükümler</h2>
+<p><strong>4.1</strong> Alıcı, sözleşme konusu ürünün temel nitelikleri, satış fiyatı ve ödeme şekli ile teslimata ilişkin tüm ön bilgileri okuyup bilgi sahibi olduğunu ve elektronik ortamda gerekli teyidi verdiğini beyan eder.</p>
+<p><strong>4.2</strong> Sözleşme konusu ürün, alıcının yerleşim yerine bağlı olarak yasal 30 günlük süreyi aşmamak koşulu ile her bir ürün için alıcının ürünü sipariş vermesinden itibaren web sitesinde belirtilen süre içinde teslim edilir.</p>
+<p><strong>4.3</strong> Sözleşme konusu ürün, alıcıdan başka bir kişi/kuruluşa teslim edilecek ise, teslim edilecek kişi/kuruluşun teslimatı kabul etmemesinden satıcı sorumlu tutulamaz.</p>
+<p><strong>4.4</strong> Satıcı, sözleşme konusu ürünün sağlam, eksiksiz, siparişte belirtilen niteliklere uygun ve varsa garanti belgeleri ve kullanım kılavuzları ile teslim edilmesinden sorumludur.</p>
+<p><strong>4.5</strong> Sözleşme konusu ürünün teslimatı için işbu sözleşmenin elektronik ortamda teyit edilmiş olması ve satış bedelinin alıcının tercih ettiği ödeme şekli ile ödenmiş olması şarttır. Herhangi bir nedenle ürün bedeli ödenmez veya banka kayıtlarında iptal edilirse satıcı ürünün teslimi yükümlülüğünden kurtulmuş kabul edilir.</p>
+<p><strong>4.6</strong> Ürünün tesliminden sonra alıcıya ait kredi kartının alıcının kusurundan kaynaklanmayan bir şekilde yetkisiz kişilerce haksız veya hukuka aykırı olarak kullanılması nedeni ile ilgili banka veya finans kuruluşunun ürün bedelini satıcıya ödememesi halinde, alıcı ürünü 3 gün içerisinde nakliye gideri kendisine ait olmak üzere satıcıya iade etmek zorundadır.</p>
+<p><strong>4.7</strong> Satıcı mücbir sebepler veya nakliyeyi engelleyen olağanüstü durumlar nedeni ile sözleşme konusu ürünü süresi içinde teslim edemez ise, durumu alıcıya bildirmekle yükümlüdür. Bu takdirde alıcı siparişin iptal edilmesini, sözleşme konusu ürünün varsa emsali ile değiştirilmesini ve/veya teslimat süresinin engelleyici durumun ortadan kalkmasına kadar ertelenmesi haklarından birini kullanabilir.</p>
+<p><strong>4.8</strong> Garanti belgesi ile satılan ürünlerden olan veya olmayan ürünlerin arızalı veya bozuk olanlar, garanti şartları içinde gerekli onarımın yetkili servise yaptırılması için satıcıya gönderilebilir; bu takdirde kargo giderleri satıcı tarafından karşılanacaktır.</p>
+
+<h2>Madde 5 — Cayma Hakkı</h2>
+<p>Alıcı, sözleşme konusu ürünün kendisine veya gösterdiği adresteki kişi/kuruluşa tesliminden itibaren 14 (on dört) gün içinde herhangi bir gerekçe göstermeksizin ve cezai şart ödemeksizin cayma hakkına sahiptir. Cayma bildirimi e-posta veya telefonla satıcıya iletilir; ürünün kullanılmamış olması ve faturanın iadesi gerekir. Geri ödeme, malın iadesinin ardından 14 gün içinde tüketicinin ödeme aracına uygun şekilde yapılır.</p>
+
+<h2>Madde 6 — Cayma Hakkı Kullanılamayacak Ürünler</h2>
+<p>Niteliği itibarıyla iade edilemeyecek ürünler (tek kullanımlık, kopyalanabilir yazılım, çabuk bozulabilen veya son kullanma tarihi geçebilecek ürünler), ambalajı/koruyucu unsurları açıldıktan sonra hijyen açısından iadesi uygun olmayan ürünler ve mevzuatta sayılan diğer istisnalar için cayma hakkı kullanılamaz.</p>
+
+<h2>Madde 7 — Yetkili Mahkeme</h2>
+<p>İşbu sözleşmenin uygulanmasında, Sanayi ve Ticaret Bakanlığınca ilan edilen değere kadar Tüketici Hakem Heyetleri ile alıcının veya satıcının yerleşim yerindeki Tüketici Mahkemeleri yetkilidir.</p>
+
+<h2>Madde 8 — Sözleşme Tarihi ve Mücbir Nedenler</h2>
+<p>Sözleşmenin tarihi, alıcı tarafından siparişin verildiği tarihtir. Doğal afetler, savaş, terör, isyan, mevzuat değişiklikleri, el koyma, grev, lokavt, tesis arızası gibi mücbir sebepler nedeniyle taraflar yükümlülüklerini yerine getiremezse karşılıklı bildirim sonrası sorumluluk doğmaz. Mücbir sebep 30 günden fazla sürerse taraflardan her biri sözleşmeyi tek taraflı feshedebilir.</p>
+
+<h2>Madde 9 — Satıcının Hak ve Yükümlülükleri</h2>
+<p><strong>9.1</strong> Satıcı, mücbir sebep dışında 6502 sayılı Tüketicinin Korunması Hakkında Kanun ve ilgili mevzuat hükümlerine uygun davranmayı kabul ve taahhüt eder.</p>
+<p><strong>9.2</strong> 18 yaşından küçük kişiler platformdan alışveriş yapamaz. Satıcı, alıcı tarafından beyan edilen yaş bilgisinin doğruluğunu esas alır.</p>
+<p><strong>9.3</strong> Sistem hataları, tasarım kaynaklı arızalar veya yetkisiz site değişikliklerinden kaynaklanan promosyon/fiyatlandırma hatalarından satıcı sorumlu tutulamaz.</p>
+<p><strong>9.4</strong> Kabul edilen ödeme yöntemleri kredi kartı (Visa, MasterCard), banka transferi ve kapıda ödemedir. Bir hafta içinde ödemesi yapılmayan siparişler iptal edilir; sipariş işleyişi ödemenin alınması ile başlar.</p>
+
+{%- when 'gizlilik' -%}
+<h2>Sorumlu Şirket</h2>
+<p>İşbu Gizlilik Politikası, <strong>{{ settings.company_title }}</strong> tarafından, {{ settings.company_address }} adresinde yürütülen faaliyetler kapsamında düzenlenmiştir.</p>
+
+<h2>Kişisel Veri Toplama</h2>
+<p>Üyelik kaydı, sipariş işlemi ve site üzerindeki çeşitli formlar aracılığıyla ad, soyad, şirket bilgileri, telefon, adres ve e-posta gibi kişisel verileri toplayabiliriz. Bu veriler yalnızca size daha iyi hizmet sunmak amacıyla işlenir.</p>
+
+<h2>Pazarlama İletişimi</h2>
+<p>Üye, kayıt sırasında kampanya bilgilendirmeleri, ürün haberleri ve tanıtım iletişimini almak/almamak konusunda tercihte bulunabilir. Bu tercih hesap ayarlarından ya da e-postalardaki abonelikten çıkma bağlantısı ile her zaman değiştirilebilir.</p>
+
+<h2>Veri Güvenliği ve Üçüncü Taraf Paylaşımı</h2>
+<p>Elektronik ortamda iletilen kişisel bilgiler, Kullanıcı Sözleşmesi'nde belirtilen istisnalar dışında üçüncü taraflarla paylaşılmaz. Şirket, kullanıcıları tanımlamadan, doğrudan pazarlama ve istatistiksel analiz amacıyla verileri kullanabilir.</p>
+
+<h2>IP Adresi Kullanımı</h2>
+<p>Sistem sorunlarını tespit etmek, hizmet kalitesini artırmak ve demografik analiz yapmak amacıyla IP adresleri kayıt altına alınır.</p>
+
+<h2>Kredi Kartı Güvenliği</h2>
+<p>Kredi kartı bilgileri sistemimizde saklanmaz. Tüm ödeme işlemleri, 256-bit SSL şifrelemesi kullanan HalkÖde (Halk Elektronik Para ve Ödeme Hizmetleri A.Ş.) altyapısı üzerinden, bilgileriniz doğrudan bankaya iletilerek gerçekleştirilir.</p>
+
+<h2>Çerezler</h2>
+<p>Sitemiz, ziyaret istatistiklerini ve kullanıcı davranışlarını anlamak amacıyla çerez kullanır. Çerezler kişisel verilerinize erişmek için kullanılmaz. Tarayıcı ayarlarınızdan çerez kabulünü dilediğiniz gibi düzenleyebilirsiniz.</p>
+
+<h2>Gizliliğe İlişkin İstisnalar</h2>
+<p>Yasal zorunluluk, sözleşmesel yükümlülüklerin yerine getirilmesi, hukuki soruşturmalar veya kullanıcı hak ve güvenliğinin korunması gerektiğinde bilgileriniz ilgili otoritelere açıklanabilir.</p>
+
+{%- when 'iade' -%}
+<p>6502 sayılı Tüketicinin Korunması Hakkındaki Kanun gereğince, alıcılar teslim tarihinden itibaren 14 gün içinde herhangi bir gerekçe göstermeden ve cezai şart ödemeden cayma hakkını kullanabilir.</p>
+
+<h2>1. Mesafeli Sözleşmelerde Cayma Hakkı</h2>
+<p><strong>(1)</strong> Tüketici, on dört gün içinde herhangi bir gerekçe göstermeksizin ve cezai şart ödemeksizin sözleşmeden cayma hakkına sahiptir.</p>
+<p><strong>(2)</strong> Cayma hakkı süresi, hizmet ifasına ilişkin sözleşmelerde sözleşmenin kurulduğu gün; mal teslimine ilişkin sözleşmelerde ise tüketicinin veya tüketici tarafından belirlenen üçüncü kişinin malı teslim aldığı gün başlar.</p>
+<p><strong>(3)</strong> Tek sipariş konusu olup ayrı ayrı teslim edilen mallarda son malın teslim alındığı gün; birden fazla parçadan oluşan mallarda son parçanın teslim alındığı gün; düzenli teslim sözleşmelerinde ilk malın teslim alındığı gün esas alınır.</p>
+
+<h2>2. Cayma Hakkının Kullanımı</h2>
+<p>Cayma bildirimi yazılı olarak veya kalıcı veri saklayıcısı (e-posta) ile satıcıya iletilebilir. Satıcı, bildirimin kendisine ulaştığına ilişkin teyit bilgisini derhal tüketiciye iletir.</p>
+<p>İletişim için: <a href="mailto:{{ settings.company_email }}">{{ settings.company_email }}</a> · <a href="tel:+90{{ company_phone_intl }}">{{ settings.company_phone }}</a></p>
+
+<h2>3. Satıcının Yükümlülükleri</h2>
+<p>Satıcı, cayma hakkının kullanıldığına ilişkin bildirimin kendisine ulaştığı tarihten itibaren 14 gün içinde, varsa malın teslim masrafları dahil tüm ödemeleri tüketicinin ödeme aracına uygun şekilde tek seferde iade etmekle yükümlüdür.</p>
+
+<h2>4. Tüketicinin Yükümlülükleri</h2>
+<p>Tüketici, cayma hakkını kullandığını bildirdiği tarihten itibaren 10 gün içinde malı satıcıya geri göndermek zorundadır. Cayma süresi içinde malın işleyişine, teknik özelliklerine ve kullanım talimatlarına uygun bir şekilde kullanıldığı takdirde meydana gelen değişiklik ve bozulmalardan tüketici sorumlu değildir.</p>
+
+<h2>5. Cayma Hakkının İstisnaları</h2>
+<p>Aşağıdaki sözleşmelerde cayma hakkı kullanılamaz:</p>
+<ul>
+  <li>Fiyatı finansal piyasalardaki dalgalanmalara bağlı olan ve satıcının kontrolünde olmayan mal/hizmetler.</li>
+  <li>Tüketicinin istek veya kişisel ihtiyaçları doğrultusunda hazırlanan mallar.</li>
+  <li>Çabuk bozulabilen veya son kullanma tarihi geçebilecek mallar.</li>
+  <li>Tesliminden sonra ambalaj, bant, mühür, paket gibi koruyucu unsurları açılmış olup iadesi sağlık ve hijyen açısından uygun olmayan mallar.</li>
+  <li>Tesliminden sonra başka ürünlerle karışan ve ayrıştırılması mümkün olmayan mallar.</li>
+  <li>Anında ifa edilen elektronik hizmetler ve anında teslim edilen gayri maddi mallar.</li>
+  <li>Cayma hakkı süresi sona ermeden tüketicinin onayı ile ifasına başlanan hizmetler.</li>
+</ul>
+
+<h2>6. Teslimat</h2>
+<p>Siparişler, ödemenin onaylanmasından sonra stok durumuna göre 1-3 iş günü içerisinde kargoya verilir. Türkiye geneli teslimat süresi kargo firmasına ve şehre göre 1-4 iş günüdür. Sipariş takibi WhatsApp veya e-posta üzerinden takip edilebilir.</p>
+
+{%- when 'kvkk' -%}
+<p><strong>{{ settings.company_title }}</strong> olarak kişisel verilerinizin 6698 sayılı Kişisel Verilerin Korunması Kanunu'na ("Kanun") uygun olarak işlenerek muhafaza edilmesine büyük önem veriyoruz. Müşterilerimizi kişisel veri toplama, işleme ve aktarma amacımız ile yöntemlerimiz ve buna bağlı olarak sizlerin Kanun'dan kaynaklanan haklarınız hakkında bilgilendirmek isteriz.</p>
+
+<h2>1. Kişisel Verilerin Toplanması</h2>
+<p>Veri sorumlusu sıfatıyla, mevzuattan kaynaklanan yasal yükümlülüklerimiz çerçevesinde; markalarımızın hizmetlerinden faydalanabilmeniz, onayınız halinde kampanyalarımız hakkında sizleri bilgilendirmek, öneri ve şikayetlerinizi kayıt altına alabilmek, sizlere daha iyi hizmet standartları oluşturabilmek, ticari ve iş stratejilerinin belirlenmesi gibi amaçlarla kişisel verilerinizi internet sitesi, sosyal medya mecraları, mobil uygulamalar gibi vasıtalarla sözlü, yazılı ya da elektronik yöntemlerle toplamaktayız.</p>
+
+<h2>2. Kişisel Verilerin İşlenmesi ve Amaçları</h2>
+<p>Çağrı merkezi, yazılı iletişim kanalları, sosyal medya sayfaları, mobil iletişim kanalları aracılığıyla onayınız dahilinde elde ettiğimiz kişisel veriler: tamamen veya kısmen elde edilebilir, kaydedilebilir, saklanabilir, depolanabilir, değiştirilebilir, güncellenebilir, periyodik olarak kontrol edilebilir, sınıflandırılabilir; işlendikleri amaç için gerekli olan veya kanunda öngörülen süre kadar muhafaza edilebilir. Hizmet kalitesinin artırılması, kampanya bilgilendirme, öneri/şikayet kaydı, ticari strateji belirleme amaçlarıyla işlenir.</p>
+
+<h2>3. Kişisel Verilerin Aktarılması</h2>
+<p>Kişisel verileriniz; açık rızanıza istinaden veya Kanun'da belirtilen güvenlik ve gizlilik esasları çerçevesinde, yeterli önlemler alınmak kaydıyla yurt içinde ve yurt dışında, şirket faaliyetlerinin yürütülmesi, hizmet sunulması ve hizmet kalitesinin artırılması amacıyla; grup şirketlerimiz, iş ortaklarımız, anlaşmalı tedarikçiler, denetim şirketleri ve yasal olarak yetkili kamu kurum ve kuruluşları ile paylaşılabilir.</p>
+
+<h2>4. Veri Sahibinin Hakları (Kanun Madde 11)</h2>
+<p>İlgili kişiler aşağıdaki taleplerini Şirket'e iletebilir:</p>
+<ul>
+  <li>Kişisel verilerinin işlenip işlenmediğini ve hangi verilerin işlendiğini öğrenme,</li>
+  <li>İşleme amaçları hakkında bilgi alma,</li>
+  <li>Verilerin yurt içinde veya yurt dışında aktarıldığı üçüncü kişileri bilme,</li>
+  <li>Eksik veya yanlış işlenmiş verilerin düzeltilmesini isteme,</li>
+  <li>Kanun'a uygun olarak verilerin silinmesini veya yok edilmesini isteme,</li>
+  <li>Yapılan düzeltme/silme/yok etme işlemlerinin verilerin aktarıldığı üçüncü kişilere bildirilmesini isteme,</li>
+  <li>İşlenen verilerin münhasıran otomatik sistemlerle analiz edilmesi sonucunda kişinin kendisi aleyhine bir sonuç doğmasına itiraz etme,</li>
+  <li>Kişisel verilerinin bir kopyasını alma.</li>
+</ul>
+
+<h2>5. Kredi Kartı ve Ödeme Güvenliği</h2>
+<p>Ödeme sayfasında girilen kredi kartı bilgileri, müşterilerimizin güvenliğini en üst seviyede tutmak amacıyla hiçbir şekilde Şirket veya hizmet sağlayıcılarımızın sunucularında tutulmamaktadır. Tüm ödeme işlemleri banka ile bilgisayarınız arasında, 256-bit SSL şifreleme altyapısı (HalkÖde) üzerinden gerçekleşir.</p>
+
+<h2>6. Çerez Kullanımı</h2>
+<p>Çerezler, sitemizi ziyaret ettiğinizde cihazınıza kaydedilen küçük metin dosyalarıdır. Çerezler, sitenin daha kolay kullanılması, tercihlerinizin hatırlanması ve site kullanımı hakkında istatistiksel bilgiler toplanması amacıyla kullanılır. Tarayıcı ayarlarınızdan çerez kullanımını her zaman kontrol edebilirsiniz.</p>
+
+<h2>7. İletişim Bilgileri</h2>
+<p>
+  <strong>Unvan:</strong> {{ settings.company_title }}<br>
+  <strong>Vergi Dairesi:</strong> Beyoğlu Vergi Dairesi Müdürlüğü<br>
+  <strong>Vergi Numarası:</strong> {{ settings.company_vkn }}<br>
+  <strong>Adres:</strong> {{ settings.company_address }}<br>
+  <strong>E-posta:</strong> <a href="mailto:{{ settings.company_email }}">{{ settings.company_email }}</a><br>
+  <strong>Telefon:</strong> <a href="tel:+90{{ company_phone_intl }}">{{ settings.company_phone }}</a>
+</p>
+
+{%- when 'hakkimizda' -%}
+<p><strong>Via Mood</strong>, {{ settings.company_title }} (markamız: Via Home Decor) tarafından işletilen, evinizi düzenli, şık ve kullanışlı kılan pratik çözümler sunan bir e-ticaret markasıdır. İstanbul'da kurulan küçük ama hızlı bir ekibiz. Mutfak, banyo ve dolap içi düzenleyicilerden çekmece organizerlerine, saklama kaplarından çamaşır sepetlerine kadar günlük hayata değer katan ürünleri ulaşılabilir fiyatla size getiriyoruz.</p>
+
+<h2>Neyi Farklı Yapıyoruz?</h2>
+<div class="vl-about-grid">
+  <div>
+    <h3>Akıllı operasyon</h3>
+    <p>Ürünleri iş ortaklarımızın deposundan doğrudan göndererek gereksiz maliyetleri azaltır, uygun fiyat ve hızlı teslimat sağlarız.</p>
+  </div>
+  <div>
+    <h3>Seçilmiş ürün gamı</h3>
+    <p>Dayanıklılık, kullanım kolaylığı ve malzeme güvenliği (PP05, BPA'sız vb.) önceliğimizdir; her ürün gerçek hayatta test edilir.</p>
+  </div>
+  <div>
+    <h3>Şeffaf fiyatlandırma</h3>
+    <p>Kargo, komisyon ve vergileri hesaba katan net bir fiyat politikası ile sürpriz yoktur.</p>
+  </div>
+  <div>
+    <h3>Kolay iletişim</h3>
+    <p>Sipariş öncesi ve sonrasında WhatsApp, e-posta ve telefonla hızlı dönüş, açık bilgilendirme.</p>
+  </div>
+  <div>
+    <h3>Güvenli ödeme</h3>
+    <p>HalkÖde altyapısı ile 256-bit SSL şifrelemeli kart ödemesi ve kapıda ödeme seçeneği.</p>
+  </div>
+  <div>
+    <h3>Kolay iade</h3>
+    <p>14 gün içinde sebep göstermeden iade hakkı; bildirim sonrası ürün hızlıca yerine ulaşır.</p>
+  </div>
+</div>
+
+<h2>Misyonumuz</h2>
+<p>Evinizdeki her köşeyi daha düzenli ve verimli hale getiren işlevsel ve estetik ürünleri, herkesin erişebileceği bir fiyat/performans dengesiyle sunmak.</p>
+
+<h2>Vizyonumuz</h2>
+<p>Türkiye'de ev düzeni ve saklama kategorisinde güven duyulan ve ilk akla gelen dijital marka olmak.</p>
+
+<h2>Nasıl Alışveriş Yaparsınız?</h2>
+<ul>
+  <li><strong>Web sitemiz:</strong> Güvenli ödeme altyapısı (HalkÖde) ile hızlı ve kolay alışveriş.</li>
+  <li><strong>Kapıda ödeme:</strong> Sipariş onayı sonrasında nakit veya kart ile teslimat anında ödeme.</li>
+  <li><strong>WhatsApp:</strong> {{ settings.company_phone }} üzerinden sipariş ve bilgi.</li>
+  <li><strong>Kargo:</strong> Siparişler 1-3 iş günü içinde kargoya verilir, Türkiye genelinde 1-4 iş gününde teslim.</li>
+</ul>
+
+<h2>Sözümüz</h2>
+<p>Her siparişte; dürüst iletişim, hızlı teslimat, sağlam paketleme ve memnuniyet odaklı hizmet.</p>
+
+{%- when 'sayfa' -%}
+{{ page.content }}
+
+{%- else -%}
+{{ section.settings.content }}
+
+{%- endcase -%}
+
+    </div>
+
+    <div class="vl-contact">
+      <strong>Soru ve geri bildirim için</strong>
+      {{ settings.company_title }} · {{ settings.company_address }}<br>
+      E-posta: <a href="mailto:{{ settings.company_email }}">{{ settings.company_email }}</a> · Telefon: <a href="tel:+90{{ company_phone_intl }}">{{ settings.company_phone }}</a>
+    </div>
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "Via legal sayfa",
+  "settings": [
+    {
+      "type": "select",
+      "id": "doc_handle",
+      "label": "Belge",
+      "default": "custom",
+      "options": [
+        { "value": "custom", "label": "Özel (içerik aşağıdan)" },
+        { "value": "mesafeli", "label": "Mesafeli Satış Sözleşmesi" },
+        { "value": "gizlilik", "label": "Gizlilik ve Güvenlik" },
+        { "value": "iade", "label": "Teslimat / İptal / İade" },
+        { "value": "kvkk", "label": "KVKK" },
+        { "value": "hakkimizda", "label": "Hakkımızda" },
+        { "value": "sayfa", "label": "Sayfanın kendi içeriği (page.content)" }
+      ]
+    },
+    {
+      "type": "text",
+      "id": "title",
+      "label": "Özel başlık (custom için)"
+    },
+    {
+      "type": "text",
+      "id": "updated_date",
+      "label": "Son güncelleme tarihi",
+      "default": "Mayıs 2026"
+    },
+    {
+      "type": "richtext",
+      "id": "content",
+      "label": "İçerik (sadece 'custom' için)"
+    }
+  ],
+  "presets": [
+    { "name": "Via legal sayfa" }
+  ]
+}
+{% endschema %}
