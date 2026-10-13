@@ -11,6 +11,7 @@ import { db } from '@/db/client';
 import { welcomeSignups } from '@/db/schema';
 import { mailKanaliHazir, sendEmail } from '@/lib/email/sender';
 import { welcomeDiscountEmail } from '@/lib/email/templates';
+import { hosGeldinTetikle } from '@/lib/eposta-akis-tetik';
 
 /** Onay kutusunun kanonik metni. Temadaki metinle BİREBİR aynı olmalı. */
 export const CONSENT_TEXT =
@@ -128,9 +129,51 @@ export async function createSignup(input: SignupInput): Promise<SignupResult> {
     })
     .returning({ id: welcomeSignups.id });
 
-  if (row) void deliverDiscountEmail(row.id, email, input.name.trim());
+  if (row) {
+    // #994057: AKIŞ AÇIKSA kişiye özel kupon akışı DEVRALIR — iki yol aynı anda
+    // koşarsa müşteri iki mail alır (biri statik kodlu, biri kişisel kodlu).
+    // Kapı tek çevre değişkeni: EPOSTA_AKIS_AKTIF=1 ⇒ yeni akış, yoksa eski yol.
+    if (akisDevraldiMi()) {
+      void akisDevret(row.id, email, input.consent === true);
+    } else {
+      void deliverDiscountEmail(row.id, email, input.name.trim());
+    }
+  }
 
   return { ok: true };
+}
+
+/**
+ * #994057 — HOŞ GELDİN AKIŞI DEVRALDI MI?
+ * Varsayılan HAYIR: anahtar verilmedikçe üretimdeki davranış BİREBİR AYNI kalır
+ * (eski statik kodlu mail). Açılış/kapanış tek değişkenle, kod geri alınmadan.
+ */
+export function akisDevraldiMi(deger = process.env.EPOSTA_AKIS_AKTIF): boolean {
+  return (deger ?? '').trim() === '1';
+}
+
+/**
+ * Kaydı yeni akışa devreder: tetik açılır (adım 1 ANINDA, adım 2 +2 gün) ve
+ * gönderim artık zamanlayıcı ucunun işi olur.
+ * `emailStatus` 'skipped' + sebep yazılır — 'sent' yazmak YALAN olurdu, mail bu
+ * yoldan çıkmadı; hangi yolun devraldığı defterde açıkça durur.
+ */
+export async function akisDevret(signupId: string, email: string, consent: boolean): Promise<void> {
+  try {
+    await hosGeldinTetikle(db as any, { email, iysOnayi: consent });
+    await db
+      .update(welcomeSignups)
+      .set({ emailStatus: 'skipped', emailError: '#994057 akışı devraldı (eposta_akis_tetikleri)' })
+      .where(eq(welcomeSignups.id, signupId));
+  } catch (err) {
+    await db
+      .update(welcomeSignups)
+      .set({
+        emailStatus: 'failed',
+        emailError: ('akış tetiklenemedi: ' + (err instanceof Error ? err.message : 'bilinmeyen hata')).slice(0, 500),
+      })
+      .where(eq(welcomeSignups.id, signupId));
+  }
 }
 
 /**

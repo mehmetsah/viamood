@@ -376,3 +376,142 @@ export function payoutPaidEmail(
     text: `${vendorName}, ${netAmount} ödendi. ${externalRef ? `Ref: ${externalRef}. ` : ''}Detay: ${env.APP_URL}/payouts`,
   };
 }
+
+/* ──────────────────────────────────────────────────────────────────────────
+ * OTOMATİK AKIŞ MAİLLERİ (#994057) — hoş geldin · sepet terki · checkout terki
+ *
+ * ⚠ TİCARİ DİL TASLAKTIR: bu yedi metnin onayı md.31 gereği ŞAH + Ayşe'dedir.
+ * Kod ayağı metne bağımlı DEĞİL — `akisMaili` tek kapı, onaylı metin gelince
+ * yalnız bu blok değişir, gönderim katmanı değişmez.
+ *
+ * ⚠ İNDİRİM CÜMLESİ TEK YERDEN: `indirimCumlesi()`. Eski `welcomeDiscountEmail`
+ * "1000₺ ve üzeri ilk siparişinizde geçerlidir" diyor — Yunus'un #994057 spec'i
+ * ise "%10 · 1.500₺ üstünde indirim 300₺'de tavanlanır". İkisi AYNI DEĞİL; eski
+ * şablon bilerek DEĞİŞTİRİLMEDİ (statik kodla çalışan ayrı akış, ürün yönü kararı
+ * sahibin) ama yeni akışlar spec'in cümlesini kullanır.
+ * ────────────────────────────────────────────────────────────────────────── */
+
+/** Spec'in indirim kuralının tek cümlelik, müşteriye dönük hâli. */
+export function indirimCumlesi(yuzde: number, esikTl: number, tavanTl: number): string {
+  return `%${yuzde} indirim · ${esikTl.toLocaleString('tr-TR')}₺ üzeri siparişlerde indirim en çok ${tavanTl.toLocaleString('tr-TR')}₺ olarak uygulanır.`;
+}
+
+function kodKutusu(kod: string): string {
+  return `<div class="em-card" style="margin:24px 0;padding:20px;border:1px dashed #d9cfc0;border-radius:12px;background:#fffdf9;text-align:center;">
+        <span class="em-mono" style="font-size:26px;font-weight:700;letter-spacing:2px;color:#14201d;">${kod}</span>
+      </div>`;
+}
+
+function kucukNot(metin: string): string {
+  return `<p style="font-size:14px;line-height:1.5;color:#6b6660;">${metin}</p>`;
+}
+
+export interface AkisMailGirdi {
+  /** hos_geldin | sepet_terki | checkout_terki */
+  akis: string;
+  adim: number;
+  name?: string | null;
+  /** Kuponlu adımda ZORUNLU; kuponsuz adımda verilmez. */
+  kod?: string | null;
+  /** Kuponun son geçerlilik günü — "7 gün" yerine müşteriye TARİH yazılır. */
+  bitisAni?: Date | null;
+  /** Sepeti/checkout'u tamamlama bağlantısı (yoksa vitrin adresi). */
+  devamUrl?: string | null;
+  yuzde?: number;
+  esikTl?: number;
+  tavanTl?: number;
+}
+
+/**
+ * Akış maili — TEK KAPI. Bilinmeyen akış/adım için `null` döner; çağıran o satırı
+ * 'atlandi' işaretler. ⛔ Burada `throw` YOK: tek bir eksik metin yüzünden
+ * zamanlayıcının tüm turu düşerse öteki müşterilerin maili de gitmez.
+ */
+export function akisMaili(g: AkisMailGirdi): { subject: string; html: string; text: string } | null {
+  const hitap = g.name ? `Merhaba <strong>${g.name}</strong>,` : 'Merhaba,';
+  const devam = g.devamUrl || env.STOREFRONT_URL;
+  const kural = indirimCumlesi(g.yuzde ?? 10, g.esikTl ?? 1500, g.tavanTl ?? 300);
+  const tarih = g.bitisAni
+    ? g.bitisAni.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' })
+    : null;
+  const sure = tarih ? `Kod <strong>${tarih}</strong> tarihine kadar geçerli.` : '';
+  const kodlu = (g.kod ?? '').trim();
+
+  const yaz = (subject: string, govde: string, duz: string) => ({
+    subject,
+    html: wrap(govde),
+    text: `${BRAND_NAME} — ${subject}\n\n${duz}\n\n${devam}`,
+  });
+
+  if (g.akis === 'hos_geldin' && g.adim === 1) {
+    if (!kodlu) return null;
+    return yaz(`${BRAND_NAME}: indirim kodunuz hazır`, `
+      <p>${hitap}</p>
+      <p>Aramıza hoş geldiniz. İlk siparişinizde kullanabileceğiniz <strong>kişisel indirim kodunuz</strong>:</p>
+      ${kodKutusu(kodlu)}
+      ${kucukNot(`${kural} ${sure} Kod yalnızca size tanımlıdır ve bir kez kullanılır.`)}
+      ${button(devam, 'Alışverişe başla')}
+    `, `İndirim kodunuz: ${kodlu}\n${kural}${tarih ? `\nSon gün: ${tarih}` : ''}`);
+  }
+
+  if (g.akis === 'hos_geldin' && g.adim === 2) {
+    return yaz(`${BRAND_NAME}: indirim kodunuzu kullanmayı unutmayın`, `
+      <p>${hitap}</p>
+      <p>İndirim kodunuz hâlâ hesabınızda duruyor${tarih ? ` ve <strong>${tarih}</strong> tarihinde sona eriyor` : ''}.</p>
+      ${kodlu ? kodKutusu(kodlu) : ''}
+      ${kucukNot(kural)}
+      ${button(devam, 'Ürünlere göz at')}
+    `, `İndirim kodunuz hâlâ geçerli${tarih ? ` (son gün ${tarih})` : ''}.${kodlu ? `\nKod: ${kodlu}` : ''}`);
+  }
+
+  if (g.akis === 'sepet_terki' && g.adim === 1) {
+    return yaz(`${BRAND_NAME}: sepetinizi sizin için ayırdık`, `
+      <p>${hitap}</p>
+      <p>Sepetinizdeki ürünler duruyor. Kaldığınız yerden devam edebilirsiniz.</p>
+      ${button(devam, 'Sepetime dön')}
+      ${kucukNot('Stoklar sınırlı olabilir; ürünlerin ayrılması garanti edilmez.')}
+    `, 'Sepetinizdeki ürünler duruyor — kaldığınız yerden devam edebilirsiniz.');
+  }
+
+  if (g.akis === 'sepet_terki' && g.adim === 2) {
+    if (!kodlu) return null;
+    return yaz(`${BRAND_NAME}: sepetiniz için indirim kodunuz`, `
+      <p>${hitap}</p>
+      <p>Kararınızı kolaylaştırmak için sepetinize özel bir indirim kodu tanımladık:</p>
+      ${kodKutusu(kodlu)}
+      ${kucukNot(`${kural} ${sure} Kod yalnızca size tanımlıdır ve bir kez kullanılır.`)}
+      ${button(devam, 'Sepetimi tamamla')}
+    `, `Sepetinize özel indirim kodu: ${kodlu}\n${kural}${tarih ? `\nSon gün: ${tarih}` : ''}`);
+  }
+
+  if (g.akis === 'sepet_terki' && g.adim === 3) {
+    return yaz(`${BRAND_NAME}: sepetiniz için son hatırlatma`, `
+      <p>${hitap}</p>
+      <p>Sepetinizi kapatmadan önce son bir hatırlatma yapmak istedik.</p>
+      ${button(devam, 'Sepetime dön')}
+      ${kucukNot('Bu konuda size bir daha yazmayacağız.')}
+    `, 'Sepetiniz için son hatırlatma.');
+  }
+
+  if (g.akis === 'checkout_terki' && g.adim === 1) {
+    return yaz(`${BRAND_NAME}: ödeme adımınız yarım kaldı`, `
+      <p>${hitap}</p>
+      <p>Siparişiniz ödeme adımında kaldı. Bıraktığınız yerden tek dokunuşla tamamlayabilirsiniz.</p>
+      ${button(devam, 'Siparişimi tamamla')}
+      ${kucukNot('Ödeme sayfası 3D Secure ile korunur; kart bilgileri tarafımızda saklanmaz.')}
+    `, 'Siparişiniz ödeme adımında kaldı — bıraktığınız yerden tamamlayabilirsiniz.');
+  }
+
+  if (g.akis === 'checkout_terki' && g.adim === 2) {
+    if (!kodlu) return null;
+    return yaz(`${BRAND_NAME}: siparişiniz için indirim kodunuz`, `
+      <p>${hitap}</p>
+      <p>Yarım kalan siparişiniz için size özel bir indirim kodu tanımladık:</p>
+      ${kodKutusu(kodlu)}
+      ${kucukNot(`${kural} ${sure} Kod yalnızca size tanımlıdır ve bir kez kullanılır.`)}
+      ${button(devam, 'Siparişimi tamamla')}
+    `, `Siparişiniz için indirim kodu: ${kodlu}\n${kural}${tarih ? `\nSon gün: ${tarih}` : ''}`);
+  }
+
+  return null;
+}
