@@ -987,6 +987,15 @@
     .vmh2-hero-badge{display:none}
     .vmh2-section{margin:78px auto}.vmh2-section-head{align-items:flex-start;flex-direction:column}.vmh2-section h2{font-size:46px}
     .vmh2-category-grid{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:auto;gap:12px}.vmh2-category-card{min-width:0;height:230px}.vmh2-category-card:first-child,.vmh2-category-card:nth-child(4){grid-column:auto;grid-row:auto}.vmh2-category-copy{left:16px;right:16px;bottom:16px}.vmh2-category-copy h3{font-size:20px}
+    /* #994052 — MOBİLDE ŞERİT GİZLİ. Volkan Yapıcı 13 Eki 2026: slider altındaki
+       siyah zeminli bilgilendirme bloğu mobilde istenmiyor. CANLIDA bu kural ZATEN
+       VARDI ama DEPODA YOKTU (ölçüldü 13 Eki: canlı `@media(max-width:720px)
+       .vmh2-benefit-strip{display:none}` → şerit 0x0; depo yaması aynı kırılımda
+       yalnız tek sütuna indiriyordu). Yani depo sürümü bir gün uygulanırsa siyah
+       şerit mobilde GERİ GELİRDİ — bu satır o mayını kapatıyor.
+       Masaüstü görünümü DEĞİŞMEDİ; aşağıdaki tek sütun/kenarlık kuralları, ileride
+       şerit mobilde yeniden açılmak istenirse hazır dursun diye KORUNDU. */
+    .vmh2-benefit-strip{display:none}
     .vmh2-benefit-strip{grid-template-columns:1fr;padding:22px}.vmh2-benefit{border-right:0;border-bottom:1px solid rgba(255,255,255,.1);padding-bottom:18px}.vmh2-benefit:last-child{border-bottom:0;padding-bottom:0}
     .vmh2-products{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.vmh2-product-info{padding:12px 4px 6px}.vmh2-product-info h3{font-size:13.5px;margin:5px 0 8px}.vmh2-mini-add{width:34px;height:34px;font-size:18px}.vmh2-pill{font-size:10px;padding:6px 9px;left:10px;top:10px}
     .vmh2-story-copy{padding:42px 24px}.vmh2-story-copy h2{font-size:46px}.vmh2-story-media{min-height:430px}
