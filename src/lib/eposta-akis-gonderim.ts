@@ -19,7 +19,7 @@
  *  · `gonder` ENJEKTE EDİLİR — çivi gerçek mail atmadan tüm dalları koşar.
  */
 import { eq } from 'drizzle-orm';
-import { ADIMLAR, hatirlatmaAtlanirMi, type Akis } from './eposta-akis';
+import { ADIMLAR, SABIT_KUPON_KODU, hatirlatmaAtlanirMi, type Akis } from './eposta-akis';
 import { DURUM, bekleyenler, gonderimIsaretle } from './eposta-akis-kosucu';
 import { kuponKullanildiMi } from './eposta-kupon';
 import { kuponAc } from './eposta-kupon';
@@ -135,7 +135,10 @@ export async function gonderimTuru(
           ozet.atlandi += 1; say(ozet.sebepler, `kupon_${k.sebep}`);
           continue;
         }
-        kod = k.kod; kuponId = k.id; bitisAni = k.bitisAni;
+        // Yunus kararı (#994057, 16 Eki): e-postaya giden kod SABİT HOSGELDIN10.
+        // `kuponAc` yine çağrıldı — 60 GÜN FRENİ ve bitiş tarihi ondan geliyor;
+        // üretilen kişiye özel kod (`k.kod`) kayda yazılıyor ama GÖNDERİLMİYOR.
+        kod = SABIT_KUPON_KODU; kuponId = k.id; bitisAni = k.bitisAni;
       }
 
       const mail = akisMaili({

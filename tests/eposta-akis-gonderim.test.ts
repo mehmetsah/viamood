@@ -131,7 +131,9 @@ describe('gönderim turu', () => {
     expect(o).toMatchObject({ tarandi: 1, gonderildi: 1, hata: 0 });
     expect(gidenler[0].tip).toBe('pazarlama');                     // çıkış linki zorunlu sınıf
     expect(gidenler[0].sablon).toBe(`akis:${AKIS.HOS_GELDIN}:1`);
-    expect(gidenler[0].html).toContain('HG-');                     // kişisel kod gövdede
+    // Yunus 16 Eki kararı: gövdeye SABİT HOSGELDIN10 girer, kişiye özel kod GİRMEZ.
+    expect(gidenler[0].html).toContain('HOSGELDIN10');
+    expect(gidenler[0].html).not.toContain('HG-');   // NEGATİF: kişisel kod sızmıyor
     expect(isaretler[0]).toMatchObject({ durum: DURUM.GONDERILDI, kuponId: 'kupon-1' });
   });
 

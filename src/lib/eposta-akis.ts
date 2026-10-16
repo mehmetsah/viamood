@@ -45,6 +45,28 @@ export const KUPON_OMRU_MS: Partial<Record<Akis, number>> = {
   [AKIS.CHECKOUT_TERKI]: 48 * SAAT,
 };
 
+/**
+ * GÖNDERİLEN İNDİRİM KODU — SABİT. (Yunus, 16 Eki 2026, birebir:
+ * «indirim olarak HOSGELDIN10 kodunu tanımladık … Yeni indirim kodu açmana
+ * gerek yok.»)
+ *
+ * ⚠ BU KARARLA ÜÇ GÜVENCE BİLEREK BIRAKILDI — sessizce kaybolmasın diye burada:
+ *   (a) 300 TL TAVANI ARTIK BİZDE DEĞİL. Paylaşılan bir Shopify koduna üst tavan
+ *       konamaz (Shopify yüzde indiriminde tavan alanı yok). Tavan artık yalnız
+ *       Shopify'daki HOSGELDIN10 tanımına bağlı; bizim kontrolümüzde DEĞİL.
+ *       `UST_LIMIT_KURUS` ve `indirimTutariKurus()` HESAP için duruyor (e-posta
+ *       metni, raporlama), ama gerçek indirimi artık Shopify uyguluyor.
+ *   (b) TEK KULLANIMLIK GARANTİSİ YOK. Kod paylaşılabilir; aynı kişi ya da
+ *       başkası birden çok kez kullanabilir.
+ *   (c) 60 GÜN FRENİ YALNIZ E-POSTAYI DURDURUR. `kuponAc()` hâlâ çağrılıyor ve
+ *       aynı kişiye 60 gün içinde ikinci kez indirim MAİLİ atılmasını engelliyor;
+ *       kodun KULLANIMINI engellemiyor.
+ *
+ * Kişiye özel üretim (`kuponKoduUret`, `eposta_kuponlari`) BİLEREK SİLİNMEDİ:
+ * karar geri alınabilsin, iş mantığı ve çivileri ayakta kalsın.
+ */
+export const SABIT_KUPON_KODU = 'HOSGELDIN10';
+
 export const TABAN_INDIRIM_YUZDE = 10;
 /** Üst limitin devreye girdiği sepet tutarı (kuruş) ve limit (kuruş). */
 export const UST_LIMIT_ESIGI_KURUS = 150_000;   // 1.500 TL
