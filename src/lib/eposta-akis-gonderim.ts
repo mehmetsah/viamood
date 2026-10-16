@@ -19,8 +19,9 @@
  *  · `gonder` ENJEKTE EDİLİR — çivi gerçek mail atmadan tüm dalları koşar.
  */
 import { eq } from 'drizzle-orm';
-import { ADIMLAR, type Akis } from './eposta-akis';
+import { ADIMLAR, hatirlatmaAtlanirMi, type Akis } from './eposta-akis';
 import { DURUM, bekleyenler, gonderimIsaretle } from './eposta-akis-kosucu';
+import { kuponKullanildiMi } from './eposta-kupon';
 import { kuponAc } from './eposta-kupon';
 import { sendEmail } from './email/sender';
 import { akisMaili } from './email/templates';
@@ -115,6 +116,16 @@ export async function gonderimTuru(
       let kod: string | null = null;
       let kuponId: string | undefined;
       let bitisAni: Date | null = null;
+
+      // A2 KURALI (#994057): hoş geldin hatırlatması, kod KULLANILDIYSA gitmez.
+      // Kuponsuz adım olduğu için aşağıdaki kupon kapısına hiç girmiyordu.
+      if (hatirlatmaAtlanirMi(akis, s.adim)) {
+        if (await kuponKullanildiMi(db, tetik.email, akis)) {
+          await gonderimIsaretle(db, s.id, DURUM.ATLANDI, { hataMetni: 'kod kullanıldı — hatırlatma gereksiz' });
+          ozet.atlandi += 1; say(ozet.sebepler, 'kod_kullanildi');
+          continue;
+        }
+      }
 
       if (kuponluAdimMi(akis, s.adim)) {
         const k = await kuponAc(db, { email: tetik.email, akis, simdi });

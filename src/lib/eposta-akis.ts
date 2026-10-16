@@ -54,6 +54,22 @@ export const FREN_GUN = 60;
 export const FREN_MS = FREN_GUN * GUN;
 
 /** Bir adımın ne zaman gönderileceği. Tetik anına gecikme eklenir. */
+/**
+ * HATIRLATMA ADIMI ATLANIR MI? (#994057 · Yunus 16 Eki spec'i, A2)
+ *
+ * Spec birebir: hoş geldin akışının 2. e-postası (çok satanlar + kod hatırlatma)
+ * "SADECE kodu kullanmadıysa" gider. Kullanmışsa hatırlatmak hem anlamsız hem
+ * rahatsız edici: müşteri zaten alışverişi yapmış.
+ *
+ * ⚠ NEDEN BURAYA, GÖNDERİM KATMANINA DEĞİL: A2 KUPONSUZ bir adım, yani
+ * `kuponluAdimMi()` kapısından geçmiyordu ve kupon durumu hiç sorulmuyordu —
+ * kod kullanılmış olsa bile mail çıkıyordu. Kural saf tutuldu ki çivi onu
+ * veritabanı olmadan koşturabilsin.
+ */
+export function hatirlatmaAtlanirMi(akis: Akis, adim: number): boolean {
+  return akis === AKIS.HOS_GELDIN && adim === 2;
+}
+
 export function planlananAn(akis: Akis, adim: number, tetikAni: Date): Date | null {
   const a = ADIMLAR[akis]?.find((x) => x.adim === adim);
   if (!a) return null;

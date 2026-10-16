@@ -76,6 +76,21 @@ export type KuponSonuc =
  * 60 gün freni KAPIDIR: fren açıksa satır YAZILMAZ ve `{ok:false,sebep:'fren'}` döner —
  * çağıran o adımı 'atlandi' işaretler, kuponsuz "indirim kodunuz" maili GÖNDERMEZ.
  */
+/**
+ * Bu kişinin BU AKIŞTAKİ kuponu kullanıldı mı? (#994057 A2 kuralı için)
+ * Kupon hiç verilmemişse `false` döner — "kullanmadı" ile "kuponu yok" aynı
+ * sonucu verir, ikisinde de hatırlatma gitmeli.
+ */
+export async function kuponKullanildiMi(db: DbGibi, email: string, akis: Akis): Promise<boolean> {
+  const [k] = await db
+    .select({ kullanildiAni: epostaKuponlari.kullanildiAni })
+    .from(epostaKuponlari)
+    .where(and(eq(epostaKuponlari.email, email.trim().toLowerCase()), eq(epostaKuponlari.akis, akis)))
+    .orderBy(desc(epostaKuponlari.createdAt))
+    .limit(1);
+  return Boolean(k?.kullanildiAni);
+}
+
 export async function kuponAc(
   db: DbGibi,
   girdi: { email: string; akis: Akis; simdi?: Date; govde?: () => string },
