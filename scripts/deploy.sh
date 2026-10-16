@@ -269,6 +269,12 @@ fi
 # hesap.viamood.com.tr SSL kurulumu (idempotent, best-effort — deploy'u asla bozmaz)
 bash scripts/hesap-ssl.sh || echo "  (hesap-ssl adımı atlandı)"
 
+# E-posta akışı kurulumu (#994057) — AYNI KALIP: idempotent, best-effort.
+# Bayrağı/cron'u yoksa kurar, varsa dokunmaz; sonunda kuru koşuyu log'a yazar.
+# SSH'sız tek yol: prod'un 22'si kapalı ama auto-deploy.sh 2 dk'da bir bu betiği
+# origin/main'den çekip koşuyor (kanıt: push sonrası /api/health buildId eşitlendi).
+bash scripts/eposta-akis-kur.sh || echo "  (eposta-akis kurulum adımı atlandı)"
+
 echo ""
 echo "════════════════════════════════════════════"
 echo "  ✓ Deploy tamam: $OLD_COMMIT → $NEW_COMMIT"
