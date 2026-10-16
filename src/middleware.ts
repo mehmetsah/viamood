@@ -2,7 +2,7 @@ import NextAuth from 'next-auth';
 import { NextResponse, type NextRequest } from 'next/server';
 import { authConfig } from '@/lib/auth.config';
 import { adminYoluAcikMi, SSS_EDITOR, SSS_YOL } from '@/lib/yetki';
-import { RET_ANAHTARI, RET_CEREZI, RET_CEREZ_OMRU } from '@/lib/ret-bildirim';
+import { RET_ANAHTARI, RET_BASLIGI, RET_CEREZI, RET_CEREZ_OMRU } from '@/lib/ret-bildirim';
 import {
   HALKODE_PREVIEW_COOKIE,
   HALKODE_PREVIEW_MAX_AGE,
@@ -188,6 +188,19 @@ export default auth((req) => {
   const role = (session.user as { role?: string; yetkiler?: string[] }).role;
   const yetkiler = (session.user as { yetkiler?: string[] }).yetkiler ?? [];
 
+  // ── Tek seferlik ret bildirimi: OKU → BAŞLIĞA KOY → ÇEREZİ SİL (#992119-L)
+  // Çerez artık `httpOnly`; sayfa onu JS ile okuyup silemez. Middleware sayfadan ÖNCE
+  // çalıştığı için okuma ve silme burada yapılır, değer isteğe başlık olarak eklenir.
+  // Böylece uyarı BİR kez görünür ve XSS bu çerezi ne okuyabilir ne kurabilir.
+  const retAnahtari = req.cookies.get(RET_CEREZI)?.value;
+  if (retAnahtari && !pathname.startsWith(ADMIN_PREFIX)) {
+    const basliklar = new Headers(req.headers);
+    basliklar.set(RET_BASLIGI, retAnahtari);
+    const res = NextResponse.next({ request: { headers: basliklar } });
+    res.cookies.set(RET_CEREZI, '', { path: '/', maxAge: 0 });
+    return res;
+  }
+
   if (pathname.startsWith(ADMIN_PREFIX)) {
     // KAPI 1/3 — yol bazlı. sss_editor YALNIZ /admin/urun-sss görebilir; menüden
     // gizlemek yetmez, adres çubuğuna başka yol yazan da buradan döner.
@@ -203,7 +216,7 @@ export default auth((req) => {
       //   AYRICA tek seferlik çerezle taşınır; hedef sayfa okur, sabit metne çevirir,
       //   çerezi HEMEN siler. Çerez METİN TAŞIMAZ, yalnız anahtar.
       yanit.cookies.set(RET_CEREZI, RET_ANAHTARI, {
-        httpOnly: false,
+        httpOnly: true,
         sameSite: 'lax',
         secure: process.env.NODE_ENV === 'production',
         path: '/',

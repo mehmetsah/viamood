@@ -28,7 +28,13 @@ export const RET_CEREZI = 'vm_ret';
 /** Taşınan tek anahtar. Metin DEĞİL. */
 export const RET_ANAHTARI = 'yetkisiz';
 
-/** Tek seferlik: sayfa okuyunca silinir, okunmazsa bu süre sonunda düşer. */
+/**
+ * Middleware, çerezi okuyup bu BAŞLIKLA sayfaya geçirir ve AYNI yanıtta çerezi siler.
+ * Böylece çerez `httpOnly` olabiliyor: sayfanın JS'e ihtiyacı kalmıyor (#992119-L).
+ */
+export const RET_BASLIGI = 'x-vm-ret';
+
+/** Tek seferlik: middleware okuyunca siler; okunmazsa bu süre sonunda düşer. */
 export const RET_CEREZ_OMRU = 60;
 
 /**
