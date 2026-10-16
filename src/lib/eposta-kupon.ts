@@ -93,7 +93,7 @@ export async function kuponKullanildiMi(db: DbGibi, email: string, akis: Akis): 
 
 export async function kuponAc(
   db: DbGibi,
-  girdi: { email: string; akis: Akis; simdi?: Date; govde?: () => string },
+  girdi: { email: string; akis: Akis; simdi?: Date; govde?: () => string; prova?: boolean },
 ): Promise<KuponSonuc> {
   const simdi = girdi.simdi ?? new Date();
   const email = girdi.email.trim().toLowerCase();
@@ -101,6 +101,13 @@ export async function kuponAc(
   const bitisAni = kuponBitisi(girdi.akis, simdi);
   if (!bitisAni) return { ok: false, sebep: 'omur_yok' };
   const kod = kuponKoduUret(girdi.akis, girdi.govde ?? (() => govdeUret()));
+  // PROVA (kuru koşu): KARAR aynı yerden verilir (60 gün freni + ömür yukarıda
+  // ÖLÇÜLDÜ), yalnız DEFTERE YAZILMAZ. Sebep ölçüldü (#994057, 16 Eki): prova
+  // çağrısı gerçek kupon satırı açıyordu ve o satır 60 GÜN FRENİNİ YAKIYORDU —
+  // yani "deneme" müşterinin gerçek kupon hakkını harcıyordu.
+  if (girdi.prova) {
+    return { ok: true, id: 'prova-yazilmadi', kod, bitisAni, indirimYuzde: TABAN_INDIRIM_YUZDE, ustLimitKurus: UST_LIMIT_KURUS };
+  }
   const [r] = await db
     .insert(epostaKuponlari)
     .values({

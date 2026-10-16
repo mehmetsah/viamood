@@ -75,9 +75,12 @@ export async function hosGeldinTetikle(
 
 export interface TerkOzet {
   tarandi: number;
+  /** PROVA kipinde: AÇILACAK OLAN akış sayısı (açılan değil — yazma yapılmadı). */
   acilan: number;
   epostasiz: number;
   sinif: Record<string, number>;
+  /** true ise bu tur hiçbir satır YAZMADI (yalnız okuma). */
+  prova?: boolean;
 }
 
 /**
@@ -88,8 +91,15 @@ export interface TerkOzet {
  */
 export async function terkTara(
   db: DbGibi,
-  secenek: { simdi?: Date; esikMs?: number; limit?: number } = {},
+  secenek: { simdi?: Date; esikMs?: number; limit?: number; prova?: boolean } = {},
 ): Promise<TerkOzet> {
+  // PROVA (kuru koşu) — TEK YAZMA NOKTASI YOK, İKİ TANE VAR ve ikisi de kapanır:
+  // (a) `carts.status='abandoned'` işareti, (b) `akisBaslat` tetik satırı.
+  // Sebep ölçüldü (#994057, 16 Eki): cron ucu `?prova=1` ile çağrıldığında
+  // yalnız MAİL GÖNDERİCİSİ susturuluyordu; bu fonksiyon GERÇEK müşteri
+  // sepetlerini terk edilmiş işaretliyor ve akışları açıyordu. Yani "güvenli
+  // deneme" diye çağrılan uç gerçek veriyi bozuyordu.
+  const prova = secenek.prova === true;
   const simdi = secenek.simdi ?? new Date();
   const esik = new Date(simdi.getTime() - (secenek.esikMs ?? TERK_ESIGI_MS));
   const satirlar = await db
@@ -98,7 +108,7 @@ export async function terkTara(
     .where(and(eq(carts.status, 'active'), lte(carts.updatedAt, esik)))
     .limit(secenek.limit ?? 100);
 
-  const ozet: TerkOzet = { tarandi: satirlar.length, acilan: 0, epostasiz: 0, sinif: {} };
+  const ozet: TerkOzet = { tarandi: satirlar.length, acilan: 0, epostasiz: 0, sinif: {}, ...(prova ? { prova: true } : {}) };
   for (const c of satirlar) {
     let email = epostaCikar(c.attributes as Nitelikler);
     // ÜYE EŞLEŞTİRMESİ (Yunus 16 Eki: «giriş yaptıysa zaten kayıtlı maile»).
@@ -114,10 +124,10 @@ export async function terkTara(
         .limit(1);
       if (m?.email) email = m.email.trim().toLowerCase();
     }
-    await db.update(carts).set({ status: 'abandoned' }).where(eq(carts.id, c.id));
+    if (!prova) await db.update(carts).set({ status: 'abandoned' }).where(eq(carts.id, c.id));
     if (!email) { ozet.epostasiz += 1; continue; }
     const akis = terkSinifi(c.attributes as Nitelikler);
-    await akisBaslat(db, { akis, email, cartId: c.id, tetikAni: simdi });
+    if (!prova) await akisBaslat(db, { akis, email, cartId: c.id, tetikAni: simdi });
     ozet.acilan += 1;
     ozet.sinif[akis] = (ozet.sinif[akis] ?? 0) + 1;
   }

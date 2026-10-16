@@ -45,17 +45,18 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   }
 
   const limit = Math.min(Math.max(Number(req.nextUrl.searchParams.get('limit') ?? 100), 1), 200);
-  // KURU KOŞU: &prova=1 ile tarama yapılır, mail GÖNDERİLMEZ (kanıt toplamak için).
+  // KURU KOŞU: &prova=1 ile tarama yapılır, HİÇBİR SATIR YAZILMAZ ve mail
+  // GÖNDERİLMEZ. ⚠ 16 Eki'ye kadar bu YARIM UYGULANMIŞTI: prova yalnız mail
+  // göndericisini susturuyordu; `terkTara` gerçek sepetleri 'abandoned'
+  // işaretliyor, `kuponAc` gerçek kupon açıp 60 gün frenini yakıyor, susturulan
+  // gönderici yüzünden satırlar 'hata' damgalanıyordu. Artık prova her İKİ
+  // katmana da geçiyor — tek yerde unutulmasın diye aynı değişken kullanılıyor.
   const prova = req.nextUrl.searchParams.get('prova') === '1';
   const simdi = new Date();
 
   try {
-    const terk = await terkTara(db as any, { simdi, limit });
-    const gonderim = await gonderimTuru(db as any, {
-      simdi,
-      limit,
-      ...(prova ? { gonder: async () => ({ ok: false, error: 'PROVA: mail gönderilmedi' }) } : {}),
-    });
+    const terk = await terkTara(db as any, { simdi, limit, prova });
+    const gonderim = await gonderimTuru(db as any, { simdi, limit, prova });
     return NextResponse.json({ ok: true, aktif: true, prova, terk, gonderim });
   } catch (e) {
     return NextResponse.json(

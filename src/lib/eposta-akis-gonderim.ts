@@ -30,10 +30,13 @@ import { epostaAkisTetikleri } from '@/db/schema';
 
 export interface GonderimOzet {
   tarandi: number;
+  /** PROVA kipinde: GÖNDERİLECEK OLAN sayısı (mail gitmedi, damga yazılmadı). */
   gonderildi: number;
   atlandi: number;
   hata: number;
   sebepler: Record<string, number>;
+  /** true ise bu tur hiçbir satır YAZMADI ve hiç mail GİTMEDİ. */
+  prova?: boolean;
 }
 
 type DbGibi = {
@@ -75,12 +78,24 @@ function say(o: Record<string, number>, k: string) {
  */
 export async function gonderimTuru(
   db: DbGibi,
-  secenek: { simdi?: Date; limit?: number; gonder?: Gonderici } = {},
+  secenek: { simdi?: Date; limit?: number; gonder?: Gonderici; prova?: boolean } = {},
 ): Promise<GonderimOzet> {
   const simdi = secenek.simdi ?? new Date();
-  const gonder: Gonderici = secenek.gonder ?? ((p) => sendEmail(p as any));
+  // PROVA (kuru koşu) — ÜÇ YAZMA YOLU BİRDEN KAPANIR, mail susturmak YETMEZDİ:
+  //  (a) `gonderimIsaretle` her daldan satırın durumunu yazıyordu,
+  //  (b) `kuponAc` GERÇEK kupon satırı açıp 60 GÜN FRENİNİ yakıyordu,
+  //  (c) gönderici susturulunca `res.ok=false` olduğu için satır 'hata'
+  //      damgalanıyor ve bir daha ASLA gönderilmiyordu.
+  // Ölçüldü #994057, 16 Eki: `?prova=1` "güvenli deneme" değildi.
+  const prova = secenek.prova === true;
+  const isaretle: typeof gonderimIsaretle = prova
+    ? (async () => undefined) as unknown as typeof gonderimIsaretle
+    : gonderimIsaretle;
+  const gonder: Gonderici = prova
+    ? (async () => ({ ok: true }))          // PROVA: mail GİTMEZ, 'hata' da damgalanmaz
+    : secenek.gonder ?? ((p) => sendEmail(p as any));
   const satirlar = await bekleyenler(db, simdi, secenek.limit ?? 100);
-  const ozet: GonderimOzet = { tarandi: satirlar.length, gonderildi: 0, atlandi: 0, hata: 0, sebepler: {} };
+  const ozet: GonderimOzet = { tarandi: satirlar.length, gonderildi: 0, atlandi: 0, hata: 0, sebepler: {}, ...(prova ? { prova: true } : {}) };
 
   for (const s of satirlar) {
     try {
@@ -96,18 +111,18 @@ export async function gonderimTuru(
         .limit(1);
 
       if (!tetik) {
-        await gonderimIsaretle(db, s.id, DURUM.HATA, { hataMetni: 'tetik satırı bulunamadı' });
+        await isaretle(db, s.id, DURUM.HATA, { hataMetni: 'tetik satırı bulunamadı' });
         ozet.hata += 1; say(ozet.sebepler, 'tetik_yok');
         continue;
       }
       // Akış erken kapandıysa (sipariş verdi / abonelikten çıktı) MAİL GİTMEZ.
       if (tetik.iptalSebebi) {
-        await gonderimIsaretle(db, s.id, DURUM.IPTAL);
+        await isaretle(db, s.id, DURUM.IPTAL);
         ozet.atlandi += 1; say(ozet.sebepler, `iptal:${tetik.iptalSebebi}`);
         continue;
       }
       if (s.kanal === 'sms') {
-        await gonderimIsaretle(db, s.id, DURUM.ATLANDI, { hataMetni: 'SMS sağlayıcısı yapılandırılmadı' });
+        await isaretle(db, s.id, DURUM.ATLANDI, { hataMetni: 'SMS sağlayıcısı yapılandırılmadı' });
         ozet.atlandi += 1; say(ozet.sebepler, 'sms_saglayici_yok');
         continue;
       }
@@ -121,17 +136,17 @@ export async function gonderimTuru(
       // Kuponsuz adım olduğu için aşağıdaki kupon kapısına hiç girmiyordu.
       if (hatirlatmaAtlanirMi(akis, s.adim)) {
         if (await kuponKullanildiMi(db, tetik.email, akis)) {
-          await gonderimIsaretle(db, s.id, DURUM.ATLANDI, { hataMetni: 'kod kullanıldı — hatırlatma gereksiz' });
+          await isaretle(db, s.id, DURUM.ATLANDI, { hataMetni: 'kod kullanıldı — hatırlatma gereksiz' });
           ozet.atlandi += 1; say(ozet.sebepler, 'kod_kullanildi');
           continue;
         }
       }
 
       if (kuponluAdimMi(akis, s.adim)) {
-        const k = await kuponAc(db, { email: tetik.email, akis, simdi });
+        const k = await kuponAc(db, { email: tetik.email, akis, simdi, prova });
         if (!k.ok) {
           // 60 GÜN FRENİ: kupon verilmez ⇒ kuponlu adım HİÇ gönderilmez.
-          await gonderimIsaretle(db, s.id, DURUM.ATLANDI, { hataMetni: `kupon verilmedi: ${k.sebep}` });
+          await isaretle(db, s.id, DURUM.ATLANDI, { hataMetni: `kupon verilmedi: ${k.sebep}` });
           ozet.atlandi += 1; say(ozet.sebepler, `kupon_${k.sebep}`);
           continue;
         }
@@ -149,7 +164,7 @@ export async function gonderimTuru(
         devamUrl: devamUrl(tetik.cartId ? String(tetik.cartId) : null),
       });
       if (!mail) {
-        await gonderimIsaretle(db, s.id, DURUM.ATLANDI, { hataMetni: `şablon yok: ${akis}/${s.adim}` });
+        await isaretle(db, s.id, DURUM.ATLANDI, { hataMetni: `şablon yok: ${akis}/${s.adim}` });
         ozet.atlandi += 1; say(ozet.sebepler, 'sablon_yok');
         continue;
       }
@@ -166,16 +181,16 @@ export async function gonderimTuru(
       });
 
       if (res.ok) {
-        await gonderimIsaretle(db, s.id, DURUM.GONDERILDI, kuponId ? { kuponId } : undefined);
+        await isaretle(db, s.id, DURUM.GONDERILDI, kuponId ? { kuponId } : undefined);
         ozet.gonderildi += 1;
       } else {
-        await gonderimIsaretle(db, s.id, DURUM.HATA, { hataMetni: (res.error ?? 'bilinmeyen hata').slice(0, 500), kuponId });
+        await isaretle(db, s.id, DURUM.HATA, { hataMetni: (res.error ?? 'bilinmeyen hata').slice(0, 500), kuponId });
         ozet.hata += 1; say(ozet.sebepler, 'gonderim_hatasi');
       }
     } catch (e) {
       const m = (e instanceof Error ? e.message : String(e)).slice(0, 500);
       try {
-        await gonderimIsaretle(db, s.id, DURUM.HATA, { hataMetni: m });
+        await isaretle(db, s.id, DURUM.HATA, { hataMetni: m });
       } catch { /* defter de yazamıyorsa tur devam eder; sayaç hatayı gösterir */ }
       ozet.hata += 1; say(ozet.sebepler, 'istisna');
     }
