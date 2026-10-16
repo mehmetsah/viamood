@@ -30,7 +30,11 @@ export const ADIMLAR: Record<Akis, Array<{ adim: number; gecikmeMs: number; kupo
   [AKIS.SEPET_TERKI]: [
     { adim: 1, gecikmeMs: 1 * SAAT, kupon: false, sms: false }, // indirimsiz
     { adim: 2, gecikmeMs: 24 * SAAT, kupon: true, sms: false },  // %10
-    { adim: 3, gecikmeMs: 48 * SAAT, kupon: false, sms: true },  // son hatırlatma (İYS varsa SMS)
+    // Yunus 16 Eki: «SMS şimdilik yok, e-posta devam». ÖLÇÜLEN ARIZA: `sms:true`
+    // iken İYS ONAYI OLAN müşteride kanal 'sms' seçiliyor, gönderim katmanı da
+    // sağlayıcı olmadığı için satırı ATLIYORDU — yani onay veren müşteri 3.
+    // hatırlatmayı HİÇ almıyordu. SMS sağlayıcısı gelince bu satır `true` olur.
+    { adim: 3, gecikmeMs: 48 * SAAT, kupon: false, sms: false }, // son hatırlatma — e-posta
   ],
   [AKIS.CHECKOUT_TERKI]: [
     { adim: 1, gecikmeMs: 1 * SAAT, kupon: false, sms: false }, // güven vurgulu, indirimsiz

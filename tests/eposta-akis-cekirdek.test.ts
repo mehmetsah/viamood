@@ -176,7 +176,11 @@ describe('İYS — SMS yalnız onay varsa', () => {
     const smsAdimlari = Object.entries(ADIMLAR).flatMap(([akis, adimlar]) =>
       adimlar.filter((a) => a.sms).map((a) => `${akis}#${a.adim}`),
     );
-    expect(smsAdimlari).toEqual(['sepet_terki#3']);
+    // Yunus 16 Eki: «SMS şimdilik yok, e-posta devam» → SMS adayı adım KALMADI.
+    // ÖLÇÜLEN SEBEP: `sms:true` iken İYS ONAYI OLAN müşteride kanal 'sms' seçiliyor,
+    // sağlayıcı olmadığı için satır ATLANIYORDU — onay veren müşteri 3. hatırlatmayı
+    // hiç almıyordu. Sağlayıcı gelince bu liste yine ['sepet_terki#3'] olmalı.
+    expect(smsAdimlari).toEqual([]);
   });
 });
 

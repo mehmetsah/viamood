@@ -16,10 +16,10 @@
  * ⚠ E-POSTASIZ SEPET ATLANIR (sessiz değil, sayılır): adres yoksa gönderilecek
  * yer yoktur; satır 'abandoned' işaretlenir ama akış AÇILMAZ.
  */
-import { and, eq, lte, sql } from 'drizzle-orm';
+import { and, eq, lte, or, sql } from 'drizzle-orm';
 import { AKIS } from './eposta-akis';
 import { akisBaslat, akisIptal } from './eposta-akis-kosucu';
-import { carts, epostaAkisTetikleri } from '@/db/schema';
+import { carts, customers, epostaAkisTetikleri } from '@/db/schema';
 
 const SAAT = 3600_000;
 /** Sepete/ödemeye dokunulmadan geçmesi gereken süre — terk sayılma eşiği. */
@@ -93,14 +93,27 @@ export async function terkTara(
   const simdi = secenek.simdi ?? new Date();
   const esik = new Date(simdi.getTime() - (secenek.esikMs ?? TERK_ESIGI_MS));
   const satirlar = await db
-    .select({ id: carts.id, token: carts.token, attributes: carts.attributes })
+    .select({ id: carts.id, token: carts.token, attributes: carts.attributes, customerId: carts.customerId })
     .from(carts)
     .where(and(eq(carts.status, 'active'), lte(carts.updatedAt, esik)))
     .limit(secenek.limit ?? 100);
 
   const ozet: TerkOzet = { tarandi: satirlar.length, acilan: 0, epostasiz: 0, sinif: {} };
   for (const c of satirlar) {
-    const email = epostaCikar(c.attributes as Nitelikler);
+    let email = epostaCikar(c.attributes as Nitelikler);
+    // ÜYE EŞLEŞTİRMESİ (Yunus 16 Eki: «giriş yaptıysa zaten kayıtlı maile»).
+    // Sepet niteliklerinde e-posta yoksa ve sepet bir ÜYEYE bağlıysa, müşteri
+    // kaydındaki e-posta kullanılır. Tema/vitrin değişikliği GEREKMEZ — bağ
+    // zaten `carts.customer_id` sütununda duruyor.
+    // ⚠ ANONİM ziyaretçi bu yoldan FAYDALANMAZ (kapsam dışı, Yunus'un kararı).
+    if (!email && c.customerId) {
+      const [m] = await db
+        .select({ email: customers.email })
+        .from(customers)
+        .where(or(eq(customers.shopifyCustomerId, c.customerId), sql`${customers.id}::text = ${c.customerId}`))
+        .limit(1);
+      if (m?.email) email = m.email.trim().toLowerCase();
+    }
     await db.update(carts).set({ status: 'abandoned' }).where(eq(carts.id, c.id));
     if (!email) { ozet.epostasiz += 1; continue; }
     const akis = terkSinifi(c.attributes as Nitelikler);

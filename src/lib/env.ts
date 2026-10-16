@@ -66,7 +66,9 @@ const envSchema = z.object({
   //   Bu yüzden bilinçli olarak DEFAULT YOK — kaynağa gömülmesin.
   // Mail gönderimi RESEND_API_KEY ile birlikte aktifleşir; ikisi de doluysa mail gider.
   WELCOME_DISCOUNT_CODE: z.string().optional(),
-  EMAIL_FROM: z.string().default('Via Mood <noreply@viamood.com>'),
+  // Yunus 16 Eki: «gönderen adresi info@viamood.com kullanılabilir».
+  // Prod'da .env ile ezilir; bu yalnız VARSAYILAN.
+  EMAIL_FROM: z.string().default('Via Mood <info@viamood.com>'),
 
   // Storefront — primary domain (custom checkout ödeme redirect'i + CORS default origin). Domain değişince TEK yer.
   STOREFRONT_URL: z.string().url().default('https://viamood.com.tr'),
