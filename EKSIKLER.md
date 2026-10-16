@@ -41,6 +41,42 @@ gerekmiyor. Kalan iş fiziksel cihazlarda, Yunus'ta.
 
 ---
 
+## 0-B. 16 EKİ 2026 — DAL ENVANTERİ TAZE ÖLÇÜLDÜ (Elif)
+
+> ⚠ **Bu bölümün sebebi: aşağıdaki 8 Eki ölçümünün bir kısmı BAYATLAMIŞ.**
+> "main'de değil" denen işlerin bir bölümü o tarihten sonra main'e alınmış ama
+> burası güncellenmemiş. Körlemesine güvenilen her bayat satır, kapanmış bir işi
+> ikinci kez açtırıyor (Mehmet'in 1 numaralı şikâyeti). Aşağısı `git merge-base
+> --is-ancestor` ile commit commit ölçülmüştür.
+
+**DAL TARAMASI (90 `kod/*` dalı):** 87'si **main'de birleşmiş**. Gerçekten
+bekleyen **3** dal vardı:
+
+| Dal | Durum | Karar |
+|---|---|---|
+| `kod/992119-L-cerez-httponly` `72e2e25` | saf `src/`+`tests`, tema dosyası **0** | ✅ **BUGÜN MAIN'E ALINDI** (`eaddef7`) |
+| `kod/991406-meta-odeme-olaylari` `af90ef0` | `tema-yamalari/via-checkout.liquid.meta-initiate-purchase` taşıyor | ⛔ kapsam dışı — Shopify tema erişimi gerekiyor |
+| `kod/meta-pixel-eksik-olaylar` `0045568` | `tema-yamalari/via-checkout.liquid.halkode-form-b` (1.716 satır) taşıyor | ⛔ kapsam dışı — aynı sebep |
+
+**BAYAT ÇIKAN SATIRLAR (düzeltme):**
+- Madde 3 "`kod/991676-eposta-otomasyon` `326d820` **hâlâ main'de değil**" →
+  **YANLIŞ**, `326d820` main'in **içinde**.
+- Madde 12 "onarım `2e8287e` + yama main'de, temaya uygulanmadı" → commit kısmı
+  doğru (`2e8287e` main'de); temaya uygulanmama durumu ayrı iş olarak sürüyor.
+- `kod/992334-deploy-goc-listesi` `83e14c7` (göç listesi) → **main'de**.
+- `kod/991987-takip-link-yonlendirme` `736f619` (takip linki) → **main'de**.
+
+**CANLI ÖLÇÜM (16 Eki):** `hesap.viamood.com.tr/auth/davet` → **HTTP 200**
+(eski 500 **yok**), `/api/health` → **200**. Yani "davet 500" maddesi **kapandı**.
+
+**BUGÜN KAPANAN:** `#992119-L` — `vm_ret` çerezi artık `httpOnly`; okuma/silme
+middleware'e alındı, `/hesabim`'daki `dangerouslySetInnerHTML` + `document.cookie`
+silme bileşeni kaldırıldı (XSS'te sahte "yetkiniz yok" uyarısı kurulabiliyordu).
+Çivi `tests/cerez-httponly.test.ts` 8 iddia; **tüm takım 822/822 yeşil**.
+Ezme kapısı net silmeyi yakaladı → kasıt kanıtı `ezme-kanit.tsv`'ye yazıldı, kapı
+yinelendi, sonra push edildi.
+
+---
 ## ✅ Yunus'un 12 Maddesi — TİK DURUMU (**8 Eki 2026** ölçümü, Elif)
 Kanıt: `~/asistan-veri/mehmet/raporlar/viamood-12-madde-envanter-20261008.md` (canlı curl + Playwright 430/1440px + `merge-base`).
 Önceki tablo (6 Eki) **BAYATLADI** — iki etiketi yanlıştı, aşağıdaki geçerli.
