@@ -1,28 +1,21 @@
 {%- assign company_phone_intl = settings.company_phone | remove: ' ' | remove_first: '0' -%}
-{%- comment -%}
-  #994357 — ÜÇ DÜZENLEME (Yunus, 16 Eki 2026). Taban: tema HEAD c00a22c.
-  Yeniden uygulanacaksa yalnız şu üçü aranır:
-    (a) `template.name == 'policy'` → doc='politika'  (bu bloğun altında)
-    (b) `when 'politika'` gövde dalı                   (büyük case içinde)
-    (c) schema'dan `updated_date` ayarı SİLİNDİ, tarih sabit
-  ⚠ `.994058-sayfa-dali` yaması (HalkÖde metni + 'sayfa' dalı) AYRI karttır;
-    o önce inerse bu üç düzenleme onun üstüne tekrar uygulanır.
-{%- endcomment -%}
 {%- liquid
   assign doc = section.settings.doc_handle | default: 'custom'
-  # #994357 — Shopify'ın KENDİ /policies/* sayfası bu bölümü JSON şablonsuz
-  # çağırır (templates/policy.liquid → {% section 'via-legal-page' %}); orada
-  # section ayarı YOKTUR, bu yüzden hangi belge olduğunu ŞABLONDAN ölçüyoruz.
-  # ÖLÇÜLEN SEBEP: /pages/gizlilik-politikasi 301 ile /policies/privacy-policy'e
-  # yönleniyor ve Shopify'ın varsayılan .shopify-policy__* kabuğu çiziliyordu —
-  # yani doğru tasarımlı şablon tema deposunda VARDI ama ERİŞİLEMİYORDU.
+  # 994357 - Shopify'in KENDI /policies/* sayfasi bu bolumu JSON sablonsuz
+  # cagirir (templates/policy.liquid icinden section etiketiyle); orada section
+  # ayari YOKTUR, bu yuzden hangi belge oldugunu SABLONDAN olcuyoruz.
+  # OLCULEN SEBEP (17 Eki 2026): templates/policy.liquid canli temada YOKTU
+  # (Admin API 404) ve /pages/gizlilik-politikasi 301 ile politika sayfasina
+  # yonleniyor; yani dogru tasarimli sablon VARDI ama ERISILEMIYORDU.
+  # ⛔ BU YORUMLARDA SUSLU PARANTEZ KULLANILMAZ: yuzde-suslu dizisi liquid
+  # etiketini erken kapatir ve asagidaki atamalar hic kosmaz (17 Eki, canlida
+  # olculdu: vl-title ve vl-meta BOS cikti).
   if template.name == 'policy'
     assign doc = 'politika'
   endif
-  # #994357 — "Son güncelleme" ARTIK PANEL AYARI DEĞİL (Yunus: yönetim
-  # ekranından kaldırılsın). Ekrandaki metin AYNEN KALIR; dört JSON şablonunun
-  # hepsinde değer 'Mayıs 2026' olduğu için görünen hiçbir şey değişmiyor
-  # (ölçüldü: page.kvkk/mesafeli/iade/gizlilik → dördü de 'Mayıs 2026').
+  # 994357 - "Son guncelleme" ARTIK PANEL AYARI DEGIL (Yunus: yonetim
+  # ekranindan kaldirilsin). Ekrandaki metin AYNEN KALIR; dort JSON sablonunun
+  # dordunde de deger 'Mayis 2026' oldugu icin gorunen hicbir sey degismiyor.
   assign updated = 'Mayıs 2026'
 
   case doc
@@ -37,9 +30,10 @@
     when 'hakkimizda'
       assign doc_title = 'Hakkımızda'
     when 'politika'
-      # Shopify'ın kendi politika adı (Ayarlar > Politikalar) — başlığı biz
-      # UYDURMUYORUZ, kaynaktan alıyoruz.
+      # Shopify'in kendi politika adi (Ayarlar > Politikalar) - UYDURMUYORUZ.
       assign doc_title = page_title
+    when 'sayfa'
+      assign doc_title = page.title
     else
       assign doc_title = section.settings.title | default: page.title
   endcase
@@ -259,7 +253,7 @@
 <p>Sistem sorunlarını tespit etmek, hizmet kalitesini artırmak ve demografik analiz yapmak amacıyla IP adresleri kayıt altına alınır.</p>
 
 <h2>Kredi Kartı Güvenliği</h2>
-<p>Kredi kartı bilgileri sistemimizde saklanmaz. Tüm ödeme işlemleri, 256-bit SSL şifrelemesi kullanan PayTR altyapısı üzerinden, bilgileriniz doğrudan bankaya iletilerek gerçekleştirilir.</p>
+<p>Kredi kartı bilgileri sistemimizde saklanmaz. Tüm ödeme işlemleri, 256-bit SSL şifrelemesi kullanan HalkÖde (Halk Elektronik Para ve Ödeme Hizmetleri A.Ş.) altyapısı üzerinden, bilgileriniz doğrudan bankaya iletilerek gerçekleştirilir.</p>
 
 <h2>Çerezler</h2>
 <p>Sitemiz, ziyaret istatistiklerini ve kullanıcı davranışlarını anlamak amacıyla çerez kullanır. Çerezler kişisel verilerinize erişmek için kullanılmaz. Tarayıcı ayarlarınızdan çerez kabulünü dilediğiniz gibi düzenleyebilirsiniz.</p>
@@ -326,7 +320,7 @@
 </ul>
 
 <h2>5. Kredi Kartı ve Ödeme Güvenliği</h2>
-<p>Ödeme sayfasında girilen kredi kartı bilgileri, müşterilerimizin güvenliğini en üst seviyede tutmak amacıyla hiçbir şekilde Şirket veya hizmet sağlayıcılarımızın sunucularında tutulmamaktadır. Tüm ödeme işlemleri banka ile bilgisayarınız arasında, 256-bit SSL şifreleme altyapısı (PayTR) üzerinden gerçekleşir.</p>
+<p>Ödeme sayfasında girilen kredi kartı bilgileri, müşterilerimizin güvenliğini en üst seviyede tutmak amacıyla hiçbir şekilde Şirket veya hizmet sağlayıcılarımızın sunucularında tutulmamaktadır. Tüm ödeme işlemleri banka ile bilgisayarınız arasında, 256-bit SSL şifreleme altyapısı (HalkÖde) üzerinden gerçekleşir.</p>
 
 <h2>6. Çerez Kullanımı</h2>
 <p>Çerezler, sitemizi ziyaret ettiğinizde cihazınıza kaydedilen küçük metin dosyalarıdır. Çerezler, sitenin daha kolay kullanılması, tercihlerinizin hatırlanması ve site kullanımı hakkında istatistiksel bilgiler toplanması amacıyla kullanılır. Tarayıcı ayarlarınızdan çerez kullanımını her zaman kontrol edebilirsiniz.</p>
@@ -364,7 +358,7 @@
   </div>
   <div>
     <h3>Güvenli ödeme</h3>
-    <p>PayTR altyapısı ile 256-bit SSL şifrelemeli kart ödemesi ve kapıda ödeme seçeneği.</p>
+    <p>HalkÖde altyapısı ile 256-bit SSL şifrelemeli kart ödemesi ve kapıda ödeme seçeneği.</p>
   </div>
   <div>
     <h3>Kolay iade</h3>
@@ -380,7 +374,7 @@
 
 <h2>Nasıl Alışveriş Yaparsınız?</h2>
 <ul>
-  <li><strong>Web sitemiz:</strong> Güvenli ödeme altyapısı (PayTR) ile hızlı ve kolay alışveriş.</li>
+  <li><strong>Web sitemiz:</strong> Güvenli ödeme altyapısı (HalkÖde) ile hızlı ve kolay alışveriş.</li>
   <li><strong>Kapıda ödeme:</strong> Sipariş onayı sonrasında nakit veya kart ile teslimat anında ödeme.</li>
   <li><strong>WhatsApp:</strong> {{ settings.company_phone }} üzerinden sipariş ve bilgi.</li>
   <li><strong>Kargo:</strong> Siparişler 1-3 iş günü içinde kargoya verilir, Türkiye genelinde 1-4 iş gününde teslim.</li>
@@ -388,6 +382,9 @@
 
 <h2>Sözümüz</h2>
 <p>Her siparişte; dürüst iletişim, hızlı teslimat, sağlam paketleme ve memnuniyet odaklı hizmet.</p>
+
+{%- when 'sayfa' -%}
+{{ page.content }}
 
 {%- else -%}
 {{ section.settings.content }}
@@ -419,7 +416,8 @@
         { "value": "gizlilik", "label": "Gizlilik ve Güvenlik" },
         { "value": "iade", "label": "Teslimat / İptal / İade" },
         { "value": "kvkk", "label": "KVKK" },
-        { "value": "hakkimizda", "label": "Hakkımızda" }
+        { "value": "hakkimizda", "label": "Hakkımızda" },
+        { "value": "sayfa", "label": "Sayfanın kendi içeriği (page.content)" }
       ]
     },
     {

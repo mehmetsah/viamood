@@ -1,18 +1,19 @@
 {%- comment -%}
   #994357 — Shopify POLİTİKA SAYFALARI onaylı yasal kabuğu kullanır.
 
-  SEBEP (ölçüldü 17 Eki 2026): temada `templates/policy.liquid` YOKTU, bu yüzden
-  /policies/privacy-policy Shopify'ın varsayılan `.shopify-policy__*` kabuğuyla
-  çiziliyordu ve sitedeki öbür yasal sayfalardan (vl-eyebrow / vl-title /
-  vl-meta) FARKLI görünüyordu. Üstüne /pages/gizlilik-politikasi 301 ile buraya
-  yönlendiği için doğru tasarımlı şablon erişilemez durumdaydı.
+  SEBEP (ölçüldü 17 Eki 2026, Admin API): bu dosya temada YOKTU (assets.json
+  → 404), bu yüzden /policies/privacy-policy Shopify'ın varsayılan
+  `.shopify-policy__*` kabuğuyla çiziliyordu ve öbür yasal sayfalardan
+  (vl-eyebrow / vl-title / vl-meta) FARKLI görünüyordu. Üstüne
+  /pages/gizlilik-politikasi 301 ile buraya yönlendiği için doğru tasarımlı
+  şablon erişilemez durumdaydı.
 
-  ⛔ YENİ TASARIM ÜRETİLMEDİ (md.16): onaylı `via-legal-page` bölümü BİREBİR
-  çağrılıyor. Bölüm `template.name == 'policy'` olduğunda doc='politika' ölçer,
-  başlığı `page_title`, gövdeyi `page_description` ile Shopify'ın kendi politika
-  metninden alır. Yani tek kaynak: via-legal-page.liquid.
+  ⛔ YENİ TASARIM ÜRETİLMEDİ: onaylı `via-legal-page` bölümü BİREBİR çağrılıyor.
+  Bölüm `template.name == 'policy'` olduğunda doc='politika' ölçer; başlığı
+  `page_title`, gövdeyi `page_description` ile Shopify'ın kendi politika
+  metninden alır. Tek kaynak: sections/via-legal-page.liquid.
 
-  Bu dosya TÜM /policies/* sayfalarını kapsar (gizlilik · iade · şartlar ·
-  kargo) — hepsi aynı kabuğa oturur.
+  TÜM /policies/* sayfalarını kapsar (gizlilik · iade · şartlar · kargo).
+  GERİ ALMA: bu dosyayı silmek yeter — Shopify varsayılan kabuğa döner.
 {%- endcomment -%}
 {% section 'via-legal-page' %}

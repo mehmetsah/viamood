@@ -83,3 +83,27 @@ describe('(3) — panelden "Son güncelleme" alanı KALDIRILDI', () => {
     expect(idler).toContain('doc_handle');     // asıl seçici YERİNDE
   });
 });
+
+describe('⛔ LIQUID KAPISI — etiket içinde süslü parantez YASAK', () => {
+  it('`{% liquid %}` bloğunun İÇİNDE `{%` ya da `%}` YOK', () => {
+    // ÖLÇÜLEN CANLI ARIZA (17 Eki 2026): yorum satırına örnek olarak
+    // `{%` … `%}` yazmıştım; Liquid çözümleyici etiketi O NOKTADA kapattı,
+    // altındaki `case doc` / `assign updated` HİÇ koşmadı ve canlı yasal
+    // sayfalarda vl-title + vl-meta BOŞ çıktı. Yedekten geri dönülüp
+    // yorumlar sadeleştirildi. Bu kapı aynı hatayı bir daha geçirmez.
+    const ham = oku('via-legal-page.liquid.994357-YENI');
+    const m = ham.match(/\{%-?\s*liquid([\s\S]*?)-%\}/);
+    expect(m).toBeTruthy();
+    expect(m![1]).not.toContain('%}');
+    expect(m![1]).not.toContain('{%');
+  });
+
+  it('canlı sürümün korunan parçaları yamada DURUYOR (ezme yok)', () => {
+    // Yama CANLI dosyadan türetildi (tema deposu HEAD'i GERİDE: HalkÖde metni
+    // ve 'sayfa' dalı canlıda var, depoda yok). Depo tabanlı yama uygulanırsa
+    // bunlar SİLİNİRDİ — bu iddia o sessiz geri almayı yakalar.
+    const ham = oku('via-legal-page.liquid.994357-YENI');
+    expect(ham).toContain('HalkÖde');
+    expect(ham).toContain("when 'sayfa'");
+  });
+});
