@@ -35,7 +35,17 @@
         <circle cx="7" cy="18.5" r="1.6"/><circle cx="17.5" cy="18.5" r="1.6"/>
       </svg>
     </span>
-    <span class="vks-satir__metin"><strong data-vks-sure></strong> içinde sipariş verirseniz <strong data-vks-gun></strong></span>
+    {%- comment -%}
+      ⚠ `data-vks-onek` SARMALI, 12 SAAT EŞİĞİNİN TUTAMAĞIDIR (#994352 madde 4,
+      ŞAH kararı · md.46). 12 saatten fazla kalan süre kıtlık üretmiyor ve
+      "43 saat içinde sipariş verirseniz" cümlesi mantıken zayıf okunuyor;
+      o aralıkta bu sarmal gizlenir ve satır yalnız gün sözünü söyler.
+      Boşluk ("verirseniz ") BİLEREK sarmalın İÇİNDEDİR — dışarıda kalsa
+      sarmal gizlendiğinde satır boşlukla başlardı.
+      Kutu kipinde bu sarmal YOKTUR, bu yüzden ürün sayfası kartı eşikten
+      ETKİLENMEZ (Ayşe: "kutu kipinde sayaç en belirgin ikinci öğe").
+    {%- endcomment -%}
+    <span class="vks-satir__metin"><span class="vks-satir__onek" data-vks-onek><strong data-vks-sure></strong> içinde sipariş verirseniz </span><strong data-vks-gun></strong></span>
   </div>
 {%- else -%}
 <div class="vks" data-vks data-sunucu-ts="{{ 'now' | date: '%s' }}" hidden>
@@ -89,7 +99,26 @@
   .vks-satir__ikon{ flex:0 0 auto; display:flex; }
   .vks-satir__ikon svg{ width:15px; height:15px; display:block; }
   .vks-satir__metin{ min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  .vks-satir strong{ font-weight:var(--font-weight-semibold, 600); color:inherit; }
+  /* İKİ KADEMELİ OKUMA (Ayşe inceleme madde 3): satırın gövdesi soluk
+     (opacity-subdued .64) kalır, RAKAM tam kontrast alır. Önceki hâlde
+     `color:inherit` yüzünden rakam satırın en soluk öğesiydi — kutu kipinde
+     sayaç en belirgin ikinci öğe olduğu için iki kip ters hiyerarşi
+     konuşuyordu. */
+  .vks-satir strong{ font-weight:var(--font-weight-semibold, 600); color:rgb(var(--color-foreground-rgb)); }
+  /* 12 saat eşiği sarmalı gizlerken `hidden` niteliğinin tarayıcı
+     varsayılanına GÜVENİLMEZ: tema CSS'i bir noktada display atarsa nitelik
+     sessizce etkisiz kalır (bu depoda ölçülmüş sınıf). Açıkça kapatılır. */
+  .vks-satir__onek[hidden]{ display:none; }
+
+  /* SON 1 SAAT — SATIR KİPİ (Ayşe inceleme madde 1, KAPATICI).
+     JS `vks--acil` sınıfını satıra DA ekliyordu ama CSS karşılığı yalnız
+     kutu için vardı; kesime 1 saat kalınca ürün kartı turuncuya dönüp nabız
+     atarken kullanıcının sürekli gördüğü sabit çubuk soluk gri kalıyordu —
+     aciliyet en değerli olduğu anda kayboluyordu.
+     ⚠ ZEMİN VE NABIZ BİLEREK YOK: çubukta gürültü yapar ve CTA turuncusuyla
+     yarışır (Ayşe'nin açık kararı). Yalnız renk konuşur. */
+  .vks-satir.vks--acil{ color:#d4502a; }
+  .vks-satir.vks--acil strong{ color:#d4502a; font-weight:700; }
 
   @media (max-width: 749px){
     .vks{ gap:11px; padding:12px 13px; font-size:14px; }
@@ -170,10 +199,26 @@
       if (!d){ kok.hidden = true; continue; }
       var sureEl = kok.querySelector('[data-vks-sure]'),
           gunEl  = kok.querySelector('[data-vks-gun]'),
-          sayEl  = kok.querySelector('[data-vks-sayac]');
+          sayEl  = kok.querySelector('[data-vks-sayac]'),
+          onekEl = kok.querySelector('[data-vks-onek]');
       kok.hidden = false;
+      // 12 SAAT EŞİĞİ — YALNIZ SATIR KİPİ (#994352 madde 4, ŞAH kararı md.46;
+      // Ayşe'nin önerisi: "sayaç kıtlık hissi içindir, 43 saat kıtlık
+      // üretmez"). Eşik kipe DEĞİL, sarmalın VARLIĞINA bakar: kutu kipinde
+      // [data-vks-onek] hiç basılmadığı için `onekEl` null olur ve ürün
+      // sayfası kartı eski davranışını BİREBİR sürdürür. Kip adını ikinci
+      // kez okumak (data-vks-kip==='satir') aynı bilgiyi iki kaynağa
+      // yazmak olurdu — bu depoda ölçülmüş sessiz kayma sınıfı.
+      var onekGizli = !!onekEl && d.kalan > 12 * 3600;
+      if (onekEl) onekEl.hidden = onekGizli;
       if (sureEl) sureEl.textContent = sureYaz(d.kalan);
-      if (gunEl)  gunEl.textContent  = d.etiket;
+      // Sarmal gizliyken gün sözü satırın İLK kelimesi olur; 'bugün kargoda'
+      // küçük harfle başlayıp cümle gibi okunmazdı. Büyük harf YALNIZ o
+      // durumda uygulanır — sarmal açıkken "… verirseniz bugün kargoda"
+      // cümlenin ortasıdır ve küçük harf doğrudur.
+      if (gunEl)  gunEl.textContent  = onekGizli
+                    ? d.etiket.charAt(0).toLocaleUpperCase('tr-TR') + d.etiket.slice(1)
+                    : d.etiket;
       if (sayEl)  sayEl.textContent  = sayacYaz(d.kalan);   // satır kipinde yok
       kok.classList.toggle('vks--acil', d.bugun && d.kalan < 3600);
     }
