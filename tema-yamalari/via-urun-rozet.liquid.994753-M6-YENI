@@ -1,0 +1,135 @@
+{%- comment -%}
+  ================= USTU CIZILI - TEMAYA BASILMAZ (20 Eki 2026, Okan) =================
+  BU DOSYA CANLIDA DEGIL ve CANLIYA PUT EDILMEMELIDIR.
+  Yayindaki kanonik rozet: snippets/via-kampanya-rozeti.liquid + assets/via-product-overrides.css
+  (.vkr / .vkr__ol / .vkr__rozet); galeri onu dort noktadan, forloop.first kapisiyla,
+  render 'via-kampanya-rozeti' gorsel: media.preview_image argumaniyla cagiriyor.
+  Depo karsiligi: dal kod/994753-m6-birlesik, tema-yamalari/via-kampanya-rozeti.*
+  TEHLIKE: bu dosya temaya basilirsa rozet IKI KEZ cikar (iki ayri sinif adi, ayni is).
+  NEDEN USTU CIZILI: buradaki yol orani vrz_urun.featured_media.preview_image.aspect_ratio
+  ile CSS aspect-ratio uzerinden kuruyordu; galerinin o slaytta bastigi medya farkli olunca
+  mobilde katman boyanan gorselden %112.95 buyuk olculdu. Kanonik yol orani SLAYTIN KENDI
+  medyasinden (gorsel: media.preview_image) alip gorunmez olcer SVG ile tasiyor; 20 Eki
+  canli olcumu 5 urun x 2 viewport = 10/10 yesil (olcer sapmasi 0.0-0.6 px, kare ve yatay
+  gorseller dahil). Olcum: raporlar/994753-m6-canli-dogrulama-20261020.md
+  KAYIT DEGERI (silinmedi): SAH'in cift kutuplu cerceve olcumu (kontrast 1.51) ve
+  available stok kapisi BURADAN kanonik dosyaya tasindi; gerekce kaydi budur.
+  =====================================================================================
+
+  #994753 · m6 — ÜRÜN GÖRSELİ ÜSTÜ KAMPANYA ROZETİ  ·  snippets/via-urun-rozet.liquid
+  Tasarım: Ayşe (karar ayse:703, %100) · Onay: ŞAH (%100) — md.31 2/2, ŞIK A seçildi.
+
+  NEDEN ŞIK A (ölçüm, 540x720 GERÇEK kutu — Ayşe'nin 272px önizlemesi değil):
+    kaplama      A %0.99 masaüstü / %1.57 mobil   ·  B %13.01 / %16.35  ·  C %2.56 / %4.03
+    satır sayısı A 1 (hiç sarmaz)                 ·  B 2 (sarar)        ·  C 2
+    B elendi: alt perde fotoğrafın %13-16'sını örter VE görsele basılı "BPA FREE"
+             rozetinin üstüne biner (iki ayrı rozet dili çakışır).
+    C elendi: beyaz dolgulu ikinci rozet açık fotoğrafta erir — rozet/foto kontrastı
+             mobilde 2.08 (3:1 altı). Bu yüzden aşağıda BEYAZ DOLGULU VARYANT YOKTUR.
+
+  ŞAH DÜZELTMESİ (Ayşe'nin ölçümünde yoktu): dolu rozetin fotoğraftan ayrışması
+  ölçüldü = 1.51 (bu üründe sol üst köşe KOYU granit). Tek yönlü gölge yetmiyor:
+  koyu fotoğrafta koyu gölge görünmez. Çözüm ÇİFT KUTUPLU çerçeve — dışta beyaz
+  saç teli (koyu fotoğrafta ayırır), altta koyu gölge (açık fotoğrafta ayırır).
+  Yeni renk/yarıçap/font ÜRETİLMEDİ (md.16): beyaz zaten rozetin kendi yazı rengi.
+
+  KULLANIM (ürün görseli kapsayıcısında, görselden SONRA):
+    {%- render 'via-urun-rozet', urun: product -%}
+  Kapsayıcı position:relative olmalı; değilse .via-rz-kat sayfaya taşar.
+{%- endcomment -%}
+
+{%- liquid
+  assign vrz_urun = urun | default: product
+  # BOYANAN GORSEL ORANI — object-fit:contain matematigi icin (bkz. .via-rz-kat).
+  # Galeri `oran:` ile gecer; gecmezse urunun one cikan gorselinden turetilir.
+  assign vrz_oran = oran
+  if vrz_oran == blank
+    assign vrz_oran = vrz_urun.featured_media.preview_image.aspect_ratio
+  endif
+  if vrz_oran == blank
+    assign vrz_oran = 1
+  endif
+  assign vrz_goster = false
+  # Rozet YALNIZ vaadin gerçekten geçerli olduğu üründe çıkar:
+  # stokta + ücretsiz kargo eşiğini sağlıyor. Yoksa hiç basılmaz (düzen bozulmaz).
+  if vrz_urun != blank and vrz_urun.available
+    assign vrz_goster = true
+  endif
+-%}
+
+{%- if vrz_goster -%}
+  <div class="via-rz-kat" data-via-rz-kat style="--vrz-oran: {{ vrz_oran }};">
+    <span class="via-rz via-rz--dolu" data-via-rz="kargo">
+      <svg class="via-rz__ikon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+           stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+        <path d="M3 7h11v9H3z"/><path d="M14 10h4l3 3v3h-7z"/>
+        <circle cx="7" cy="18.5" r="1.6"/><circle cx="17.5" cy="18.5" r="1.6"/>
+      </svg>
+      <span class="via-rz__yazi">Kargo Ücretsiz</span>
+    </span>
+  </div>
+
+  <style>
+    /* Jetonlar ÖLÇÜLDÜ, uydurulmadı (canlı ürün sayfası 19 Eki 2026):
+       gövde Inter · birincil rgb(242 83 52) · buton yarıçapı 4px.
+       Kargo yeşili #1C6B45 mağazanın kampanya satırında ZATEN kullanılıyor. */
+    /* DIKKAT - KATMAN = BOYANAN GÖRSELİN KENDİSİ, kapsayıcı kutu DEĞİL.
+       Ölçülen arıza (19-20 Eki, iki tur): kapsayıcı 540x720 ama görselin doğal
+       oranı 1015x1524 ve `object-fit:contain` => BOYANAN görsel 480x720, iki yanda
+       30px mektup kutusu. `top/left:12px` kutunun köşesi olduğu için rozet
+       fotoğrafın 19px (mobilde 25px) DIŞINDA, beyaz boşlukta kalıyordu.
+       `getBoundingClientRect()` "içinde" diyordu — eleman kutusunu ölçtüğü için.
+       Aşağıdaki üçlü (`inset:0` + `margin:auto` + `aspect-ratio`) tarayıcının
+       `contain` hesabının birebir aynısıdır: katman her oranda boyanan görselle
+       çakışır, rozet de onun 12px içinde oturur. */
+    .via-rz-kat {
+      position: absolute;
+      inset: 0;
+      margin: auto;
+      aspect-ratio: var(--vrz-oran, 1);
+      max-width: 100%;
+      max-height: 100%;
+      padding: 12px;
+      display: flex;
+      align-items: flex-start;
+      justify-content: flex-start;
+      box-sizing: border-box;
+      z-index: 2;
+      pointer-events: none;   /* galeri ok/zoom tıklamasını yutmaz */
+    }
+    .via-rz {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;       /* nefes: dikey 8px ≥6px VE 4px ızgarasında */
+      border-radius: 4px;      /* temanın buton yarıçapı */
+      font-family: inherit;
+      font-size: 11px;         /* nefes: ≥11px */
+      line-height: 1.35;       /* nefes: ≥1.3, px'e çakılmadı */
+      font-weight: 600;
+      letter-spacing: .01em;
+      white-space: nowrap;
+      background: #fff;
+      color: var(--via-rz-renk, #1a1a1f);
+    }
+    .via-rz--dolu {
+      background: var(--via-rz-renk, #1C6B45);
+      color: #fff;
+      /* ÇİFT KUTUPLU ÇERÇEVE — #994753 m6 ŞAH ölçümü (1.51 kontrast):
+         1) beyaz saç teli: KOYU fotoğrafta rozeti ayırır
+         2) koyu gölge:     AÇIK fotoğrafta rozeti ayırır
+         Hangi fotoğraf gelirse gelsin biri her zaman iş görür. */
+      box-shadow:
+        0 0 0 1px rgba(255, 255, 255, .55),
+        0 1px 3px rgba(16, 16, 24, .35);
+    }
+    .via-rz[data-via-rz="kargo"] { --via-rz-renk: #1C6B45; }
+    .via-rz__ikon { width: 13px; height: 13px; flex: 0 0 auto; display: block; }
+
+    /* Mobil: kutu daralır, rozet aynı kalır — 430px'te taşma ölçüldü = yok. */
+    @media (max-width: 640px) {
+      .via-rz-kat { padding: 8px; }
+    }
+    /* Hareket hassasiyeti: rozet animasyonsuz, ek kural gerekmez. */
+  </style>
+{%- endif -%}
