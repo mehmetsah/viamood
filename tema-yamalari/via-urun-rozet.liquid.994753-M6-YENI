@@ -23,6 +23,15 @@
 
 {%- liquid
   assign vrz_urun = urun | default: product
+  # BOYANAN GORSEL ORANI — object-fit:contain matematigi icin (bkz. .via-rz-kat).
+  # Galeri `oran:` ile gecer; gecmezse urunun one cikan gorselinden turetilir.
+  assign vrz_oran = oran
+  if vrz_oran == blank
+    assign vrz_oran = vrz_urun.featured_media.preview_image.aspect_ratio
+  endif
+  if vrz_oran == blank
+    assign vrz_oran = 1
+  endif
   assign vrz_goster = false
   # Rozet YALNIZ vaadin gerçekten geçerli olduğu üründe çıkar:
   # stokta + ücretsiz kargo eşiğini sağlıyor. Yoksa hiç basılmaz (düzen bozulmaz).
@@ -32,7 +41,7 @@
 -%}
 
 {%- if vrz_goster -%}
-  <div class="via-rz-kat" data-via-rz-kat>
+  <div class="via-rz-kat" data-via-rz-kat style="--vrz-oran: {{ vrz_oran }};">
     <span class="via-rz via-rz--dolu" data-via-rz="kargo">
       <svg class="via-rz__ikon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
            stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
@@ -47,10 +56,27 @@
     /* Jetonlar ÖLÇÜLDÜ, uydurulmadı (canlı ürün sayfası 19 Eki 2026):
        gövde Inter · birincil rgb(242 83 52) · buton yarıçapı 4px.
        Kargo yeşili #1C6B45 mağazanın kampanya satırında ZATEN kullanılıyor. */
+    /* DIKKAT - KATMAN = BOYANAN GÖRSELİN KENDİSİ, kapsayıcı kutu DEĞİL.
+       Ölçülen arıza (19-20 Eki, iki tur): kapsayıcı 540x720 ama görselin doğal
+       oranı 1015x1524 ve `object-fit:contain` => BOYANAN görsel 480x720, iki yanda
+       30px mektup kutusu. `top/left:12px` kutunun köşesi olduğu için rozet
+       fotoğrafın 19px (mobilde 25px) DIŞINDA, beyaz boşlukta kalıyordu.
+       `getBoundingClientRect()` "içinde" diyordu — eleman kutusunu ölçtüğü için.
+       Aşağıdaki üçlü (`inset:0` + `margin:auto` + `aspect-ratio`) tarayıcının
+       `contain` hesabının birebir aynısıdır: katman her oranda boyanan görselle
+       çakışır, rozet de onun 12px içinde oturur. */
     .via-rz-kat {
       position: absolute;
-      top: 12px;
-      left: 12px;
+      inset: 0;
+      margin: auto;
+      aspect-ratio: var(--vrz-oran, 1);
+      max-width: 100%;
+      max-height: 100%;
+      padding: 12px;
+      display: flex;
+      align-items: flex-start;
+      justify-content: flex-start;
+      box-sizing: border-box;
       z-index: 2;
       pointer-events: none;   /* galeri ok/zoom tıklamasını yutmaz */
     }
@@ -85,7 +111,7 @@
 
     /* Mobil: kutu daralır, rozet aynı kalır — 430px'te taşma ölçüldü = yok. */
     @media (max-width: 640px) {
-      .via-rz-kat { top: 8px; left: 8px; }
+      .via-rz-kat { padding: 8px; }
     }
     /* Hareket hassasiyeti: rozet animasyonsuz, ek kural gerekmez. */
   </style>
