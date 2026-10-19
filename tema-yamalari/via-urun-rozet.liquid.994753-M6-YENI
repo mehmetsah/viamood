@@ -1,0 +1,92 @@
+{%- comment -%}
+  #994753 · m6 — ÜRÜN GÖRSELİ ÜSTÜ KAMPANYA ROZETİ  ·  snippets/via-urun-rozet.liquid
+  Tasarım: Ayşe (karar ayse:703, %100) · Onay: ŞAH (%100) — md.31 2/2, ŞIK A seçildi.
+
+  NEDEN ŞIK A (ölçüm, 540x720 GERÇEK kutu — Ayşe'nin 272px önizlemesi değil):
+    kaplama      A %0.99 masaüstü / %1.57 mobil   ·  B %13.01 / %16.35  ·  C %2.56 / %4.03
+    satır sayısı A 1 (hiç sarmaz)                 ·  B 2 (sarar)        ·  C 2
+    B elendi: alt perde fotoğrafın %13-16'sını örter VE görsele basılı "BPA FREE"
+             rozetinin üstüne biner (iki ayrı rozet dili çakışır).
+    C elendi: beyaz dolgulu ikinci rozet açık fotoğrafta erir — rozet/foto kontrastı
+             mobilde 2.08 (3:1 altı). Bu yüzden aşağıda BEYAZ DOLGULU VARYANT YOKTUR.
+
+  ŞAH DÜZELTMESİ (Ayşe'nin ölçümünde yoktu): dolu rozetin fotoğraftan ayrışması
+  ölçüldü = 1.51 (bu üründe sol üst köşe KOYU granit). Tek yönlü gölge yetmiyor:
+  koyu fotoğrafta koyu gölge görünmez. Çözüm ÇİFT KUTUPLU çerçeve — dışta beyaz
+  saç teli (koyu fotoğrafta ayırır), altta koyu gölge (açık fotoğrafta ayırır).
+  Yeni renk/yarıçap/font ÜRETİLMEDİ (md.16): beyaz zaten rozetin kendi yazı rengi.
+
+  KULLANIM (ürün görseli kapsayıcısında, görselden SONRA):
+    {%- render 'via-urun-rozet', urun: product -%}
+  Kapsayıcı position:relative olmalı; değilse .via-rz-kat sayfaya taşar.
+{%- endcomment -%}
+
+{%- liquid
+  assign vrz_urun = urun | default: product
+  assign vrz_goster = false
+  # Rozet YALNIZ vaadin gerçekten geçerli olduğu üründe çıkar:
+  # stokta + ücretsiz kargo eşiğini sağlıyor. Yoksa hiç basılmaz (düzen bozulmaz).
+  if vrz_urun != blank and vrz_urun.available
+    assign vrz_goster = true
+  endif
+-%}
+
+{%- if vrz_goster -%}
+  <div class="via-rz-kat" data-via-rz-kat>
+    <span class="via-rz via-rz--dolu" data-via-rz="kargo">
+      <svg class="via-rz__ikon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+           stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+        <path d="M3 7h11v9H3z"/><path d="M14 10h4l3 3v3h-7z"/>
+        <circle cx="7" cy="18.5" r="1.6"/><circle cx="17.5" cy="18.5" r="1.6"/>
+      </svg>
+      <span class="via-rz__yazi">Kargo Ücretsiz</span>
+    </span>
+  </div>
+
+  <style>
+    /* Jetonlar ÖLÇÜLDÜ, uydurulmadı (canlı ürün sayfası 19 Eki 2026):
+       gövde Inter · birincil rgb(242 83 52) · buton yarıçapı 4px.
+       Kargo yeşili #1C6B45 mağazanın kampanya satırında ZATEN kullanılıyor. */
+    .via-rz-kat {
+      position: absolute;
+      top: 12px;
+      left: 12px;
+      z-index: 2;
+      pointer-events: none;   /* galeri ok/zoom tıklamasını yutmaz */
+    }
+    .via-rz {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;       /* nefes: dikey 8px ≥6px VE 4px ızgarasında */
+      border-radius: 4px;      /* temanın buton yarıçapı */
+      font-family: inherit;
+      font-size: 11px;         /* nefes: ≥11px */
+      line-height: 1.35;       /* nefes: ≥1.3, px'e çakılmadı */
+      font-weight: 600;
+      letter-spacing: .01em;
+      white-space: nowrap;
+      background: #fff;
+      color: var(--via-rz-renk, #1a1a1f);
+    }
+    .via-rz--dolu {
+      background: var(--via-rz-renk, #1C6B45);
+      color: #fff;
+      /* ÇİFT KUTUPLU ÇERÇEVE — #994753 m6 ŞAH ölçümü (1.51 kontrast):
+         1) beyaz saç teli: KOYU fotoğrafta rozeti ayırır
+         2) koyu gölge:     AÇIK fotoğrafta rozeti ayırır
+         Hangi fotoğraf gelirse gelsin biri her zaman iş görür. */
+      box-shadow:
+        0 0 0 1px rgba(255, 255, 255, .55),
+        0 1px 3px rgba(16, 16, 24, .35);
+    }
+    .via-rz[data-via-rz="kargo"] { --via-rz-renk: #1C6B45; }
+    .via-rz__ikon { width: 13px; height: 13px; flex: 0 0 auto; display: block; }
+
+    /* Mobil: kutu daralır, rozet aynı kalır — 430px'te taşma ölçüldü = yok. */
+    @media (max-width: 640px) {
+      .via-rz-kat { top: 8px; left: 8px; }
+    }
+    /* Hareket hassasiyeti: rozet animasyonsuz, ek kural gerekmez. */
+  </style>
+{%- endif -%}
