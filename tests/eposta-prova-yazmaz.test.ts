@@ -89,7 +89,7 @@ describe('terkTara — prova kipi', () => {
 
 describe('gonderimTuru — prova kipi', () => {
   const BEKLEYEN = [{ id: 'g-1', tetikId: 't-1', adim: 1, planlananAn: new Date('2026-10-16T11:00:00Z'), kanal: 'email' }];
-  const TETIK = [{ akis: AKIS.HOS_GELDIN, email: 'musteri@ornek.com', cartId: null, iptalSebebi: null }];
+  const TETIK = [{ akis: AKIS.HOS_GELDIN, email: 'musteri@ornek.com', cartId: null, iptalSebebi: null, iysOnayi: true }];
   const SON_KUPON: unknown[] = [];   // hiç kupon yok ⇒ 60 gün freni KAPALI (adım 1 KUPONLU)
 
   it('PROVA: ne mail gider, ne damga yazılır, ne kupon açılır', async () => {
