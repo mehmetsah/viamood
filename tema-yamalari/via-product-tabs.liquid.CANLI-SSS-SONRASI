@@ -43,38 +43,67 @@
 </script>
 <script>
 (function(){
+  // Shopify metafield veri kaynağıdır; izinli JSON API ikinci güvenli yoldur.
+  // Sekmeler daha önce kurulmuşsa da SSS eklenir: eski erken-return hatası gider.
+  function sssEkle(root, sss){
+    if (!root || !Array.isArray(sss) || !sss.length || root.querySelector('[data-vm-sss]')) return;
+    var last = root.querySelectorAll('details[data-testid="accordion-details"]');
+    if (!last.length) return;
+    var host = last[last.length - 1].closest('accordion-custom') || last[last.length - 1].parentNode;
+    if (!host || !host.parentNode) return;
+    var ac = document.createElement('accordion-custom');
+    var dt = document.createElement('details');
+    dt.className = 'details'; dt.setAttribute('data-testid', 'accordion-details'); dt.setAttribute('data-vm-sss', '1');
+    var sm = document.createElement('summary');
+    sm.className = 'details__header'; sm.textContent = 'Sıkça Sorulan Sorular';
+    var dc = document.createElement('div'); dc.className = 'details-content details__content';
+    sss.forEach(function(k){
+      if (!k || typeof k.soru !== 'string' || typeof k.cevap !== 'string' || !k.soru.trim() || !k.cevap.trim()) return;
+      var w = document.createElement('div'); w.className = 'vm-sss-oge';
+      var q = document.createElement('p'); q.className = 'vm-sss-soru';
+      var b = document.createElement('strong'); b.textContent = k.soru; q.appendChild(b);
+      var a = document.createElement('p'); a.className = 'vm-sss-cevap'; a.textContent = k.cevap;
+      w.appendChild(q); w.appendChild(a); dc.appendChild(w);
+    });
+    if (!dc.children.length) return;
+    dt.appendChild(sm); dt.appendChild(dc); ac.appendChild(dt);
+    host.parentNode.insertBefore(ac, host.nextSibling);
+
+    // AJAX metafield/API geldikten SONRA var olan sekme nav'ına güvenle bağla.
+    var nav = root.querySelector('.vp-tabnav');
+    if (nav) {
+      var btn = document.createElement('button');
+      btn.type = 'button'; btn.className = 'vp-tab'; btn.textContent = 'Sıkça Sorulan Sorular';
+      btn.addEventListener('click', function(){
+        root.querySelectorAll('details[data-testid="accordion-details"]').forEach(function(x){x.classList.remove('vp-active');});
+        nav.querySelectorAll('.vp-tab').forEach(function(x){x.classList.remove('vp-active');});
+        dt.open = true; dt.classList.add('vp-active'); btn.classList.add('vp-active');
+      });
+      // Eski sekme dinleyicileri statik NodeList tutar; yeni SSS'yi kapatabilsinler.
+      nav.addEventListener('click', function(e){
+        if (e.target !== btn) { dt.classList.remove('vp-active'); btn.classList.remove('vp-active'); }
+      }, true);
+      nav.appendChild(btn);
+    }
+  }
+
   function init(){
     var root = document.querySelector('[data-testid="product-information-details"]');
-    if (!root || root.classList.contains('vp-tabbed')) return;
-    // SSS sekmesi: veri varsa accordion listesinin SONUNA ekle (yoksa hic dokunma)
-    try {
-      var sss = window.__vmSSS;
-      if (sss && sss.length && !root.querySelector('[data-vm-sss]')) {
-        var last = root.querySelectorAll('details[data-testid="accordion-details"]');
-        if (last.length) {
-          var host = last[last.length - 1].closest('accordion-custom') || last[last.length - 1].parentNode;
-          var ac = document.createElement('accordion-custom');
-          var dt = document.createElement('details');
-          dt.className = 'details'; dt.setAttribute('data-testid', 'accordion-details'); dt.setAttribute('data-vm-sss', '1');
-          var sm = document.createElement('summary');
-          sm.className = 'details__header'; sm.textContent = 'Sıkça Sorulan Sorular';
-          var dc = document.createElement('div');
-          dc.className = 'details-content details__content';
-          sss.forEach(function (k) {
-            if (!k || !k.soru || !k.cevap) return;
-            var w = document.createElement('div'); w.className = 'vm-sss-oge';
-            var q = document.createElement('p'); q.className = 'vm-sss-soru';
-            var b = document.createElement('strong'); b.textContent = k.soru; q.appendChild(b);
-            var a = document.createElement('p'); a.className = 'vm-sss-cevap'; a.textContent = k.cevap;
-            w.appendChild(q); w.appendChild(a); dc.appendChild(w);
-          });
-          if (dc.children.length) {
-            dt.appendChild(sm); dt.appendChild(dc); ac.appendChild(dt);
-            host.parentNode.insertBefore(ac, host.nextSibling);
-          }
-        }
+    if (!root) return;
+    var sss = window.__vmSSS;
+    if (Array.isArray(sss) && sss.length) sssEkle(root, sss);
+    else if (!root.dataset.vmSssFetch) {
+      root.dataset.vmSssFetch = '1';
+      var handle = {{ product.handle | default: closest.product.handle | json }};
+      if (handle && window.fetch) {
+        fetch('https://hesap.viamood.com.tr/api/v1/urun-sss?handle=' + encodeURIComponent(handle),
+              { credentials: 'omit', mode: 'cors' })
+          .then(function(r){ if (!r.ok) return null; return r.json(); })
+          .then(function(data){ if (data && data.ok && Array.isArray(data.sss)) sssEkle(root, data.sss); })
+          .catch(function(){ /* vitrin API erişilemezse mevcut akordeon bozulmaz */ });
       }
-    } catch (e) {}
+    }
+    if (root.classList.contains('vp-tabbed')) return;
     var items = root.querySelectorAll('details[data-testid="accordion-details"]');
     if (items.length < 2) return; // 0-1 bölüm → akordeon kalsın
     var nav = document.createElement('div');

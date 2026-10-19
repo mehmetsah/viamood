@@ -77,6 +77,9 @@ async function shopifyTazele(handle: string): Promise<string | null> {
       .where(and(eq(urunSss.urunHandle, handle), eq(urunSss.acik, true)))
       .orderBy(asc(urunSss.sira));
     const r = await sssSenkronla(handle, kayitlar);
+    // Kapalı kill switch BAŞARI değildir: DB'ye kaydolur fakat Shopify vitrinine
+    // aktarılmaz. Başarılı görünürse içerik doldurulsa dahi SSS boş kalır.
+    if (r.ok && 'atlandi' in r) return 'Shopify SSS senkronu kapalı (SSS_METAFIELD_SENKRON=1 gerekli)';
     return r.ok ? null : r.hata;
   } catch (e) {
       if (yonlendirmeMi(e)) throw e; // Next yönlendirmesi — yutma
