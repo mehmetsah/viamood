@@ -13,19 +13,22 @@
  * Spam savunması: alan-bazlı uzunluk sınırı + honeypot + IP hash rate-limit (TODO).
  */
 import crypto from 'node:crypto';
+import { eskiKopruAnahtari, imzaGecerliMi } from '@/lib/storefront/imza';
 import { NextResponse, type NextRequest } from 'next/server';
-import { and, desc, eq, sql } from 'drizzle-orm';
+import { and, desc, eq, gt, sql } from 'drizzle-orm';
 import { db } from '@/db/client';
 import { env } from '@/lib/env';
 import { reviews } from '@/db/schema/reviews';
-// import { orders } from '@/db/schema'; // verified-buyer eşlemesi aktive edilince
+import { orders, orderLineItems } from '@/db/schema/orders';
+import { products } from '@/db/schema/products';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
-// via-checkout.liquid / addresses köprüsüyle paylaşılan anahtar.
-// Tenant başına FARKLI olmalı (multi-instance): env varsa onu kullan; yoksa mevcut Via Mood sabiti (geriye uyumlu).
-const BRIDGE_KEY = process.env.STOREFRONT_BRIDGE_KEY ?? '15e66ee567ae0186394a79588f077a84ba483c8f341508f237bd5f7500524734';
+// İmzalama anahtarı KODA GÖMÜLEMEZ. Eski sabit anahtar public repoda
+// paylaşıldığı için güvenilir değildir ve mutlaka yenisiyle değiştirilmelidir.
+// Anahtar tanımsızsa yorum kabul edilir; verifiedBuyer=false kalır.
+const BRIDGE_KEY = (process.env.STOREFRONT_BRIDGE_KEY ?? '').trim();
 
 function corsHeaders() {
   return {
@@ -121,20 +124,46 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // Doğrulanmış alıcı: imza geçerli mi? (orders eşlemesi aktivasyonda eklenecek)
+  // İmza sadece mağaza oturum e-postasını doğrular, SATIN ALIMI DEĞİL.
+  // "Doğrulanmış alıcı" etiketi için bu ürünün TESLİM EDİLMİŞ satırı gerekir.
+  // Eski repoya yazılmış sabit anahtarın hiçbir güven değeri yoktur.
   let verifiedBuyer = false;
-  if (email && sig) {
-    const expected = crypto.createHmac('sha256', BRIDGE_KEY).update(email).digest('hex');
-    if (crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(sig.padEnd(expected.length).slice(0, expected.length)))) {
-      verifiedBuyer = true; // TODO: orders tablosunda bu e-posta ile teslim edilmiş sipariş ara.
+  if (email && productHandle && imzaGecerliMi(email, sig, BRIDGE_KEY, eskiKopruAnahtari())) {
+    try {
+      const [satir] = await db.select({ id: orderLineItems.id })
+        .from(orderLineItems)
+        .innerJoin(orders, eq(orderLineItems.orderId, orders.id))
+        .innerJoin(products, eq(orderLineItems.productId, products.id))
+        .where(and(
+          sql`lower(${orders.customerEmail}) = ${email}`,
+          eq(products.shopifyHandle, productHandle),
+          eq(orderLineItems.status, 'delivered'),
+          eq(orders.fulfillmentStatus, 'fulfilled'),
+        ))
+        .limit(1);
+      verifiedBuyer = Boolean(satir);
+    } catch {
+      // DB/ürün eşleşmesi kanıtlanamadıysa etiketi VERME (yorum yine pending).
+      verifiedBuyer = false;
     }
   }
 
+  // Tek IP'den kısa sürede yapılan toplu yorumları sınırlamayı DB üzerinde
+  // tut: process yeniden başlasa da sınır silinmesin. (Paylaşılan IP: 20/saat.)
+  const ip = req.headers.get('cf-connecting-ip') || req.headers.get('x-real-ip') ||
+    req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
   const ipHash = crypto
     .createHash('sha256')
-    .update((req.headers.get('x-forwarded-for') ?? 'unknown') + BRIDGE_KEY)
+    .update(ip + (BRIDGE_KEY || env.AUTH_SECRET))
     .digest('hex')
     .slice(0, 32);
+  const [sonSaat] = await db.select({ n: sql<number>`count(*)::int` })
+    .from(reviews)
+    .where(and(eq(reviews.ipHash, ipHash), gt(reviews.createdAt, new Date(Date.now() - 3600_000))));
+  if ((sonSaat?.n ?? 0) >= 20) {
+    return NextResponse.json({ ok: false, error: 'Çok fazla yorum denemesi. Daha sonra tekrar deneyin.' },
+      { status: 429, headers: corsHeaders() });
+  }
 
   await db.insert(reviews).values({
     source: 'customer',

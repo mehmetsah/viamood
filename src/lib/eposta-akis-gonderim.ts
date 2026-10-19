@@ -105,6 +105,7 @@ export async function gonderimTuru(
           email: epostaAkisTetikleri.email,
           cartId: epostaAkisTetikleri.cartId,
           iptalSebebi: epostaAkisTetikleri.iptalSebebi,
+          iysOnayi: epostaAkisTetikleri.iysOnayi,
         })
         .from(epostaAkisTetikleri)
         .where(eq(epostaAkisTetikleri.id, s.tetikId))
@@ -119,6 +120,14 @@ export async function gonderimTuru(
       if (tetik.iptalSebebi) {
         await isaretle(db, s.id, DURUM.IPTAL);
         ozet.atlandi += 1; say(ozet.sebepler, `iptal:${tetik.iptalSebebi}`);
+        continue;
+      }
+      // Pazarlama akışları izinsiz alıcıya GİTMEZ. Tetik anında alınmış
+      // açık onay yoksa sender'a ulaşmadan durur (gönderim tutarı/kupon
+      // da oluşmaz). Abonelikten daha sonra çıkma ayrıca sender'da denetlenir.
+      if (tetik.iysOnayi !== true) {
+        await isaretle(db, s.id, DURUM.ATLANDI, { hataMetni: 'pazarlama onayı doğrulanmadı' });
+        ozet.atlandi += 1; say(ozet.sebepler, 'iys_onayi_yok');
         continue;
       }
       if (s.kanal === 'sms') {

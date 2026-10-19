@@ -14,6 +14,9 @@ describe('handle temizleme — tam adres yapıştırsa da çalışır', () => {
     expect(handleTemizle('kirilmaz-saklama-kabi')).toBe('kirilmaz-saklama-kabi');
     expect(handleTemizle('/products/kirilmaz-saklama-kabi')).toBe('kirilmaz-saklama-kabi');
     expect(handleTemizle('products/kirilmaz-saklama-kabi/')).toBe('kirilmaz-saklama-kabi');
+    expect(handleTemizle('https://viamood.com.tr/products/kirilmaz-saklama-kabi?variant=1#detay')).toBe('kirilmaz-saklama-kabi');
+    expect(handleTemizle('https://viamood.com.tr/urunler/kirilmaz-saklama-kabi/')).toBe('kirilmaz-saklama-kabi');
+    expect(handleTemizle('/urunler/kirilmaz-saklama-kabi')).toBe('kirilmaz-saklama-kabi');
   });
   it('büyük harf ve boşluk düşer', () => {
     expect(handleTemizle('  Kirilmaz-Saklama  ')).toBe('kirilmaz-saklama');
@@ -106,6 +109,11 @@ describe('ÜRÜN KAYNAĞI — kurallar tek yerden mi geliyor', () => {
     const i = UC.indexOf('catch');
     expect(i).toBeGreaterThan(-1);
     expect(UC.slice(i, i + 200)).toMatch(/sss: \[\]/);
+  });
+
+  it('Shopify senkronu KAPALIYSA admin kullanıcıyı bilgilendiriyor', () => {
+    expect(EYLEM).toContain("SSS_METAFIELD_SENKRON=1 gerekli");
+    expect(EYLEM).toContain("'atlandi' in r");
   });
 
   it('silme sonrası sıralar yeniden diziliyor (tekil kısıt çakışmasın)', () => {

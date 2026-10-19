@@ -6,7 +6,8 @@
  * yoktu — sistem kurulu görünüyor, tek mail göndermiyordu. Çağıran burada.
  *
  * TETİKLEME (sunucu crontab / Vercel cron / external scheduler):
- *   GET https://<platform>/api/cron/eposta-akis?key=<INTERNAL_API_KEY>&limit=100
+ *   GET https://<platform>/api/cron/eposta-akis?limit=100
+ *   Authorization: Bearer <INTERNAL_API_KEY> (query parametresinde SIR YOK)
  * Önerilen sıklık: 15 dk. Spec'in en küçük adımı 1 saat olduğundan 15 dk'lık
  * yoklama en kötü hâlde 15 dk gecikme demektir; daha sık koşmak kazanç getirmez.
  *
@@ -34,10 +35,16 @@ export function akisAktifMi(deger = process.env.EPOSTA_AKIS_AKTIF): boolean {
   return (deger ?? '').trim() === '1';
 }
 
+/** Yetki yalnız Authorization başlığından gelir; URL loglarına secret yazılmaz. */
+export function cronYetkiliMi(authorization: string | null, secret: string): boolean {
+  if (!secret || !authorization?.startsWith('Bearer ')) return false;
+  const key = authorization.slice('Bearer '.length);
+  return !!key && safeEqual(key, secret);
+}
+
 export async function GET(req: NextRequest): Promise<NextResponse> {
   const secret = env.INTERNAL_API_KEY ?? '';
-  const key = req.nextUrl.searchParams.get('key') ?? '';
-  if (!secret || !safeEqual(key, secret)) {
+  if (!cronYetkiliMi(req.headers.get('authorization'), secret)) {
     return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
   }
   if (!akisAktifMi()) {

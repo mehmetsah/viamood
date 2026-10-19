@@ -78,6 +78,16 @@ interface IngestOk {
 interface IngestErr {
   ok: false;
   error: string;
+  /**
+   * #994753 · R1 — çağıran HTTP yanıt kodunu buna göre seçer:
+   *   false = KALICI hata (şema/doğrulama). Yeniden denemek aynı sonucu verir;
+   *           webhook ucu 200 döner ve kayıt ölü mektuba yazılır. 503 dönmek
+   *           Shopify'ın ~48 saat sonra ABONELİĞİ kapatmasına yol açardı.
+   *   true  = GEÇİCİ hata (DB/ağ). Yeniden deneme başarabilir ⇒ 503.
+   * Varsayılan YOKTUR: her hata yolu tipini AÇIKÇA söylemek zorundadır,
+   * yoksa "hangi hata hangi koda düşer" sorusu sessizce yanlış cevaplanır.
+   */
+  retryable: boolean;
 }
 export type IngestResult = IngestOk | IngestErr;
 
@@ -164,7 +174,8 @@ const FULFILLMENT_STATUS_MAP: Record<string, 'unfulfilled' | 'partial' | 'fulfil
 
 export async function ingestShopifyOrder(payload: ShopifyOrderPayload): Promise<IngestResult> {
   if (!payload.id || !payload.line_items || payload.line_items.length === 0) {
-    return { ok: false, error: 'Geçersiz Shopify payload (id veya line_items eksik)' };
+    // KALICI: aynı gövde yeniden gönderilse yine düşer ⇒ Shopify tekrar denemesin.
+    return { ok: false, error: 'Geçersiz Shopify payload (id veya line_items eksik)', retryable: false };
   }
 
   const shopifyOrderId = String(payload.id);

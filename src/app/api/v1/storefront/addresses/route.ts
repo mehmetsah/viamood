@@ -12,7 +12,7 @@
  * Response: { ok:true, adresler:[{label,firstName,lastName,phone,province,
  *             district,neighborhood,address1,postalCode,isDefault}] }
  */
-import crypto from 'node:crypto';
+import { eskiKopruAnahtari, imzaGecerliMi } from '@/lib/storefront/imza';
 import { NextResponse, type NextRequest } from 'next/server';
 import { desc, eq, sql } from 'drizzle-orm';
 import { db } from '@/db/client';
@@ -52,15 +52,13 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  // İmza doğrulama (sabit-zaman karşılaştırma; geçersiz hex → reddet)
-  const expected = crypto.createHmac('sha256', BRIDGE_KEY).update(email).digest();
-  let given: Buffer;
-  try {
-    given = Buffer.from(sig, 'hex');
-  } catch {
-    given = Buffer.alloc(0);
-  }
-  if (given.length !== expected.length || !crypto.timingSafeEqual(expected, given)) {
+  // #994753 · R3 — İMZA DOĞRULAMASI ARTIK TEK KAYNAKTAN. Eskiden bu uç
+  // `hmac(email)` (ham), yorum ucu ise `hmac(email.toLowerCase())` kullanıyordu;
+  // büyük harfli bir `customer.email` için aynı Liquid imzası bir uçta geçerli,
+  // ötekinde geçersiz sayılıyordu ve sonuç sessizdi. Ortak doğrulayıcı ham VE
+  // küçük harfli adayı birlikte dener, böylece bugünkü tema da ileride
+  // `| downcase` eklenmiş tema da çalışır.
+  if (!imzaGecerliMi(email, sig, BRIDGE_KEY, eskiKopruAnahtari())) {
     return NextResponse.json(
       { ok: false, error: 'imza geçersiz' },
       { status: 403, headers: corsHeaders() },
