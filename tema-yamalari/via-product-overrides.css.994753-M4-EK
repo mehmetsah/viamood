@@ -1,0 +1,66 @@
+
+/* ==================================================================
+   #994753 m4 · TİPOGRAFİ + BOŞLUK ÖLÇEĞİ — ayse:704 (Ayşe %96 + ŞAH %100)
+   Kaynak: raporlar/994753-m4-tipografi-olcek-20261019.md §2.1 · §3.1 · §5.4
+   ⚠ EŞİK 1.30 DEĞİL 1.32 (rapor §3.1): kayan noktada 26×1.3 = 33.8 →
+     33.8/26 = 1.2999999… < 1.3 ⇒ tam eşiğe nişan alınmaz, bir basamak üstü.
+   ⚠ Bu blok EKLEMEDİR; dosyanın kendi kuralları silinmedi, sonda ezilir.
+   ⚠ Yerleşim · renk · YAZI BOYUTU DEĞİŞTİRİLMEDİ — yalnız satır yüksekliği
+     ve boşluk tokenları.
+   GERİ ALMA: bu blok silinir (yedek: CANLI-YEDEK__assets__via-product-overrides.css).
+   ================================================================== */
+
+/* --- 1 · BOŞLUK TOKENLARI (19 adet, rapor §2.1) ------------------
+   `html:root` kullanıldı: tema kendi :root'unu sonra yüklerse tek sınıf
+   özgüllük farkıyla bu blok kazanır (saf :root ile kaynak sırasına kalırdı). */
+html:root{
+  --padding-3xs: 4px;  --padding-sm: 12px;  --padding-md: 12px;
+  --margin-3xs: 4px;   --margin-2xs: 4px;   --margin-sm: 12px;  --margin-md: 12px;
+  --gap-3xs: 4px;      --gap-2xs: 4px;      --gap-sm: 12px;     --gap-md: 16px;
+  --input-padding: 12px; --input-padding-x: 12px; --input-padding-y: 12px;
+  --checkbox-label-padding: 8px;
+  --checkout-button-gap: 12px;
+  --drawer-content-block-padding: 12px;
+  --drawer-inline-padding: 24px;
+  --drawer-padding: 20px;
+  --badge-rectangle-padding-inline: 12px;
+  --button-size-sm: 32px;
+}
+
+/* --- 2 · BAŞLIKLAR — ÖĞE DÜZEYİ (rapor §4.1: token yolu ÇALIŞMIYOR) ---
+   Başlık tokenları iki kez ölçüldü, etkisizdi. Bu yüzden doğrudan öğe kuralı. */
+h1,h2,h3{ line-height: 1.32 !important; }
+h4{ line-height: 1.34 !important; }
+h5,h6{ line-height: 1.40 !important; }
+
+/* --- 3 · FİYAT (1.1 → 1.32) --- */
+.price,.product-price,
+[class*=product-price__regular],[class*=price__regular],[class*=price-item--regular],
+product-price .price__sale,product-price .price__regular{
+  line-height: 1.32 !important;
+}
+
+/* --- 4 · KART MARKA SATIRI (1.2 → 1.40) --- */
+.resource-card__vendor{ line-height: 1.40 !important; }
+
+/* --- 5 · KENDİ BİLEŞENLERİMİZ (via-* snippet'leri) — 1.1/1.2 → 1.40 ---
+   Bu seçicilerin kuralları snippet'lerin kendi <style> bloklarında; burada
+   ezilir, snippet dosyalarına DOKUNULMAZ (tek dosyalık geri alma korunur). */
+.vp-tab,.vuy-btn,.vuy-btn-solid,.tax-note,.predictive-search-results__title{
+  line-height: 1.40 !important;
+}
+
+/* --- 6 · İKON-GLİF DÜĞMESİ (×) — ORTALAMA SATIR KUTUSUNDAN ALINIR ---
+   Tek karakterlik düğmede satır yüksekliği metin nefesi değil ORTALAMA aracıdır;
+   1.32'yi doğrudan vermek glifi kaydırırdı. grid + place-items ortalamayı
+   devralır ⇒ glif piksel piksel aynı yerde, ölçüt de yeşil (rapor §2.1 C). */
+.vuy-modal-close{
+  display: grid !important;
+  place-items: center !important;
+  line-height: 1.32 !important;
+}
+
+/* --- 7 · TIKLANABİLİR YÜKSEKLİK: breadcrumb + "Tümü →" ---
+   16px/19.6px olan dokunma hedefleri dikey dolguyla eşiğe çıkar. */
+.via-breadcrumb a,.vbk-all{ padding-block: 8px !important; }
+nav.via-breadcrumb{ padding-block: 8px !important; }
