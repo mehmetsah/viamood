@@ -1,0 +1,33 @@
+name: ViaMood code checks
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [fix/**]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      NODE_ENV: test
+      DATABASE_URL: postgresql://localhost:5432/viamood_test
+      REDIS_URL: redis://localhost:6379
+      AUTH_SECRET: test-auth-secret-xxxxxxxxxxxxxxxxxxxxxxxxxxxx
+      SHOPIFY_STORE_DOMAIN: test.myshopify.com
+      APP_URL: https://hesap.viamood.com.tr
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - name: Typecheck production sources
+        run: npx tsc --noEmit -p tsconfig.deploy.json
+      - name: Unit and security regressions
+        run: npx vitest run

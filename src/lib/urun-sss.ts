@@ -20,8 +20,7 @@ export function handleTemizle(v: string | null | undefined): string {
   if (/^https?:\/\//.test(input)) {
     try { path = new URL(input).pathname; } catch { return ''; }
   }
-  return path
-    .split(/[?#]/, 1)[0]
+  return (path.split(/[?#]/, 1)[0] ?? '')
     .replace(/^\/+|\/+$/g, '')
     .replace(/^(?:products|urunler)\//, '')
     .replace(/[^a-z0-9-]/g, '');
