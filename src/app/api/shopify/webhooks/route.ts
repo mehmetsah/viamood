@@ -9,6 +9,7 @@ import { accrueCommissionForOrder } from '@/lib/server/commission-service';
 import { syncOrderToMikro } from '@/lib/server/mikro-sync';
 import { autoFulfillOrder } from '@/lib/server/auto-fulfill';
 import { ingestShopifyOrder, type ShopifyOrderPayload } from '@/lib/shopify/order-ingest';
+import { oluMektupYaz } from '@/lib/shopify/olu-mektup';
 import { ingestShopifyProduct, type ShopifyProductPayload } from '@/lib/shopify/product-ingest';
 import { verifyShopifyWebhook } from '@/lib/shopify/webhook';
 
@@ -56,8 +57,17 @@ export async function POST(req: NextRequest) {
       case 'orders/create': {
         const result = await ingestShopifyOrder(payload as ShopifyOrderPayload);
         if (!result.ok) {
-          console.error('[webhook orders/create] ingest fail:', result.error);
-          return NextResponse.json({ error: result.error }, { status: 200 }); // 200 ki retry olmasın
+          console.error('[webhook orders/create] ingest fail:', result.error, 'retryable=', result.retryable);
+          // #994753 · R1 — YANIT KODU HATANIN TİPİNE GÖRE SEÇİLİR, ham gövde HER
+          // İKİ HÂLDE saklanır; yani kod ne olursa olsun sipariş kaybolmaz.
+          //   kalıcı (şema/doğrulama) → 200: tekrar deneme aynı sonucu verir ve
+          //     ısrar Shopify'ın ~48 saat sonra ABONELİĞİ kapatmasına yol açar.
+          //   geçici (DB/ağ)          → 503: Shopify tekrar denesin, ingest idempotent.
+          await oluMektupYaz({ konu: topic, webhookId, shopDomain: shop,
+            kalici: !result.retryable, hata: result.error, hamGovde: rawBody });
+          return result.retryable
+            ? NextResponse.json({ error: 'sipariş işlenemedi, tekrar denenecek' }, { status: 503 })
+            : NextResponse.json({ error: result.error, oluMektup: true }, { status: 200 });
         }
         if (result.isNew && result.matchedLineItems > 0) {
           // Routing → ardından OTOMATİK kargo etiketi (müşterinin seçtiği kurye; havale-pending bekler)
@@ -182,7 +192,14 @@ export async function POST(req: NextRequest) {
         const result = await ingestShopifyProduct(payload as ShopifyProductPayload);
         if (!result.ok) {
           console.error('[webhook products] ingest fail:', result.error);
-          return NextResponse.json({ error: result.error }, { status: 200 });
+          // Ürün senkronu BİLİNÇLİ olarak 200 kalır: kaçan bir ürün güncellemesi
+          // `scripts/backfill-products.mts` ile telafi edilebilir, oysa kalıcı 503
+          // ısrarı ürün webhook'unun aboneliğini de düşürür. Kayıp olmaması için
+          // ham gövde yine ölü mektuba yazılır.
+          await oluMektupYaz({ konu: topic, webhookId, shopDomain: shop,
+            kalici: true, hata: result.error ?? 'ürün ingest hatası (sebep bildirilmedi)',
+            hamGovde: rawBody });
+          return NextResponse.json({ error: result.error, oluMektup: true }, { status: 200 });
         }
         await logAudit({
           actorType: 'system',
@@ -210,10 +227,15 @@ export async function POST(req: NextRequest) {
     }
   } catch (err) {
     console.error('[webhook] handler error:', err);
-    // 200 dönüyoruz — retry storm'a yol açmamak için (audit'ten sonra manuel inceleme)
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : 'unknown' },
-      { status: 200 },
-    );
+    // #994753 · R1 — BURADA 200 DÖNMEK ASIL SESSİZ KAYIPTI: bu bloğa yalnız
+    // FIRLATILMIŞ istisnalar düşer (DB tıkanması, ağ, beklenmeyen hata) ve
+    // bunlar tanım gereği GEÇİCİDİR. 200 dönmek Shopify'a "başardım" demekti,
+    // yani her veritabanı kesintisi o anki siparişleri kalıcı olarak yok ediyordu.
+    // Artık 503 dönüyoruz (Shopify yeniden dener) ve ham gövdeyi de saklıyoruz —
+    // yeniden deneme hiç gelmese bile olay deftere yazılı kalır.
+    const mesaj = err instanceof Error ? err.message : 'unknown';
+    await oluMektupYaz({ konu: topic, webhookId, shopDomain: shop,
+      kalici: false, hata: mesaj, hamGovde: rawBody });
+    return NextResponse.json({ error: mesaj, oluMektup: true }, { status: 503 });
   }
 }

@@ -13,11 +13,16 @@ export type SssKayit = { soru: string; cevap: string; sira: number };
 
 /** Handle'ı ürün adresindeki biçime indirir; geçersizse boş dize. */
 export function handleTemizle(v: string | null | undefined): string {
-  return String(v ?? '')
-    .trim()
-    .toLowerCase()
+  const input = String(v ?? '').trim().toLowerCase();
+  // Admin arayüzü tam Shopify ürün adresi yapıştırmayı desteklediğini söylüyor.
+  // URL'yi önce path'e indir; alan adı / ?variant / #fragment handle'a karışmasın.
+  let path = input;
+  if (/^https?:\/\//.test(input)) {
+    try { path = new URL(input).pathname; } catch { return ''; }
+  }
+  return (path.split(/[?#]/, 1)[0] ?? '')
     .replace(/^\/+|\/+$/g, '')
-    .replace(/^products\//, '')
+    .replace(/^(?:products|urunler)\//, '')
     .replace(/[^a-z0-9-]/g, '');
 }
 
