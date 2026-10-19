@@ -13,7 +13,7 @@
  * Spam savunması: alan-bazlı uzunluk sınırı + honeypot + IP hash rate-limit (TODO).
  */
 import crypto from 'node:crypto';
-import { imzaGecerliMi } from '@/lib/reviews/verify';
+import { eskiKopruAnahtari, imzaGecerliMi } from '@/lib/storefront/imza';
 import { NextResponse, type NextRequest } from 'next/server';
 import { and, desc, eq, gt, sql } from 'drizzle-orm';
 import { db } from '@/db/client';
@@ -128,7 +128,7 @@ export async function POST(req: NextRequest) {
   // "Doğrulanmış alıcı" etiketi için bu ürünün TESLİM EDİLMİŞ satırı gerekir.
   // Eski repoya yazılmış sabit anahtarın hiçbir güven değeri yoktur.
   let verifiedBuyer = false;
-  if (email && productHandle && imzaGecerliMi(email, sig, BRIDGE_KEY)) {
+  if (email && productHandle && imzaGecerliMi(email, sig, BRIDGE_KEY, eskiKopruAnahtari())) {
     try {
       const [satir] = await db.select({ id: orderLineItems.id })
         .from(orderLineItems)
