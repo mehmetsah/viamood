@@ -160,10 +160,10 @@ async function abonelikCikmisMi(email: string): Promise<boolean> {
       .limit(1);
     return !!r;
   } catch {
-    // Tablo/DB yoksa gönderimi ENGELLEMEYİZ — ama bu hâl log'da 'izin ölçülemedi'
-    // olarak görünmez; bilinçli tercih: yasal risk < müşteriye mail gitmemesi riski
-    // DEĞİL, tersine: tablo kurulmadan pazarlama maili atılmamalı. Bkz. kayitYaz.
-    return false;
+    // FAIL-CLOSED: abonelikten çıkış veritabanı okunamıyorsa pazarlama/duyuru
+    // gönderimi güvenilir biçimde yetkilendirilemez. İşlemsel mailler bu
+    // kontrolü zaten kullanmaz; sipariş ve şifre mailleri etkilenmez.
+    return true;
   }
 }
 
@@ -198,8 +198,8 @@ export async function sendEmail(params: EmailParams): Promise<EmailSonuc> {
   // (a) İZİN KAPISI — yalnız pazarlama/duyuru. İşlemsel mail engellenmez.
   if (cikisEngelliyorMu(tip) && tekAlici && (await abonelikCikmisMi(tekAlici))) {
     await kayitYaz({ alici: tekAlici, konu: params.subject, sablon, tip,
-      basarili: false, kanal: 'engellendi', hata: 'abonelikten çıkmış' });
-    return { ok: false, error: 'alıcı abonelikten çıkmış', kanal: 'stub' };
+      basarili: false, kanal: 'engellendi', hata: 'abonelikten çıkmış veya izin kontrolü başarısız' });
+    return { ok: false, error: 'abonelikten çıkmış veya izin kontrolü başarısız', kanal: 'stub' };
   }
 
   // (b) ÇIKIŞ LİNKİ — pazarlama/duyuru gövdesine eklenir, işlemselde eklenmez.

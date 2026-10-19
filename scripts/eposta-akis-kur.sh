@@ -9,7 +9,8 @@
 #
 # ÜÇ ADIM — HEPSİ İDEMPOTENT, hiçbiri deploy'u düşürmez (best-effort; çağıran
 # `|| echo` ile sarar, `hesap-ssl.sh` ile aynı kalıp):
-#   1) .env.production'a EPOSTA_AKIS_AKTIF satırı YOKSA ekler (varsa DOKUNMAZ).
+#   1) .env.production'a EPOSTA_AKIS_AKTIF=0 ekler (varsa DOKUNMAZ).
+#      Pazarlama gönderimi yalnız doğrulama + açık aktivasyondan sonra başlar.
 #   2) crontab'a 15 dk'lık çağırıcı YOKSA ekler (varsa tekrar eklemez).
 #   3) Kuru koşu (&prova=1) ile ucu yoklar ve SONUCU LOG'A yazar.
 #
@@ -22,9 +23,8 @@
 #   Bayrağı kapatmak isteyen satırı `0` yapar; betik varsa dokunmadığı için
 #   kararı EZMEZ (md: geri dönüşü kolay).
 #
-# ⚠ ANAHTAR SATIRA GÖMÜLMEZ: cron satırı ortam dosyasını `.` ile kaynak alır ve
-#   $INTERNAL_API_KEY'i çalışma anında okur. Böylece anahtar ne crontab'da ne
-#   süreç listesinde (`ps`) görünür.
+# ⚠ ANAHTAR URL'YE / CRON'A / argv'YE GİRMEZ: ayrı yoklama betiği
+#   Authorization başlığını stdin üzerinden curl'a verir.
 set -u
 
 UYG_DIZIN="${UYG_DIZIN:-/var/www/viamood}"
@@ -44,27 +44,29 @@ else
   cp -p "$ENV_DOSYA" "$ENV_DOSYA.yedek-$(date +%Y%m%d-%H%M%S)" 2>/dev/null \
     && yaz "✓ yedek alındı: $(basename "$ENV_DOSYA").yedek-*" \
     || { yaz "⛔ yedek alınamadı — ortam dosyasına DOKUNULMADI"; exit 0; }
-  printf '\n# #994057 — e-posta akışı anahtarı (0 yaparsan akış durur, kod geri alınmaz)\nEPOSTA_AKIS_AKTIF=1\n' >> "$ENV_DOSYA" \
-    && yaz "✓ EPOSTA_AKIS_AKTIF=1 EKLENDİ" || yaz "⛔ eklenemedi"
+  printf '\n# #994057 — açık onaydan sonra elle 1 yapılır; varsayılan KAPALI\nEPOSTA_AKIS_AKTIF=0\n' >> "$ENV_DOSYA" \
+    && yaz "✓ EPOSTA_AKIS_AKTIF=0 EKLENDİ (gönderim kapalı)" || yaz "⛔ eklenemedi"
 fi
 
-# ── 2) ÇAĞIRICI: 15 dk'lık cron, yoksa ekle ─────────────────────────────────
-# md.47 dersi: "yargıç var, çağıran yok" bu deponun en sık arızası. Çağıran burada.
-if crontab -l 2>/dev/null | grep -q 'api/cron/eposta-akis'; then
-  yaz "✓ eposta-akis cron satırı zaten var — tekrar eklenmedi"
+# ── 2) ÇAĞIRICI: eski ?key= URL'li cron'u güvenli helper'a GÖÇÜR ──
+# Mevcut diğer cron'lara dokunma, yalnız bu işin eski ve yeni satırlarını
+# ayıkla. Token ne komut satırına ne HTTP sorgu dizesine girer.
+CRON_SATIR="*/15 * * * * UYG_DIZIN=\"$UYG_DIZIN\" EPOSTA_AKIS_UC=\"$UC\" bash \"$UYG_DIZIN/scripts/eposta-akis-yokla.sh\" >> \"$LOG_DIR/eposta-akis.log\" 2>&1"
+MEVCUT="$(crontab -l 2>/dev/null || true)"
+if printf '%s\n' "$MEVCUT" | grep -Fq 'scripts/eposta-akis-yokla.sh' && \
+   ! printf '%s\n' "$MEVCUT" | grep -Fq 'api/cron/eposta-akis?key='; then
+  yaz "✓ güvenli e-posta çağırıcısı zaten var"
 else
-  SATIR="*/15 * * * * . $ENV_DOSYA; curl -fsS \"$UC?key=\$INTERNAL_API_KEY&limit=100\" >> $LOG_DIR/eposta-akis.log 2>&1"
-  { crontab -l 2>/dev/null; echo "$SATIR"; } | crontab - \
-    && yaz "✓ 15 dk'lık çağırıcı crontab'a EKLENDİ" || yaz "⛔ crontab yazılamadı"
+  TEMIZ="$(printf '%s\n' "$MEVCUT" | grep -Ev 'eposta-akis-yokla\.sh|api/cron/eposta-akis' || true)"
+  { [ -z "$TEMIZ" ] || printf '%s\n' "$TEMIZ"; printf '%s\n' "$CRON_SATIR"; } | crontab - \
+    && yaz "✓ 15 dk'lık güvenli çağırıcı kuruldu/eski URL anahtarı silindi" || yaz "⛔ crontab yazılamadı"
 fi
 
-# ── 3) KURU KOŞU: yalnız ölçer ve log'a yazar, deploy'u ASLA düşürmez ───────
-# shellcheck disable=SC1090
-. "$ENV_DOSYA" 2>/dev/null
-if [ -n "${INTERNAL_API_KEY:-}" ]; then
-  YANIT=$(curl -fsS -m 15 "$UC?key=$INTERNAL_API_KEY&prova=1&limit=5" 2>/dev/null | head -c 300)
+# ── 3) KURU KOŞU: token curl stdin başlığında, log'a sır girmez ──
+if [ -f "$UYG_DIZIN/scripts/eposta-akis-yokla.sh" ]; then
+  YANIT="$(UYG_DIZIN="$UYG_DIZIN" EPOSTA_AKIS_UC="$UC" bash "$UYG_DIZIN/scripts/eposta-akis-yokla.sh" --prova 2>/dev/null | head -c 300)"
   yaz "kuru koşu yanıtı: ${YANIT:-(yanıt yok)}"
 else
-  yaz "⚠ INTERNAL_API_KEY okunamadı — kuru koşu atlandı"
+  yaz "⚠ güvenli yoklama betiği henüz yok — kuru koşu atlandı"
 fi
 exit 0

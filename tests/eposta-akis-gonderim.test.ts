@@ -27,7 +27,7 @@ import { BIRLESIR, cozumle, govdeUret } from '@/lib/eposta-kupon';
 import { gonderimTuru, kuponluAdimMi } from '@/lib/eposta-akis-gonderim';
 import { CHECKOUT_ALANLARI, epostaCikar, terkSinifi } from '@/lib/eposta-akis-tetik';
 import { akisMaili, indirimCumlesi } from '@/lib/email/templates';
-import { akisAktifMi } from '@/app/api/cron/eposta-akis/route';
+import { akisAktifMi, cronYetkiliMi } from '@/app/api/cron/eposta-akis/route';
 
 const T0 = new Date('2026-10-13T12:00:00Z');
 const KUPON = { id: 'k1', email: 'a@b.c', bitisAni: new Date('2026-10-20T12:00:00Z'), kullanildiAni: null };
@@ -58,7 +58,7 @@ const SATIR = (ek: Partial<{ adim: number; kanal: string }> = {}) => [
   { id: 'g1', tetikId: 't1', adim: ek.adim ?? 1, planlananAn: T0, kanal: ek.kanal ?? 'eposta' },
 ];
 const TETIK = (ek: Record<string, unknown> = {}) => [
-  { akis: AKIS.HOS_GELDIN, email: 'a@b.c', cartId: null, iptalSebebi: null, ...ek },
+  { akis: AKIS.HOS_GELDIN, email: 'a@b.c', cartId: null, iptalSebebi: null, iysOnayi: true, ...ek },
 ];
 
 /* ── 1) KUPON TUTARI — tavan yüzdeyi düşürmez, TUTARI tavanlar ─────────── */
@@ -148,6 +148,15 @@ describe('gönderim turu', () => {
     expect(isaretler[0]).toMatchObject({ durum: DURUM.ATLANDI });
   });
 
+  it('NEGATİF: pazarlama onayı yoksa mail ve kupon gönderilmez', async () => {
+    const { db, isaretler } = sahteDb([SATIR(), TETIK({ iysOnayi: false })]);
+    const gidenler: any[] = [];
+    const o = await gonderimTuru(db, { simdi: T0, gonder: async (p) => { gidenler.push(p); return { ok: true }; } });
+    expect(gidenler).toHaveLength(0);
+    expect(o.sebepler.iys_onayi_yok).toBe(1);
+    expect(isaretler[0]).toMatchObject({ durum: DURUM.ATLANDI });
+  });
+
   it('İPTAL EDİLMİŞ akışa mail GİTMEZ (sipariş verdi / abonelikten çıktı)', async () => {
     const { db, isaretler } = sahteDb([SATIR(), TETIK({ iptalSebebi: 'donusum' })]);
     const gidenler: any[] = [];
@@ -229,6 +238,16 @@ describe('terk sınıflandırma', () => {
     expect(epostaCikar({ customer_email: 'x@y.z' })).toBe('x@y.z');
     expect(epostaCikar({ email: 'gecersiz' })).toBeNull();
     expect(epostaCikar(null)).toBeNull();
+  });
+});
+
+describe('zamanlayıcı yetki başlığı', () => {
+  it('yalnız Bearer ve doğru sır kabul edilir, URL query yetki sayılmaz', () => {
+    expect(cronYetkiliMi('Bearer test-key', 'test-key')).toBe(true);
+    expect(cronYetkiliMi(null, 'test-key')).toBe(false);
+    expect(cronYetkiliMi('test-key', 'test-key')).toBe(false);
+    expect(cronYetkiliMi('Bearer wrong', 'test-key')).toBe(false);
+    expect(cronYetkiliMi('Bearer test-key', '')).toBe(false);
   });
 });
 

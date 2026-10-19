@@ -9,7 +9,7 @@
  * betiğin kendisi o çağırandır, bozulursa akış sessizce durur.
  */
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, readdirSync, chmodSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, readdirSync, chmodSync, copyFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -23,6 +23,9 @@ function kumHavuzu(envIcerik: string) {
   const bin = join(kok, 'bin');
   const log = join(kok, 'log');
   mkdirSync(uyg); mkdirSync(bin); mkdirSync(log);
+  mkdirSync(join(uyg, 'scripts'));
+  copyFileSync(join(__dirname, '..', 'scripts', 'eposta-akis-yokla.sh'),
+    join(uyg, 'scripts', 'eposta-akis-yokla.sh'));
   writeFileSync(join(uyg, '.env.production'), envIcerik);
   // sahte crontab: dosyada tutar (-l okur, '-' yazar)
   const cronDosya = join(kok, 'crontab.txt');
@@ -48,7 +51,7 @@ describe('eposta-akis-kur.sh — idempotans', () => {
   it('bayrak YOKSA ekler, ve İKİNCİ koşuda TEKRAR EKLEMEZ', () => {
     const k = kumHavuzu('DATABASE_URL=x\nINTERNAL_API_KEY=abc\n');
     k.kos();
-    expect(k.env()).toContain('EPOSTA_AKIS_AKTIF=1');
+    expect(k.env()).toContain('EPOSTA_AKIS_AKTIF=0');
     k.kos();
     const kez = (k.env().match(/^\s*EPOSTA_AKIS_AKTIF=/gm) || []).length;
     expect(kez).toBe(1);                       // idempotans
@@ -86,7 +89,12 @@ describe('eposta-akis-kur.sh — idempotans', () => {
     const k = kumHavuzu('INTERNAL_API_KEY=cok-gizli-deger\n');
     k.kos();
     expect(k.cron()).not.toContain('cok-gizli-deger');
-    expect(k.cron()).toContain('$INTERNAL_API_KEY');
+    expect(k.cron()).not.toContain('$INTERNAL_API_KEY');
+    expect(k.cron()).toContain('eposta-akis-yokla.sh');
+    expect(k.cron()).not.toContain('?key=');
+    const helper = readFileSync(join(__dirname, '..', 'scripts', 'eposta-akis-yokla.sh'), 'utf8');
+    expect(helper).toContain('Authorization: Bearer %s');
+    expect(helper).toContain('--header @-');
   });
 
   it('ortam dosyası YOKSA sessizce çıkar (deploy düşmez)', () => {
