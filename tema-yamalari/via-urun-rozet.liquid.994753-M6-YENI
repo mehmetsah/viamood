@@ -1,4 +1,21 @@
 {%- comment -%}
+  ================= USTU CIZILI - TEMAYA BASILMAZ (20 Eki 2026, Okan) =================
+  BU DOSYA CANLIDA DEGIL ve CANLIYA PUT EDILMEMELIDIR.
+  Yayindaki kanonik rozet: snippets/via-kampanya-rozeti.liquid + assets/via-product-overrides.css
+  (.vkr / .vkr__ol / .vkr__rozet); galeri onu dort noktadan, forloop.first kapisiyla,
+  render 'via-kampanya-rozeti' gorsel: media.preview_image argumaniyla cagiriyor.
+  Depo karsiligi: dal kod/994753-m6-birlesik, tema-yamalari/via-kampanya-rozeti.*
+  TEHLIKE: bu dosya temaya basilirsa rozet IKI KEZ cikar (iki ayri sinif adi, ayni is).
+  NEDEN USTU CIZILI: buradaki yol orani vrz_urun.featured_media.preview_image.aspect_ratio
+  ile CSS aspect-ratio uzerinden kuruyordu; galerinin o slaytta bastigi medya farkli olunca
+  mobilde katman boyanan gorselden %112.95 buyuk olculdu. Kanonik yol orani SLAYTIN KENDI
+  medyasinden (gorsel: media.preview_image) alip gorunmez olcer SVG ile tasiyor; 20 Eki
+  canli olcumu 5 urun x 2 viewport = 10/10 yesil (olcer sapmasi 0.0-0.6 px, kare ve yatay
+  gorseller dahil). Olcum: raporlar/994753-m6-canli-dogrulama-20261020.md
+  KAYIT DEGERI (silinmedi): SAH'in cift kutuplu cerceve olcumu (kontrast 1.51) ve
+  available stok kapisi BURADAN kanonik dosyaya tasindi; gerekce kaydi budur.
+  =====================================================================================
+
   #994753 · m6 — ÜRÜN GÖRSELİ ÜSTÜ KAMPANYA ROZETİ  ·  snippets/via-urun-rozet.liquid
   Tasarım: Ayşe (karar ayse:703, %100) · Onay: ŞAH (%100) — md.31 2/2, ŞIK A seçildi.
 
