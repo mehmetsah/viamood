@@ -57,7 +57,9 @@ export async function POST(req: NextRequest) {
         const result = await ingestShopifyOrder(payload as ShopifyOrderPayload);
         if (!result.ok) {
           console.error('[webhook orders/create] ingest fail:', result.error);
-          return NextResponse.json({ error: result.error }, { status: 200 }); // 200 ki retry olmasın
+          // DB/katalog hatasında 200 gönderirsek Shopify olayı başarmış sanar ve
+          // yeniden denemez: gerçek sipariş SESSİZCE KAYBOLUR. Ingest idempotent.
+          return NextResponse.json({ error: 'sipariş işlenemedi, tekrar denenecek' }, { status: 503 });
         }
         if (result.isNew && result.matchedLineItems > 0) {
           // Routing → ardından OTOMATİK kargo etiketi (müşterinin seçtiği kurye; havale-pending bekler)

@@ -3,38 +3,40 @@
  * Production'da ayrı bir node process, dev'de `npm run worker:dev`.
  */
 import { createWorker, QueueName } from '../lib/queue';
+import { routeOrder } from '@/lib/routing/engine';
+import { sendEmail } from '@/lib/email/sender';
+import { siparisIdDogrula, epostaIsiDogrula, desteklenmeyenIs } from './validators';
 
 console.log('🚀 Worker starting...');
 
-// Stub processors — Phase 2'de gerçek implementasyon gelecek
-const shopifyWebhookWorker = createWorker(QueueName.ShopifyWebhook, async (job) => {
-  console.log(`[shopify-webhook] processing ${job.name}`, job.data);
-  // TODO: Phase 2 — webhook payload'ı DB'ye yaz
-  return { processed: true };
+// Shopify webhook'un canlı yolu /api/shopify/webhooks'ta HMAC ile doğrulanır.
+// BullMQ üzerinde henüz doğrulanmış payload sözleşmesi yok; başarılı TAKLİDİ
+// yapmak yerine fail-closed; Shopify'a zaten çalışan doğrudan yolu kullan.
+const shopifyWebhookWorker = createWorker(QueueName.ShopifyWebhook, async () => {
+  return desteklenmeyenIs('shopify-webhook: imzalı payload işleyicisi');
 });
 
 const orderRoutingWorker = createWorker(QueueName.OrderRouting, async (job) => {
-  console.log(`[order-routing] processing ${job.name}`, job.data);
-  // TODO: Phase 3 — routing engine
-  return { routed: true };
+  const orderId = siparisIdDogrula(job.data);
+  const sonuc = await routeOrder(orderId); // gerçek, idempotent routing
+  return { routed: true, mode: sonuc.mode };
 });
 
-const fulfillmentWorker = createWorker(QueueName.KargolabFulfillment, async (job) => {
-  console.log(`[kargolab] processing ${job.name}`, job.data);
-  // TODO: Phase 4 — KargoLab API çağrısı
-  return { labelCreated: true };
+// Etiket ve para ödemesi alanındaki job sözleşmesi/geri alma kuralı henüz yok:
+// "labelCreated:true" / "paid:true" GERÇEK işlem yapılmadan dönmek YASAK.
+const fulfillmentWorker = createWorker(QueueName.KargolabFulfillment, async () => {
+  return desteklenmeyenIs('kargolab-fulfillment: gönderi sözleşmesi');
 });
 
-const payoutWorker = createWorker(QueueName.PayoutProcess, async (job) => {
-  console.log(`[payout] processing ${job.name}`, job.data);
-  // TODO: Phase 5 — payout batch işleme
-  return { paid: true };
+const payoutWorker = createWorker(QueueName.PayoutProcess, async () => {
+  return desteklenmeyenIs('payout-process: finansal onay ve mutabakat');
 });
 
 const emailWorker = createWorker(QueueName.EmailNotify, async (job) => {
-  console.log(`[email] processing ${job.name}`, job.data);
-  // TODO: Resend API
-  return { sent: true };
+  const p = epostaIsiDogrula(job.data); // pazarlama izni ve tip zorunludur
+  const sonuc = await sendEmail(p);
+  if (!sonuc.ok) throw new Error('eposta işi gönderilemedi: ' + (sonuc.error || 'sağlayıcı hatası'));
+  return { sent: true, kanal: sonuc.kanal };
 });
 
 const workers = [
