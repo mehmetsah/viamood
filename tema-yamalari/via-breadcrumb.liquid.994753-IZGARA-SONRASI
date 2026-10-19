@@ -1,0 +1,32 @@
+{%- comment -%} Ürün sayfası kategori ağacı (breadcrumb): Anasayfa › Kategori › Ürün {%- endcomment -%}
+{%- if product -%}
+<nav class="via-breadcrumb" aria-label="Kategori ağacı">
+  <ol>
+    <li><a href="{{ routes.root_url }}">Anasayfa</a></li>
+    {%- assign coll = product.collections.first -%}
+    {%- if coll and coll.handle != 'frontpage' and coll.handle != 'all' -%}
+      <li class="via-breadcrumb__sep" aria-hidden="true">›</li>
+      <li><a href="{{ coll.url }}">{{ coll.title }}</a></li>
+    {%- endif -%}
+    <li class="via-breadcrumb__sep" aria-hidden="true">›</li>
+    <li aria-current="page">{{ product.title | truncate: 48 }}</li>
+  </ol>
+</nav>
+<style>
+  .via-breadcrumb{ max-width:1280px; margin:0 auto; padding:16px 20px 0; }
+  .via-breadcrumb ol{ list-style:none; margin:0; padding:0; display:flex; flex-wrap:wrap; align-items:center; gap:8px; font-size:13px; color:#8a8a8f; line-height:1.5; }
+  .via-breadcrumb a{ color:#8a8a8f; text-decoration:none; }
+  .via-breadcrumb a:hover{ color:#E8552B; text-decoration:underline; }
+  .via-breadcrumb__sep{ color:#c9c7c2; }
+  .via-breadcrumb [aria-current]{ color:#1d1d1f; font-weight:600; }
+  @media (max-width:749px){ .via-breadcrumb{ padding:12px 16px 0; font-size:12px; } }
+</style>
+{%- endif -%}
+{% schema %}
+{
+  "name": "Ürün Breadcrumb",
+  "tag": "section",
+  "settings": [],
+  "presets": [{ "name": "Ürün Breadcrumb" }]
+}
+{% endschema %}
