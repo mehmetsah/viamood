@@ -1,4 +1,18 @@
 {%- comment -%}
+  ⛔ BU DOSYA KULLANILMIYOR — ÜSTÜ ÇİZİLDİ (#994753 m6, tur 5, 19 Eki 2026).
+  Sebep: aynı rozet işi iki ayrı adla iki kez yazılmıştı (ŞAH `via-urun-rozet` ·
+  Okan `via-kampanya-rozeti`). Galeri zaten `via-kampanya-rozeti`yi çağırıyordu,
+  o ad KANONİK yapıldı. Bu dosyadaki iki katkı oraya TAŞINDI:
+    ① ÇİFT KUTUPLU çerçeve (beyaz saç teli + koyu gölge) — koyu fotoğrafta
+      ölçülen 1.51 kontrastın cevabı. ŞAH'ın ölçümü, Ayşe'nin notunda yoktu.
+    ② `available` kapısı — stokta olmayan üründe "Kargo Ücretsiz" basılmaz.
+  SİLİNMEDİ: aşağıdaki ŞIK A/B/C eleme ölçümleri (kaplama %, satır sayısı,
+  kontrast) başka bir yerde kayıtlı değil ve karar gerekçesi olarak değerli.
+  ⛔ TEMAYA PUT EDİLMEZ. Kanonik dosya: via-kampanya-rozeti.liquid.994753-M6
+     Commit: b472686 (ŞAH) — katkı kaybolmadı, birleştirildi.
+{%- endcomment -%}
+
+{%- comment -%}
   #994753 · m6 — ÜRÜN GÖRSELİ ÜSTÜ KAMPANYA ROZETİ  ·  snippets/via-urun-rozet.liquid
   Tasarım: Ayşe (karar ayse:703, %100) · Onay: ŞAH (%100) — md.31 2/2, ŞIK A seçildi.
 

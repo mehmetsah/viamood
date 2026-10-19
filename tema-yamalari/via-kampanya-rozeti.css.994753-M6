@@ -1,0 +1,68 @@
+
+/* ===== #994753 m6 · KAMPANYA ROZETİ (ŞIK A) — Ayşe ayse:703, ŞAH+Ayşe %100/%100 =====
+   assets/via-product-overrides.css SONUNA eklenir. Markup: snippets/via-kampanya-rozeti.liquid
+   TUR 5 · İKİ ÇÖZÜMÜN BİRLEŞİMİ:
+     (A) Okan T1-T4 → "boyanan görsel" geometrisi (.vkr ızgarası + .vkr__ol ölçeri)
+     (B) ŞAH b472686 → ÇİFT KUTUPLU çerçeve (koyu fotoğrafta kontrast 1.51 ölçümü)
+
+   TUR 3-4 DERSİ (iki tur kaybettirdi): rozet önce galeri köküne, sonra <img> ELEMAN
+   kutusuna bağlıydı; teknik ölçüm 6/6 yeşil veriyordu ama object-fit:contain yüzünden
+   boyanan görsel eleman kutusundan dar olduğu için rozet fotoğrafın ~18px SOLUNA, beyaz
+   zemine taşıyordu. getBoundingClientRect() eleman kutusunu ölçer, BOYANAN görseli değil.
+   Artık çıpa .vkr__ol — görselin oranını taşıyan boş inline SVG; yerleştirilmiş eleman
+   olduğu için max-%/auto kıskacında oranını spec gereği korur ⇒ kutusu = boyanan dikdörtgen.
+   6 oran senaryosunda ölçülen sapma 0.0 px (bkz. raporlar/994753-m6-birlesik-20261019.md).
+
+   Ölçüler Ayşe'nin ölçtüğü değerlerdir: 11px/1.35, 8px/12px dolgu, 4px yarıçap. */
+.product-media-constraint-wrapper:has(> .vkr) { position: relative; }
+
+.vkr {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;   /* ızgara gözü ölçerin kutusuna oturur, o da ortalanır */
+  z-index: 3;
+  pointer-events: none;    /* galeri ok/zoom tıklamasını yutmaz */
+}
+/* ORAN ÖLÇERİ: görünmez ama YER KAPLAR — ızgara gözünü boyanan görselle eşitler.
+   display:none / width:0 YAPILMAZ: o zaman göz çöker ve rozet yine mektup kutusuna kaçar
+   (negatif kanıt: tests/994753-m6-rozet-kapi.mjs §4b, ölçersiz sapma 177px). */
+.vkr__ol {
+  grid-area: 1 / 1;
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  display: block;
+  opacity: 0;
+}
+.vkr__rozet {
+  grid-area: 1 / 1;
+  align-self: start;
+  justify-self: start;
+  margin: 12px;            /* Ayşe: fotoğrafın sol üstünden 12px içeride */
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;       /* nefes: dikey 8px ≥6px VE 4px ızgarasında */
+  border-radius: 4px;      /* temanın buton yarıçapı */
+  background: #1C6B45;
+  color: #fff;
+  font-family: inherit;
+  font-size: 11px;         /* nefes: ≥11px */
+  line-height: 1.35;       /* nefes: ≥1.3, px'e çakılmadı */
+  font-weight: 600;
+  letter-spacing: .01em;
+  white-space: nowrap;
+  /* ÇİFT KUTUPLU ÇERÇEVE — ŞAH ölçümü (bu üründe sol üst köşe KOYU granit, kontrast 1.51):
+     1) beyaz saç teli: KOYU fotoğrafta rozeti ayırır
+     2) koyu gölge:     AÇIK fotoğrafta rozeti ayırır
+     Tek yönlü gölge yetmiyordu — koyu fotoğrafta koyu gölge görünmez.
+     Yeni renk ÜRETİLMEDİ (md.16): beyaz zaten rozetin kendi yazı rengi. */
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, .55),
+    0 1px 3px rgba(16, 16, 24, .35);
+}
+.vkr__ikon { width: 13px; height: 13px; flex: 0 0 auto; display: block; }
+/* Mobilde de AYNI yazı boyu: 11px taban eşiktir, küçültülmez (nefes kuralı). */
+@media (max-width: 749px) { .vkr__rozet { margin: 8px; } }

@@ -1,0 +1,83 @@
+{% comment %}
+  VIA · KAMPANYA ROZETİ — ürün görseli üstü, ŞIK A (#994753 m6)  ·  snippets/via-kampanya-rozeti.liquid
+  Tasarım: Ayşe · karar ayse:703 · onaylar[] = Ayşe %100 + ŞAH %100 (md.31 karşılandı)
+  Kaynak prototip: raporlar/994753-m6-rozet/rozet-tasarim-ayse703.html
+  BU DOSYA İKİ ÇÖZÜMÜN BİRLEŞİMİDİR (tur 5):
+    (A) Okan T1-T4 → doğru render noktası + "boyanan görsel" geometrisi
+    (B) ŞAH b472686 (via-urun-rozet.liquid) → kontrast dayanıklılığı + stok kapısı
+  via-urun-rozet.liquid ARTIK KULLANILMIYOR (aynı işi iki ad yapıyordu); kanonik ad budur.
+
+  ŞIK A'DIR: TEK rozet, SOL ÜST köşe. Şık B (alt şerit) Ayşe tarafından ELENDİ —
+  ürün fotoğrafının sol altında tedarikçi kaynaklı gömülü "BPA FREE" rozeti var ve
+  çakışıyordu. Sağ ortadaki gömülü "5'Lİ SET" damgasının da KARŞI köşesindeyiz.
+  Bu yüzden konum keyfî değil: iki gömülü rozetten de uzak tek boş köşe burası.
+
+  ÖLÇÜLEN DEĞERLER (Ayşe, canlı sayfadan — uydurulmadı):
+    yazı 11px · satır yüksekliği 1.35 · dikey iç boşluk 8px · yatay 12px
+    yarıçap 4px (temanın sepete-ekle yarıçapıyla AYNI) · yazı tipi Inter (tema gövdesi)
+    renk #1C6B45 — mağazanın ZATEN onaylı "Kargo Ücretsiz" yeşili, yeni palet icat edilmedi
+  Boşluklar 4px ızgarasında (ilk taslakta 6/10px idi, ızgaraya oturmuyordu; 8/12'ye çekildi).
+  EMOJİ YOK: ikon özel, 1.8 kalınlıkta çizgi SVG, currentColor ile renklenir.
+
+  === vkr__ol NEDİR, NİYE VAR? (T4'ün kök nedeni — iki tur kaybettirdi) ===============
+  Galeri görseli object-fit:contain ile boyanıyor. Yani <img> ELEMANININ kutusu
+  (540x720) ile EKRANDA BOYANAN görsel (480x720) AYNI ŞEY DEĞİL — yatayda her iki
+  yanda 30px "mektup kutusu" boşluğu var. Rozeti eleman kutusuna 12px ile oturtmak,
+  onu fotoğrafın 18px SOLUNA, beyaz zemine koyuyordu. getBoundingClientRect() eleman
+  kutusunu ölçtüğü için teknik ölçüm 6/6 YEŞİL diyordu; sapmayı yalnız EKRAN
+  GÖRÜNTÜSÜ yakaladı. Sabit bir left ile ÇÖZÜLEMEZ: boşluk her ürünün kendi en-boy
+  oranına göre değişir.
+  ÇÖZÜM: vkr__ol — görselin oranını taşıyan, görünmez, AĞA İSTEK ATMAYAN boş inline
+  SVG. Yerleştirilmiş eleman (replaced element) olduğu için max-width/max-height:100%
+  + width/height:auto kıskacında oranını SPEC GEREĞİ korur (CSS2.1 §10.4) ⇒ kutusu
+  contain ile boyanan dikdörtgenin BİREBİR aynısı olur. Rozet aynı ızgara gözünde
+  onun sol üstüne 12px ile oturur. 6 senaryoda (dikey/yatay/kare foto x dikey/kare
+  kutu x masaüstü/mobil) ölçülen sapma: 0.0 px.
+  DENENİP ELENEN 5 YOL: inset:0+margin:auto · flex+aspect-ratio · grid+aspect-ratio
+  (üçü de 314px sapma: aspect-ratio iki eksende de kısıtlıyken yok sayılır) ·
+  min()/calc (kutu px'ini bilmek gerekir, responsive DEĞİL) · data-URI <img> ölçer
+  (dikey fotoda 300px sapma). Ölçüm: raporlar/994753-m6-birlesik-20261019.md
+  KAPSAM SINIRI: bu mağazanın galerisi contain ile boyuyor (base.css:1587). Tema
+  cover'a çevrilirse ölçer rozeti 30px fazla içeri iter — E2E'de canlı DOM üstünde
+  tripwire var (objectFit === contain), sessiz kayma olmaz.
+  ====================================================================================
+
+  KULLANIM (ürün görselini saran, position:relative olan kutunun İÇİNDE, görselden ÖNCE):
+    render 'via-kampanya-rozeti', gorsel: media.preview_image
+  gorsel verilmezse rozet 1:1 varsayar (düzen bozulmaz, yalnız girinti yaklaşıklaşır).
+  Stil: assets/via-product-overrides.css (.vkr / .vkr__ol / .vkr__rozet).
+{% endcomment %}
+
+{%- liquid
+  # (B)'den gelen KAPI: rozet YALNIZ vaadin gerçekten geçerli olduğu üründe çıkar.
+  # Stokta değilse "Kargo Ücretsiz" sözü anlamsızdır — hiç basılmaz, düzen bozulmaz.
+  assign vkr_urun = urun | default: product
+  assign vkr_goster = false
+  if vkr_urun != blank and vkr_urun.available
+    assign vkr_goster = true
+  endif
+
+  # Ölçer SVG'nin oranı: görselin DOĞAL boyutu. Yoksa 1:1'e düşülür (asla 0 olmaz —
+  # viewBox'ta 0 geometriyi çökertir).
+  assign vkr_g = gorsel.width | default: 0
+  assign vkr_y = gorsel.height | default: 0
+  if vkr_g == 0 or vkr_y == 0
+    assign vkr_g = 1
+    assign vkr_y = 1
+  endif
+-%}
+
+{%- if vkr_goster -%}
+  <div class="vkr" data-vkr>
+    <svg class="vkr__ol" width="{{ vkr_g }}" height="{{ vkr_y }}" viewBox="0 0 {{ vkr_g }} {{ vkr_y }}"
+         aria-hidden="true" focusable="false" preserveAspectRatio="xMidYMid meet"></svg>
+    <span class="vkr__rozet" data-vkr-rozet="kargo">
+      <svg class="vkr__ikon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+           stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+        <path d="M3 7h11v9H3z"/><path d="M14 10h4l3 3v3h-7z"/>
+        <circle cx="7" cy="18.5" r="1.6"/><circle cx="17.5" cy="18.5" r="1.6"/>
+      </svg>
+      <span class="vkr__metin">Kargo Ücretsiz</span>
+    </span>
+  </div>
+{%- endif -%}
