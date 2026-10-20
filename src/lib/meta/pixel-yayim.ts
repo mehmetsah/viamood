@@ -42,15 +42,26 @@ export type Fbq = (komut: string, olay: string, yuk?: Record<string, unknown>) =
 export function initiateCheckoutYay(fbq: Fbq | null | undefined, yuk: OlayYuku | null, depo: Depo | null, oturumAnahtari = 'via_fb_ic'): boolean {
   if (typeof fbq !== 'function') return false;
   if (!gonderilebilir(yuk)) return false;
+  // Reading storage must not block the checkout event if storage is denied.
   try {
     if (depo && depo.getItem(oturumAnahtari)) return false;
-    fbq('track', 'InitiateCheckout', { ...(yuk as object) } as Record<string, unknown>);
-    if (depo) depo.setItem(oturumAnahtari, '1');
-    return true;
   } catch {
-    // Depolama kapalıysa (gizli mod) olay YİNE gider — ölçüm kaybı, satış kaybından iyidir.
+    // Storage is unavailable: continue without a reliable session stamp.
+  }
+
+  try {
+    fbq('track', 'InitiateCheckout', { ...(yuk as object) } as Record<string, unknown>);
+  } catch {
+    // Do not claim delivery or write the deduplication stamp if Pixel failed.
     return false;
   }
+
+  try {
+    if (depo) depo.setItem(oturumAnahtari, '1');
+  } catch {
+    // The event was sent; failure to persist the stamp cannot undo it.
+  }
+  return true;
 }
 
 /**
