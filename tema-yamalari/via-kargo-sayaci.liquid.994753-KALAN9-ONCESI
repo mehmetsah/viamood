@@ -1,0 +1,232 @@
+{%- comment -%}
+  AYNI GÜN KARGO GERİ SAYIMI — Yunus'un 13 Eki 2026 spec'i + referans görseli
+  (whatsapp/media/1791879214-3EB00AF1A676DB4922EE0A-image.jpeg) birebir uygulandı.
+
+  KESİM: Pzt-Cum 15:00 · Cmt 13:00 · Pazar çıkış YOK (hepsi Europe/Istanbul).
+
+  ⚠ SAAT KAYNAĞI SUNUCUDUR. `data-sunucu-ts` istek anında Liquid tarafından basılır;
+     istemci bir kez `fark = sunucu - Date.now()` hesaplar ve BÜTÜN kesim matematiği
+     bu düzeltilmiş ana göre yapılır. Kullanıcı sistem saatini kaydırarak "bugün
+     kargoda" sözünü uzatamaz. TR saati `Intl` ile ayrıca çözülür — ziyaretçinin
+     saat dilimi ne olursa olsun kesim İstanbul'a göre hesaplanır.
+
+  ⚠ ÜÇÜNCÜ DURUM (Cmt 13:00 sonrası + Pazar) İÇİN YENİ TASARIM ÜRETİLMEDİ:
+     referans görselde yalnız İKİ görsel durum var (normal + son 1 saat); üçüncüsünün
+     görseli Yunus'un ekran görüntüsünde kesilmiş. Bu yüzden o durumda NORMAL
+     (mavi) görünüm aynen kullanılır, yalnız metin "Pazartesi kargoda" olur —
+     yani yeni bir tasarım dili icat edilmedi, var olanın kopyası kullanıldı.
+{%- endcomment -%}
+
+{%- comment -%}
+  KİP: "kutu" (varsayılan) = ürün sayfasındaki tam kart. "satir" = sabit sepete-ekle
+  çubuğuna giren TEK SATIR hâli (#994352 madde 1). İkisi AYNI mantığı kullanır —
+  ikinci bir sayaç/katalog yazılmadı; aşağıdaki betik sayfadaki BÜTÜN data-vks
+  düğümlerini sürer (querySelectorAll). Ölçüm: tam kart sabit çubuğu 74px'ten
+  212px'e çıkarıyordu, bu yüzden çubukta satır kipi kullanılır.
+{%- endcomment -%}
+{%- assign vks_kip = kip | default: 'kutu' -%}
+
+{%- if vks_kip == 'satir' -%}
+  <div class="vks-satir" data-vks data-vks-kip="satir" data-sunucu-ts="{{ 'now' | date: '%s' }}" hidden>
+    <span class="vks-satir__ikon" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+           stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 7h11v9H3z"/><path d="M14 10h4l3 3v3h-7z"/>
+        <circle cx="7" cy="18.5" r="1.6"/><circle cx="17.5" cy="18.5" r="1.6"/>
+      </svg>
+    </span>
+    {%- comment -%}
+      ⚠ `data-vks-onek` SARMALI, 12 SAAT EŞİĞİNİN TUTAMAĞIDIR (#994352 madde 4,
+      ŞAH kararı · md.46). 12 saatten fazla kalan süre kıtlık üretmiyor ve
+      "43 saat içinde sipariş verirseniz" cümlesi mantıken zayıf okunuyor;
+      o aralıkta bu sarmal gizlenir ve satır yalnız gün sözünü söyler.
+      Boşluk ("verirseniz ") BİLEREK sarmalın İÇİNDEDİR — dışarıda kalsa
+      sarmal gizlendiğinde satır boşlukla başlardı.
+      Kutu kipinde bu sarmal YOKTUR, bu yüzden ürün sayfası kartı eşikten
+      ETKİLENMEZ (Ayşe: "kutu kipinde sayaç en belirgin ikinci öğe").
+    {%- endcomment -%}
+    <span class="vks-satir__metin"><span class="vks-satir__onek" data-vks-onek><strong data-vks-sure></strong> içinde sipariş verirseniz </span><strong data-vks-gun></strong></span>
+  </div>
+{%- else -%}
+<div class="vks" data-vks data-sunucu-ts="{{ 'now' | date: '%s' }}" hidden>
+  <span class="vks__ikon" aria-hidden="true">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+         stroke-linecap="round" stroke-linejoin="round">
+      <path d="M3 7h11v9H3z"/><path d="M14 10h4l3 3v3h-7z"/>
+      <circle cx="7" cy="18.5" r="1.6"/><circle cx="17.5" cy="18.5" r="1.6"/>
+    </svg>
+  </span>
+  <p class="vks__metin"><strong data-vks-sure></strong> içinde sipariş verirseniz <strong data-vks-gun></strong></p>
+  <span class="vks__sayac" data-vks-sayac>--:--:--</span>
+</div>
+{%- endif -%}
+
+<style>
+  .vks{
+    display:flex; align-items:center; gap:14px;
+    padding:14px 16px; border-radius:16px;
+    background:#e9edfa; color:#2a3f7e;
+    font-size:15px; line-height:1.35;
+  }
+  .vks[hidden]{ display:none; }
+  .vks__ikon{
+    flex:0 0 auto; width:44px; height:44px; border-radius:50%;
+    background:#fff; display:flex; align-items:center; justify-content:center;
+  }
+  .vks__ikon svg{ width:22px; height:22px; display:block; }
+  .vks__metin{ flex:1 1 auto; margin:0; font-weight:400; }
+  .vks__metin strong{ font-weight:700; }
+  .vks__sayac{
+    flex:0 0 auto; background:#fff; border-radius:12px;
+    padding:10px 14px; font-weight:800; font-size:19px;
+    font-variant-numeric:tabular-nums; letter-spacing:.4px;
+  }
+  /* SON 1 SAAT — referans görseldeki turuncu + nabız */
+  .vks.vks--acil{ background:#fdeee5; color:#d4502a; animation:vks-nabiz 1.6s ease-in-out infinite; }
+  @keyframes vks-nabiz{ 0%,100%{ box-shadow:0 0 0 0 rgba(212,80,42,.28);} 50%{ box-shadow:0 0 0 7px rgba(212,80,42,0);} }
+  @media (prefers-reduced-motion: reduce){ .vks.vks--acil{ animation:none; } }
+  /* SATIR KİPİ — sabit sepete-ekle çubuğu. Ölçü ve renk, çubuktaki
+     .sticky-add-to-cart__variant satırının kendi değişkenlerinden gelir. */
+  .vks-satir{
+    display:flex; align-items:center; gap:6px;
+    margin-top:var(--margin-3xs, 4px);
+    font-size:var(--font-paragraph-small--size, 13px);
+    line-height:1.35;
+    color:rgb(var(--color-foreground-rgb) / var(--opacity-subdued-text, .64));
+    min-width:0;
+  }
+  .vks-satir[hidden]{ display:none; }
+  .vks-satir__ikon{ flex:0 0 auto; display:flex; }
+  .vks-satir__ikon svg{ width:15px; height:15px; display:block; }
+  .vks-satir__metin{ min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  /* İKİ KADEMELİ OKUMA (Ayşe inceleme madde 3): satırın gövdesi soluk
+     (opacity-subdued .64) kalır, RAKAM tam kontrast alır. Önceki hâlde
+     `color:inherit` yüzünden rakam satırın en soluk öğesiydi — kutu kipinde
+     sayaç en belirgin ikinci öğe olduğu için iki kip ters hiyerarşi
+     konuşuyordu. */
+  .vks-satir strong{ font-weight:var(--font-weight-semibold, 600); color:rgb(var(--color-foreground-rgb)); }
+  /* 12 saat eşiği sarmalı gizlerken `hidden` niteliğinin tarayıcı
+     varsayılanına GÜVENİLMEZ: tema CSS'i bir noktada display atarsa nitelik
+     sessizce etkisiz kalır (bu depoda ölçülmüş sınıf). Açıkça kapatılır. */
+  .vks-satir__onek[hidden]{ display:none; }
+
+  /* SON 1 SAAT — SATIR KİPİ (Ayşe inceleme madde 1, KAPATICI).
+     JS `vks--acil` sınıfını satıra DA ekliyordu ama CSS karşılığı yalnız
+     kutu için vardı; kesime 1 saat kalınca ürün kartı turuncuya dönüp nabız
+     atarken kullanıcının sürekli gördüğü sabit çubuk soluk gri kalıyordu —
+     aciliyet en değerli olduğu anda kayboluyordu.
+     ⚠ ZEMİN VE NABIZ BİLEREK YOK: çubukta gürültü yapar ve CTA turuncusuyla
+     yarışır (Ayşe'nin açık kararı). Yalnız renk konuşur. */
+  .vks-satir.vks--acil{ color:#d4502a; }
+  .vks-satir.vks--acil strong{ color:#d4502a; font-weight:700; }
+
+  @media (max-width: 749px){
+    .vks{ gap:11px; padding:12px 13px; font-size:14px; }
+    .vks__ikon{ width:38px; height:38px; } .vks__ikon svg{ width:19px; height:19px; }
+    .vks__sayac{ font-size:17px; padding:9px 11px; }
+  }
+</style>
+
+<script>
+(function(){
+  var KESIM = { 1:15, 2:15, 3:15, 4:15, 5:15, 6:13 };   // 0=Pazar: yok
+  var GUNLER = ['Pazar','Pazartesi','Salı','Çarşamba','Perşembe','Cuma','Cumartesi'];
+
+  /** Verilen ms anını Europe/Istanbul takvimine çevirir. */
+  function trParca(ms){
+    var p = new Intl.DateTimeFormat('en-GB', { timeZone:'Europe/Istanbul', weekday:'short',
+      hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:false }).formatToParts(new Date(ms));
+    var o = {}; p.forEach(function(x){ o[x.type] = x.value; });
+    var kisa = {Sun:0,Mon:1,Tue:2,Wed:3,Thu:4,Fri:5,Sat:6};
+    return { gun:kisa[o.weekday], saat:+o.hour, dakika:+o.minute, saniye:+o.second };
+  }
+
+  /**
+   * SAF KARAR — TEK DOĞRU KAYNAK. Kalan saniyeyi ve sözü birlikte döner.
+   * Dönen `bugun` yanlışsa "bugün kargoda" sözü ASLA verilmez (Cmt 13:00 sonrası + Pazar).
+   */
+  function vksDurum(ms){
+    var t = trParca(ms);
+    var simdiSn = t.saat*3600 + t.dakika*60 + t.saniye;
+    var kesimSaat = KESIM[t.gun];
+    if (kesimSaat !== undefined && simdiSn < kesimSaat*3600) {
+      return { kalan: kesimSaat*3600 - simdiSn, bugun:true, etiket:'bugün kargoda' };
+    }
+    // Bugün kaçtı (ya da Pazar) → sonraki ÇIKIŞ gününü bul
+    // ⚠ `gunSonu` DÖNGÜDE DEĞİŞTİRİLMEZ: ilk hâlinde hem birikiyor hem (i-1)*86400
+    //   ekleniyordu, yani aradaki her gün İKİ KEZ sayılıyordu (Cmt 13:30 → Pzt 15:00
+    //   178200 sn yerine 264600 çıkıyordu; çivi yakaladı).
+    var gunSonu = 86400 - simdiSn;            // bugünün sonuna kadar
+    for (var i=1; i<=7; i++){
+      var g = (t.gun + i) % 7;
+      if (KESIM[g] !== undefined){
+        return { kalan: gunSonu + (i-1)*86400 + KESIM[g]*3600, bugun:false,
+                 etiket: GUNLER[g] + ' kargoda' };
+      }
+    }
+    return null;
+  }
+
+  function sureYaz(sn){
+    var s = Math.floor(sn/3600), d = Math.floor((sn%3600)/60);
+    if (s > 0) return s + ' saat ' + d + ' dk';
+    return d + ' dk';
+  }
+  function sayacYaz(sn){
+    var s = Math.floor(sn/3600), d = Math.floor((sn%3600)/60), n = sn%60, i = function(x){ return x<10?'0'+x:''+x; };
+    return i(s)+':'+i(d)+':'+i(n);
+  }
+
+  // Snippet sayfada BİRDEN FAZLA kez render edilebilir (ürün kartı + sabit
+  // sepete-ekle çubuğu, #994352 madde 1). Betik de iki kez basılır; kurulum
+  // bir kez yapılır, ama tik TÜM düğümleri sürer.
+  if (window.__vksKurulu) return;
+  window.__vksKurulu = true;
+
+  // Sunucu saatine kenetlenme BİR KEZ hesaplanır. Her tikte yeniden
+  // hesaplanırsa (sunucu - Date.now()) küçülür ve zaman sunucu anında DONAR.
+  var fark = 0, farkOlculdu = false;
+
+  function tik(){
+    var kokler = document.querySelectorAll('[data-vks]');   // ÇOĞUL — tekil seçici
+    for (var i = 0; i < kokler.length; i++){                // ikinci kopyayı gizli bırakıyordu
+      var kok = kokler[i];
+      if (!farkOlculdu){
+        var ts = parseInt(kok.getAttribute('data-sunucu-ts'), 10);
+        if (!isNaN(ts)){ fark = (ts * 1000) - Date.now(); farkOlculdu = true; }
+      }
+      var d = vksDurum(Date.now() + fark);
+      if (!d){ kok.hidden = true; continue; }
+      var sureEl = kok.querySelector('[data-vks-sure]'),
+          gunEl  = kok.querySelector('[data-vks-gun]'),
+          sayEl  = kok.querySelector('[data-vks-sayac]'),
+          onekEl = kok.querySelector('[data-vks-onek]');
+      kok.hidden = false;
+      // 12 SAAT EŞİĞİ — YALNIZ SATIR KİPİ (#994352 madde 4, ŞAH kararı md.46;
+      // Ayşe'nin önerisi: "sayaç kıtlık hissi içindir, 43 saat kıtlık
+      // üretmez"). Eşik kipe DEĞİL, sarmalın VARLIĞINA bakar: kutu kipinde
+      // [data-vks-onek] hiç basılmadığı için `onekEl` null olur ve ürün
+      // sayfası kartı eski davranışını BİREBİR sürdürür. Kip adını ikinci
+      // kez okumak (data-vks-kip==='satir') aynı bilgiyi iki kaynağa
+      // yazmak olurdu — bu depoda ölçülmüş sessiz kayma sınıfı.
+      var onekGizli = !!onekEl && d.kalan > 12 * 3600;
+      if (onekEl) onekEl.hidden = onekGizli;
+      if (sureEl) sureEl.textContent = sureYaz(d.kalan);
+      // Sarmal gizliyken gün sözü satırın İLK kelimesi olur; 'bugün kargoda'
+      // küçük harfle başlayıp cümle gibi okunmazdı. Büyük harf YALNIZ o
+      // durumda uygulanır — sarmal açıkken "… verirseniz bugün kargoda"
+      // cümlenin ortasıdır ve küçük harf doğrudur.
+      if (gunEl)  gunEl.textContent  = onekGizli
+                    ? d.etiket.charAt(0).toLocaleUpperCase('tr-TR') + d.etiket.slice(1)
+                    : d.etiket;
+      if (sayEl)  sayEl.textContent  = sayacYaz(d.kalan);   // satır kipinde yok
+      kok.classList.toggle('vks--acil', d.bugun && d.kalan < 3600);
+    }
+  }
+  tik();
+  // Sonradan basılan kopyalar (çubuk, bölüm yenilemesi) ilk tikte henüz DOM'da
+  // olmayabilir; DOMContentLoaded + saniyelik tarama ikisini de yakalar.
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', tik);
+  setInterval(tik, 1000);
+})();
+</script>
