@@ -71,6 +71,11 @@
 
     // AJAX metafield/API geldikten SONRA var olan sekme nav'ına güvenle bağla.
     var nav = root.querySelector('.vp-tabnav');
+    // Full-width sekme konteyneri DOM'a tasindiysa artik root'un cocugu degildir.
+    if (!nav) {
+      var fw = document.querySelector('.vm-tabs-fw');
+      if (fw && fw.contains(dt)) nav = fw.querySelector('.vp-tabnav');
+    }
     if (nav) {
       var btn = document.createElement('button');
       btn.type = 'button'; btn.className = 'vp-tab'; btn.textContent = 'Sıkça Sorulan Sorular';
@@ -90,8 +95,10 @@
   function init(){
     var root = document.querySelector('[data-testid="product-information-details"]');
     if (!root) return;
+    // Sekmeler grid altina tasindiginda SSS ekleme koku full-width kapsayici olmali.
+    var sssRoot = document.querySelector('.vm-tabs-fw') || root;
     var sss = window.__vmSSS;
-    if (Array.isArray(sss) && sss.length) sssEkle(root, sss);
+    if (Array.isArray(sss) && sss.length) sssEkle(sssRoot, sss);
     else if (!root.dataset.vmSssFetch) {
       root.dataset.vmSssFetch = '1';
       var handle = {{ product.handle | default: closest.product.handle | json }};
@@ -99,7 +106,7 @@
         fetch('https://hesap.viamood.com.tr/api/v1/urun-sss?handle=' + encodeURIComponent(handle),
               { credentials: 'omit', mode: 'cors' })
           .then(function(r){ if (!r.ok) return null; return r.json(); })
-          .then(function(data){ if (data && data.ok && Array.isArray(data.sss)) sssEkle(root, data.sss); })
+          .then(function(data){ if (data && data.ok && Array.isArray(data.sss)) sssEkle(document.querySelector('.vm-tabs-fw') || root, data.sss); })
           .catch(function(){ /* vitrin API erişilemezse mevcut akordeon bozulmaz */ });
       }
     }
@@ -135,6 +142,8 @@
     });
     items[0].parentNode.insertBefore(nav, items[0]);
     root.classList.add('vp-tabbed');
+    // Metafield basindan geldiyse root'taki nav hazir olunca sekme olustur.
+    if (Array.isArray(sss) && sss.length) sssEkle(root, sss);
     // Full-width: sekmeleri ürün grid'inin ALTINA taşı (tam genişlik, Hepsiburada tarzı)
     try {
       var grid = document.querySelector('.product-information__grid');

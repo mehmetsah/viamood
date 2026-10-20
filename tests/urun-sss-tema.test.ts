@@ -12,7 +12,7 @@ describe('Shopify ürün SSS sekmesi — iki besleme yolu', () => {
   });
   it('vp-tabbed olsa bile SSS daha önce eklenmediyse ekler', () => {
     expect(file).not.toContain("if (!root || root.classList.contains('vp-tabbed')) return;");
-    expect(file.indexOf('sssEkle(root, sss);')).toBeLessThan(file.indexOf("if (root.classList.contains('vp-tabbed')) return;"));
+    expect(file.indexOf('sssEkle(sssRoot, sss);')).toBeLessThan(file.indexOf("if (root.classList.contains('vp-tabbed')) return;"));
     expect(file).toContain("root.querySelector('[data-vm-sss]')");
     expect(file).toContain('btn.addEventListener');
   });
