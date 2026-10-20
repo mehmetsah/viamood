@@ -1,0 +1,11 @@
+/* #994773 — vco-hk-tk 4px ızgara yaması (A/B ölçümü için; canlıya BASILMADI) */
+.vco-hk-tk__bos { padding:12px 16px; }
+.vco-hk-tk__perk { gap:8px; padding:8px 16px; }
+.vco-hk-tk { margin:4px 0 16px; }
+.vco-hk-tk__bas { gap:8px; padding:12px 16px; }
+[data-hk="taksit-liste"]:not(:empty) { gap:8px; padding:12px 16px; }
+.vco-hk .vco-hk-tk__s { gap:4px; padding:12px 8px; }
+@media (max-width:560px){
+  [data-hk="taksit-liste"]:not(:empty) { gap:8px; padding:12px; }
+  .vco-hk .vco-hk-tk__s { padding:12px 4px; }
+}
