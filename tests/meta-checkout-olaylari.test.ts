@@ -50,6 +50,32 @@ describe('InitiateCheckout', () => {
     expect(initiateCheckoutYay(undefined, YUK, sahteDepo())).toBe(false);
     expect(initiateCheckoutYay(null, YUK, sahteDepo())).toBe(false);
   });
+
+  it('depolama okumasi engellense de InitiateCheckout olayini kaybetmez', () => {
+    const d: Depo = {
+      getItem: () => { throw new Error('storage blocked'); },
+      setItem: () => { throw new Error('storage blocked'); },
+    };
+    expect(initiateCheckoutYay(fbq, YUK, d)).toBe(true);
+    expect(cagrilar).toHaveLength(1);
+    expect(cagrilar[0]![1]).toBe('InitiateCheckout');
+  });
+
+  it('depolama yazma hatasi basarili fbq olayini basarisiz saymaz', () => {
+    const d: Depo = {
+      getItem: () => null,
+      setItem: () => { throw new Error('quota exceeded'); },
+    };
+    expect(initiateCheckoutYay(fbq, YUK, d)).toBe(true);
+    expect(cagrilar).toHaveLength(1);
+  });
+
+  it('fbq hata verirse damga yazilmaz ve sonuc basarisiz olur', () => {
+    const d = sahteDepo();
+    const failingFbq = () => { throw new Error('pixel not ready'); };
+    expect(initiateCheckoutYay(failingFbq, YUK, d)).toBe(false);
+    expect(d.kutu).toEqual({});
+  });
 });
 
 describe('Purchase — sipariş no ile TEK KEZ', () => {
