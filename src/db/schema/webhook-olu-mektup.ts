@@ -19,7 +19,7 @@
  * açıktır. Yeniden işleyici (replay) ayrı bir karardır ve bu tabloya bakar.
  */
 import { sql } from 'drizzle-orm';
-import { boolean, index, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
+import { boolean, index, integer, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
 
 export const webhookOluMektup = pgTable(
   'webhook_olu_mektup',
@@ -42,6 +42,16 @@ export const webhookOluMektup = pgTable(
     hamGovde: text('ham_govde'),
     /** Elle/toplu yeniden işlenince damgalanır; NULL = hâlâ açık. */
     islendiTs: timestamp('islendi_ts', { withTimezone: true }),
+    /**
+     * #994753 · REPLAY ayağı. Kayıt SİLİNMEZ; yalnız damgalanır.
+     * denemeSayisi  — replay kaç kez denedi (0 = hiç denenmedi).
+     * sonDenemeTs   — son denemenin anı; üstel geri çekilmenin tabanı budur.
+     * elleInceleme  — deneme tavanı aşıldı ⇒ otomatik denemeye KAPALI, insana açık.
+     *                 Sessiz silme yerine görünür bir durak; kayıt yerinde kalır.
+     */
+    denemeSayisi: integer('deneme_sayisi').notNull().default(0),
+    sonDenemeTs: timestamp('son_deneme_ts', { withTimezone: true }),
+    elleInceleme: boolean('elle_inceleme').notNull().default(false),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => ({
