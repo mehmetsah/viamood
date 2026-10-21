@@ -217,12 +217,22 @@
            boş gelir ve olayı İKİNCİ KEZ yayar; src/lib/meta/pixel-yayim.ts aynı kural).
      DEĞER: URL'deki total/amount (GA4 olayıyla aynı kaynak). Yoksa PayTR/iyzico
      yolunda sipariş özeti API'si (d.total) gelince atılır. 0/geçersiz değer GİTMEZ.
-     ⛔ Sayfanın işleyişini ASLA bozmaz: try/catch, fbq yoksa sessiz çıkar. */
-  function viaMetaPurchase(no, deger){
+     ⛔ Sayfanın işleyişini ASLA bozmaz: try/catch, fbq yoksa sessiz çıkar.
+     ⛔ fbq ASYNC GELİR (#994828, canlı ölçüldü): Meta pikseli tema içinde değil, Shopify
+       Web Pixel 3431923844 — web-pixels-manager onu sayfa yüklendikten SONRA indirir.
+       Bu betik ayrıştırma anında koşar; o an fbq YOKTUR. Tek seferlik kontrol olayı
+       SESSİZCE kaçırıyordu → 250 ms aralıkla en çok 20 sn beklenir (80 deneme). */
+  function viaMetaPurchase(no, deger, kalan){
     try{
-      if(!no || typeof window.fbq !== 'function') return false;
+      if(!no) return false;
       var v = Math.round(parseFloat(deger) * 100) / 100;
       if(!isFinite(v) || v <= 0) return false;
+      if(typeof window.fbq !== 'function'){
+        kalan = (kalan === undefined) ? 80 : kalan;
+        if(kalan > 0) setTimeout(function(){ viaMetaPurchase(no, deger, kalan - 1); }, 250);
+        return false;
+      }
+      if(window.__viaMetaPur && window.__viaMetaPur.order_id === String(no)) return false;
       var anahtar = 'via_fb_pur_' + String(no);
       try { if (localStorage.getItem(anahtar)) return false; } catch(e){}
       window.fbq('track', 'Purchase', { value: v, currency: 'TRY', order_id: String(no) },
