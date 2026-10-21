@@ -1,0 +1,227 @@
+{%- comment -%}
+  Via Mood — Sipariş Alındı (teşekkür) sayfası
+  İyzico/PayTR callback başarılı ödeme sonrası buraya yönlendirir.
+  ?pid=<payment_id>&order=<draft_order_id>
+
+  ⚠️ İKONLAR EMOJİ DEĞİL, ÇİZGİ (stroke) SVG. Emoji kullanılmamasının iki sebebi var:
+  (1) marka kuralı — emoji/AI-kokan ikon yasak, ikon dili tutarlı ve minimal olmalı;
+  (2) teknik — emoji her işletim sisteminde başka bir şekil ve boyutta çiziliyor
+  (aynı paket ikonu Windows ve macOS'ta aynı satır yüksekliğini vermiyor), bu da satırları
+  kaydırıyor. SVG her yerde birebir aynı. İkonlar `currentColor` kullanır; renk
+  metinden gelir, ayrıca renk tanımı gerekmez.
+
+  DOKUNULMAYANLAR: data-* seçicileri, sınıf adları, script ve schema aynen korundu —
+  sipariş numarasını dolduran, durum linkini açan, sepeti temizleyen ve GA4 purchase
+  olayını gönderen mantık bu seçicilere bağlı.
+{%- endcomment -%}
+
+<div class="via-success">
+  <div class="via-success__icon">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M4.5 12.5 10 18 19.5 7" />
+    </svg>
+  </div>
+  <h1>{{ section.settings.title | default: 'Siparişiniz Alındı!' }}</h1>
+  <p class="via-success__lead">{{ section.settings.subtitle | default: 'Teşekkür ederiz — ödemeniz başarıyla tamamlandı, siparişiniz hazırlanıyor.' }}</p>
+
+  <div class="via-success__card" data-order-detail>
+    <div class="via-success__row" data-order-no style="display:none">
+      <span>Sipariş No</span><strong data-order-no-val></strong>
+    </div>
+    <div class="via-success__row">
+      <span>Ödeme Referansı</span><strong data-pid>—</strong>
+    </div>
+    <div class="via-success__row via-success__row--muted">
+      <span class="via-success__ikonlu">
+        <svg class="via-ikon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <rect x="2.5" y="5" width="19" height="14" rx="2" /><path d="m3 7 9 6 9-6" />
+        </svg>
+        Sipariş onayı e-postanıza gönderildi
+      </span>
+    </div>
+
+    <div data-order-items style="display:none; margin-top:10px; border-top:1px solid #ececec; padding-top:10px"></div>
+    <a data-status-link href="#" target="_blank" rel="noopener" style="display:none; margin-top:12px; text-align:center; padding:10px 14px; border:1.5px solid #e8590c; color:#e8590c; border-radius:8px; font-weight:700; text-decoration:none; font-size:14px">
+      <span class="via-success__ikonlu">
+        <svg class="via-ikon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" /><path d="m3.3 7 8.7 5 8.7-5" /><path d="M12 22V12" />
+        </svg>
+        Sipariş Durumunu Görüntüle →
+      </span>
+    </a>
+
+  </div>
+
+  <div class="via-success__info">
+    <div class="via-success__info-item">
+      <svg class="via-ikon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M1.5 16V5.5A1.5 1.5 0 0 1 3 4h10.5v12" /><path d="M13.5 8H18l4 4v4h-2.2" /><path d="M7.8 16h6" />
+        <circle cx="5.8" cy="17.5" r="2" /><circle cx="17.5" cy="17.5" r="2" />
+      </svg>
+      <span>1-3 iş günü içinde kargoya verilir</span>
+    </div>
+    <div class="via-success__info-item">
+      <svg class="via-ikon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" /><path d="m3.3 7 8.7 5 8.7-5" /><path d="M12 22V12" />
+      </svg>
+      <span>Kargo takip numarası SMS ile gönderilir</span>
+    </div>
+    <div class="via-success__info-item">
+      <svg class="via-ikon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M20.5 11.5a8 8 0 0 1-11.6 7.14L3.5 20.5l1.86-5.4A8 8 0 1 1 20.5 11.5z" />
+      </svg>
+      <span>Soruların için <a href="https://wa.me/{{ section.settings.whatsapp | default: '905531707132' }}">WhatsApp</a></span>
+    </div>
+  </div>
+
+  <p style="margin:14px 0 6px"><a href="/pages/siparis-takip" style="color:#e35427;font-weight:700;text-decoration:underline">Siparişini Takip Et →</a></p>
+<a href="{{ routes.all_products_collection_url }}" class="via-success__btn">Alışverişe Devam Et →</a>
+</div>
+
+<style>
+  .via-success { max-width: 560px; margin: 50px auto; padding: 0 20px; text-align: center; }
+  .via-success__icon {
+    width: 72px; height: 72px; margin: 0 auto 24px; border-radius: 50%;
+    background: #25a248; color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    animation: viaPop .4s cubic-bezier(.2,1.4,.4,1);
+  }
+  /* SVG onay işareti: eski ✓ karakteri font-size/line-height ile ortalanıyordu;
+     SVG'de o yöntem işlemez (glif değil), bu yüzden flex ile ortalanıyor. */
+  .via-success__icon svg { width: 34px; height: 34px; display: block; }
+  @keyframes viaPop { 0% { transform: scale(0); } 100% { transform: scale(1); } }
+  .via-success h1 { font-size: clamp(1.6rem, 4vw, 2.2rem); font-weight: 800; color: #1a1a1a; margin: 0 0 10px; }
+  .via-success__lead { color: #777; font-size: 15px; margin: 0 0 28px; }
+  .via-success__card {
+    background: #fafafa; border: 1px solid #ececec; border-radius: 12px;
+    padding: 18px 20px; margin-bottom: 24px; text-align: left;
+  }
+  .via-success__row { display: flex; justify-content: space-between; padding: 8px 0; font-size: 14px; color: #555; border-bottom: 1px solid #f0f0f0; }
+  .via-success__row:last-child { border-bottom: 0; }
+  .via-success__row strong { color: #1a1a1a; }
+  .via-success__row--muted { color: #25a248; font-size: 13px; justify-content: center; }
+  /* Ortak ikon ölçüsü — metin boyu değişse bile ikonlar aynı kalır, satırlar kaymaz.
+     flex-shrink:0 olmadan dar ekranda ikon eziliyor. */
+  .via-ikon { width: 18px; height: 18px; flex-shrink: 0; }
+  .via-success__ikonlu { display: inline-flex; align-items: center; gap: 7px; }
+  .via-success__info { text-align: left; margin-bottom: 28px; display: grid; gap: 10px; }
+  .via-success__info-item { font-size: 14px; color: #444; display: flex; align-items: center; gap: 8px; }
+  .via-success__info-item a { color: #25D366; font-weight: 700; text-decoration: none; }
+  .via-success__btn {
+    display: inline-block; background: #f25334; color: #fff; padding: 14px 32px;
+    border-radius: 8px; font-weight: 700; text-decoration: none; font-size: 15px;
+    transition: background .15s;
+  }
+  .via-success__btn:hover { background: #d8431f; }
+</style>
+
+<script>
+(function(){
+  var params = new URLSearchParams(window.location.search);
+  /* ---- MADDE 10+13: havale/kapida odemeden TASINAN sonuc blogu ----
+     /pages/odeme sonuc ekranini (havalede IBAN listesi dahil) sessionStorage'a
+     birakip buraya yonlendiriyor. Varsa onu cizeriz; yoksa sayfanin kendi
+     normal icerigi kalir (yenileme/paylasma hali). */
+  (function(){
+    var no = params.get('order'), yontem = params.get('yontem');
+    if (!no || !yontem) return;
+    var ham = null;
+    try { ham = sessionStorage.getItem('vm_siparis_sonuc_' + no); } catch(e){ return; }
+    if (!ham) return;
+    var veri; try { veri = JSON.parse(ham); } catch(e){ return; }
+    if (!veri || !veri.html) return;
+    var hedef = document.querySelector('[data-vm-tasinan-sonuc]');
+    if (!hedef) {
+      // Sayfada ozel yuva yoksa basligin altina ac — icerik sessizce kaybolmasin.
+      var kok = document.querySelector('.via-success') || document.body;
+      hedef = document.createElement('div');
+      hedef.setAttribute('data-vm-tasinan-sonuc','');
+      kok.insertBefore(hedef, kok.firstChild);
+    }
+    hedef.innerHTML = veri.html;
+    hedef.style.display = 'block';
+    // IBAN kopyala dugmesi tasinan HTML'de duruyor; dinleyicisi gelmedi, burada bagla.
+    hedef.addEventListener('click', function(e){
+      var b = e.target.closest('[data-copy]'); if (!b) return;
+      var v = b.getAttribute('data-copy') || '';
+      if (navigator.clipboard) navigator.clipboard.writeText(v);
+      var t = b.textContent; b.textContent = 'Kopyalandı'; setTimeout(function(){ b.textContent = t; }, 1500);
+    });
+  })();
+  var pid = params.get('pid') || params.get('ref'); // ref = PayTR merchant_oid
+  var order = params.get('order');
+  var pidEl = document.querySelector('[data-pid]');
+  if (pid && pidEl) { pidEl.textContent = pid; }
+  else if (pidEl) { // referans yoksa satırı gizle ("—" bozuk görünüyor)
+    var pr = pidEl.closest('.via-success__row'); if (pr) pr.style.display = 'none';
+  }
+  var val = document.querySelector('[data-order-no-val]');
+  if (order) {
+    var row = document.querySelector('[data-order-no]');
+    if (row && val) { row.style.display = 'flex'; val.textContent = '#' + order; }
+  }
+  // 13 haneli taslak id yerine GERÇEK sipariş numarasını (#1032) çek — e-postayla aynı olsun
+  if (order && /^\d{8,}$/.test(order) && val) {
+    var API = 'https://mctpt0va3m.execute-api.eu-north-1.amazonaws.com/prod';
+    var tries = 0;
+    var poll = function(){
+      tries++;
+      fetch(API + '/api/v1/payment/paytr/order-name?draft=' + encodeURIComponent(order))
+        .then(function(r){ return r.json(); })
+        .then(function(d){
+          if (d && d.completed && d.name) {
+            val.textContent = d.name;
+            // Üyeliksiz takip linki (Shopify token'lı durum sayfası)
+            if (d.status_url) { var sl = document.querySelector('[data-status-link]'); if (sl) { sl.href = d.status_url; sl.style.display = 'block'; } }
+            // Sipariş özeti
+            if (d.items && d.items.length) {
+              var box = document.querySelector('[data-order-items]');
+              if (box) {
+                var h = d.items.map(function(it){
+                  return '<div style="display:flex;justify-content:space-between;gap:10px;padding:5px 0;font-size:13px;color:#555"><span>' +
+                    String(it.qty) + ' × ' + String(it.title).replace(/</g,'&lt;') + '</span><span style="white-space:nowrap">' + String(it.price) + ' TL</span></div>';
+                }).join('');
+                if (d.total) h += '<div style="display:flex;justify-content:space-between;padding:8px 0 0;font-weight:700;font-size:14px;border-top:1px solid #f0f0f0;margin-top:4px"><span>Toplam</span><span>' + d.total + ' TL</span></div>';
+                box.innerHTML = h; box.style.display = 'block';
+              }
+            }
+          }
+          else if (tries < 4) { setTimeout(poll, tries * 2500); }
+        })
+        .catch(function(){ if (tries < 4) setTimeout(poll, tries * 2500); });
+    };
+    poll();
+  }
+  // GA4 satın-alma (dönüşüm) olayı — gtag, Shopify GA4 entegrasyonuyla yüklenir
+  try {
+    if (order && typeof gtag === 'function') {
+      var gaKey = 'vm_ga4_purchase_' + order;
+      if (!sessionStorage.getItem(gaKey)) {
+        sessionStorage.setItem(gaKey, '1');
+        var amt = parseFloat(params.get('total') || params.get('amount') || '');
+        var ev = { transaction_id: String(order), currency: 'TRY' };
+        if (!isNaN(amt) && amt > 0) { ev.value = amt; }
+        gtag('event', 'purchase', ev);
+      }
+    }
+  } catch (e) {}
+  // Sepeti temizle (ödeme tamamlandı)
+  try{ localStorage.setItem('vm_clear_cart','1'); }catch(e){}
+  fetch('/cart/clear.js', { method: 'POST' }).then(function(){
+    document.querySelectorAll('.cart-bubble, [data-vm-cart-count], [data-cart-count], .cart-count, .cart-count-bubble').forEach(function(e){ e.setAttribute('hidden',''); e.style.display='none'; });
+  }).catch(function(){});
+})();
+</script>
+
+{% schema %}
+{
+  "name": "Sipariş Alındı",
+  "tag": "section",
+  "settings": [
+    { "type": "text", "id": "title", "label": "Başlık", "default": "Siparişiniz Alındı!" },
+    { "type": "text", "id": "subtitle", "label": "Alt yazı", "default": "Teşekkür ederiz — ödemeniz başarıyla tamamlandı, siparişiniz hazırlanıyor." },
+    { "type": "text", "id": "whatsapp", "label": "WhatsApp (90...)", "default": "905531707132" }
+  ],
+  "presets": [{ "name": "Sipariş Alındı" }]
+}
+{% endschema %}
