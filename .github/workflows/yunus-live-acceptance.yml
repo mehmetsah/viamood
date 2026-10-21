@@ -1,0 +1,36 @@
+name: Yunus public storefront acceptance
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'tests/e2e-yunus/**'
+      - 'playwright.yunus.config.ts'
+      - '.github/workflows/yunus-live-acceptance.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  public-storefront:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Public read-only browser checks (not payment acceptance)
+        run: npx playwright test --config playwright.yunus.config.ts
+      - name: Save screenshots, videos, traces and HTML report even on failure
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: yunus-public-storefront-evidence
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 14

@@ -1,5 +1,10 @@
 # Viamood — Eksik İşler / Yapılacaklar
 
+> **21 Ekim 2026 güncellemesi:** Aşağıdaki 8 Ekim tablosu tarihsel kayıttır.
+> Güncel örneklemde SSS, kargo sayacı ve 6 footer ödeme ikonu canlıda görüldü;
+> `/urunler` ürün yolu hâlâ 404. Ayrıntı ve açık kalan kabuller:
+> [Yunus güncel kontrolü](belgeler/yunus-kapanis-20261021.md).
+
 > Hazırlayan: **Elif** (Viamood asistanı) · 5 Eki 2026 · istek: Mehmet Şah ("eksik ne iş varsa md çıkar, codex'te yapacağım")
 > **(5 Eki: Yunus/grup talepleri eklendi — 13a-13g) · (8 Eki: Mikro ayağı kapandı, aşağıya bkz. 0. bölüm)**
 > Ölçüm tabanı: `origin/main` = `3edb62a5d0a457e046e3c75ecf57140ab338f660` (8 Eki 2026 tazelemesi, Elif)

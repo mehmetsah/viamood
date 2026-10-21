@@ -10,7 +10,7 @@ import { initiateCheckoutYay, purchaseAnahtari, purchaseYay, type Depo } from '@
 import { urunYuku, sepetYuku } from '@/lib/meta/pixel-olay';
 
 let cagrilar: Array<[string, string, Record<string, unknown> | undefined]>;
-const fbq = (k: string, o: string, y?: Record<string, unknown>) => { cagrilar.push([k, o, y]); };
+let fbq: (k: string, o: string, y?: Record<string, unknown>) => void;
 
 function sahteDepo(): Depo & { kutu: Record<string, string> } {
   const kutu: Record<string, string> = {};
@@ -19,7 +19,10 @@ function sahteDepo(): Depo & { kutu: Record<string, string> } {
 
 const YUK = urunYuku('51835342291076', 50000); // 500,00 TL
 
-beforeEach(() => { cagrilar = []; });
+beforeEach(() => {
+  cagrilar = [];
+  fbq = (k, o, y) => { cagrilar.push([k, o, y]); };
+});
 
 describe('InitiateCheckout', () => {
   it('BİR KEZ doğar ve value/currency dolu gider', () => {
@@ -79,6 +82,45 @@ describe('InitiateCheckout', () => {
 });
 
 describe('Purchase — sipariş no ile TEK KEZ', () => {
+  it('Pixel hatası ödeme akışına taşmaz; damga yazılmaz ve tekrar denenebilir', () => {
+    const d = sahteDepo();
+    let hazir = false;
+    const gecikmeliPixel = (k: string, o: string, y?: Record<string, unknown>) => {
+      if (!hazir) throw new Error('Pixel hazır değil');
+      fbq(k, o, y);
+    };
+    expect(purchaseYay(gecikmeliPixel, YUK, 'VM1041', d)).toBe(false);
+    expect(d.kutu).toEqual({});
+    hazir = true;
+    expect(purchaseYay(gecikmeliPixel, YUK, 'VM1041', d)).toBe(true);
+    expect(cagrilar).toHaveLength(1);
+  });
+
+  it.each(['okuma', 'yazma', 'ikisi', 'depo yok'])('%s engellense de aynı sayfada çift ciro oluşmaz', (engel) => {
+    const d: Depo | null = engel === 'depo yok' ? null : {
+      getItem: () => {
+        if (engel === 'okuma' || engel === 'ikisi') throw new Error('engelli');
+        return null;
+      },
+      setItem: () => {
+        if (engel === 'yazma' || engel === 'ikisi') throw new Error('engelli');
+      },
+    };
+    expect(purchaseYay(fbq, YUK, ' VM1041 ', d)).toBe(true);
+    expect(purchaseYay(fbq, YUK, 'VM1041', d)).toBe(false);
+    expect(cagrilar).toHaveLength(1);
+    expect(cagrilar[0]![2]!.order_id).toBe('VM1041');
+    expect(purchaseYay(fbq, YUK, 'VM1042', d)).toBe(true);
+  });
+
+  it('kalıcı damga yeni Pixel örneğinde de aynı siparişi engeller', () => {
+    const d = sahteDepo();
+    purchaseYay(fbq, YUK, 'VM1041', d);
+    const yeniPixel = (k: string, o: string, y?: Record<string, unknown>) => fbq(k, o, y);
+    expect(purchaseYay(yeniPixel, YUK, 'VM1041', d)).toBe(false);
+    expect(cagrilar).toHaveLength(1);
+  });
+
   it('sipariş no ile bir kez doğar, order_id taşır', () => {
     const d = sahteDepo();
     expect(purchaseYay(fbq, YUK, 'VM1041', d)).toBe(true);
