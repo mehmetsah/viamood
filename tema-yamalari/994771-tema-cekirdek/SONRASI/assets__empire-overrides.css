@@ -1,0 +1,249 @@
+/* ============================================================
+ * EMPIRE THEME OVERRIDE — based on actual Empire demo screenshot
+ * empire.myshopify.com / themes/empire/presets/empire
+ *
+ * KEY findings from real screenshot:
+ *  - All sans-serif (Inter or similar). NO Playfair Display.
+ *  - Pure white #fff bg + pure black #000 text
+ *  - Signature ORANGE accent #F25334
+ *  - Bold weight contrast for headlines
+ *  - Logo is bold lowercase sans-serif
+ *  - Big search bar with orange button
+ *  - 4-icon benefits strip
+ * ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
+:root {
+  --empire-bg: #ffffff;
+  --empire-bg-alt: #f5f5f5;
+  --empire-ink: #000000;
+  --empire-ink-soft: #1a1a1a;
+  --empire-muted: #6b6b6b;
+  --empire-line: #e5e5e5;
+  --empire-orange: #f25334;
+  --empire-orange-hover: #d84526;
+
+  --empire-font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+/* === GLOBAL: force Inter sans-serif everywhere === */
+body, body * {
+  font-family: var(--empire-font) !important;
+  letter-spacing: 0;
+}
+
+body, body.gradient {
+  background: var(--empire-bg) !important;
+  color: var(--empire-ink) !important;
+}
+
+/* Headlines — bold sans, not serif */
+h1, h2, h3, h4, h5, h6,
+.heading, .h0, .h1, .h2, .h3, .h4, .h5 {
+  font-family: var(--empire-font) !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.015em !important;
+  line-height: 1.1 !important;
+  color: var(--empire-ink) !important;
+}
+
+/* === ANNOUNCEMENT BAR — komple kaldır (temiz header) === */
+.announcement-bar,
+.announcement,
+.header__announcement,
+[class*="announcement-bar"],
+[class*="header-announcements"],
+.shopify-section--header-announcements,
+[id*="header_announcements"] {
+  display: none !important;
+}
+
+/* === HEADER === */
+.header-component,
+header-component,
+.header-section {
+  background: var(--empire-bg) !important;
+  border-bottom: 1px solid var(--empire-line) !important;
+}
+
+/* Logo: bold sans, lowercase, big */
+.header__heading,
+.header__heading-link,
+.header-component .logo,
+.logo a, .logo {
+  font-family: var(--empire-font) !important;
+  font-weight: 800 !important;
+  font-size: 28px !important;
+  letter-spacing: -0.04em !important;
+  color: var(--empire-ink) !important;
+  text-transform: lowercase !important;
+}
+
+/* Header menu */
+.header-component a,
+.menu-list__link,
+.header__menu-item {
+  font-family: var(--empire-font) !important;
+  text-transform: none !important;
+  letter-spacing: 0 !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  color: var(--empire-ink) !important;
+}
+
+/* === BUTTONS: rounded, bold, orange primary === */
+.button, .btn,
+button[type="submit"]:not(.field__button),
+.product-form__submit,
+.shopify-payment-button__button,
+.cart__checkout-button {
+  font-family: var(--empire-font) !important;
+  border-radius: 4px !important;
+  text-transform: none !important;
+  letter-spacing: 0 !important;
+  font-size: 15px !important;
+  font-weight: 600 !important;
+  padding: 14px 28px !important;
+}
+
+/* #994771 4px izgara — DAR KAPSAM. Yukaridaki global dugme kurali (14px) bilerek
+   DEGISMEDI: site genelindeki tum dugmeleri etkilerdi. Yalniz urun sayfasinda olculen
+   bilesen dugmeleri 16px'e oturtuldu (yatay 28px zaten izgarada). Ozgulluk (0,2,1):
+   global listedeki en ozgul secici button[type=submit]:not(.field__button) ile esit,
+   sonra geldigi icin kazanir. Galeri kucuk resimleri (.slideshow-controls__thumbnail, ayni
+   zamanda .slideshow-control) BILEREK listede YOK: via-product-overrides.css onlari
+   padding:0!important ile korur; genis .slideshow-control secicisi onlari ezip resmi
+   70->38px kucultuyordu (A/B olcumunde yakalandi). */
+button.button.add-to-cart-button,
+button.button.slideshow-control--previous,
+button.button.slideshow-control--next,
+button.button.dialog-zoomed-gallery__close-button,
+button.button.dialog-thumbnails-list__thumbnail,
+button.button.predictive-search-results__clear {
+  padding-top: 16px !important;
+  padding-bottom: 16px !important;
+}
+
+/* Primary buttons → Empire orange */
+.button--primary,
+.product-form__submit,
+.shopify-payment-button__button--unbranded,
+.cart__checkout-button {
+  background: var(--empire-orange) !important;
+  color: var(--empire-bg) !important;
+  border: 0 !important;
+}
+.button--primary:hover {
+  background: var(--empire-orange-hover) !important;
+}
+
+/* === PRODUCT CARDS === */
+.card, .card-wrapper, .card-wrapper .card,
+.product-card, .product-card-wrapper {
+  border-radius: 0 !important;
+  border: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+.card__media, .card__inner,
+.product-card__media, [class*="__media"] {
+  border-radius: 4px !important;
+  overflow: hidden;
+}
+.card__information, .product-card__info, .card-information {
+  text-align: left !important;
+  padding-top: 14px !important;
+}
+.card__heading, .product-card__title, [class*="card__heading"] {
+  font-family: var(--empire-font) !important;
+  font-weight: 600 !important;
+  font-size: 15px !important;
+  letter-spacing: 0 !important;
+  line-height: 1.35 !important;
+  color: var(--empire-ink) !important;
+}
+.price, .price-item, .product-price__price {
+  font-family: var(--empire-font) !important;
+  font-size: 15px !important;
+  font-weight: 600 !important;
+  color: var(--empire-ink) !important;
+}
+
+/* === PDP === */
+.product__title h1, .product-title, .product-info__title {
+  font-family: var(--empire-font) !important;
+  font-size: clamp(1.8rem, 3vw, 2.4rem) !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.015em !important;
+}
+.product__price .price-item, .product-price__price {
+  font-family: var(--empire-font) !important;
+  font-size: 1.6rem !important;
+  font-weight: 700 !important;
+}
+
+/* === FOOTER === */
+.footer, .section-footer, footer {
+  background: var(--empire-ink) !important;
+  color: var(--empire-bg) !important;
+}
+.footer *, .section-footer *, footer * {
+  color: var(--empire-bg) !important;
+  font-family: var(--empire-font) !important;
+}
+.footer__heading, .section-footer__heading, .footer-block__heading {
+  font-family: var(--empire-font) !important;
+  font-size: 15px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0 !important;
+  text-transform: none !important;
+  margin-bottom: 16px !important;
+}
+.footer a, footer a {
+  font-size: 14px !important;
+  text-decoration: none !important;
+  font-weight: 400 !important;
+}
+.footer a:hover { opacity: .7; }
+
+/* Footer newsletter */
+.footer input[type="email"], footer input[type="email"] {
+  background: var(--empire-ink) !important;
+  border: 1px solid var(--empire-bg) !important;
+  border-radius: 4px !important;
+  color: var(--empire-bg) !important;
+  font-family: var(--empire-font) !important;
+  padding: 12px 14px !important;
+}
+.footer button[type="submit"], footer button[type="submit"] {
+  background: var(--empire-orange) !important;
+  color: var(--empire-bg) !important;
+  border: 0 !important;
+  border-radius: 4px !important;
+  padding: 12px 24px !important;
+  font-weight: 600 !important;
+  text-transform: none !important;
+  letter-spacing: 0 !important;
+}
+
+/* Forms */
+input[type="text"], input[type="email"], input[type="search"],
+select, textarea {
+  border-radius: 4px !important;
+  font-family: var(--empire-font) !important;
+}
+
+/* Subtitle/eyebrow — Empire DOESN'T use uppercase eyebrows */
+.subtitle, .caption {
+  font-family: var(--empire-font) !important;
+  text-transform: none !important;
+  letter-spacing: 0 !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  color: var(--empire-muted) !important;
+}
+
+/* Misc */
+hr { border-top: 1px solid var(--empire-line) !important; }
+.link, a { text-decoration: none; }
