@@ -1,0 +1,69 @@
+{
+ "blocks/buy-buttons.liquid": {
+  "once": [
+   16991,
+   "6e58e4b81daac41bfe34e1b5c1fc9883"
+  ],
+  "sonra": [
+   17127,
+   "ab34b8f6dd63060a295ff838272e8af7"
+  ]
+ },
+ "sections/product-information.liquid": {
+  "once": [
+   14099,
+   "718ba71b255dbcd3d193064a883bb5eb"
+  ],
+  "sonra": [
+   14348,
+   "b6bb7d59d6c8f30eb8eacb89ac6a1f62"
+  ]
+ },
+ "sections/whatsapp-sticky.liquid": {
+  "once": [
+   19813,
+   "59edbe98479e4029d65472584ef6144f"
+  ],
+  "sonra": [
+   19932,
+   "0c770c4246e58a385fbd9171ca63f6d9"
+  ]
+ },
+ "sections/footer-group.json": {
+  "once": [
+   2170,
+   "a334e6fc7d625a8dc264fb6be041194f"
+  ],
+  "sonra": [
+   2197,
+   "edd0dffcf1827a004e951b5c5950b355"
+  ]
+ },
+ "blocks/via-cok-al.liquid": {
+  "once": [
+   9914,
+   "790f0c841dcbb4b22971632e750d0414"
+  ],
+  "sonra": [
+   9978,
+   "827111b1553fd160d28a3c434bccc88e"
+  ]
+ },
+ "assets/via-product-overrides.css": {
+  "once": [
+   41951,
+   "80f9a0587c89819ddbe02d929ef2c8d7"
+  ],
+  "sonra": [
+   46492,
+   "08dd5a2eccc843239815c05767d1027c"
+  ]
+ },
+ "snippets/via-satinal-ek.liquid": {
+  "once": null,
+  "sonra": [
+   11675,
+   "5bb6a47d6bf5d50070b21137914a8ead"
+  ]
+ }
+}

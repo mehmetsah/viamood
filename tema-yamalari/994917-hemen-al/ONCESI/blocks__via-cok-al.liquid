@@ -1,0 +1,182 @@
+{%- comment -%}
+  ÇOK AL AZ ÖDE — toplu alım (quantity break) kampanya kartı seçici.
+  product.variants (adet varyantları) kart olarak: üzeri çizgili (adet × en-düşük birim fiyat),
+  indirim %, adet başı fiyat. Gerçek radio input → native klavye + ekran okuyucu. Seçim mevcut
+  ürün formunun [name="id"]'sini günceller; "Sepete Ekle" o formu submit eder (temanın native
+  AJAX + sepet). Alternate template product.cok-al.json (price bloğu template'te YOK).
+  baz = ordering'den bağımsız en düşük birim fiyat; default = son (En Çok Tercih) kart, ?variant varsa o.
+{%- endcomment -%}
+{%- liquid
+  # baz = "1 adet fiyatı" (referans). Ordering'den bağımsız: adet==1 olan varyantın fiyatı.
+  # Yoksa fallback = en YÜKSEK birim fiyat (adet arttıkça birim düşer → 1-adet ~ en yüksek birim).
+  assign baz = 0
+  for v in product.variants
+    assign a = v.title | split: ' ' | first | plus: 0
+    if a < 1
+      assign a = forloop.index
+    endif
+    if a == 1
+      assign baz = v.price
+    endif
+  endfor
+  if baz == 0
+    for v in product.variants
+      assign a = v.title | split: ' ' | first | plus: 0
+      if a < 1
+        assign a = forloop.index
+      endif
+      assign u = v.price | divided_by: a
+      if u > baz
+        assign baz = u
+      endif
+    endfor
+  endif
+  assign default_variant = product.variants.last
+  if product.selected_variant
+    assign default_variant = product.selected_variant
+  endif
+-%}
+<quantity-break class="vqb" data-block-id="{{ block.id }}">
+  <div class="vqb__price" data-vqb-price>{{ default_variant.price | money }}</div>
+  <div class="vqb__vat">Vergiler dahildir.</div>
+
+  <fieldset class="vqb__group">
+    <legend class="vqb__head">{{ product.options.first | escape }}</legend>
+    {%- for variant in product.variants -%}
+      {%- liquid
+        assign adet = variant.title | split: ' ' | first | plus: 0
+        if adet < 1
+          assign adet = forloop.index
+        endif
+        assign eski = baz | times: adet
+        assign indirim = 0
+        assign has_disc = false
+        if eski > variant.price
+          assign has_disc = true
+          assign indirim = eski | minus: variant.price | times: 100 | divided_by: eski
+        endif
+        assign birim = variant.price | divided_by: adet
+        assign secili = false
+        if variant.id == default_variant.id
+          assign secili = true
+        endif
+      -%}
+      <label class="vqb__card{% if secili %} is-selected{% endif %}{% unless variant.available %} is-soldout{% endunless %}" data-vqb-card>
+        {%- if forloop.last -%}<span class="vqb__pop">En Çok Tercih Edilen</span>{%- endif -%}
+        <input type="radio" class="vqb__input" name="vqb-{{ block.id }}" value="{{ variant.id }}"
+               data-price="{{ variant.price | money | strip_html }}"
+               {% if secili %}checked{% endif %}{% unless variant.available %} disabled aria-disabled="true"{% endunless %}>
+        <span class="vqb__radio" aria-hidden="true"></span>
+        <span class="vqb__mid">
+          <span class="vqb__adet">{{ variant.title | escape }}{% if has_disc %}<span class="vqb__disc">%{{ indirim }} İndirim</span>{% endif %}</span>
+          <span class="vqb__unit">{% unless variant.available %}{{ 'products.product.sold_out' | t }} · {% endunless %}Adet {{ birim | money }}</span>
+        </span>
+        <span class="vqb__right">
+          <span class="vqb__new">{{ variant.price | money }}</span>
+          {%- if has_disc -%}<span class="vqb__old">{{ eski | money }}</span>{%- endif -%}
+        </span>
+      </label>
+    {%- endfor -%}
+  </fieldset>
+
+  <button type="button" class="vqb__btn" data-vqb-add{% unless default_variant.available %} disabled{% endunless %}>
+    <span data-vqb-btn-label>{% if default_variant.available %}{{ 'products.product.add_to_cart' | t }}{% else %}{{ 'products.product.sold_out' | t }}{% endif %}</span>
+    <span data-vqb-btn-price> — {{ default_variant.price | money }}</span>
+  </button>
+</quantity-break>
+
+<style>
+  .vqb{ display:block; }
+  .vqb__price{ font-size:28px; font-weight:800; color:var(--vqb-turuncu,#E8552B); }
+  .vqb__vat{ font-size:13px; color:#8a8a8f; margin:2px 0 4px; }
+  .vqb__group{ border:0; padding:0; margin:0; width:100%; min-width:0; box-sizing:border-box; display:block; }
+  .vqb__card,.vqb__btn{ box-sizing:border-box; width:100%; }
+  .vqb__head{ font-size:13px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; color:#8a8a8f; margin:22px 0 12px; padding:0; width:100%; display:flex; align-items:center; gap:8px; }
+  .vqb__head::before,.vqb__head::after{ content:""; flex:1; height:1px; background:#e6e6e6; }
+  .vqb__card{ position:relative; display:flex; align-items:center; gap:14px; border:2px solid #e6e6e6; border-radius:14px; padding:16px 18px; margin-bottom:12px; cursor:pointer; background:#fff; transition:border-color .15s, background .15s; }
+  .vqb__card:hover{ border-color:#cfcfcf; }
+  .vqb__card.is-selected{ border-color:var(--vqb-turuncu,#E8552B); background:#fff8f5; }
+  .vqb__card.is-soldout{ opacity:.5; cursor:not-allowed; }
+  .vqb__card:focus-within{ outline:2px solid var(--vqb-turuncu,#E8552B); outline-offset:2px; }
+  .vqb__input{ position:absolute; opacity:0; width:1px; height:1px; margin:0; pointer-events:none; }
+  .vqb__radio{ width:22px; height:22px; border-radius:50%; border:2px solid #cfcfcf; flex:0 0 auto; display:flex; align-items:center; justify-content:center; }
+  .vqb__card.is-selected .vqb__radio{ border-color:var(--vqb-turuncu,#E8552B); }
+  .vqb__card.is-selected .vqb__radio::after{ content:""; width:11px; height:11px; border-radius:50%; background:var(--vqb-turuncu,#E8552B); }
+  .vqb__mid{ flex:1; min-width:0; display:flex; flex-direction:column; }
+  .vqb__adet{ font-size:17px; font-weight:700; color:#1d1d1f; }
+  .vqb__disc{ display:inline-block; background:#e7f5ec; color:#1a8a4a; font-size:12px; font-weight:700; padding:2px 9px; border-radius:20px; margin-left:8px; vertical-align:middle; }
+  .vqb__unit{ font-size:12.5px; color:#8a8a8f; margin-top:3px; }
+  .vqb__right{ text-align:right; flex:0 0 auto; }
+  .vqb__new{ font-size:19px; font-weight:800; display:block; color:#1d1d1f; }
+  .vqb__old{ font-size:13px; color:#8a8a8f; text-decoration:line-through; }
+  .vqb__pop{ position:absolute; top:-11px; right:16px; background:#1d1d1f; color:#fff; font-size:11px; font-weight:700; padding:3px 11px; border-radius:20px; }
+  .vqb__btn{ width:100%; margin-top:8px; background:var(--vqb-turuncu,#E8552B); color:#fff; border:none; border-radius:12px; padding:16px; font-size:16px; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:2px; }
+  .vqb__btn:hover{ background:#C6431E; }
+  .vqb__btn[disabled]{ background:#cfcfcf; cursor:not-allowed; }
+</style>
+
+<script>
+  (function(){
+    if (customElements.get('quantity-break')) return;
+    customElements.define('quantity-break', class extends HTMLElement {
+      connectedCallback(){
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', () => this.setup(), { once: true });
+        } else {
+          setTimeout(() => this.setup(), 0);
+        }
+      }
+      setup(){
+        this.cards = Array.from(this.querySelectorAll('[data-vqb-card]'));
+        this.inputs = Array.from(this.querySelectorAll('.vqb__input'));
+        this.priceEl = this.querySelector('[data-vqb-price]');
+        this.btn = this.querySelector('[data-vqb-add]');
+        this.btnLabel = this.querySelector('[data-vqb-btn-label]');
+        this.btnPrice = this.querySelector('[data-vqb-btn-price]');
+        this.hideNativeForm();
+        this.inputs.forEach((inp)=>{ inp.addEventListener('change', ()=>this.onChange(inp)); });
+        if (this.btn) this.btn.addEventListener('click', ()=>this.addToCart());
+        document.addEventListener('cart:add', ()=>this.flashAdded());
+        var checked = this.querySelector('.vqb__input:checked') || this.inputs[this.inputs.length-1];
+        if (checked){ checked.checked = true; this.onChange(checked); }
+      }
+      getForm(){ return document.querySelector('product-form-component form, form[data-type="add-to-cart-form"]'); }
+      hideNativeForm(){
+        var host = document.querySelector('product-form-component');
+        if (host){ host.style.cssText='position:absolute!important;left:-9999px!important;top:auto!important;width:1px!important;height:1px!important;overflow:hidden!important;display:block!important'; host.setAttribute('aria-hidden','true'); try{ host.inert = true; }catch(e){} }
+        var sticky = document.querySelector('sticky-add-to-cart'); if (sticky) sticky.style.display='none';
+      }
+      onChange(inp){
+        var card = inp.closest('[data-vqb-card]');
+        this.cards.forEach((c)=>c.classList.remove('is-selected'));
+        if (card) card.classList.add('is-selected');
+        var pr = inp.getAttribute('data-price');
+        var f = this.getForm(); if (f){ var fi = f.querySelector('[name="id"]'); if (fi) fi.value = inp.value; }
+        if (this.priceEl) this.priceEl.textContent = pr;
+        if (this.btnPrice) this.btnPrice.textContent = ' — ' + pr;
+      }
+      addToCart(){
+        var f = this.getForm(); if (!f) return;
+        var checked = this.querySelector('.vqb__input:checked');
+        var fi = f.querySelector('[name="id"]');
+        if (fi && checked) fi.value = checked.value;
+        var sub = f.querySelector('[type="submit"]');
+        if (sub){ sub.click(); } else if (f.requestSubmit){ f.requestSubmit(); }
+      }
+      flashAdded(){
+        if (!this.btnLabel) return;
+        var orig = this.btnLabel.textContent;
+        this.btnLabel.textContent = '✓ Eklendi';
+        clearTimeout(this._ft);
+        this._ft = setTimeout(()=>{ this.btnLabel.textContent = orig; }, 1800);
+      }
+    });
+  })();
+</script>
+
+{% schema %}
+{
+  "name": "Çok Al Az Öde",
+  "settings": []
+}
+{% endschema %}

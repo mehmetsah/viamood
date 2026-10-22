@@ -1,0 +1,45 @@
+/* ── #994917 · ayse:730 REVİZYON 3 (ŞAH) · Hemen al + ürüne özel WhatsApp — ÖNİZLEME, canlıya basılmadı ──
+   Değişenler (Ayşe RET maddeleri): (1) ≤359px fiyat kırpılmasın · (3) mobilde indirim öncesi fiyat çubukta
+   gizli — GEREKÇELİ (sayfa içi fiyatta görünür) · (4) çok al şablonu: vqb__btn altına, o bloğun kendi tokenlarıyla
+   · (5) hex yerine tema değişkenleri. Hiyerarşi, 114px, nav hizası, akış DEĞİŞMEDİ. */
+.via-satinal-ek{display:flex;flex-direction:column;gap:12px;margin-top:12px;width:100%}
+.via-hemen-al{display:flex;align-items:center;justify-content:center;box-sizing:border-box;width:100%;height:52px;min-height:52px;margin:0;padding:0 28px;background:var(--empire-bg,#fff);color:var(--empire-orange);border:2px solid var(--empire-orange);border-radius:4px;font-size:15px;font-weight:600;line-height:1.4;cursor:pointer;text-transform:none;letter-spacing:0}
+.via-hemen-al:hover{color:var(--empire-orange-hover);border-color:var(--empire-orange-hover)}
+.via-hemen-al[aria-busy="true"]{opacity:.6;pointer-events:none}
+.via-wa-siparis{display:flex;align-items:center;justify-content:center;gap:8px;box-sizing:border-box;min-height:44px;padding:0 16px;background:var(--empire-bg,#fff);color:var(--empire-ink-soft);border:1px solid var(--empire-line);border-radius:4px;font-size:14px;font-weight:600;line-height:1.4;text-decoration:none}
+/* #25D366 / #f3fdf4: temada değişkeni YOK — canlı wa-fab'ın kendi değerleri (whatsapp-sticky.liquid), birebir */
+.via-wa-siparis svg{flex:0 0 20px;width:20px;height:20px;color:#25D366}
+.via-wa-siparis:hover{border-color:#25D366;background:#f3fdf4}
+
+/* ÇOK AL ŞABLONU (templates/product.cok-al.json): blok vqb__btn'in ALTINA render edilir; o bloğun dili
+   (--vqb-turuncu, radius 12px, 16/700) — yeni değer YOK, vqb__btn'in kendi tokenları. */
+.via-satinal-ek--vqb{margin-top:12px}
+.via-satinal-ek--vqb .via-hemen-al{height:52px;min-height:52px;padding:0 16px;color:var(--vqb-turuncu,#E8552B);border-color:var(--vqb-turuncu,#E8552B);border-radius:12px;font-size:16px;font-weight:700}
+.via-satinal-ek--vqb .via-hemen-al:hover{color:#C6431E;border-color:#C6431E}
+.via-satinal-ek--vqb .via-wa-siparis{border-radius:12px}
+
+/* sabit çubuk: ızgara — yükseklik 114 KORUNUR (12 + 18 + 20 + 52 + 12) */
+sticky-add-to-cart[data-variant-available="true"] .sticky-add-to-cart__bar{display:grid;grid-template-columns:52px minmax(0,1fr) auto auto;grid-template-areas:"satir satir satir satir" "gorsel bilgi hemen sepet" "gorsel fiyat hemen sepet";column-gap:16px;row-gap:0;align-items:center}
+.sticky-add-to-cart__bar > .vks-satir{grid-area:satir;margin-bottom:20px !important}
+.sticky-add-to-cart__image{grid-area:gorsel}
+.sticky-add-to-cart__info{grid-area:bilgi;align-self:end}
+.sticky-add-to-cart__price{grid-area:fiyat;align-self:start;white-space:nowrap}
+.sticky-add-to-cart__price [class*="price"]{font-size:16px !important;line-height:1.3 !important}
+/* KARAR (Ayşe RET md.3 → şık a, TÜM genişlikler): çubukta İNDİRİM ÖNCESİ fiyat gösterilmez. Ölçülen gerekçe:
+   sayfa içi fiyat bloğu eski fiyatı (mobil dahil) ZATEN gösteriyor; tema bugün de ≤375'te çubukta gizliyor;
+   PC kapsülde 5.000/6.000 TL ürününde eski fiyat sütuna sığmıyor (kırpılıyor) ve 430/390'da yan yana sığmıyor. */
+.sticky-add-to-cart__price .compare-at-price{display:none}
+.sticky-add-to-cart__hemen{grid-area:hemen;width:auto;height:52px;padding:0 28px}
+.sticky-add-to-cart__button{grid-area:sepet}
+@media (max-width:749px){
+  sticky-add-to-cart[data-variant-available="true"] .sticky-add-to-cart__bar{column-gap:12px}
+  .sticky-add-to-cart__hemen{padding:0 16px;font-size:14px;font-weight:700;border-radius:10px}
+}
+/* ≤359px: fiyat ("5.000,00TL" = 93,2px) TAM sığsın. Ölçüldü: iç boşluk daraltma İŞLEMEZ — tema
+   via-mobile-app.css `[class*="add-to-cart"] button{padding:12px!important}` dayatıyor; daraltılsa bile sütun
+   ~84px kalırdı. Çözüm: bu genişlikte çubuktaki küçük görsel çizilmez (ürün görseli sayfada zaten ekranda),
+   başlık+fiyat sütunu ~136px olur. Yazı boyutu DEĞİŞMEZ (16/800 fiyat, 14/700 Hemen al). */
+@media (max-width:359px){
+  sticky-add-to-cart[data-variant-available="true"] .sticky-add-to-cart__bar{grid-template-columns:minmax(0,1fr) auto auto;grid-template-areas:"satir satir satir" "bilgi hemen sepet" "fiyat hemen sepet";column-gap:8px}
+  sticky-add-to-cart[data-variant-available="true"] .sticky-add-to-cart__image{display:none}
+}

@@ -1,0 +1,75 @@
+{
+  "type": "footer",
+  "name": "Footer",
+  "sections": {
+    "via_footer": {
+      "type": "via-footer",
+      "settings": {}
+    },
+    "whatsapp_sticky": {
+      "type": "whatsapp-sticky",
+      "blocks": {
+        "opt_teklif": {
+          "type": "option",
+          "settings": {
+            "icon": "📦",
+            "title": "Toplu Ürün Teklifi Al",
+            "subtitle": "Bayi \/ toptan satış",
+            "message": "Merhaba, toplu ürün için teklif almak istiyorum. Ürün listesi ve adetleri paylaşabilir misiniz?"
+          }
+        },
+        "opt_takip": {
+          "type": "option",
+          "settings": {
+            "icon": "📞",
+            "title": "Sipariş Takibi",
+            "subtitle": "Mevcut siparişim hakkında",
+            "message": "Merhaba, sipariş numaram hakkında bilgi alabilir miyim?"
+          }
+        },
+        "opt_bayi": {
+          "type": "option",
+          "settings": {
+            "icon": "🏬",
+            "title": "Bayilik \/ Toptan",
+            "subtitle": "İşletme satışı",
+            "message": "Merhaba, bayilik \/ toptan satış şartlarınız hakkında bilgi almak istiyorum."
+          }
+        },
+        "opt_genel": {
+          "type": "option",
+          "settings": {
+            "icon": "❓",
+            "title": "Genel Sorular",
+            "subtitle": "Ürün, kargo, iade",
+            "message": "Merhaba, bir konuda bilgi almak istiyorum:"
+          }
+        },
+        "opt_siparis": {
+          "type": "option",
+          "settings": {
+            "icon": "🛒",
+            "title": "WhatsApp'tan Sipariş Ver",
+            "subtitle": "Sepetini tek tıkla gönder, gerisini biz halledelim",
+            "message": "Merhaba, sipariş vermek istiyorum 🛒\nÜrün: \nAdet: \nTeslimat adresi: "
+          }
+        }
+      },
+      "block_order": [
+        "opt_siparis",
+        "opt_teklif",
+        "opt_takip",
+        "opt_bayi",
+        "opt_genel"
+      ],
+      "settings": {
+        "phone": "905531707132",
+        "intro_text": "Merhaba 👋 Nasıl yardımcı olabiliriz?"
+      }
+    }
+  },
+  "order": [
+    "via_footer",
+    "whatsapp_sticky"
+  ]
+}
