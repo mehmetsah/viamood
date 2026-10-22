@@ -1,4 +1,13 @@
 /*
+ ⛔ #994888 (22 Eki 2026, ŞAH) — BU DOSYA CANLIYA BASILMAZ.
+ 21 Eki'de via-cok-al.liquid'e basıldı, dar kartta metin fiyatın üstüne bindi, GERİ ALINDI
+ (BASIM-KANITI-994753-sss-varyasyon-20261021.md §2). Ayrıca yüzey yanlış: Ayşe'nin 10 Eki
+ varyasyon-seçici kararı via-cok-al'ın ADET KADEMESİ seçicisi olduğunu, ona DOKUNULMAYACAĞINI
+ ve varyasyon kutucuğunun temanın YERLEŞİK variant-picker bloğuyla verileceğini yazıyor.
+ O blok #994888 ile templates/product.json'a basıldı (tema-yamalari/994888-tema-uclu).
+ Dosya tarihçe için duruyor; tests/varyasyon-yatay-tema.test.ts onu okumaya devam ediyor.
+*/
+/*
  ViaMood — Yunus m9, yatay varyasyon kartlari (Shopify Horizon)
  YALNIZ ONIZLEME ICIN. Canli tema dosyasinda .vqb__group / .vqb__card
  DOM yapisi ve secim/stok/fiyat update calistigi dogrulandiktan sonra

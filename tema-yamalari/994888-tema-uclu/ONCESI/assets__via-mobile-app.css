@@ -1,0 +1,1118 @@
+/* ============================================================
+   VIA MOOD — Mobile App Layout v3 (ONAYLANDI)
+   Trendyol/HepsiBurada/Amazon app standardı
+   ============================================================ */
+
+/* === BOTTOM NAV ve mobile menu — desktop'ta GİZLİ === */
+.vm-bottom-nav,
+.vm-mobile-menu { display: none; }
+
+/* === GLOBAL OVERFLOW KILL === */
+/* 2026-07-21: overflow-x SADECE html'de — body'ye verilince body scroll
+   container olur ve position:sticky (sticky header + menü) ÇALIŞMAZ. */
+html {
+  overflow-x: hidden !important;
+}
+html, body {
+  max-width: 100vw !important;
+}
+* { box-sizing: border-box; }
+img, video, iframe, svg {
+  max-width: 100% !important;
+  height: auto;
+}
+
+/* ============================================================
+   MOBILE (max-width: 749px) — APP MODE
+   ============================================================ */
+@media (max-width: 749px) {
+
+  body {
+    font-size: 14px !important;
+    padding-bottom: 70px !important;
+    -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
+    background: #f7f7f8 !important;
+  }
+
+  /* Tüm container'lar full width */
+  .container, .page-width, [class*="page-width"],
+  .shopify-section > .container,
+  [class*="container"]:not(.cart-totals__container):not([class*="cart-item"]) {
+    max-width: 100% !important;
+    width: 100% !important;
+    padding-left: 12px !important;
+    padding-right: 12px !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+  }
+  section, .shopify-section { overflow-x: hidden !important; }
+
+  /* === ÜST HEADER (logo+sepet barı) MOBİLDE GİZLİ ===
+     Kullanıcı isteği: logo bottom nav "Ana Sayfa"da. Üst header boştu, kaldırıldı.
+     Trust badge'ler (mm-features) KORUNUR — sadece .header satırı gizli. */
+  .header {
+    display: none !important;
+  }
+  /* Header'a ait ÖKSÜZ overlay'ler — görünmez tıklama engeli yaratabilir → KESIN KALDIR */
+  .header__underlay,
+  .header__underlay-open,
+  .header__underlay-closed,
+  .menu-drawer__backdrop,
+  .menu-drawer-container {
+    display: none !important;
+    pointer-events: none !important;
+    visibility: hidden !important;
+  }
+  /* Bottom nav HER ZAMAN tıklanabilir + en üstte */
+  .vm-bottom-nav {
+    pointer-events: auto !important;
+    z-index: 2147483000 !important;
+  }
+  .vm-bottom-nav__item {
+    pointer-events: auto !important;
+  }
+  .shopify-section-header,
+  #header-group,
+  [id*="header_section"],
+  [id*="header-group"] {
+    position: relative !important;
+    z-index: 100 !important;
+    background: #fff !important;
+    box-shadow: none !important;
+  }
+  /* NOT: header grid/logo/column layout kuralları KALDIRILDI —
+     .header zaten display:none (üst header mobilde tamamen gizli).
+     header.header { display: grid } çakışması bu yüzden temizlendi. */
+
+  /* Desktop nav linklerini GIZLE — bottom nav'dan açılır */
+  .header__menu-list,
+  .header-menu-list,
+  .mega-menu-list,
+  .header__inline-menu,
+  nav.header-menu,
+  details.mega-menu,
+  .header > nav:not(.vm-bottom-nav) ul.list-menu {
+    display: none !important;
+  }
+  /* HAMBURGER TAMAMEN KALDIRILDI — bottom nav "Kategoriler" zaten aynı işi yapıyor.
+     Aşağıdaki tüm hamburger/menu-drawer/search selektörleri kesin gizli. */
+  .header-drawer,
+  .menu-drawer-container,
+  #Details-menu-drawer-container,
+  .header__icon--menu,
+  .header__icon--summary,
+  details.menu-drawer-container,
+  .header__column--left .header__icon,
+  search-button,
+  .search-action,
+  .header__search {
+    display: none !important;
+    visibility: hidden !important;
+    width: 0 !important;
+    height: 0 !important;
+    overflow: hidden !important;
+  }
+
+  /* Sepet + hesap ikonları (sağ kolon) GÖRÜNÜR kalsın */
+  .header-actions {
+    grid-column: 3 !important;
+    justify-self: end !important;
+    display: flex !important;
+    gap: 4px !important;
+    align-items: center !important;
+  }
+  .header-actions__action,
+  .account-button,
+  .header-actions__cart-icon {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 40px !important;
+    height: 40px !important;
+    padding: 0 !important;
+    background: #f7f7f8 !important;
+    border-radius: 10px !important;
+    color: #1a1a1a !important;
+  }
+  .header-actions__action svg,
+  .account-button svg,
+  .header-actions__cart-icon svg {
+    --icon-stroke-width: 2px !important;
+    width: 18px !important;
+    height: 18px !important;
+  }
+  .header-actions svg path,
+  .header-actions svg line {
+    stroke: currentColor !important;
+    stroke-width: 2px !important;
+    stroke-linecap: round !important;
+  }
+
+  /* === TRUST BADGES (mm-features) → YATAY SCROLL === */
+  .mm-features {
+    background: #fff !important;
+    padding: 0 !important;
+    margin: 0 0 8px !important;
+    border-bottom: 1px solid #f4f4f4 !important;
+    border-top: 1px solid #f4f4f4 !important;
+    overflow: hidden !important;
+  }
+  .mm-features-inner {
+    display: flex !important;
+    overflow-x: auto !important;
+    flex-wrap: nowrap !important;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    padding: 10px 12px !important;
+    gap: 14px !important;
+    max-width: 100% !important;
+  }
+  .mm-features-inner::-webkit-scrollbar { display: none; }
+  .mm-feature {
+    flex: 0 0 auto !important;
+    min-width: 140px !important;
+    max-width: 160px !important;
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    gap: 8px !important;
+    padding: 0 !important;
+  }
+  .mm-feature-ico {
+    flex: 0 0 32px !important;
+    width: 32px !important;
+    height: 32px !important;
+    background: #fff4ee !important;
+    border-radius: 8px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+  .mm-feature-ico svg {
+    width: 18px !important;
+    height: 18px !important;
+    color: #f25334 !important;
+  }
+  .mm-feature-txt {
+    flex: 1 !important;
+    min-width: 0 !important;
+  }
+  .mm-feature-txt strong {
+    font-size: 10px !important;
+    letter-spacing: 0 !important;
+    text-transform: uppercase !important;
+    color: #1a1a1a !important;
+    margin-bottom: 1px !important;
+    white-space: nowrap;
+    line-height: 1.2 !important;
+  }
+  .mm-feature-txt span {
+    font-size: 10px !important;
+    color: #888 !important;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: block;
+    line-height: 1.2 !important;
+  }
+
+  /* === MEGA MENU KATEGORI İKON BARI → MOBİLDE GİZLE ===
+     Dev ikon daireleri (YENİ GELENLER/MUTFAK DÜZENİ...) sorunu = bu bar.
+     Mobilde kategorilere bottom-nav "Kategoriler" + hamburger'dan ulaşılır.
+     Trust badge'ler (mm-features) KORUNUR — sadece ikon barı + dropdown gizli. */
+  .mm-bar,
+  .mm-panel,
+  .mm-items {
+    display: none !important;
+  }
+
+  /* ============================================================
+     ANASAYFA (emp-* namespace) — APP POLISH
+     ============================================================ */
+
+  /* Hero */
+  .emp-hero {
+    margin: 12px !important;
+    border-radius: 16px !important;
+    overflow: hidden !important;
+  }
+  .emp-hero__title {
+    font-size: 22px !important;
+    line-height: 1.25 !important;
+  }
+  .emp-hero__lead {
+    font-size: 13px !important;
+  }
+  .emp-hero__cta {
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+  }
+  .emp-hero__cta .emp-btn {
+    font-size: 13px !important;
+    padding: 11px 18px !important;
+  }
+
+  /* Kategori daireleri (emp-gifts / emp-gift) → yatay scroll */
+  .emp-gifts__grid {
+    display: flex !important;
+    overflow-x: auto !important;
+    flex-wrap: nowrap !important;
+    gap: 14px !important;
+    padding: 8px 12px !important;
+    scrollbar-width: none;
+  }
+  .emp-gifts__grid::-webkit-scrollbar { display: none; }
+  .emp-gift {
+    flex: 0 0 auto !important;
+    width: 72px !important;
+    text-align: center !important;
+  }
+  .emp-gift__circle {
+    width: 64px !important;
+    height: 64px !important;
+    border-radius: 50% !important;
+    margin: 0 auto 6px !important;
+    object-fit: cover !important;
+  }
+  .emp-gift__label {
+    font-size: 10px !important;
+    line-height: 1.2 !important;
+    font-weight: 600 !important;
+  }
+  .emp-gifts__title,
+  .emp-secthead__title,
+  .emp-slider__title {
+    font-size: 15px !important;
+    font-weight: 700 !important;
+  }
+
+  /* Ürün carousel (emp-slider) → 2-col scroll-snap */
+  .emp-slider__track {
+    display: flex !important;
+    overflow-x: auto !important;
+    scroll-snap-type: x mandatory !important;
+    -webkit-overflow-scrolling: touch !important;
+    gap: 10px !important;
+    padding: 6px 12px !important;
+    scrollbar-width: none;
+  }
+  .emp-slider__track::-webkit-scrollbar { display: none; }
+  .emp-slider__track > * {
+    scroll-snap-align: start !important;
+    flex: 0 0 47% !important;
+    min-width: 47% !important;
+    max-width: 47% !important;
+  }
+  .emp-slider__arrow { display: none !important; }
+
+  /* Ürün kartları (emp-product / emp-sli) */
+  .emp-product, .emp-sli {
+    border-radius: 12px !important;
+    overflow: hidden !important;
+    background: #fff !important;
+  }
+  .emp-product__img, .emp-sli__media img {
+    aspect-ratio: 1/1 !important;
+    object-fit: cover !important;
+    width: 100% !important;
+  }
+  .emp-product__title, .emp-sli__title {
+    font-size: 12px !important;
+    line-height: 1.3 !important;
+    display: -webkit-box !important;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .emp-product__price, .emp-sli__price {
+    font-size: 14px !important;
+    font-weight: 800 !important;
+    color: #f25334 !important;
+  }
+
+  /* Banner'lar (emp-banners / emp-bnr) → tek kolon */
+  .emp-banners__grid {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+    padding: 0 12px !important;
+  }
+  .emp-bnr {
+    border-radius: 14px !important;
+    overflow: hidden !important;
+  }
+  .emp-bnr__title { font-size: 18px !important; }
+  .emp-bnr__lead { font-size: 12px !important; }
+
+  /* Benefits (emp-benefits) → 2-col */
+  .emp-benefits__grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 10px !important;
+    padding: 0 12px !important;
+  }
+
+  /* Featured grid (emp-featgrid) → tek kolon */
+  .emp-featgrid__grid {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+    padding: 0 12px !important;
+  }
+
+  /* Story (emp-story) → tek kolon */
+  .emp-story__grid {
+    grid-template-columns: 1fr !important;
+    gap: 16px !important;
+  }
+
+  /* Newsletter (emp-news) */
+  .emp-news__form {
+    flex-direction: column !important;
+    gap: 8px !important;
+  }
+  .emp-news__input, .emp-news__btn {
+    width: 100% !important;
+  }
+
+  /* Section genel padding */
+  .emp-section, .emp-wrap {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    max-width: 100% !important;
+  }
+
+  /* === Anasayfa carousel'leri === */
+  .emp-slider,
+  [class*="slider"],
+  [class*="carousel"] {
+    overflow: hidden !important;
+    padding: 0 !important;
+    margin-bottom: 16px !important;
+  }
+  .emp-slider__head {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    padding: 0 12px 8px !important;
+  }
+  .emp-slider__title {
+    font-size: 15px !important;
+    font-weight: 700 !important;
+    color: #1a1a1a !important;
+  }
+  .emp-slider__track,
+  [data-slider-track],
+  [class*="slider__track"] {
+    display: flex !important;
+    overflow-x: auto !important;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    padding: 6px 12px !important;
+    gap: 10px !important;
+    scrollbar-width: none;
+  }
+  .emp-slider__track::-webkit-scrollbar { display: none; }
+  .emp-slider__track > *,
+  [data-slider-track] > * {
+    scroll-snap-align: start;
+    flex: 0 0 48% !important;
+    min-width: 48% !important;
+    max-width: 48% !important;
+  }
+  .emp-slider__arrow,
+  [class*="slider__arrow"],
+  [data-slider-prev],
+  [data-slider-next] {
+    display: none !important;
+  }
+
+  /* === KATEGORI: Ürün grid 2-col (Shopify Horizon: product-grid + product-grid__item) === */
+  .product-grid {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 10px !important;
+    padding: 0 12px !important;
+    list-style: none !important;
+    margin: 0 !important;
+  }
+  .product-grid__item {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    min-width: 0 !important;
+  }
+  .product-card {
+    border-radius: 12px !important;
+    overflow: hidden !important;
+    background: #fff !important;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05) !important;
+    width: 100% !important;
+    margin: 0 !important;
+  }
+  .product-card__link { width: 100% !important; }
+  .product-card img,
+  .product-card-gallery img {
+    aspect-ratio: 3 / 4 !important; /* 2026-07-21 toplantı: her yerde 3x4 */
+    object-fit: cover !important;
+    width: 100% !important;
+  }
+  .product-card .product-title,
+  .product-card [class*="title"]:not(.placeholder),
+  .product-card h3 {
+    font-size: 13px !important;
+    line-height: 1.3 !important;
+    font-weight: 500 !important;
+    margin: 0 !important;
+    color: #1a1a1a !important;
+    display: -webkit-box !important;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .product-card .price,
+  .product-card .price-item--regular,
+  .product-card .price-item--sale {
+    font-size: 14px !important;
+    font-weight: 800 !important;
+    color: #f25334 !important;
+  }
+  /* Sepete carousel'lerdeki ürün card'ları da 48% */
+  .product-grid-container,
+  [class*="product-grid-container"] {
+    padding: 0 !important;
+  }
+
+  /* === ÜRÜN DETAY (Shopify Horizon: product-media, dialog-thumbnails-list) === */
+  .product-information,
+  .product-page,
+  [class*="product-information"] {
+    padding-bottom: 112px !important; /* #994771 4px izgara: 110 idi */
+  }
+  /* Galeri full-width edge */
+  .product-media,
+  .product-media-constraint-wrapper,
+  .product-media-container {
+    max-height: none !important;
+    width: 100% !important;
+    border-radius: 0 !important;
+  }
+  .product-media__image,
+  .product-media img {
+    border-radius: 0 !important;
+    width: 100% !important;
+    aspect-ratio: 3 / 4 !important; /* 2026-07-21 toplantı: her yerde 3x4 */
+    object-fit: cover !important;
+  }
+  /* Thumbnails strip (dialog-thumbnails-list) */
+  .dialog-thumbnails-list,
+  .dialog-thumbnails-list-container {
+    display: flex !important;
+    gap: 8px !important; /* #994771 4px izgara: 6 idi */
+    padding: 8px 0 !important;
+    overflow-x: auto !important;
+    scrollbar-width: none;
+    background: #fff !important;
+    margin-bottom: 8px !important;
+  }
+  .dialog-thumbnails-list::-webkit-scrollbar { display: none; }
+  .dialog-thumbnails-list__thumbnail {
+    width: 56px !important;
+    height: 56px !important;
+    border-radius: 8px !important;
+    flex-shrink: 0 !important;
+    overflow: hidden;
+  }
+  .dialog-thumbnails-list__thumbnail img {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
+  }
+
+  /* Ürün başlık + fiyat (detay sayfası) */
+  .product-information h1,
+  .product-details h1,
+  .group-block h1 {
+    font-size: 19px !important;
+    line-height: 1.3 !important;
+    font-weight: 700 !important;
+    margin: 8px 0 12px !important;
+    color: #1a1a1a !important;
+  }
+  /* Detay fiyatı büyük turuncu (sticky-add-to-cart hariç) */
+  .product-information .price .price-item--regular,
+  .product-information .price .price-item--sale,
+  .product-details .price-item--sale,
+  .product-details .price-item--regular {
+    font-size: 24px !important;
+    font-weight: 800 !important;
+    color: #f25334 !important;
+  }
+  /* 2026-07-02: Buy-area mobilde sticky-KUTU değil, TEMİZ INLINE (Yunus: "miktar+sepete ekle iç içe iki kutucuk gibi").
+     Border-top+shadow+bg kutuydu → kaldırıldı; miktar+buton içerik içinde düz akar. */
+  .buy-buttons-block,
+  .product-form-buttons,
+  [class*="buy-buttons"] {
+    position: static !important;
+    background: transparent !important;
+    margin: 16px 0 0 !important; /* #994771 4px izgara: 14 idi */
+    padding: 0 !important;
+    box-shadow: none !important;
+    border-top: 0 !important;
+    display: flex !important;
+    gap: 12px !important; /* #994771 4px izgara: 10 idi */
+    align-items: center !important;
+  }
+  .buy-buttons-block .quantity-selector,
+  .product-form-buttons .quantity-selector {
+    flex: 0 0 auto !important;
+  }
+  .add-to-cart-button,
+  [class*="add-to-cart"] button {
+    flex: 1 !important;
+    padding: 12px !important;
+    font-size: 14px !important;
+    border-radius: 10px !important;
+    font-weight: 700 !important;
+  }
+
+  /* === KATEGORI SAYFASI === */
+  .collection-hero,
+  [class*="collection-banner"] {
+    margin: 0 -12px 12px !important;
+    padding: 16px 14px !important;
+    background: #fff !important;
+  }
+  .collection-hero h1,
+  .collection__title,
+  .main-collection h1 {
+    font-size: 18px !important;
+    margin: 0 !important;
+    font-weight: 800 !important;
+    color: #1a1a1a !important;
+  }
+  /* Filtre/sort toggle button (Shopify Horizon: facets-toggle__button) */
+  .facets-toggle__button,
+  .facets__see-results {
+    padding: 10px 14px !important;
+    background: #f7f7f8 !important;
+    border: 1px solid #ececec !important;
+    border-radius: 8px !important;
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    color: #1a1a1a !important;
+  }
+
+  /* === SEPET DRAWER === */
+  cart-drawer-component,
+  [class*="cart-drawer"] { width: 100vw !important; }
+  cart-drawer-component dialog,
+  .cart-drawer__content {
+    width: 100vw !important;
+    max-width: 100vw !important;
+    height: 100vh !important;
+    max-height: 100vh !important;
+    border-radius: 0 !important;
+    margin: 0 !important;
+  }
+  .cart-drawer__header {
+    padding: 14px !important;
+    border-bottom: 1px solid #ececec !important;
+  }
+  .cart-drawer__title {
+    font-size: 17px !important;
+    font-weight: 800 !important;
+  }
+  .cart-items, .cart-item { font-size: 13px !important; }
+  .cart-item__image,
+  .cart-item img,
+  .cart-items img {
+    width: 60px !important;
+    height: 60px !important;
+    border-radius: 8px !important;
+    object-fit: cover !important;
+  }
+  .cart__ctas, .cart-totals,
+  [class*="cart__checkout"] { padding: 12px !important; }
+  .cart__checkout-button {
+    width: 100% !important;
+    padding: 14px !important;
+    font-size: 15px !important;
+    border-radius: 10px !important;
+    font-weight: 700 !important;
+  }
+
+  /* Sepet içi il/ilçe widget */
+  .via-cart-region {
+    margin: 0 0 12px !important;
+    padding: 12px !important;
+    background: #fff !important;
+    border-top: 1px solid #ececec !important;
+    border-bottom: 1px solid #ececec !important;
+  }
+  .via-cart-region__title {
+    font-size: 12px !important;
+    font-weight: 700 !important;
+    color: #1a1a1a !important;
+    margin-bottom: 10px !important;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .via-cart-region .tr-address-cascade {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 6px !important;
+  }
+  .via-cart-region .tr-field:nth-child(3) { grid-column: 1 / -1 !important; }
+
+  /* === HESAP SAYFALARI (Modern Customer Accounts) === */
+  .vm-acc, .vm-auth, .vm-addr {
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #f7f7f8 !important;
+  }
+  .vm-acc__top {
+    background: linear-gradient(135deg, #f25334 0%, #d8431f 100%) !important;
+    color: #fff !important;
+    padding: 20px 16px !important;
+    margin: 0 !important;
+    flex-direction: column !important;
+    align-items: flex-start !important;
+  }
+  .vm-acc__title {
+    color: #fff !important;
+    font-size: 18px !important;
+  }
+  .vm-acc__subtitle {
+    color: rgba(255,255,255,0.9) !important;
+    font-size: 12px !important;
+  }
+  .vm-acc__logout {
+    background: rgba(255,255,255,0.2);
+    padding: 6px 12px;
+    border-radius: 6px;
+    color: #fff !important;
+    font-size: 12px;
+    margin-top: 8px;
+  }
+  .vm-acc__nav {
+    padding: 12px 14px !important;
+    background: #fff !important;
+    margin: 0 !important;
+    border-bottom: 1px solid #ececec !important;
+  }
+  .vm-acc__nav a {
+    padding: 8px 14px !important;
+    border-radius: 8px !important;
+    border: 0 !important;
+    background: #f7f7f8 !important;
+    font-size: 12px !important;
+  }
+  .vm-acc__nav a.active {
+    background: #1a1a1a !important;
+    color: #fff !important;
+  }
+  .vm-acc__panel {
+    background: #fff !important;
+    margin: 12px 12px !important;
+    border-radius: 10px !important;
+    padding: 14px !important;
+    border: 1px solid #ececec !important;
+  }
+
+  /* === LOGIN/REGISTER === */
+  .vm-auth {
+    margin: 16px 12px !important;
+    padding: 24px 18px !important;
+    background: #fff !important;
+    border-radius: 14px !important;
+    border: 1px solid #ececec !important;
+    width: auto !important;
+  }
+  .vm-auth h1 {
+    font-size: 22px !important;
+    font-weight: 800 !important;
+    margin-bottom: 4px !important;
+  }
+  .vm-auth__sub {
+    font-size: 12px !important;
+    margin-bottom: 20px !important;
+  }
+  .vm-auth__btn {
+    padding: 14px !important;
+    border-radius: 8px !important;
+    font-size: 13px !important;
+  }
+
+  /* === ARAMA MODAL === */
+  search-modal-component dialog,
+  .search-modal,
+  [id*="search-modal"] dialog {
+    width: 100vw !important;
+    height: 100vh !important;
+    max-width: 100vw !important;
+    max-height: 100vh !important;
+    margin: 0 !important;
+    border-radius: 0 !important;
+  }
+
+  /* === WhatsApp Sticky — Bottom Nav üstünde === */
+  [id*="via_product_whatsapp"] {
+    bottom: 70px !important;
+    z-index: 90 !important;
+  }
+  .via-wa-bulk-btn {
+    padding: 12px !important;
+    font-size: 13px !important;
+  }
+  .via-wa-bulk-btn small { display: none !important; }
+
+  /* === FORM === */
+  input, select, textarea {
+    font-size: 16px !important;
+    min-height: 44px !important;
+    border-radius: 8px !important;
+  }
+  button, .button, [type="submit"] {
+    min-height: 44px !important;
+    cursor: pointer !important;
+    touch-action: manipulation;
+  }
+
+  footer, [class*="footer"] {
+    margin-bottom: 70px !important;
+  }
+  .footer__column, [class*="footer-block"] {
+    flex: 0 0 100% !important;
+    margin-bottom: 16px !important;
+  }
+}
+
+@media (max-width: 379px) {
+  .product-grid, .collection-grid { gap: 8px !important; }
+  .product-card__title { font-size: 12px !important; }
+  .product-card__price { font-size: 13px !important; }
+}
+
+/* ============================================================
+   BOTTOM NAVIGATION (mobile only)
+   ============================================================ */
+@media (max-width: 749px) {
+  .vm-bottom-nav {
+    display: flex !important;
+    position: fixed !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    z-index: 1001 !important; /* search/menü drawer'ların ÜSTÜNDE — her zaman görünür */
+    background: #fff;
+    border-top: 1px solid #ececec;
+    padding: 6px 0 calc(6px + env(safe-area-inset-bottom, 0px));
+    height: 64px;
+    box-shadow: 0 -2px 8px rgba(0,0,0,0.06);
+  }
+  .vm-bottom-nav__item {
+    flex: 1 1 0;
+    display: flex !important;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    background: transparent;
+    border: 0;
+    padding: 4px;
+    color: #999;
+    text-decoration: none;
+    font-size: 10px;
+    font-weight: 500;
+    cursor: pointer;
+    position: relative;
+    transition: color .15s, transform .1s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .vm-bottom-nav__item svg {
+    width: 22px !important;
+    height: 22px !important;
+  }
+  /* "Ana Sayfa" sekmesinde Via Mood logosu */
+  .vm-bottom-nav__logo {
+    width: 30px !important;
+    height: 22px !important;
+    object-fit: contain !important;
+    display: block !important;
+  }
+  .vm-bottom-nav__item--home.is-active .vm-bottom-nav__logo,
+  .vm-bottom-nav__item--home .vm-bottom-nav__logo {
+    opacity: 1 !important; /* logo turuncu zaten, renk filtresi yok */
+  }
+  .vm-bottom-nav__item span:not(.vm-bottom-nav__badge) {
+    font-size: 10px;
+    line-height: 1;
+  }
+  .vm-bottom-nav__item.is-active,
+  .vm-bottom-nav__item:hover {
+    color: #f25334;
+  }
+  .vm-bottom-nav__item:active {
+    transform: scale(0.94);
+    opacity: 0.7;
+  }
+  .vm-bottom-nav__badge {
+    position: absolute;
+    top: 0;
+    right: calc(50% - 18px);
+    background: #f25334;
+    color: #fff;
+    min-width: 16px;
+    height: 16px;
+    border-radius: 8px;
+    font-size: 10px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 4px;
+    line-height: 1;
+  }
+  .vm-bottom-nav__badge[hidden] { display: none !important; }
+
+  /* === MOBILE MENU DRAWER === */
+  .vm-mobile-menu {
+    display: block !important;
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+  }
+  .vm-mobile-menu[hidden] { display: none !important; }
+  .vm-mobile-menu__backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    animation: vmFadeIn .2s ease;
+  }
+  .vm-mobile-menu__panel {
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 85%;
+    max-width: 340px;
+    background: #fff;
+    overflow-y: auto;
+    animation: vmSlideIn .25s ease;
+  }
+  .vm-mobile-menu__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 18px;
+    border-bottom: 1px solid #ececec;
+    position: sticky;
+    top: 0;
+    background: #fff;
+    z-index: 2;
+  }
+  .vm-mobile-menu__header strong {
+    font-size: 16px;
+    color: #1a1a1a;
+  }
+  .vm-mobile-menu__header button {
+    background: transparent;
+    border: 0;
+    font-size: 22px;
+    cursor: pointer;
+    color: #777;
+    padding: 4px 8px;
+  }
+  .vm-mobile-menu__list {
+    list-style: none;
+    margin: 0;
+    padding: 8px 0;
+  }
+  .vm-mobile-menu__list > li {
+    border-bottom: 1px solid #f4f4f4;
+  }
+  .vm-mobile-menu__link {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 18px;
+    color: #1a1a1a;
+    text-decoration: none;
+    font-size: 15px;
+    font-weight: 600;
+  }
+  .vm-mobile-menu__link svg {
+    width: 16px;
+    height: 16px;
+    color: #999;
+  }
+  .vm-mobile-menu__link:active {
+    background: #fafafa;
+  }
+  .vm-mobile-menu__sublist {
+    list-style: none;
+    margin: 0;
+    padding: 4px 0 8px;
+    background: #fafafa;
+  }
+  .vm-mobile-menu__sublist a {
+    display: block;
+    padding: 10px 32px;
+    color: #555;
+    text-decoration: none;
+    font-size: 13px;
+  }
+}
+
+@keyframes vmFadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes vmSlideIn { from { transform: translateX(-100%); } to { transform: translateX(0); } }
+
+/* === APP TOUCH FEEDBACK === */
+@media (hover: none) and (pointer: coarse) {
+  a:active, button:active, .button:active {
+    opacity: 0.75;
+    transition: opacity .1s, transform .1s;
+  }
+}
+
+/* === SMOOTH SCROLL === */
+html { scroll-behavior: smooth; }
+
+/* ============================================================
+   DESKTOP — Aşağıdaki sadeleştirmeler tablet/PC için
+   ============================================================ */
+@media (min-width: 750px) {
+  /* Product card hover lift */
+  [class*="product-card"]:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+    transition: transform .2s, box-shadow .2s;
+  }
+  /* Buy button hover */
+  .add-to-cart-button:hover {
+    background: #d8431f !important;
+  }
+}
+
+/* ============================================================
+   2026-07-02 MOBİL DENETİM DÜZELTMELERİ (8-ajan tarama + Yunus geri bildirim)
+   Additive/güvenli: tap-target ≥44px, font ≥12px, taşma/kırpma önleme.
+   ============================================================ */
+@media (max-width: 749px) {
+  /* #1 Anasayfa kategori daireleri: justify-content:center + overflow ilk daireyi kırpıyordu → flex-start */
+  .emp-gifts__grid--scroll { justify-content: flex-start !important; }
+  /* #11 Banner kopyası %60'a sıkışıp sağda yer israf ediyordu → tam genişlik */
+  .emp-bnr__copy { max-width: 100% !important; }
+  /* #23/#29 Güven bandı: uzun etiket kelime-kelime sarmasın + okunur font */
+  .emp-trust__item { font-size: 13px !important; }
+  .emp-trust__item span { min-width: 0; }
+  /* #16/#30 Kart görselleri yatay taşma güvenliği */
+  .emp-sli__media img { max-width: 100%; }
+  /* #14 Footer kategori/yardım linkleri dokunma hedefi */
+  .vf-col ul a { display: block; padding-block: 8px; }
+  /* #13 Ürün detay sekme çubuğu tap-target */
+  .vp-tab { padding: 12px 16px !important; min-height: 44px; }
+  /* #22 Popüler arama chip'leri tap-target + okunur font */
+  .vm-search__chips a { padding: 11px 16px !important; font-size: 13px !important; min-height: 44px; display: inline-flex; align-items: center; }
+  /* #20 Çerez banner butonları tap-target */
+  #vm-cookie button { min-height: 44px !important; }
+  /* #10 Mega-nav mobil bar: mobilde GİZLE (Yunus kararı). Hamburger drawer (#vmm-drawer) + alt menü "Kategoriler" + native header hamburger navigasyonu karşılıyor; .mm-bar ayrı <nav>, drawer trigger içinde DEĞİL → güvenli. */
+  .mm-bar { display: none !important; }
+  /* #21 Sepet header güven rozetleri (4 adet) 2x2 düzgün dizilsin */
+  .vch__trust { display: grid !important; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .vch__trust-item { justify-content: center; }
+  /* #6 Sepet çekmecesi kapatma (X) butonu tap-target */
+  cart-drawer-component dialog button[aria-label*="kapat" i],
+  cart-drawer-component dialog button[aria-label*="close" i] { min-width: 44px; min-height: 44px; }
+  /* #17 Drawer indirim 'kaldır' butonu tap-target */
+  .vm-disc-rm { min-height: 36px; padding: 6px 10px !important; font-size: 13px !important; }
+
+  /* === BOŞLUK FIX (Yunus 2026-07-02): footer altında dev boş SİYAH kutu ===
+     Native tema mobilde footer'a `margin-bottom:70px` + `padding:var(--padding-2xl)` + `background:var(--empire-ink=#000)`
+     bindiriyor. Sonuç: footer saf siyah + altında yığılmış boşluk (footer margin 70 + body padding 70) = boş siyah kutu.
+     Düzeltme: footer alt boşluğunu sıfırla, bg'yi tasarlanan koyu-yeşile (--vf-ink) sabitle.
+     body padding-bottom:70px zaten alt menü (nav) clearance'ını tek başına karşılıyor. */
+  footer, footer.vf, .vf, .section-footer { margin-bottom: 0 !important; }
+  footer.vf, .vf {
+    padding-bottom: 16px !important;
+    background: #14201d !important;
+  }
+}
+
+/* === FOOTER GLOBAL FIX (Yunus 2026-07-02 "footerda altta boşluk") ===
+   (1) Native tema `footer{background:var(--empire-ink=#000)}` footer'ı TÜM genişliklerde SİYAH yapıyordu
+       (via-footer'ın --vf-ink #14201d'sini eziyor) → koyu-yeşile global sabitle.
+   (2) ≤600px'te footer 5 kolonu TEK sütuna stack olup footer'ı ~2034px'e şişiriyordu (dev koyu boşluk) →
+       2 sütun + kompakt padding + link tap-target'ı biraz kısalt → ~1480px. */
+footer.vf, .vf { background: #14201d !important; }
+
+/* === ASIL BOŞLUK FIX (Yunus "her sayfada altta boşluk") ===
+   Native `dialog-component.search-modal` KAPALIYKEN de wrapper `height:888px (100vh)` + display:block + static
+   ile flow'da 888px yer kaplıyordu (iç <dialog> display:none olsa da) → footer'dan sonra dev boşluk, HER sayfada.
+   height:auto → kapalı wrapper 0'a çöker. Açılınca iç <dialog> top-layer modal olarak gösterilir (etkilenmez);
+   mobilde zaten arama .vm-search overlay'iyle açılıyor. */
+dialog-component.search-modal { height: auto !important; min-height: 0 !important; }
+
+@media (max-width: 600px) {
+  #shopify-section-sections--27920105__via_footer .vf-grid,
+  .vf-main .vf-grid, .vf-grid { grid-template-columns: 1fr 1fr !important; gap: 22px 16px !important; }
+  .vf-col.vf-brand { grid-column: 1 / -1 !important; }
+  .vf-main, .vf-news { padding-block: 26px !important; }
+  .vf-col ul a { padding-block: 5px !important; }
+}
+
+/* ============================================================
+   #994650 — SABİT "SEPETE EKLE" ÇUBUĞU ALT NAVİGASYONUN ÜSTÜNE ALINDI
+   ------------------------------------------------------------
+   ÖLÇÜLEN ARIZA (17 Eki 2026, canlı Chrome 430px, ürün sayfası):
+     .sticky-add-to-cart__bar  → position:fixed · bottom:0 · z-index:7
+     .vm-bottom-nav            → position:fixed · bottom:0 · height:64 · z-index:1001
+     Düğme (.sticky-add-to-cart__button) üst 837 / alt 889; nav üst 836.
+     ÖRTÜŞME 52px / düğme yüksekliği 52px = %100.
+     document.elementFromPoint(düğme merkezi) → a.vm-bottom-nav__item
+     yani düğme GÖRSEL OLARAK değil GERÇEKTEN tıklanamıyordu (nav'ın
+     pointer-events:auto). Satış kaybı sınıfı.
+
+   NEDEN z-index DEĞİL, bottom:
+     nav kendi kuralında `z-index:1001 !important` ve başka bir blokta
+     `z-index:2147483000 !important` taşıyor (drawer'ların üstünde kalsın
+     diye). z-index yarışına girmek nav'ı gömme riski taşır — çubuğu
+     YUKARI ALMAK iki öğeyi de tıklanabilir bırakır. Aynı yaklaşım
+     WhatsApp FAB'ında da kullanıldı.
+
+   Değer uydurulmadı: nav'ın KENDİ ölçüleri (64px + safe-area inset,
+   yukarıdaki .vm-bottom-nav kuralındaki padding formülünün aynısı).
+   Kırılma noktası da nav'ın kendi max-width:749px'i.
+   ============================================================ */
+@media (max-width: 749px) {
+  .sticky-add-to-cart__bar {
+    bottom: calc(64px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+}
+
+/* #994650 ek bulgu — WHATSAPP FAB'ININ "NABIZ" HALKASI TIKLAMA YİYORDU.
+   Ölçüldü (canlı, 430px): .wa-fab kendisi 633-685 arasında, düğme 773-825 —
+   GEOMETRİK ÖRTÜŞME YOK. Ama document.elementFromPoint(düğme merkezi)
+   `span.wa-fab__pulse` döndürüyordu: nabız halkası animasyonla büyüyüp
+   düğmenin üstüne taşıyor ve pointer-events:auto olduğu için tıklamayı
+   yutuyordu (aralıklı arıza — kullanıcı için daha da sinir bozucu).
+   Halka SALT SÜSLEME; tıklanan öğe .wa-fab'ın kendisi. Görsel değişmez. */
+.wa-fab__pulse { pointer-events: none !important; }
+
+/* #994650-FAB — WHATSAPP FAB SABIT CUBUGUN USTUNE ALINDI.
+   OLCULDU (18 Eki 2026, canli 430px, data-stuck=true, cerez bandi kapali):
+     nav.vm-bottom-nav      bant 0..64      z 1001
+     .sticky-add-to-cart__bar bant 64..190   z 7
+     #wa-fab                bant 80..132    z 9998   <-- cubugun BANDININ ICINDE
+   document.elementFromPoint(dugme merkezi) -> button.wa-fab__main, yani
+   "Sepete ekle" TIKLANAMIYOR (gercek click zaman asimi, cart item_count 0->0).
+   200px GUVENLI: cubugun ust kenari 190'da bitiyor, 190-400 bandinda baska
+   sabit oge YOK (bant haritasi ile olculdu) -> 10px nefes payiyla temiz.
+   FAB'in bottom'u JS ile yazildigi icin !important ve id (#wa-fab) secildi.
+   Kural yalniz nav'in kendi kirilma noktasinda (max-width:749px) gecerli,
+   masaustu ETKILENMEZ. */
+@media (max-width: 749px) {
+  body:has(.sticky-add-to-cart__bar[data-stuck="true"]) #wa-fab {
+    bottom: calc(200px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+}
