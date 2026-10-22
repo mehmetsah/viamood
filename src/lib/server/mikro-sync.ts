@@ -14,7 +14,7 @@
  *
  * Fire-and-forget: webhook handler 200 dönüşünden sonra paralel çalışır.
  */
-import { eq, sql } from 'drizzle-orm';
+import { and, eq, like, sql } from 'drizzle-orm';
 import { db } from '@/db/client';
 import {
   mikroSequences,
@@ -422,6 +422,21 @@ async function kaydetFirmaHatasi(orderId: string, sebep: string | undefined): Pr
   }
 }
 
+/** Mutabakat dalında firma bacağı başarılı olunca ESKİ firma hatası notunu siler (#994827).
+ *  Neden: 8-22 Eki'de SqlVeriOku 404'ü 40 siparişe 'firma bacagi: … 404' yazdı; mutabakat
+ *  başarılı olsa da not kalıyor ve izleme sinyali sonsuza dek kırmızı görünüyordu.
+ *  YALNIZ 'firma bacagi' ile başlayan not silinir — başka sebepli hata korunur. */
+async function temizleFirmaHatasi(orderId: string): Promise<void> {
+  try {
+    await db
+      .update(orders)
+      .set({ mikroError: null, updatedAt: new Date() })
+      .where(and(eq(orders.id, orderId), like(orders.mikroError, 'firma bacagi%')));
+  } catch (err) {
+    console.error('[mikro-sync] firma hatasi notu silinemedi:', err);
+  }
+}
+
 export async function syncOrderToMikro(orderId: string, kargo?: MikroKargoBilgi): Promise<SyncResult> {
   // 1. Order çek
   const [order] = await db
@@ -515,6 +530,7 @@ export async function syncOrderToMikro(orderId: string, kargo?: MikroKargoBilgi)
         courier: kargo?.courier ?? null,
       });
       if (!firmaMutabakat.ok) await kaydetFirmaHatasi(orderId, firmaMutabakat.error);
+      else await temizleFirmaHatasi(orderId);
     }
     return {
       ok: true,

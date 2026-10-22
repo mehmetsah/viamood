@@ -77,4 +77,22 @@ describe("#992928 — 'approved' erken çıkışı firma bacağını mühürleme
     expect(blok).toContain('pushToFirmaDb');
     expect(blok).not.toContain('siparisEkle');
   });
+
+  it('8. #994827: mutabakat dalında firma bacağı BAŞARILIYSA eski firma hatası notu silinir', () => {
+    const dal = src.slice(src.indexOf("if (order.mikroSyncStatus === 'approved') {"));
+    const govde = dal.slice(0, dal.indexOf('return {'));
+    expect(govde).toMatch(/if \(!firmaMutabakat\.ok\) await kaydetFirmaHatasi\(orderId, firmaMutabakat\.error\);\s*else await temizleFirmaHatasi\(orderId\);/);
+  });
+
+  it('9. #994827: temizleme YALNIZ "firma bacagi" notunu siler — başka sebepli hata korunur', () => {
+    const yardimci = src.slice(src.indexOf('async function temizleFirmaHatasi('));
+    expect(yardimci.slice(0, 600)).toMatch(/like\(orders\.mikroError, 'firma bacagi%'\)/);
+  });
+
+  it('10. NEGATİF KANIT: else dalı kaldırılırsa 8. çivi kırılır', () => {
+    const mutant = src.replace(/\s*else await temizleFirmaHatasi\(orderId\);/, '');
+    expect(mutant).not.toBe(src);
+    const dal = mutant.slice(mutant.indexOf("if (order.mikroSyncStatus === 'approved') {"));
+    expect(dal.slice(0, dal.indexOf('return {'))).not.toMatch(/temizleFirmaHatasi/);
+  });
 });
