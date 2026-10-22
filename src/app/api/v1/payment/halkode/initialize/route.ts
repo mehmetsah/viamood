@@ -25,6 +25,7 @@ import { upsertCustomerAddress } from '@/lib/shopify/customer-address';
 import { getStore, type StorefrontOrderBody } from '@/lib/store';
 import { createNativeCardPendingOrder } from '@/lib/store/native-create-order';
 import { trustedDiscountDetailed } from '@/lib/shopify/discount-resolve';
+import { taslakKaynakAlanlari } from '@/lib/kaynak/kaynak-izi';
 import { kartDenetle } from '@/lib/halkode/kart-dogrula';
 import {
   getToken,
@@ -60,6 +61,8 @@ export async function OPTIONS(req: NextRequest) {
 }
 
 interface HalkodeInitBody {
+  /** #994887 trafik kaynağı {ilk, son} — temadan gelir, GÜVENİLMEZ; taslakKaynakAlanlari süzer */
+  kaynak?: unknown;
   line_items: Array<{ variant_id: number; quantity: number; title?: string; price?: number }>;
   shipping_cost?: number;
   shipping_courier?: string;
@@ -125,7 +128,8 @@ async function createDraftOrder(b: HalkodeInitBody, totalTl: number): Promise<nu
       billing_address: addr,
       ...(b.customer_id ? { customer: { id: b.customer_id } } : { email: b.email }),
       email: b.customer_email || b.email,
-      tags: 'via-mood-storefront,halkode-pending',
+      // #994887: trafik kaynağı → note_attributes + 'kaynak-<x>' etiketi
+      ...taslakKaynakAlanlari(b.kaynak, 'via-mood-storefront,halkode-pending'),
       note: `📍 ${b.first_name} ${b.last_name} · ${b.province}/${b.city}\n💳 Halköde (Halkbank) · ${totalTl.toFixed(2)} TL\n${invoiceNote(b)}`,
       use_customer_default_address: false,
       ...(b.shipping_courier || shippingTl > 0
