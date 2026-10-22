@@ -75,12 +75,13 @@ async function mikroLogin(): Promise<string> {
 }
 
 async function mikroQuery<T = Record<string, unknown>>(token: string, sql: string): Promise<T[]> {
-  const res = await fetch(`${MIKRO_URL}/MikroV17/sqlverioku`, {
+  // Sözleşme: query + isProcedure SORGU DİZGESİNDE, gövde boş nesne (src/lib/mikro/client.ts sqlVeriOku)
+  const res = await fetch(`${MIKRO_URL}/MikroV17/SqlVeriOku?query=${encodeURIComponent(sql)}&isProcedure=false`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-    body: JSON.stringify({ Query: sql }),
+    body: JSON.stringify({}),
   });
-  if (!res.ok) throw new Error(`Mikro sqlverioku ${res.status}: ${await res.text()}`);
+  if (!res.ok) throw new Error(`Mikro SqlVeriOku ${res.status}: ${await res.text()}`);
   const data = (await res.json()) as { IsSuccess?: boolean; ErrorMessage?: string; Result?: T[] };
   if (data.IsSuccess === false) throw new Error(`Mikro sorgu hatası: ${data.ErrorMessage}`);
   return data.Result || [];

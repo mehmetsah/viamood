@@ -25,7 +25,7 @@ import {
 import { logAudit } from '@/lib/audit/logger';
 import { env } from '@/lib/env';
 import { cariKayit, siparisEkle } from '@/lib/mikro/operations';
-import { mikroFetch } from '@/lib/mikro/client';
+import { sqlVeriOku } from '@/lib/mikro/client';
 import type { MikroEvrak, MikroEvrakAciklama, MikroHareket } from '@/lib/mikro/types';
 
 interface SyncOk {
@@ -236,10 +236,10 @@ async function pushToFirmaDb(params: {
   const firmaSeri = `${env.MIKRO_PAZARYERI}${orderDigits}`;
   try {
     // Idempotensi: seri firma DB'sinde zaten varsa ekleme
-    const dupe = await mikroFetch<{ Result?: Array<{ adet: number }> }>('/MikroV17/sqlverioku', {
-      method: 'POST',
-      body: { Query: `SELECT COUNT(*) as adet FROM SIPARISLER WITH (NOLOCK) WHERE sip_evrakno_seri='${firmaSeri.replace(/'/g, '')}'` },
-    }, base);
+    const dupe = await sqlVeriOku<{ adet: number }>(
+      `SELECT COUNT(*) as adet FROM SIPARISLER WITH (NOLOCK) WHERE sip_evrakno_seri='${firmaSeri.replace(/'/g, '')}'`,
+      base,
+    );
     if ((dupe?.Result?.[0]?.adet ?? 0) > 0) return { ok: true };
 
     // Cari: telefonla dedupe (Woo akışında email boş geliyor) → yoksa yeni müşteri carisi aç
@@ -247,10 +247,10 @@ async function pushToFirmaDb(params: {
     const alici = ship.name?.trim() || order.customerName; // cari/irsaliye adı = ADRESTEKİ alıcı (Shopify profili değil — Yunus kuralı)
     let cariKodu: string | null = null;
     if (telefon.length >= 10) {
-      const found = await mikroFetch<{ Result?: Array<{ cari_kod: string }> }>('/MikroV17/sqlverioku', {
-        method: 'POST',
-        body: { Query: `SELECT TOP 1 cari_kod FROM CARI_HESAPLAR WITH (NOLOCK) WHERE cari_CepTel LIKE '%${telefon.slice(-10)}'` },
-      }, base);
+      const found = await sqlVeriOku<{ cari_kod: string }>(
+        `SELECT TOP 1 cari_kod FROM CARI_HESAPLAR WITH (NOLOCK) WHERE cari_CepTel LIKE '%${telefon.slice(-10)}'`,
+        base,
+      );
       cariKodu = found?.Result?.[0]?.cari_kod ?? null;
     }
     if (!cariKodu) {
@@ -532,10 +532,9 @@ export async function syncOrderToMikro(orderId: string, kargo?: MikroKargoBilgi)
 
   // Idempotensi: seri Mikro'da ZATEN varsa (elle/backfill girilmiş) tekrar EKLEME — çift evrak önlenir
   try {
-    const dupe = await mikroFetch<{ Result?: Array<{ adet: number }> }>('/MikroV17/sqlverioku', {
-      method: 'POST',
-      body: { Query: `SELECT COUNT(*) as adet FROM SIPARISLER WITH (NOLOCK) WHERE sip_evrakno_seri='${evrakSeri.replace(/'/g, '')}'` },
-    });
+    const dupe = await sqlVeriOku<{ adet: number }>(
+      `SELECT COUNT(*) as adet FROM SIPARISLER WITH (NOLOCK) WHERE sip_evrakno_seri='${evrakSeri.replace(/'/g, '')}'`,
+    );
     if ((dupe?.Result?.[0]?.adet ?? 0) > 0) {
       await db
         .update(orders)

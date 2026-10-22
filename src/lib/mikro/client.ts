@@ -119,6 +119,33 @@ export async function mikroFetch<T = unknown>(
   }
 }
 
+/**
+ * Mikro `SqlVeriOku` — salt okuma SQL sorgusu.
+ *
+ * SÖZLEŞME (API'nin kendi swagger'ı, 22 Eki 2026 ölçüldü, 7781 + 7782):
+ *   POST /api/MikroV17/SqlVeriOku?query=<sql>&isProcedure=<bool>   gövde: parameters
+ * Eski çağrı biçimi `/MikroV17/sqlverioku` + gövdede `{ Query }` idi: zorunlu
+ * `query` parametresi sorgu dizgesinde olmadığı için Web API hiçbir eyleme
+ * eşleştiremiyor ve HER ZAMAN 404 dönüyordu ("No HTTP resource was found").
+ * Ölçülen bedel (#994827): VIA firma bacağı 8 Eki'den beri senkronlanan 40
+ * siparişin 40'ında düştü; ARADEPO'nun çift-evrak denetimi de sessizce
+ * atlanıyordu. Gövde BOŞ NESNE olmalı — `[]` 500 "Sıra hiçbir öğe içermiyor" verir.
+ *
+ * `IsSuccess:false` sessizce "0 satır" sayılmasın diye hata fırlatır.
+ */
+export async function sqlVeriOku<T = Record<string, unknown>>(
+  sorgu: string,
+  baseUrl?: string,
+): Promise<{ IsSuccess?: boolean; ErrorMessage?: string; Result?: T[] }> {
+  const r = await mikroFetch<{ IsSuccess?: boolean; ErrorMessage?: string; Result?: T[] }>(
+    `/MikroV17/SqlVeriOku?query=${encodeURIComponent(sorgu)}&isProcedure=false`,
+    { method: 'POST', body: {} },
+    baseUrl,
+  );
+  if (r?.IsSuccess === false) throw new MikroError(200, r, `Mikro sorgu hatası: ${r.ErrorMessage ?? ''}`);
+  return r;
+}
+
 /** Bağlantı sağlık kontrolü — login eder, token döner. */
 export async function mikroHealthCheck(): Promise<{ ok: boolean; tokenPrefix?: string; error?: string }> {
   try {
