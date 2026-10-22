@@ -18,6 +18,7 @@ import { resolveVendorIbans } from './vendor-ibans';
 import { normalizeTrPhone, shopifyErrorToTr } from './tr-format';
 import { orderConfirmationEmail } from '../email/templates';
 import { sendEmail } from '../email/sender';
+import { kaynakEtiketi, kaynakNitelikleri, kaynakSuz } from '../kaynak/kaynak-izi';
 
 export type StorefrontPaymentMethod = 'havale' | 'cod';
 
@@ -51,6 +52,8 @@ export interface StorefrontOrderBody {
   cod_surcharge?: number; // TL — kapıda KART komisyonu (toplamın %4'ü)
   discount_code?: string; // uygulanan indirim kuponu
   discount_amount?: number; // TL — frontend'in hesapladığı indirim tutarı
+  /** #994887 trafik kaynağı {ilk, son} — temadan gelir, GÜVENİLMEZ; kaynakSuz'dan geçer */
+  kaynak?: unknown;
 }
 
 export interface CreatedOrder {
@@ -156,6 +159,9 @@ export async function createStorefrontOrder(
     });
   }
   const codTipi = method === 'cod' ? (b.cod_method === 'kart' ? 'Kart' : 'Nakit') : '';
+  // #994887: siparişin trafik kaynağı — Shopify'ın "Kanal" alanı yalnız uygulama adını gösterir.
+  const kaynak = kaynakSuz(b.kaynak);
+  const kaynakEtk = kaynakEtiketi(kaynak);
 
   const order: Record<string, unknown> = {
     line_items: lineItems,
@@ -165,7 +171,7 @@ export async function createStorefrontOrder(
     billing_address: addr,
     financial_status: 'pending', // ödenmemiş — havale onayı / kapıda tahsilat bekliyor
     gateway: GATEWAY[method],
-    tags: TAGS[method] + (codCard ? ',kapida-kart' : ''),
+    tags: TAGS[method] + (codCard ? ',kapida-kart' : '') + (kaynakEtk ? ',' + kaynakEtk : ''),
     note: `📍 ${b.first_name} ${b.last_name} · ${b.province}/${b.city}\n💳 ${GATEWAY[method]}${codTipi ? ' (' + codTipi + ')' : ''}\n${invoiceNote(b)}`,
     note_attributes: [
       { name: '_odeme_yontemi', value: method },
@@ -175,6 +181,7 @@ export async function createStorefrontOrder(
             { name: '_kapida_odeme_tipi', value: b.cod_method || 'nakit' },
           ]
         : []),
+      ...kaynakNitelikleri(kaynak),
     ],
     // Shopify makbuzu AÇIK: bildirim şablonlarının ANA içeriği Türkçeleştirildi (panelden) —
     // locale'den bağımsız herkese Türkçe gider. (Resend'e gerek kalmadı; anahtar yoksa
