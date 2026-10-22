@@ -1,0 +1,51 @@
+{%- comment -%}
+  #994888 m2 — /policies/* (Shopify SISTEM politika sayfasi) BASLIK BIRLIGI.
+  Yunus 15 Eki 11:14: diger uc yasal sayfadaki gibi basligin ustunde
+  "Yasal · Via Mood", hemen altinda "Son guncelleme: <ay yil> · <unvan>";
+  panelin icindeki "Son Guncelleme" satiri kalksin.
+
+  NEDEN SNIPPET: Shopify politika sayfasi tema sablonu KULLANMAZ — icerik
+  content_for_layout icinde hazir gelir (olculdu 22 Eki: templates/policy.liquid
+  canlida olmasina ragmen sayfa .shopify-policy__container ile ciziliyor,
+  data-template bos). Bu yuzden isaretleme layout'ta, yalniz
+  request.page_type == 'policy' iken bu snippet uzerinden eklenir.
+
+  YENI TASARIM YOK (md.16): sinif adlari ve metin bicimi
+  sections/via-legal-page.liquid'in .vl-eyebrow / .vl-meta satirlarinin
+  BIREBIR aynisi; stil assets/via-product-overrides.css #994888 m2 blogunda.
+
+  TARIH UYDURULMAZ: deger politikanin KENDI "Son Guncelleme: 13 Ekim 2026"
+  satirindan okunur ve oteki sayfalarin "ay yil" bicimine indirilir
+  (Ekim 2026). Satir govdeden yalniz GORUNTUDE kalkar — Shopify'daki politika
+  metnine dokunulmaz. Satir yoksa yalniz unvan yazilir.
+  GERI ALMA: layout'taki policy dali kaldirilir (bu dosya kullanilmaz kalir).
+{%- endcomment -%}
+{%- liquid
+  assign govde = icerik
+  assign tarih = ''
+  assign adaylar = '<p>Son Güncelleme:|<p>Son güncelleme:' | split: '|'
+  for aday in adaylar
+    if tarih == blank and govde contains aday
+      assign parcalar = govde | split: aday
+      assign ham = parcalar[1] | split: '</p>' | first
+      assign satir = aday | append: ham | append: '</p>'
+      assign govde = govde | remove_first: satir
+      assign tarih = ham | strip
+    endif
+  endfor
+  assign kelimeler = tarih | split: ' '
+  if kelimeler.size == 3
+    assign tarih = kelimeler[1] | append: ' ' | append: kelimeler[2]
+  endif
+  if tarih != blank
+    assign meta = 'Son güncelleme: ' | append: tarih | append: ' · ' | append: settings.company_title
+  else
+    assign meta = settings.company_title
+  endif
+  assign baslik_ac = '<div class="shopify-policy__title">'
+  assign baslik_ac_yeni = baslik_ac | append: '<p class="vl-eyebrow">Yasal · Via Mood</p>'
+  assign govde = govde | replace_first: baslik_ac, baslik_ac_yeni
+  assign h1_kapa = '</h1><p class="vl-meta">' | append: meta | append: '</p>'
+  assign govde = govde | replace_first: '</h1>', h1_kapa
+-%}
+{{ govde }}

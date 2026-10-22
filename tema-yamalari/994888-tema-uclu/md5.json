@@ -1,0 +1,39 @@
+{
+ "templates/product.json": {
+  "once": [
+   27040,
+   "7f31c1da41e072c8c6f88e6f7525ff2f"
+  ],
+  "sonra": [
+   27520,
+   "51343646fd65b43e985fc483ec708bc3"
+  ]
+ },
+ "layout/theme.liquid": {
+  "once": [
+   33384,
+   "717d6590d2350133f812fe97788ae597"
+  ],
+  "sonra": [
+   33661,
+   "3902f4884c83fbbdd75d7190ce422961"
+  ]
+ },
+ "assets/via-product-overrides.css": {
+  "once": [
+   39924,
+   "1e71cd84577dea27e7a50be569c01260"
+  ],
+  "sonra": [
+   41951,
+   "80f9a0587c89819ddbe02d929ef2c8d7"
+  ]
+ },
+ "snippets/via-politika-baslik.liquid": {
+  "once": null,
+  "sonra": [
+   2380,
+   "e02f40a457650550bc8d5c6672d120da"
+  ]
+ }
+}
