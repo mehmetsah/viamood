@@ -50,26 +50,15 @@ export const KUPON_OMRU_MS: Partial<Record<Akis, number>> = {
 };
 
 /**
- * GÖNDERİLEN İNDİRİM KODU — SABİT. (Yunus, 16 Eki 2026, birebir:
- * «indirim olarak HOSGELDIN10 kodunu tanımladık … Yeni indirim kodu açmana
- * gerek yok.»)
+ * GÖNDERİLEN İNDİRİM KODU — KİŞİYE ÖZEL, TEK KULLANIMLIK (#994816).
  *
- * ⚠ BU KARARLA ÜÇ GÜVENCE BİLEREK BIRAKILDI — sessizce kaybolmasın diye burada:
- *   (a) 300 TL TAVANI ARTIK BİZDE DEĞİL. Paylaşılan bir Shopify koduna üst tavan
- *       konamaz (Shopify yüzde indiriminde tavan alanı yok). Tavan artık yalnız
- *       Shopify'daki HOSGELDIN10 tanımına bağlı; bizim kontrolümüzde DEĞİL.
- *       `UST_LIMIT_KURUS` ve `indirimTutariKurus()` HESAP için duruyor (e-posta
- *       metni, raporlama), ama gerçek indirimi artık Shopify uyguluyor.
- *   (b) TEK KULLANIMLIK GARANTİSİ YOK. Kod paylaşılabilir; aynı kişi ya da
- *       başkası birden çok kez kullanabilir.
- *   (c) 60 GÜN FRENİ YALNIZ E-POSTAYI DURDURUR. `kuponAc()` hâlâ çağrılıyor ve
- *       aynı kişiye 60 gün içinde ikinci kez indirim MAİLİ atılmasını engelliyor;
- *       kodun KULLANIMINI engellemiyor.
- *
- * Kişiye özel üretim (`kuponKoduUret`, `eposta_kuponlari`) BİLEREK SİLİNMEDİ:
- * karar geri alınabilsin, iş mantığı ve çivileri ayakta kalsın.
+ * Yunus 21 Eki 2026 spec'i (birebir): «Tüm kodlar kişiye özel ve tek
+ * kullanımlık olmalı». 16 Eki'deki "sabit HOSGELDIN10 gönder" notu bu
+ * tekrarlanan spec'te YOK ve gruba kişiye özel kod taahhüdü verildi; sabit
+ * kod yolu bu yüzden KALDIRILDI. Kod `kuponAc` ile üretilir, Shopify'da
+ * `usageLimit:1` ile açılır (`src/lib/shopify/eposta-indirim.ts`), tavan ve
+ * kişi kilidi ödeme uçlarında uygulanır (`src/lib/eposta-kupon-odeme.ts`).
  */
-export const SABIT_KUPON_KODU = 'HOSGELDIN10';
 
 export const TABAN_INDIRIM_YUZDE = 10;
 /** Üst limitin devreye girdiği sepet tutarı (kuruş) ve limit (kuruş). */
@@ -78,6 +67,17 @@ export const UST_LIMIT_KURUS = 30_000;          // 300 TL
 /** Aynı kişiye tekrar kupon verilmeden önce geçmesi gereken süre. */
 export const FREN_GUN = 60;
 export const FREN_MS = FREN_GUN * GUN;
+/**
+ * 60 gün freni HANGİ akışların kuponunu sayar? Spec birebir: «Aynı müşteriye
+ * 60 gün içinde ikinci kez SEPET TERKİ indirimi gönderilmez». Checkout terki
+ * aynı %10 kodu taşır (B2 ile aynı şablon) — ikisi tek kova. Hoş geldin kodu
+ * kovaya GİRMEZ: yeni üye kodu aldı diye 2 ay terk indirimi kaybetmez.
+ * (16 Eki'ye kadar tüm akışlar sayılıyordu — ölçüldü #994816.)
+ */
+export const FREN_AKISLARI: readonly Akis[] = [AKIS.SEPET_TERKI, AKIS.CHECKOUT_TERKI];
+export function frenUygulanirMi(akis: Akis): boolean {
+  return FREN_AKISLARI.includes(akis);
+}
 
 /** Bir adımın ne zaman gönderileceği. Tetik anına gecikme eklenir. */
 /**
