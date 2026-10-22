@@ -53,7 +53,8 @@
       if secili.sku != blank
         assign wa_mesaj = wa_mesaj | append: nl | append: 'Ürün kodu: ' | append: secili.sku
       endif
-      unless product.has_only_default_variant
+      assign secenek_ad = secili.title | strip | downcase | replace: 'ı', 'i'
+      unless product.has_only_default_variant or secenek_ad == 'default title' or secenek_ad == 'varsayilan başlik'
         assign wa_mesaj = wa_mesaj | append: nl | append: 'Seçenek: ' | append: secili.title
       endunless
       if secili.available
@@ -160,7 +161,8 @@
           sat.push('');
           sat.push('Ürün: ' + kirp(d.baslik));
           if (v.sku) sat.push('Ürün kodu: ' + v.sku);
-          if (!d.tekVaryant) sat.push('Seçenek: ' + v.baslik);
+          var secAd = String(v.baslik || '').trim().toLowerCase().replace(/ı/g, 'i');
+          if (!d.tekVaryant && secAd !== 'default title' && secAd !== 'varsayilan başlik') sat.push('Seçenek: ' + v.baslik);
           if (v.stokta) {
             if (!s.vqb) sat.push('Adet: ' + s.adet);
             sat.push('Fiyat: ' + tl(v.fiyat) + (!s.vqb && s.adet > 1 ? ' (toplam ' + tl(v.fiyat * s.adet) + ')' : ''));

@@ -21,3 +21,9 @@ Render eden 6 dosyayı ÖNCESİ'ne döndürür (GET-back md5 doğrular), snippet
 
 ## TEMA GÜNCELLEMESİ RİSKİ
 `python3 yama.py ONCESI SONRASI` aynı çapalarla yeniden uygulanır; her çapa TAM 1 eşleşmezse DURUR.
+
+## CİLA · 22 Eki 2026 22:26 — "Seçenek: Default Title" sızıntısı kapatıldı
+`snippets/via-satinal-ek.liquid` 5bb6a47d (11675 B) → **12f1463b576059cbea29beaf775e4917** (11975 B), GET-back ✓.
+Kök neden: seçenek ADI "Default Title" olan 105 tek varyantlı üründe `has_only_default_variant` = false.
+Ayrıntı ve geri alma: `cila-secenek/` (yalnız snippet'i 5bb6a47d'ye döndürür). Bu dizindeki YENI/ ve SONRASI/
+snippet ile md5.json güncel canlı hâle (12f1463b) çekildi — ana yama yeniden uygulanırsa cila kaybolmaz.

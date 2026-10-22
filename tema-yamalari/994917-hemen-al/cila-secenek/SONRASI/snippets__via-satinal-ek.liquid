@@ -1,0 +1,215 @@
+{%- comment -%}
+  #994917 · ayse:730 (r3 tasarım + r4 teslim, md.31 ŞAH %100 + Ayşe %100) — Hemen al + ürüne özel WhatsApp.
+  Çağrı yerleri: blocks/buy-buttons.liquid (§5.2, standart) · blocks/via-cok-al.liquid (§5.6, kip: 'vqb').
+  Sabit çubuktaki Hemen al Liquid'de sections/product-information.liquid içinde (§5.3); bağlaması burada.
+
+  KURALLAR (ölçülmüş):
+  · Yalnız ürün şablonunda çizilir (quick-add vb. yüzeylere sızmaz).
+  · Veri adası ürün başına TEK KEZ basılır: yalnız standart çağrıda (kip boş). Çok al şablonunda yerel
+    form da DOM'da olduğu için standart çağrı orada da koşar — o çağrı düğme ÇİZMEZ, yalnız adayı ve
+    betiği basar; görünür düğmeler vqb çağrısından gelir.
+  · SKU / varyant başlığı / fiyat DOM metninden değil veri adasından okunur ("Ürün Kodu" metni varyant
+    değişince güncellenmiyor; .vqb__adet metni indirim rozetini içeriyor).
+  · Hemen al: seçili varyant + adet → POST /cart/add.js → /pages/odeme. Sepet SİLİNMEZ
+    (/cart/clear.js ve /cart/change.js çağrılmaz). Bağlama belge düzeyinde TEK delegasyon; çift tık tek ekleme.
+  · Mesajda emoji yok; fiyat tr-TR "1.299,00 TL"; başlık ≤140 aynen, >140 ortadan kırpılır.
+{%- endcomment -%}
+{%- if template.name == 'product' and product != blank -%}
+  {%- capture nl %}
+{% endcapture -%}
+  {%- liquid
+    assign kip = kip | default: ''
+    if kip == 'vqb'
+      assign secili = product.variants.last
+      if product.selected_variant
+        assign secili = product.selected_variant
+      endif
+      assign hemen_var = product.available
+    else
+      assign secili = variant | default: product.selected_or_first_available_variant
+      assign hemen_var = can_add_to_cart
+    endif
+    assign tel = '905531707132'
+    assign dugme_ciz = true
+    if kip != 'vqb' and template.suffix == 'cok-al'
+      assign dugme_ciz = false
+    endif
+    assign stok_sor = true
+    if secili.available
+      assign stok_sor = false
+    endif
+    if kip == 'vqb' and product.available
+      assign stok_sor = false
+    endif
+  -%}
+  {%- if dugme_ciz -%}
+    {%- liquid
+      if secili.available
+        assign wa_mesaj = 'Merhaba, bu ürünü sipariş etmek istiyorum.'
+      else
+        assign wa_mesaj = 'Merhaba, bu ürün stokta görünmüyor. Tekrar gelecek mi?'
+      endif
+      assign wa_mesaj = wa_mesaj | append: nl | append: nl | append: 'Ürün: ' | append: product.title
+      if secili.sku != blank
+        assign wa_mesaj = wa_mesaj | append: nl | append: 'Ürün kodu: ' | append: secili.sku
+      endif
+      assign secenek_ad = secili.title | strip | downcase | replace: 'ı', 'i'
+      unless product.has_only_default_variant or secenek_ad == 'default title' or secenek_ad == 'varsayilan başlik'
+        assign wa_mesaj = wa_mesaj | append: nl | append: 'Seçenek: ' | append: secili.title
+      endunless
+      if secili.available
+        if kip != 'vqb'
+          assign wa_mesaj = wa_mesaj | append: nl | append: 'Adet: 1'
+        endif
+        assign fiyat_metni = secili.price | money_without_currency
+        assign wa_mesaj = wa_mesaj | append: nl | append: 'Fiyat: ' | append: fiyat_metni | append: ' TL'
+      endif
+      assign wa_link = shop.url | append: product.url
+      unless product.has_only_default_variant
+        assign wa_link = wa_link | append: '?variant=' | append: secili.id
+      endunless
+      assign wa_mesaj = wa_mesaj | append: nl | append: wa_link
+    -%}
+    <div
+      class="via-satinal-ek{% if kip == 'vqb' %} via-satinal-ek--vqb{% endif %}"
+      data-via-satinal
+      data-urun="{{ product.id }}"
+      {% if form_id != blank %}data-form-id="{{ form_id }}"{% endif %}
+      {% if kip == 'vqb' %}data-kip="vqb"{% endif %}
+    >
+      {%- if hemen_var -%}
+        <button type="button" class="via-hemen-al" data-via-hemen-al>Hemen al</button>
+      {%- endif -%}
+      <a
+        class="via-wa-siparis"
+        data-via-wa
+        href="https://wa.me/{{ tel }}?text={{ wa_mesaj | url_encode }}"
+        target="_blank"
+        rel="noopener"
+      >
+        <svg viewBox="0 0 32 32" fill="currentColor" aria-hidden="true" focusable="false"><path d="M19.11 17.205c-.372 0-1.088 1.39-1.518 1.39-.054 0-.108-.022-.157-.057-.295-.157-1.135-.405-2.183-1.388-.815-.747-1.358-1.654-1.523-1.929-.165-.275-.029-.42.119-.563.131-.131.295-.34.443-.516.156-.18.21-.299.295-.487.084-.187.054-.36-.029-.495-.084-.135-.74-1.83-1.039-2.501-.299-.671-.595-.563-.778-.563-.187 0-.39-.029-.595-.029-.205 0-.539.075-.821.36-.282.285-1.075 1.05-1.075 2.555 0 1.505 1.1 2.96 1.255 3.165.157.205 2.16 3.301 5.23 4.629.728.314 1.301.495 1.755.638.733.234 1.405.198 1.93.12.59-.088 1.815-.74 2.077-1.46.255-.72.255-1.335.18-1.46-.075-.135-.27-.205-.566-.36zM16.011 4.667c-6.255 0-11.345 5.09-11.345 11.345 0 2.038.537 4.034 1.559 5.79l-1.62 5.916 6.06-1.589c1.693.926 3.605 1.414 5.346 1.414 6.255 0 11.345-5.09 11.345-11.345S22.266 4.667 16.011 4.667zm0 20.792c-1.625 0-3.224-.435-4.622-1.262l-.331-.197-3.43.9.916-3.346-.215-.342c-.91-1.448-1.392-3.117-1.392-4.83 0-5.012 4.078-9.09 9.095-9.09 5.012 0 9.09 4.078 9.09 9.09s-4.078 9.09-9.111 9.09z"/></svg>
+        <span>{% if stok_sor %}WhatsApp ile stok sor{% else %}WhatsApp ile sipariş ver{% endif %}</span>
+      </a>
+    </div>
+  {%- endif -%}
+  {%- if kip != 'vqb' -%}
+    <script type="application/json" data-via-wa-urun="{{ product.id }}">
+      {
+        "baslik": {{ product.title | json }},
+        "url": {{ shop.url | append: product.url | json }},
+        "telefon": {{ tel | json }},
+        "tekVaryant": {{ product.has_only_default_variant | json }},
+        "varyantlar": {
+          {%- for v in product.variants -%}
+            {{ v.id | append: '' | json }}: {"baslik": {{ v.title | json }}, "sku": {{ v.sku | default: '' | json }}, "fiyat": {{ v.price | json }}, "stokta": {{ v.available | json }}}{% unless forloop.last %},{% endunless %}
+          {%- endfor -%}
+        }
+      }
+    </script>
+    <script>
+      (function () {
+        if (window.__viaSatinalEk) return;
+        window.__viaSatinalEk = true;
+
+        function ada(urunId) {
+          var el = urunId ? document.querySelector('script[data-via-wa-urun="' + urunId + '"]')
+                          : document.querySelector('script[data-via-wa-urun]');
+          if (!el) return null;
+          try { return JSON.parse(el.textContent); } catch (e) { return null; }
+        }
+        function tl(kurus) {
+          return (kurus / 100).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' TL';
+        }
+        function kirp(s) {
+          if (s.length <= 140) return s;
+          var bas = s.slice(0, 80), son = s.slice(-50);
+          var b = bas.lastIndexOf(' '); if (b > 40) bas = bas.slice(0, b);
+          var e = son.indexOf(' '); if (e > -1 && e < 20) son = son.slice(e + 1);
+          return bas + ' … ' + son;
+        }
+        function anaForm(kok) {
+          var id = kok && kok.getAttribute('data-form-id');
+          var f = id ? document.getElementById(id) : null;
+          return f || document.querySelector('product-form-component form[data-type="add-to-cart-form"]');
+        }
+        // Seçim: çok al kipinde işaretli vqb kartı (adet 1); aksi hâlde ana formun varyantı + adet kutusu.
+        function secim(kok) {
+          var vqbKok = kok && kok.closest ? kok.closest('quantity-break') : null;
+          if (!vqbKok && !(kok && kok.closest && kok.closest('[data-via-satinal]'))) vqbKok = document.querySelector('quantity-break');
+          if (vqbKok) {
+            var ch = vqbKok.querySelector('.vqb__input:checked');
+            if (ch) return { id: ch.value, adet: 1, vqb: true };
+          }
+          var f = anaForm(kok && kok.closest ? kok.closest('[data-via-satinal]') : null);
+          var host = f && f.closest('product-form-component');
+          var idEl = f && f.querySelector('[name="id"]');
+          var qEl = host && host.querySelector('input[name="quantity"]');
+          var adet = parseInt(qEl && qEl.value, 10);
+          return { id: idEl ? idEl.value : null, adet: adet > 0 ? adet : 1, vqb: false };
+        }
+        // TEK mesaj kurucu — sayfa içi düğme VE yüzen WhatsApp (#wa-fab) aynı işlevi çağırır.
+        window.viaWaMesaj = function (kok) {
+          var blok = kok && kok.closest ? kok.closest('[data-via-satinal]') : null;
+          var d = ada(blok && blok.getAttribute('data-urun'));
+          if (!d) return null;
+          var s = secim(kok);
+          var v = (s.id && d.varyantlar[String(s.id)]) || null;
+          if (!v) { var ilk = Object.keys(d.varyantlar)[0]; s.id = ilk; v = d.varyantlar[ilk]; }
+          var link = d.url + (d.tekVaryant ? '' : '?variant=' + s.id);
+          var sat = [];
+          sat.push(v.stokta ? 'Merhaba, bu ürünü sipariş etmek istiyorum.' : 'Merhaba, bu ürün stokta görünmüyor. Tekrar gelecek mi?');
+          sat.push('');
+          sat.push('Ürün: ' + kirp(d.baslik));
+          if (v.sku) sat.push('Ürün kodu: ' + v.sku);
+          var secAd = String(v.baslik || '').trim().toLowerCase().replace(/ı/g, 'i');
+          if (!d.tekVaryant && secAd !== 'default title' && secAd !== 'varsayilan başlik') sat.push('Seçenek: ' + v.baslik);
+          if (v.stokta) {
+            if (!s.vqb) sat.push('Adet: ' + s.adet);
+            sat.push('Fiyat: ' + tl(v.fiyat) + (!s.vqb && s.adet > 1 ? ' (toplam ' + tl(v.fiyat * s.adet) + ')' : ''));
+          }
+          sat.push(link);
+          return sat.join('\n');
+        };
+        function telefon(d) {
+          var fab = document.getElementById('wa-fab');
+          return (fab && fab.getAttribute('data-wa-phone')) || (d && d.telefon) || '905531707132';
+        }
+
+        document.addEventListener('click', function (e) {
+          var wa = e.target.closest && e.target.closest('[data-via-wa]');
+          if (wa) {
+            var m = window.viaWaMesaj(wa);
+            var blok = wa.closest('[data-via-satinal]');
+            if (m) wa.href = 'https://wa.me/' + telefon(ada(blok && blok.getAttribute('data-urun'))) + '?text=' + encodeURIComponent(m);
+            return; // varsayılan gezinme sürer (açılır pencere engeline takılmaz)
+          }
+          var btn = e.target.closest && e.target.closest('[data-via-hemen-al]');
+          if (!btn || btn.disabled || btn.getAttribute('aria-busy') === 'true') return;
+          e.preventDefault();
+          var s = secim(btn);
+          if (!s.id) return;
+          var eski = btn.textContent;
+          btn.setAttribute('aria-busy', 'true');
+          btn.disabled = true;
+          btn.textContent = 'İşleniyor…';
+          fetch('/cart/add.js', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+            body: JSON.stringify({ items: [{ id: Number(s.id), quantity: s.adet }] })
+          }).then(function (r) {
+            if (r.ok) { window.location.assign('/pages/odeme'); return; }
+            return r.json().catch(function () { return {}; }).then(function (j) {
+              btn.removeAttribute('aria-busy'); btn.disabled = false; btn.textContent = eski;
+              var host = (btn.closest('[data-via-satinal]') && anaForm(btn.closest('[data-via-satinal]')) || anaForm(null));
+              var kap = host && host.closest('product-form-component');
+              var hata = kap && kap.querySelector('[ref="addToCartTextError"]');
+              if (hata) { var m = hata.querySelector('[data-via-hata]'); if (!m) { m = document.createElement('span'); m.setAttribute('data-via-hata', ''); hata.appendChild(m); } m.textContent = ' ' + (j.description || j.message || 'Ürün sepete eklenemedi.'); hata.classList.remove('hidden'); }
+            });
+          }).catch(function () {
+            btn.removeAttribute('aria-busy'); btn.disabled = false; btn.textContent = eski;
+          });
+        }, true);
+      })();
+    </script>
+  {%- endif -%}
+{%- endif -%}
