@@ -77,7 +77,7 @@ vi.mock('@/lib/brand', () => ({ trackingPageUrl: () => 'https://example.test/tak
 vi.mock('@/lib/env', () => ({ env: { MIKRO_AUTO_PUSH: false, SHOPIFY_API_VERSION: '2025-01' } }));
 
 const { ilIlceUyumu, trKatla } = await import('@/lib/tr-addresses/il-ilce-uyum');
-const { etiketAdresKapisi } = await import('@/lib/server/etiket-adres-kapisi');
+const { etiketAdresKapisi, nottanIlIlce } = await import('@/lib/server/etiket-adres-kapisi');
 const { createFulfillmentForOrderVendor } = await import('@/lib/server/fulfillment-service');
 
 beforeEach(() => {
@@ -202,17 +202,91 @@ describe('etiketAdresKapisi — hata, olay kaydı ve Shopify düzeltmesi', () =>
     expect(b.guncelAdresOku).not.toHaveBeenCalled();
   });
 
-  it('il boş (eski PayTR siparişleri) → geçer, bugünkü davranış', async () => {
+  // ── #994827 / sipariş #1214: il BOŞ (kart yolunda Shopify ili düşürüyor) ──
+  const NOT_1214 = '📍 Ad Soyad · Ankara/Çankaya\n💳 Halköde (Halkbank) · 1300.00 TL\n👤 BİREYSEL FATURA';
+
+  it('il boş, Shopify da boş, not yok → etiket YOK + İL eksik hatası + olay kaydı (ilçeden il TÜRETİLMEZ)', async () => {
+    const b = bag({ city: 'Çankaya' });
+    const r = await etiketAdresKapisi({ orderId: 'o1', vendorId: 'v1', shopifyOrderId: '6500', ship: { city: 'Çankaya' } }, b);
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.error).toMatch(/Teslimat adresinde İL eksik/);
+    expect(b.guncelAdresOku).toHaveBeenCalledTimes(1);
+    expect(b.adresiKaydet).not.toHaveBeenCalled();
+    expect(b.olayYaz).toHaveBeenCalledWith('o1', 'v1', expect.objectContaining({ sebep: 'il-yok' }));
+  });
+
+  it('il boş ama operasyon Shopify\'da ili doldurdu → güncel adres DB\'ye yazılır, etiket geçer ("ili doldurun" yolu artık çalışıyor)', async () => {
+    const b = bag({ district: 'Ankara', city: 'Çankaya', address1: 'x' });
+    const r = await etiketAdresKapisi({ orderId: 'o1', vendorId: 'v1', shopifyOrderId: '6500', ship: { city: 'Çankaya' } }, b);
+    expect(r).toMatchObject({ ok: true, tazelendi: true, ship: { district: 'Ankara', city: 'Çankaya' } });
+    expect(b.adresiKaydet).toHaveBeenCalledWith('o1', { district: 'Ankara', city: 'Çankaya', address1: 'x' });
+    expect(b.olayYaz).not.toHaveBeenCalled();
+  });
+
+  it('il boş, Shopify boş, notta müşterinin seçimi Ankara/Çankaya → il nottan kurulur ve DB\'ye yazılır (#1214)', async () => {
+    const b = bag({ city: 'Çankaya' });
+    const r = await etiketAdresKapisi(
+      { orderId: 'o1', vendorId: 'v1', shopifyOrderId: '6500', ship: { city: 'Çankaya', address1: 'x' }, not: NOT_1214 },
+      b,
+    );
+    expect(r).toMatchObject({ ok: true, tazelendi: true, ship: { district: 'Ankara', city: 'Çankaya', address1: 'x' } });
+    expect(b.adresiKaydet).toHaveBeenCalledWith('o1', { district: 'Ankara', city: 'Çankaya', address1: 'x' });
+    expect(b.olayYaz).not.toHaveBeenCalled();
+  });
+
+  it('notta il KOD olarak (TR-06) → ada çevrilir', async () => {
     const b = bag(null);
-    const r = await etiketAdresKapisi({ orderId: 'o1', vendorId: 'v1', shopifyOrderId: '6500', ship: { city: 'Çeşme' } }, b);
-    expect(r.ok).toBe(true);
-    expect(b.guncelAdresOku).not.toHaveBeenCalled();
+    const r = await etiketAdresKapisi(
+      { orderId: 'o1', vendorId: 'v1', shopifyOrderId: null, ship: { city: 'Çankaya' }, not: '📍 A B · TR-06/Çankaya' },
+      b,
+    );
+    expect(r).toMatchObject({ ok: true, ship: { district: 'Ankara' } });
+  });
+
+  it('NEGATİF: notun ilçesi teslimat ilçesinden farklı (adres sonradan değişmiş) → not KULLANILMAZ', async () => {
+    const b = bag(null);
+    const r = await etiketAdresKapisi(
+      { orderId: 'o1', vendorId: 'v1', shopifyOrderId: '6500', ship: { city: 'Çankaya' }, not: '📍 A B · Ankara/Keçiören' },
+      b,
+    );
+    expect(r.ok).toBe(false);
+    expect(b.adresiKaydet).not.toHaveBeenCalled();
+  });
+
+  it('NEGATİF: notun il/ilçe çifti geçersiz (İzmir/Çankaya) → not KULLANILMAZ', async () => {
+    const b = bag(null);
+    const r = await etiketAdresKapisi(
+      { orderId: 'o1', vendorId: 'v1', shopifyOrderId: '6500', ship: { city: 'Çankaya' }, not: '📍 A B · İzmir/Çankaya' },
+      b,
+    );
+    expect(r.ok).toBe(false);
+    expect(b.adresiKaydet).not.toHaveBeenCalled();
+  });
+});
+
+describe('nottanIlIlce — sipariş notundaki "📍 Ad Soyad · İl/İlçe" satırı', () => {
+  it('olağan biçim', () => {
+    expect(nottanIlIlce('📍 Ad Soyad · İstanbul/Kadıköy\n💳 PayTR')).toEqual({ il: 'İstanbul', ilce: 'Kadıköy' });
+  });
+  it('ad içinde " · " geçse de SON ayraç alınır', () => {
+    expect(nottanIlIlce('📍 Ali · Veli Yılmaz · Mersin/Yenişehir')).toEqual({ il: 'Mersin', ilce: 'Yenişehir' });
+  });
+  it('il kodu ada çevrilir', () => {
+    expect(nottanIlIlce('📍 A B · TR-34/Şişli')).toEqual({ il: 'İstanbul', ilce: 'Şişli' });
+  });
+  it('biçim tutmuyorsa null — tahmin yok', () => {
+    expect(nottanIlIlce(null)).toBeNull();
+    expect(nottanIlIlce('')).toBeNull();
+    expect(nottanIlIlce('müşteri notu: kapıya bırakın')).toBeNull();
+    expect(nottanIlIlce('📍 Ad Soyad')).toBeNull();
+    expect(nottanIlIlce('📍 Ad Soyad · /Çankaya')).toBeNull();
+    expect(nottanIlIlce('📍 Ad Soyad · Ankara/')).toBeNull();
   });
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
 describe('createFulfillmentForOrderVendor — kapı etiketten ÖNCE', () => {
-  function siparisKuyrugu(ship: Record<string, string>) {
+  function siparisKuyrugu(ship: Record<string, string>, note: string | null = null) {
     kuyruk.push(
       [], // mevcut fulfillment yok
       [
@@ -227,6 +301,7 @@ describe('createFulfillmentForOrderVendor — kapı etiketten ÖNCE', () => {
           customerName: 'Ad Soyad',
           tags: ['kapida-odeme'],
           totalCents: 10000n,
+          note,
         },
       ],
       [{ id: 'li1', variantId: 'v', title: 'Ürün', sku: '1', quantity: 1, unitPriceCents: 10000n, weightGrams: 500 }],
@@ -244,6 +319,32 @@ describe('createFulfillmentForOrderVendor — kapı etiketten ÖNCE', () => {
     expect(quoteShipmentRate).not.toHaveBeenCalled();
     // operasyonun gördüğü olay kaydı
     expect(eklenenler).toContainEqual(expect.objectContaining({ orderId: 'o1', eventType: 'etiket_engellendi' }));
+  });
+
+  it('#1214: il boş (Shopify da boş) + notta Ankara/Çankaya → etiket Ankara iline kesilir, DB adresi tamamlanır', async () => {
+    siparisKuyrugu({ city: 'Çankaya' }, '📍 Ad Soyad · Ankara/Çankaya\n💳 Halköde (Halkbank) · 1300.00 TL');
+    shopifyRest.mockResolvedValueOnce({ order: { shipping_address: { province: null, city: 'Çankaya' } } });
+    await createFulfillmentForOrderVendor('o1', 'v1', { courrier: 'PTT' });
+    expect(createKargoLabShipment).toHaveBeenCalledTimes(1);
+    const alici = (createKargoLabShipment.mock.calls[0]![0] as { addresses: { receiver: Record<string, string> } })
+      .addresses.receiver;
+    expect(alici.state).toBe('Ankara');
+    expect(alici.town).toBe('Çankaya');
+    expect(guncellenenler).toContainEqual(
+      expect.objectContaining({ shippingAddress: expect.objectContaining({ district: 'Ankara', city: 'Çankaya' }) }),
+    );
+  });
+
+  it('NEGATİF #1214: il boş, Shopify boş, not yok → KargoLab hiç çağrılmaz, etiket_engellendi olayı düşer', async () => {
+    siparisKuyrugu({ city: 'Çankaya' });
+    shopifyRest.mockResolvedValueOnce({ order: { shipping_address: { province: null, city: 'Çankaya' } } });
+    const r = await createFulfillmentForOrderVendor('o1', 'v1', { courrier: 'PTT' });
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.error).toMatch(/Teslimat adresinde İL eksik/);
+    expect(createKargoLabShipment).not.toHaveBeenCalled();
+    expect(eklenenler).toContainEqual(
+      expect.objectContaining({ orderId: 'o1', eventType: 'etiket_engellendi', payload: expect.objectContaining({ sebep: 'il-yok' }) }),
+    );
   });
 
   it('Tokat/Erbaa → geçer: KargoLab etiketi istenir', async () => {
