@@ -5,22 +5,22 @@
  * `eposta_kuponlari` defterine çevirir ve ödeme tarafının soracağı tek soruyu cevaplar:
  * "bu kod bu kişide, bu sepette geçerli mi ve kaç kuruş indirir?"
  *
- * ⚠ NEDEN KOD SHOPIFY'A YAZILMIYOR (ölçülmüş gerekçe, uydurulmadı):
- * Yunus'un spec'i "1.500 TL üstü siparişte indirim 300 TL'de TAVANLANSIN" diyor.
- * Shopify'ın yüzde indiriminde ÜST TAVAN alanı YOKTUR (yalnız Shopify Functions ile
- * yazılabilir, o da ayrı bir uygulama uzantısı demek). Buna karşılık bu platformda
- * ödeme uçlarının hepsi indirimi SUNUCUDA hesaplıyor
- * (`src/lib/shopify/discount-resolve.ts` → iyzico · halkode · paytr · cod · havale),
- * yani tavanı kendi tarafımızda GARANTİ edebiliyoruz. Kodu Shopify'da da açmak
- * tavanı aşan ikinci bir kullanım yolu doğurur — spec'i delen yol açılmadı.
+ * KOD İKİ YERDE YAŞAR (#994816):
+ *   · `eposta_kuponlari` defteri — kişi, akış, bitiş, kullanım damgası (60 gün freni
+ *     ve A2 "kullandıysa hatırlatma" kuralı BURADAN sorulur).
+ *   · Shopify indirim kodu — ödeme uçları kodu `discount-resolve.ts` ile Shopify'dan
+ *     çözer; orada olmayan kod müşteride "geçersiz" düşerdi. Açılış
+ *     `src/lib/shopify/eposta-indirim.ts` (usageLimit 1 · combinations kapalı).
  *
- * ⚠ BİRLEŞMEZ ("combinations"): e-posta kuponu kampanya indirimiyle ÜST ÜSTE BİNMEZ.
- * Karar burada tek satırda duruyor (`BIRLESIR = false`) ve `kuponCoz` başka indirim
- * bildirildiğinde kodu reddeder. Shopify'daki `combinesWith` ayarı bu kodlar için
- * ANLAMSIZDIR, çünkü kodlar Shopify'da yok.
+ * TAVAN + KİŞİ KİLİDİ ödeme anında `eposta-kupon-odeme.ts` kancasıyla uygulanır:
+ * Shopify yüzde indiriminde tavan alanı yoktur, ödeme uçları ise indirimi
+ * SUNUCUDA hesaplar — tavan orada GARANTİ edilir, yalnız bu defterdeki kodlara.
+ *
+ * ⚠ BİRLEŞMEZ ("combinations"): Shopify'da `combinesWith` ürün/sipariş KAPALI;
+ * kendi ödeme sayfamız zaten tek kod kabul ediyor (`BIRLESIR = false`).
  */
 import { randomBytes } from 'node:crypto';
-import { and, desc, eq, isNull } from 'drizzle-orm';
+import { and, desc, eq, inArray, isNull } from 'drizzle-orm';
 import {
   type Akis,
   TABAN_INDIRIM_YUZDE,
@@ -32,6 +32,8 @@ import {
   kuponVerilebilirMi,
 } from './eposta-akis';
 import { epostaKuponlari } from '@/db/schema';
+import { FREN_AKISLARI, frenUygulanirMi } from './eposta-akis';
+import type { ShopifyKuponAcici } from './shopify/eposta-indirim';
 
 /** E-posta kuponu başka indirimle birleşir mi? Spec: HAYIR. */
 export const BIRLESIR = false;
@@ -56,12 +58,16 @@ type DbGibi = {
   update: (...a: any[]) => any;
 };
 
-/** Bu e-postaya en son ne zaman kupon verildi? (60 gün freninin tek sorusu) */
+/**
+ * Bu e-postaya en son ne zaman TERK İNDİRİMİ verildi? (60 gün freninin tek sorusu)
+ * Yalnız `FREN_AKISLARI` sayılır — hoş geldin kodu freni YAKMAZ (spec: "sepet terki
+ * indirimi").
+ */
 export async function sonKuponAni(db: DbGibi, email: string): Promise<Date | null> {
   const [r] = await db
     .select({ createdAt: epostaKuponlari.createdAt })
     .from(epostaKuponlari)
-    .where(eq(epostaKuponlari.email, email.trim().toLowerCase()))
+    .where(and(eq(epostaKuponlari.email, email.trim().toLowerCase()), inArray(epostaKuponlari.akis, [...FREN_AKISLARI])))
     .orderBy(desc(epostaKuponlari.createdAt))
     .limit(1);
   return r?.createdAt ?? null;
@@ -69,7 +75,7 @@ export async function sonKuponAni(db: DbGibi, email: string): Promise<Date | nul
 
 export type KuponSonuc =
   | { ok: true; id: string; kod: string; bitisAni: Date; indirimYuzde: number; ustLimitKurus: number }
-  | { ok: false; sebep: 'fren' | 'omur_yok' };
+  | { ok: false; sebep: 'fren' | 'omur_yok' | 'shopify'; hata?: string };
 
 /**
  * Kişiye özel, TEK KULLANIMLIK kupon açar.
@@ -93,11 +99,13 @@ export async function kuponKullanildiMi(db: DbGibi, email: string, akis: Akis): 
 
 export async function kuponAc(
   db: DbGibi,
-  girdi: { email: string; akis: Akis; simdi?: Date; govde?: () => string; prova?: boolean },
+  girdi: { email: string; akis: Akis; simdi?: Date; govde?: () => string; prova?: boolean; shopify?: ShopifyKuponAcici },
 ): Promise<KuponSonuc> {
   const simdi = girdi.simdi ?? new Date();
   const email = girdi.email.trim().toLowerCase();
-  if (!kuponVerilebilirMi(await sonKuponAni(db, email), simdi)) return { ok: false, sebep: 'fren' };
+  if (frenUygulanirMi(girdi.akis) && !kuponVerilebilirMi(await sonKuponAni(db, email), simdi)) {
+    return { ok: false, sebep: 'fren' };
+  }
   const bitisAni = kuponBitisi(girdi.akis, simdi);
   if (!bitisAni) return { ok: false, sebep: 'omur_yok' };
   const kod = kuponKoduUret(girdi.akis, girdi.govde ?? (() => govdeUret()));
@@ -108,6 +116,16 @@ export async function kuponAc(
   if (girdi.prova) {
     return { ok: true, id: 'prova-yazilmadi', kod, bitisAni, indirimYuzde: TABAN_INDIRIM_YUZDE, ustLimitKurus: UST_LIMIT_KURUS };
   }
+  // ÖNCE SHOPIFY, SONRA DEFTER: Shopify açamazsa deftere satır YAZILMAZ — freni
+  // boşa yakmaz ve "indirim kodunuz" maili kullanılamayan kodla GİTMEZ (çağıran
+  // adımı 'atlandi' + sebep işaretler). Ters sıra, defterde ölü kod bırakırdı.
+  // Geç yükleme: ödeme kancası (`eposta-kupon-odeme.ts`) bu dosyayı içe aktarıyor;
+  // Shopify istemcisi (DB + env) yalnız gerçekten kupon açılırken yüklensin.
+  const ac = girdi.shopify ?? (await import('./shopify/eposta-indirim')).shopifyKuponAc;
+  const sh = await ac({
+    kod, akis: girdi.akis, yuzde: TABAN_INDIRIM_YUZDE, baslangic: simdi, bitis: bitisAni,
+  });
+  if (!sh.ok) return { ok: false, sebep: 'shopify', hata: sh.hata };
   const [r] = await db
     .insert(epostaKuponlari)
     .values({
@@ -117,6 +135,7 @@ export async function kuponAc(
       indirimYuzde: TABAN_INDIRIM_YUZDE,
       ustLimitKurus: UST_LIMIT_KURUS,
       bitisAni,
+      shopifyIndirimId: sh.id,
     })
     .returning({ id: epostaKuponlari.id });
   return { ok: true, id: r.id, kod, bitisAni, indirimYuzde: TABAN_INDIRIM_YUZDE, ustLimitKurus: UST_LIMIT_KURUS };
@@ -185,6 +204,33 @@ export async function kuponKullan(
     .where(and(eq(epostaKuponlari.id, kuponId), isNull(epostaKuponlari.kullanildiAni)))
     .returning({ id: epostaKuponlari.id });
   return Array.isArray(r) ? r.length === 1 : false;
+}
+
+/** Bizim ürettiğimiz kodun biçimi: HG-/ST-/CT- + 8 karakter (govdeUret alfabesi). */
+export const EPOSTA_KOD_DESENI = /^(HG|ST|CT)-[ABCDEFGHJKMNPQRSTUVWXYZ2-9]{8}$/;
+
+/**
+ * SİPARİŞ ANINDA KUPON DAMGASI (#994816) — `kuponKullan`ın ÇAĞIRANI.
+ * 13 Eki'den beri `kuponKullan` yazılıydı ama hiçbir yerden çağrılmıyordu; sonuç:
+ * kullanım damgası hiç düşmüyor, A2 kuralı ("kodu kullandıysa hatırlatma gitmez")
+ * üretimde ASLA tetiklenemiyordu. Sipariş yutucusu (`order-ingest.ts`) bunu çağırır.
+ * Yalnız bizim desenimizdeki kodlar sorgulanır; kampanya kodları DB'ye gitmez.
+ */
+export async function siparisKuponlariniDamgala(
+  db: DbGibi,
+  girdi: { kodlar: Array<string | null | undefined>; siparisId?: string | null; simdi?: Date },
+): Promise<number> {
+  const kodlar = [...new Set(girdi.kodlar.map((k) => (k ?? '').trim().toUpperCase()).filter((k) => EPOSTA_KOD_DESENI.test(k)))];
+  let damga = 0;
+  for (const kod of kodlar) {
+    const [k] = await db
+      .select({ id: epostaKuponlari.id })
+      .from(epostaKuponlari)
+      .where(eq(epostaKuponlari.kod, kod))
+      .limit(1);
+    if (k && (await kuponKullan(db, k.id, girdi.siparisId, girdi.simdi))) damga += 1;
+  }
+  return damga;
 }
 
 export { kuponGecerliMi, indirimTutariKurus };

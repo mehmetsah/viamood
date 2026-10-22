@@ -155,11 +155,10 @@ Senkron **cron değil webhook güdümlü** (`PRODUCTS_CREATE/UPDATE/DELETE` → 
 Webhook ucu ayakta (GET → 405). ⚠ Betik prod DB'ye **yazar**; koşturma kararı sahipte.
 · Dosya: `scripts/backfill-products.mts` · **Öncelik: YÜKSEK**
 
-### 5. Kuyruk işleyicileri hâlâ **stub** — zamanlanmış hiçbir iş gerçekte çalışmıyor
-`src/worker/index.ts` içindeki processor'lar yalnız `console.log` + `{ processed: true }` dönüyor
-("Stub processors — Phase 2'de gerçek implementasyon gelecek"). BullMQ altyapısı (`src/lib/queue.ts`) ve
-`QueueName.EmailNotify` hazır, ama tüketen yok. Bu, aşağıdaki 6. maddenin de ön koşulu.
-· Dosya: `src/worker/index.ts` · **Öncelik: YÜKSEK**
+### 5. ~~Kuyruk işleyicileri stub~~ — **KAPANDI** (22 Eki 2026 ölçümü, Elif · #994816)
+`e20b0c7` (19 Eki) ile `src/worker/index.ts` gerçek routing/e-posta işlerini yapıyor. E-posta akışları zaten
+worker'a bağlı değil: zamanlayıcı `src/app/api/cron/eposta-akis` ucu + `scripts/eposta-akis-yokla.sh` (15 dk crontab,
+`deploy.sh:276` kuruyor). Canlıda uç ayakta (yetkisiz istek → 401).
 
 ### 13a. Taksit tablosu "tek çekim" kutusunun border-top çizgisi kesiliyor — **YÜZEY BELİRSİZ**
 Yunus'un şikâyeti: *"tek çekimin border-top çizgisi altta kalıyor, %1 ya da az yukarıdan padding/margin verirsen çözülür."*
@@ -198,17 +197,15 @@ yoksa onun yarım işi ezilir.
 
 ## 🟠 ORTA ÖNCELİK
 
-### 6. Otomatik e-posta akışları: çekirdek yazıldı, **zamanlayıcı + şablonlar yok**
-`kod/991676-eposta-otomasyon` (`326d820`) üç tabloyu ve saf karar katmanını getiriyor
-(A hoş geldin 0/+2g · B sepet terki +1sa/+24sa/+48sa · C checkout terki +1sa/+24sa, kişiye özel tek
-kullanımlık kupon, %10 / 1.500 TL üstü 300 TL tavan, **60 gün freni**, çift-mail freni `UNIQUE(tetik_id, adim)`).
-**Eksik:** planlı satırları tarayan koşucu (madde 5'e bağlı), şablon metinleri ve görsel (Ayşe onayına bırakıldı),
-**İYS kalıcı onay kolonu** (müşteri bazlı, geri alınabilir — hukuki kayıt + iptal akışı ister).
-· **Öncelik: ORTA**
-
-### 7. Kişiye özel kupon yok — tek statik env kodu kullanılıyor
-`src/lib/welcome-signup.ts` tek bir `WELCOME_DISCOUNT_CODE` okuyor; "kişiye özel + tek kullanımlık" şartı
-karşılanmıyor. Madde 6'daki `eposta_kuponlari` tablosu bunu çözüyor ama bağlanmadı.
+### 6–7. Otomatik e-posta akışları + kişiye özel kupon — **KODDA TAMAM, AÇILIŞ SAHİP ONAYINDA** (22 Eki 2026, Elif · #994816)
+Zincir uçtan uca: tetik (hoş geldin anında · sepet/checkout terk tarayıcısı) → 15 dk zamanlayıcı → kişiye özel tek
+kullanımlık kod (Shopify `discountCodeBasicCreate`, usageLimit 1, ürün/sipariş indirimiyle birleşmez) → şablon →
+gönderim → ödeme anında tavan (1.500 TL üstü maks 300 TL) + kişi kilidi → sipariş anında kullanım damgası + dönüşüm
+freni. Islak koşu gerçek Postgres'te (`tests/eposta-akis-islak.test.ts`).
+**Açık kalan:** (a) `EPOSTA_AKIS_AKTIF=1` — canlı gönderim sahip onayı; (b) Shopify uygulamasında `write_discounts`
+izni ÖLÇÜLEMEDİ (kasa kilitli) — kuru koşu yanıtındaki `shopifyIndirimYazma` alanı gösterecek; (c) Shopify'ın KENDİ
+checkout'unda 300 TL tavanı uygulanamaz (yüzde indiriminde tavan alanı yok) — yalnız bizim ödeme sayfamızda garanti;
+(d) terk maili yalnız hoş geldin formunda açık rıza vermiş adrese gider (başka kayıtlı onay kaynağı yok).
 · **Öncelik: ORTA**
 
 ### 8. Meta Pixel: checkout olayları hiç doğmuyor

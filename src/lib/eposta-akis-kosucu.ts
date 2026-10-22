@@ -32,6 +32,8 @@ import { epostaAkisGonderimleri, epostaAkisTetikleri } from '@/db/schema';
 /** Şemadaki `durum` sözlüğü — serbest metin yazılmasın diye tek kaynak. */
 export const DURUM = {
   PLANLANDI: 'planlandi',
+  /** Bir tur satırı SAHİPLENDİ, sonuç yazılmadı. Tur çökerse burada kalır — DB'de görünür, sessiz kayıp değil. */
+  ISLENIYOR: 'isleniyor',
   GONDERILDI: 'gonderildi',
   ATLANDI: 'atlandi',
   IPTAL: 'iptal',
@@ -116,7 +118,7 @@ export async function akisBaslat(
  * Vakti gelmiş planlı satırlar. Şemanın kendi notu: `(durum, planlanan_an)`
  * "zamanlayıcının taradığı TEK indeks" — sorgu bilerek o indekse oturuyor.
  */
-export async function bekleyenler(db: DbGibi, simdi: Date = new Date(), limit = 100) {
+export async function bekleyenler(db: DbGibi, simdi: Date = new Date(), limit = 100, tetikId?: string) {
   return db
     .select({
       id: epostaAkisGonderimleri.id,
@@ -126,16 +128,36 @@ export async function bekleyenler(db: DbGibi, simdi: Date = new Date(), limit = 
       kanal: epostaAkisGonderimleri.kanal,
     })
     .from(epostaAkisGonderimleri)
-    .where(and(eq(epostaAkisGonderimleri.durum, DURUM.PLANLANDI), lte(epostaAkisGonderimleri.planlananAn, simdi)))
+    .where(and(
+      eq(epostaAkisGonderimleri.durum, DURUM.PLANLANDI),
+      lte(epostaAkisGonderimleri.planlananAn, simdi),
+      ...(tetikId ? [eq(epostaAkisGonderimleri.tetikId, tetikId)] : []),
+    ))
     .orderBy(asc(epostaAkisGonderimleri.planlananAn))
     .limit(limit);
+}
+
+/**
+ * SATIRI SAHİPLEN (#994816) — 'planlandi' → 'isleniyor', tek SQL ile.
+ * Kilit SORGUDA: `WHERE durum='planlandi'`. Cron turu ile hoş geldin anında-gönderimi
+ * aynı satırı aynı anda okusa bile yalnız biri 1 satır etkiler; öteki `false` alır
+ * ve maili GÖNDERMEZ. (Eski not "koruma durum geçişindedir" diyordu ama geçiş
+ * gönderimden SONRA yazılıyordu — iki okuyucu ikisi de gönderirdi.)
+ */
+export async function satirSahiplen(db: DbGibi, id: string): Promise<boolean> {
+  const r = await db
+    .update(epostaAkisGonderimleri)
+    .set({ durum: DURUM.ISLENIYOR })
+    .where(and(eq(epostaAkisGonderimleri.id, id), eq(epostaAkisGonderimleri.durum, DURUM.PLANLANDI)))
+    .returning({ id: epostaAkisGonderimleri.id });
+  return Array.isArray(r) && r.length === 1;
 }
 
 /** Sonucu işaretler. 'gonderildi' ise gönderim anı damgalanır. */
 export async function gonderimIsaretle(
   db: DbGibi,
   id: string,
-  durum: Exclude<Durum, 'planlandi'>,
+  durum: Exclude<Durum, 'planlandi' | 'isleniyor'>,
   ek?: { hataMetni?: string; kuponId?: string },
 ) {
   return db

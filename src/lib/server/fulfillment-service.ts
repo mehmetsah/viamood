@@ -244,6 +244,8 @@ export async function createFulfillmentForOrderVendor(
       customerName: orders.customerName,
       tags: orders.tags,
       totalCents: orders.totalCents,
+      // #994827: il boşsa kapı müşterinin seçimini notun "📍 … · İl/İlçe" satırından okur
+      note: orders.note,
     })
     .from(orders)
     .where(eq(orders.id, orderId))
@@ -286,6 +288,7 @@ export async function createFulfillmentForOrderVendor(
     vendorId,
     shopifyOrderId: order.shopifyOrderId ?? null,
     ship,
+    not: order.note ?? null,
   });
   if (!kapi.ok) return { ok: false, error: kapi.error };
   ship = kapi.ship;

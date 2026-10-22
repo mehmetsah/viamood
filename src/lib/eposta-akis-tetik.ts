@@ -16,10 +16,14 @@
  * ⚠ E-POSTASIZ SEPET ATLANIR (sessiz değil, sayılır): adres yoksa gönderilecek
  * yer yoktur; satır 'abandoned' işaretlenir ama akış AÇILMAZ.
  */
-import { and, eq, lte, or, sql } from 'drizzle-orm';
+import { and, desc, eq, inArray, lte, or, sql } from 'drizzle-orm';
 import { AKIS } from './eposta-akis';
-import { akisBaslat, akisIptal } from './eposta-akis-kosucu';
-import { carts, customers, epostaAkisTetikleri } from '@/db/schema';
+import { DURUM, akisBaslat, akisIptal } from './eposta-akis-kosucu';
+import { siparisKuponlariniDamgala } from './eposta-kupon';
+import { carts, customers, epostaAkisGonderimleri, epostaAkisTetikleri, welcomeSignups } from '@/db/schema';
+
+/** Sipariş/terk ilişkisi olan akışlar — dönüşüm freni ve "tek açık akış" kuralı bunlara bakar. */
+export const TERK_AKISLARI = [AKIS.SEPET_TERKI, AKIS.CHECKOUT_TERKI] as const;
 
 const SAAT = 3600_000;
 /** Sepete/ödemeye dokunulmadan geçmesi gereken süre — terk sayılma eşiği. */
@@ -78,6 +82,10 @@ export interface TerkOzet {
   /** PROVA kipinde: AÇILACAK OLAN akış sayısı (açılan değil — yazma yapılmadı). */
   acilan: number;
   epostasiz: number;
+  /** Aynı kişide hâlâ planlı adımı olan terk akışı vardı — ikinci dizi açılmadı. */
+  zatenAcik: number;
+  /** Akış açıldı ama kişinin kayıtlı pazarlama onayı yok ⇒ adımlar 'atlandi' düşecek. */
+  onaysiz: number;
   sinif: Record<string, number>;
   /** true ise bu tur hiçbir satır YAZMADI (yalnız okuma). */
   prova?: boolean;
@@ -108,7 +116,7 @@ export async function terkTara(
     .where(and(eq(carts.status, 'active'), lte(carts.updatedAt, esik)))
     .limit(secenek.limit ?? 100);
 
-  const ozet: TerkOzet = { tarandi: satirlar.length, acilan: 0, epostasiz: 0, sinif: {}, ...(prova ? { prova: true } : {}) };
+  const ozet: TerkOzet = { tarandi: satirlar.length, acilan: 0, epostasiz: 0, zatenAcik: 0, onaysiz: 0, sinif: {}, ...(prova ? { prova: true } : {}) };
   for (const c of satirlar) {
     let email = epostaCikar(c.attributes as Nitelikler);
     // ÜYE EŞLEŞTİRMESİ (Yunus 16 Eki: «giriş yaptıysa zaten kayıtlı maile»).
@@ -126,8 +134,13 @@ export async function terkTara(
     }
     if (!prova) await db.update(carts).set({ status: 'abandoned' }).where(eq(carts.id, c.id));
     if (!email) { ozet.epostasiz += 1; continue; }
+    // TEK AÇIK TERK DİZİSİ (#994816): aynı kişinin iki sepeti üst üste terk
+    // edilirse iki ayrı posta dizisi aynı kutuya binerdi (1sa/24sa/48sa × 2).
+    if (await acikTerkAkisiVarMi(db, email)) { ozet.zatenAcik += 1; continue; }
     const akis = terkSinifi(c.attributes as Nitelikler);
-    if (!prova) await akisBaslat(db, { akis, email, cartId: c.id, tetikAni: simdi });
+    const iysOnayi = await pazarlamaOnayiVarMi(db, email);
+    if (!iysOnayi) ozet.onaysiz += 1;
+    if (!prova) await akisBaslat(db, { akis, email, cartId: c.id, iysOnayi, tetikAni: simdi });
     ozet.acilan += 1;
     ozet.sinif[akis] = (ozet.sinif[akis] ?? 0) + 1;
   }
@@ -135,14 +148,76 @@ export async function terkTara(
 }
 
 /**
- * DÖNÜŞÜM FRENİ: kişi sipariş verdiyse açık akışları kapatır — "sepetinizi
+ * PAZARLAMA (İYS/ETK) ONAYI — terk akışının tetik anındaki görüntüsü (#994816).
+ *
+ * ÖLÇÜLEN ARIZA (ıslak koşu, 22 Eki): `terkTara` akışı `iysOnayi` VERMEDEN açıyordu
+ * (varsayılan false), gönderim katmanı ise 19 Eki'den beri onaysız alıcıya pazarlama
+ * mailini kesiyor (52632f5). Sonuç: sepet/checkout terki maili HİÇ KİMSEYE gidemezdi.
+ *
+ * Kaynak: kişinin EN SON hoş geldin kaydındaki açık rıza (`welcome_signups.consent`,
+ * rıza metni + zaman damgasıyla saklanıyor). Başka kayıtlı onay kaynağı bu depoda
+ * yok; onay kaydı olmayan kişiye ticari ileti GÖNDERİLMEZ (fail-closed). Sonradan
+ * abonelikten çıkma ayrıca `sender.ts`'te denetlenir.
+ */
+export async function pazarlamaOnayiVarMi(db: DbGibi, email: string): Promise<boolean> {
+  const [r] = await db
+    .select({ consent: welcomeSignups.consent })
+    .from(welcomeSignups)
+    .where(eq(welcomeSignups.email, email.trim().toLowerCase()))
+    .orderBy(desc(welcomeSignups.consentAt))
+    .limit(1);
+  return r?.consent === true;
+}
+
+/** Kişinin hâlâ PLANLI adımı olan, iptal edilmemiş bir terk akışı var mı? */
+export async function acikTerkAkisiVarMi(db: DbGibi, email: string): Promise<boolean> {
+  const [r] = await db
+    .select({ id: epostaAkisGonderimleri.id })
+    .from(epostaAkisGonderimleri)
+    .innerJoin(epostaAkisTetikleri, eq(epostaAkisGonderimleri.tetikId, epostaAkisTetikleri.id))
+    .where(and(
+      eq(epostaAkisTetikleri.email, email.trim().toLowerCase()),
+      inArray(epostaAkisTetikleri.akis, [...TERK_AKISLARI]),
+      sql`${epostaAkisTetikleri.iptalSebebi} is null`,
+      eq(epostaAkisGonderimleri.durum, DURUM.PLANLANDI),
+    ))
+    .limit(1);
+  return Boolean(r);
+}
+
+/**
+ * DÖNÜŞÜM FRENİ: kişi sipariş verdiyse açık TERK akışlarını kapatır — "sepetinizi
  * tamamlayın" maili sipariş verdikten SONRA gitmez.
+ * Hoş geldin akışı KAPANMAZ: A2 kuralı "kodu kullanmadıysa hatırlat" diyor; kodsuz
+ * sipariş veren üye hâlâ hatırlatmayı hak eder, kodu kullandıysa A2 zaten susturur.
  */
 export async function donusumIptal(db: DbGibi, email: string): Promise<number> {
   const acik = await db
     .select({ id: epostaAkisTetikleri.id })
     .from(epostaAkisTetikleri)
-    .where(and(eq(epostaAkisTetikleri.email, email.trim().toLowerCase()), sql`${epostaAkisTetikleri.iptalSebebi} is null`));
+    .where(and(
+      eq(epostaAkisTetikleri.email, email.trim().toLowerCase()),
+      inArray(epostaAkisTetikleri.akis, [...TERK_AKISLARI]),
+      sql`${epostaAkisTetikleri.iptalSebebi} is null`,
+    ));
   for (const t of acik) await akisIptal(db, t.id, 'donusum');
   return acik.length;
+}
+
+/**
+ * SİPARİŞ KANCASI (#994816) — `order-ingest.ts` yeni sipariş yazınca çağırır.
+ * `donusumIptal` ve `kuponKullan` 13 Eki'den beri yazılıydı ama ÇAĞIRANI YOKTU
+ * (md.47 "yargıç var, çağıran yok"): sipariş veren müşteriye terk maili gidiyor,
+ * kod kullanım damgası hiç düşmüyordu.
+ */
+export async function siparisSonrasiAkis(
+  db: DbGibi,
+  girdi: { email?: string | null; kodlar?: Array<string | null | undefined>; siparisId?: string | null; simdi?: Date },
+): Promise<{ damga: number; iptal: number }> {
+  const damga = girdi.kodlar?.length
+    ? await siparisKuponlariniDamgala(db, { kodlar: girdi.kodlar, siparisId: girdi.siparisId, simdi: girdi.simdi })
+    : 0;
+  const email = (girdi.email ?? '').trim().toLowerCase();
+  const iptal = email.includes('@') ? await donusumIptal(db, email) : 0;
+  return { damga, iptal };
 }
