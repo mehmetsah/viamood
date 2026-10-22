@@ -1,0 +1,119 @@
+{%- comment -%}
+  Via Mood — "Bu kategoride diğer seçenekler" (Yunus 32v).
+  ESKİ: native product-list (collection:"all") → TÜM ürünlerde AYNI sabit ürünler.
+  YENİ: açılan ürünün KENDİ kategorisinden (product.collections, generic'ler atlanır)
+  diğer ürünler. Sıra = o koleksiyonun mağaza sıralaması (Admin'de "Best selling"
+  seçilirse otomatik en-çok-satan olur). Kartta sepete-ekle YOK (Madde 22/28).
+  V1 yedeği: templates/product-v1-YEDEK.json (rollback tek adım).
+{%- endcomment -%}
+
+{%- liquid
+  assign sec = section.settings
+  assign atla = 'all,frontpage,tum-urunler,tumu,tum-koleksiyonlar,yeni-gelenler,yeni-gelen,cok-satanlar,cok-satan,en-cok-satanlar,kampanya-setleri,kampanyalar,kampanya,indirim,indirimdekiler,indirimli,500-tl-alti,500tl-alti,home,ana-sayfa,anasayfa,featured'
+  comment
+    En SPESİFİK kategoriyi seç: generic olmayan koleksiyonlar arasında en az ürünlü
+    (en dar) olan = en alakalı. Böylece hem "Saklama Kabı" hem geniş "Ev ve Yaşam"da
+    olan ürün, dar olan Saklama Kabı'nı gösterir.
+  endcomment
+  assign benzer = null
+  assign en_az = 999999
+  for c in product.collections
+    unless atla contains c.handle
+      if c.products_count > 1 and c.products_count < en_az
+        assign benzer = c
+        assign en_az = c.products_count
+      endif
+    endunless
+  endfor
+  if benzer == null
+    for c in product.collections
+      unless atla contains c.handle
+        assign benzer = c
+        break
+      endunless
+    endfor
+  endif
+  if benzer == null and product.collections.size > 0
+    assign benzer = product.collections.first
+  endif
+  assign gerek = sec.urun_adedi | default: 8
+-%}
+
+{%- if benzer and benzer.products_count > 1 -%}
+<section class="vbk">
+  <div class="vbk-in">
+    <div class="vbk-head">
+      <div>
+        {%- if sec.kicker != blank -%}<div class="vbk-kicker">{{ sec.kicker }}</div>{%- endif -%}
+        <h2>{{ sec.baslik | default: 'Bu kategoride diğer seçenekler' }}</h2>
+      </div>
+      <a href="{{ benzer.url }}" class="vbk-all">{{ benzer.title }} — Tümü →</a>
+    </div>
+
+    <div class="vbk-grid">
+      {%- assign n = 0 -%}
+      {%- for p in benzer.products -%}
+        {%- if p.id == product.id -%}{%- continue -%}{%- endif -%}
+        {%- if n >= gerek -%}{%- break -%}{%- endif -%}
+        {%- assign n = n | plus: 1 -%}
+        <a class="vbk-card" href="{{ p.url }}">
+          <span class="vbk-img">
+            {%- if p.featured_image -%}
+              <img src="{{ p.featured_image | image_url: width: 360 }}&quality=65" srcset="{{ p.featured_image | image_url: width: 240 }}&quality=65 240w, {{ p.featured_image | image_url: width: 360 }}&quality=65 360w, {{ p.featured_image | image_url: width: 540 }}&quality=65 540w" sizes="(min-width: 750px) 300px, 42vw" alt="{{ p.title | escape }}" loading="lazy" width="500" height="500">
+            {%- endif -%}
+            {%- if p.compare_at_price > p.price -%}
+              {%- assign ind = p.compare_at_price | minus: p.price | times: 100.0 | divided_by: p.compare_at_price | round -%}
+              <span class="vbk-rozet">%{{ ind }} indirim</span>
+            {%- elsif p.available == false -%}
+              <span class="vbk-rozet vbk-tukendi">Tükendi</span>
+            {%- endif -%}
+          </span>
+          <span class="vbk-marka">{{ p.vendor | default: benzer.title }}</span>
+          <span class="vbk-ad">{{ p.title }}</span>
+          <span class="vbk-fiyat">
+            {{ p.price | money }}
+            {%- if p.compare_at_price > p.price -%}<s>{{ p.compare_at_price | money }}</s>{%- endif -%}
+          </span>
+        </a>
+      {%- endfor -%}
+    </div>
+  </div>
+</section>
+
+{% style %}
+  .vbk{--vbk-ink:#1f2522;--vbk-muted:#7c837d;--vbk-line:#e8e2d9;--vbk-accent:#ef6b43;--vbk-paper:#fff}
+  .vbk-in{max-width:1280px;margin:0 auto;padding:44px 20px 8px}
+  .vbk-head{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;margin-bottom:24px}
+  .vbk-kicker{font-size:12px;letter-spacing:.12em;text-transform:uppercase;font-weight:800;color:var(--vbk-accent);margin-bottom:8px}
+  .vbk-head h2{font-family:"Playfair Display",serif;font-size:clamp(24px,3vw,34px);line-height:1.1;letter-spacing:-.02em;margin:0;color:var(--vbk-ink)}
+  .vbk-all{white-space:nowrap;font-weight:700;font-size:14px;color:var(--vbk-accent);text-decoration:none}
+  .vbk-all:hover{text-decoration:underline}
+  .vbk-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}
+  .vbk-card{display:flex;flex-direction:column;text-decoration:none;color:inherit;background:var(--vbk-paper);border:1px solid var(--vbk-line);border-radius:18px;overflow:hidden;transition:transform .2s ease,box-shadow .2s ease}
+  .vbk-card:hover{transform:translateY(-5px);box-shadow:0 18px 40px rgba(45,33,24,.12)}
+  .vbk-img{position:relative;display:block;aspect-ratio:1/1;background:#f1ece4;overflow:hidden}
+  .vbk-img img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .5s ease}
+  .vbk-card:hover .vbk-img img{transform:scale(1.05)}
+  .vbk-rozet{position:absolute;left:8px;top:8px;background:var(--vbk-accent);color:#fff;font-size:11px;font-weight:800;padding:4px 8px;border-radius:999px}
+  .vbk-rozet.vbk-tukendi{background:#8a8f89}
+  .vbk-marka{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:#a29a8e;padding:12px 16px 0}
+  .vbk-ad{font-size:14px;line-height:1.4;font-weight:600;color:var(--vbk-ink);padding:4px 16px 0;min-height:40px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .vbk-fiyat{font-weight:800;color:var(--vbk-ink);padding:8px 16px 16px;font-size:16px;display:flex;align-items:baseline;gap:8px}
+  .vbk-fiyat s{font-weight:500;color:#a29a8e;font-size:12.5px}
+  @media(max-width:900px){ .vbk-grid{grid-template-columns:repeat(3,1fr);gap:12px} }
+  @media(max-width:600px){ .vbk-grid{grid-template-columns:repeat(2,1fr);gap:12px} .vbk-in{padding:32px 16px 4px} .vbk-head{align-items:flex-start} }
+{% endstyle %}
+{%- endif -%}
+
+{% schema %}
+{
+  "name": "Via Mood Benzer Kategori",
+  "settings": [
+    { "type": "paragraph", "content": "Açılan ürünün kendi kategorisinden (product.collections) diğer ürünleri gösterir. En çok satana göre sıralamak için: Admin → o koleksiyon → Sıralama = 'En çok satan'." },
+    { "type": "text", "id": "kicker", "label": "Kicker (opsiyonel)", "default": "Benzer ürünler" },
+    { "type": "text", "id": "baslik", "label": "Başlık", "default": "Bu kategoride diğer seçenekler" },
+    { "type": "range", "id": "urun_adedi", "label": "Gösterilecek ürün", "min": 4, "max": 12, "step": 1, "default": 8 }
+  ],
+  "presets": [{ "name": "Via Mood Benzer Kategori" }]
+}
+{% endschema %}
