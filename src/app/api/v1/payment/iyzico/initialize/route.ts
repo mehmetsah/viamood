@@ -18,6 +18,7 @@ import { ensureTrCustomer } from '@/lib/shopify/customer-locale';
 import { getStore, type StorefrontOrderBody } from '@/lib/store';
 import { createNativeCardPendingOrder } from '@/lib/store/native-create-order';
 import { trustedDiscountDetailed } from '@/lib/shopify/discount-resolve';
+import { taslakKaynakAlanlari } from '@/lib/kaynak/kaynak-izi';
 
 interface DraftOrderResp {
   draft_order?: { id: number; invoice_url?: string };
@@ -50,7 +51,8 @@ async function createDraftOrder(body: InitBody): Promise<number | null> {
           ? { customer: { id: body.customer_id } }
           : { email: body.email }),
         email: body.customer_email || body.email,
-        tags: 'via-mood-storefront,iyzico-pending',
+        // #994887: trafik kaynağı → note_attributes + 'kaynak-<x>' etiketi
+        ...taslakKaynakAlanlari(body.kaynak, 'via-mood-storefront,iyzico-pending'),
         note: `📍 ${body.first_name} ${body.last_name} · ${body.province}/${body.city}\n${buildInvoiceNote(body)}`,
         use_customer_default_address: false,
         // Kargo — Shopify draft order shipping_line.
@@ -142,6 +144,8 @@ export async function OPTIONS(req: NextRequest) {
 }
 
 interface InitBody {
+  /** #994887 trafik kaynağı {ilk, son} — temadan gelir, GÜVENİLMEZ; taslakKaynakAlanlari süzer */
+  kaynak?: unknown;
   line_items: Array<{ variant_id: number; quantity: number; title?: string; price?: number; product_type?: string }>;
   shipping_cost?: number; // kuruş veya TL? — TL kabul ediyoruz (number)
   shipping_courier?: string; // müşterinin checkout'ta seçtiği kurye (otomatik etiket bunu kullanır)
