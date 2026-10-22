@@ -32,6 +32,11 @@ export type Depo = {
 
 export type Fbq = (komut: string, olay: string, yuk?: Record<string, unknown>) => void;
 
+// Tarayıcı deposu engellense de aynı Pixel örneğinde başarılı yayımı hatırla.
+// WeakMap farklı Pixel/test örneklerini birbirinden ayırır; sayfa yenilenince
+// kalıcı deponun yerini TUTMAZ. Başarısız çağrılar buraya kaydedilmez.
+const purchaseYayimlari = new WeakMap<Fbq, Set<string>>();
+
 /**
  * InitiateCheckout — ödeme sayfası açıldığında BİR KEZ.
  *
@@ -42,15 +47,26 @@ export type Fbq = (komut: string, olay: string, yuk?: Record<string, unknown>) =
 export function initiateCheckoutYay(fbq: Fbq | null | undefined, yuk: OlayYuku | null, depo: Depo | null, oturumAnahtari = 'via_fb_ic'): boolean {
   if (typeof fbq !== 'function') return false;
   if (!gonderilebilir(yuk)) return false;
+  // Reading storage must not block the checkout event if storage is denied.
   try {
     if (depo && depo.getItem(oturumAnahtari)) return false;
-    fbq('track', 'InitiateCheckout', { ...(yuk as object) } as Record<string, unknown>);
-    if (depo) depo.setItem(oturumAnahtari, '1');
-    return true;
   } catch {
-    // Depolama kapalıysa (gizli mod) olay YİNE gider — ölçüm kaybı, satış kaybından iyidir.
+    // Storage is unavailable: continue without a reliable session stamp.
+  }
+
+  try {
+    fbq('track', 'InitiateCheckout', { ...(yuk as object) } as Record<string, unknown>);
+  } catch {
+    // Do not claim delivery or write the deduplication stamp if Pixel failed.
     return false;
   }
+
+  try {
+    if (depo) depo.setItem(oturumAnahtari, '1');
+  } catch {
+    // The event was sent; failure to persist the stamp cannot undo it.
+  }
+  return true;
 }
 
 /**
@@ -60,6 +76,9 @@ export function initiateCheckoutYay(fbq: Fbq | null | undefined, yuk: OlayYuku |
  * teşekkür sayfasını yeni sekmede açarsa ya da mailden tekrar tıklarsa
  * sessionStorage boş gelir ve Purchase İKİNCİ KEZ yayılır. Sipariş numarası
  * kalıcı bir kimliktir; damgası da kalıcı olmalı.
+ * Bu işlev ödeme doğrulamaz. Çağıran yalnız sunucuda doğrulanmış tahsilatın
+ * yükünü vermelidir; URL'deki order/total veya siparişin oluşması ödeme kanıtı
+ * değildir. Depo engelliyse bellek freni sadece mevcut Pixel örneğini korur.
  */
 export function purchaseYay(
   fbq: Fbq | null | undefined,
@@ -72,13 +91,26 @@ export function purchaseYay(
   if (!gonderilebilir(yuk)) return false;
 
   const anahtar = purchaseAnahtari(siparisNo);
+  if (purchaseYayimlari.get(fbq)?.has(anahtar)) return false;
   try {
     if (depo && depo.getItem(anahtar)) return false; // ÇİFT SAYIM KAPISI
   } catch {
     /* depolama okunamadı — aşağıda yine de yayılır */
   }
 
-  fbq('track', 'Purchase', { ...(yuk as object), order_id: String(siparisNo) } as Record<string, unknown>);
+  try {
+    fbq('track', 'Purchase', { ...(yuk as object), order_id: String(siparisNo).trim() } as Record<string, unknown>);
+  } catch {
+    // Ölçüm hatası ödeme/teşekkür akışını bozamaz; tekrar deneme açık kalır.
+    return false;
+  }
+
+  let yayilanlar = purchaseYayimlari.get(fbq);
+  if (!yayilanlar) {
+    yayilanlar = new Set();
+    purchaseYayimlari.set(fbq, yayilanlar);
+  }
+  yayilanlar.add(anahtar);
 
   try {
     if (depo) depo.setItem(anahtar, '1');
