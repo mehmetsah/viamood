@@ -35,7 +35,7 @@ const KUPON = { id: 'k1', email: 'a@b.c', bitisAni: new Date('2026-10-20T12:00:0
 /* ── sahte db: zincirli drizzle çağrılarını taklit eder ─────────────────── */
 function zincir(sonuc: unknown) {
   const p: any = {};
-  for (const k of ['from', 'where', 'orderBy', 'limit', 'set', 'values', 'returning']) p[k] = () => p;
+  for (const k of ['from', 'innerJoin', 'where', 'orderBy', 'limit', 'set', 'values', 'returning']) p[k] = () => p;
   p.then = (res: any, rej: any) => Promise.resolve(sonuc).then(res, rej);
   return p;
 }
@@ -47,6 +47,8 @@ function sahteDb(secmeler: unknown[], eklemeler: unknown[] = [[{ id: 'kupon-1' }
     insert: () => zincir(eklemeler.shift() ?? [{ id: 'kupon-1' }]),
     update: () => ({
       set: (v: any) => {
+        // satirSahiplen (#994816): 'isleniyor' geçişi 1 satır döner = sahiplenildi.
+        if (v?.durum === DURUM.ISLENIYOR) return zincir([{ id: 'sahip' }]);
         if (v && typeof v.durum === 'string') isaretler.push(v);
         return zincir([]);
       },
@@ -54,6 +56,8 @@ function sahteDb(secmeler: unknown[], eklemeler: unknown[] = [[{ id: 'kupon-1' }
   };
   return { db, isaretler };
 }
+/** Shopify kod açıcısı — çivi gerçek mağazaya YAZMAZ (#994816). */
+const SHOPIFY_OK = async () => ({ ok: true as const, id: 'gid://shopify/DiscountCodeNode/1' });
 const SATIR = (ek: Partial<{ adim: number; kanal: string }> = {}) => [
   { id: 'g1', tetikId: 't1', adim: ek.adim ?? 1, planlananAn: T0, kanal: ek.kanal ?? 'eposta' },
 ];
@@ -127,21 +131,21 @@ describe('gönderim turu', () => {
   it('kuponlu adımı gönderir, kuponu satıra damgalar', async () => {
     const { db, isaretler } = sahteDb([SATIR(), TETIK()]);
     const gidenler: any[] = [];
-    const o = await gonderimTuru(db, { simdi: T0, gonder: async (p) => { gidenler.push(p); return { ok: true }; } });
+    const o = await gonderimTuru(db, { simdi: T0, shopify: SHOPIFY_OK, gonder: async (p) => { gidenler.push(p); return { ok: true }; } });
     expect(o).toMatchObject({ tarandi: 1, gonderildi: 1, hata: 0 });
     expect(gidenler[0].tip).toBe('pazarlama');                     // çıkış linki zorunlu sınıf
     expect(gidenler[0].sablon).toBe(`akis:${AKIS.HOS_GELDIN}:1`);
-    // Yunus 16 Eki kararı: gövdeye SABİT HOSGELDIN10 girer, kişiye özel kod GİRMEZ.
-    expect(gidenler[0].html).toContain('HOSGELDIN10');
-    expect(gidenler[0].html).not.toContain('HG-');   // NEGATİF: kişisel kod sızmıyor
+    // #994816 (Yunus 21 Eki spec'i): gövdeye KİŞİYE ÖZEL kod girer, sabit kod GİRMEZ.
+    expect(gidenler[0].html).toMatch(/HG-[A-Z2-9]{8}/);
+    expect(gidenler[0].html).not.toContain('HOSGELDIN10');   // NEGATİF: paylaşılan kod geri gelmedi
     expect(isaretler[0]).toMatchObject({ durum: DURUM.GONDERILDI, kuponId: 'kupon-1' });
   });
 
   it('60 GÜN FRENİ: kupon verilmezse adım ATLANIR — kuponsuz "indirim kodunuz" maili GİTMEZ', async () => {
-    // sonKuponAni = 10 gün önce ⇒ fren açık
-    const { db, isaretler } = sahteDb([SATIR(), TETIK(), [{ createdAt: new Date(T0.getTime() - 10 * 864e5) }]]);
+    // sonKuponAni = 10 gün önce ⇒ fren açık (fren yalnız TERK akışlarında — spec)
+    const { db, isaretler } = sahteDb([SATIR({ adim: 2 }), TETIK({ akis: AKIS.SEPET_TERKI }), [{ createdAt: new Date(T0.getTime() - 10 * 864e5) }]]);
     const gidenler: any[] = [];
-    const o = await gonderimTuru(db, { simdi: T0, gonder: async (p) => { gidenler.push(p); return { ok: true }; } });
+    const o = await gonderimTuru(db, { simdi: T0, shopify: SHOPIFY_OK, gonder: async (p) => { gidenler.push(p); return { ok: true }; } });
     expect(gidenler).toHaveLength(0);
     expect(o).toMatchObject({ gonderildi: 0, atlandi: 1 });
     expect(o.sebepler.kupon_fren).toBe(1);
@@ -175,14 +179,14 @@ describe('gönderim turu', () => {
 
   it('gönderici başarısız dönerse satır HATA damgalanır (sessiz başarı YOK)', async () => {
     const { db, isaretler } = sahteDb([SATIR(), TETIK()]);
-    const o = await gonderimTuru(db, { simdi: T0, gonder: async () => ({ ok: false, error: 'smtp reddetti' }) });
+    const o = await gonderimTuru(db, { simdi: T0, shopify: SHOPIFY_OK, gonder: async () => ({ ok: false, error: 'smtp reddetti' }) });
     expect(o).toMatchObject({ gonderildi: 0, hata: 1 });
     expect(isaretler[0]).toMatchObject({ durum: DURUM.HATA, hataMetni: 'smtp reddetti' });
   });
 
   it('bir satırın istisnası TURU DÜŞÜRMEZ', async () => {
     const { db } = sahteDb([SATIR(), TETIK()]);
-    const o = await gonderimTuru(db, { simdi: T0, gonder: async () => { throw new Error('patladı'); } });
+    const o = await gonderimTuru(db, { simdi: T0, shopify: SHOPIFY_OK, gonder: async () => { throw new Error('patladı'); } });
     expect(o).toMatchObject({ tarandi: 1, hata: 1 });
     expect(o.sebepler.istisna).toBe(1);
   });

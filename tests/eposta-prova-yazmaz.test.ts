@@ -36,6 +36,7 @@ function sahteDb(okumalar: unknown[][]) {
   const sel = (): Record<string, unknown> => {
     const o: Record<string, unknown> = {};
     o.from = () => o;
+    o.innerJoin = () => o;
     o.where = () => o;
     o.orderBy = () => o;
     o.limit = () => Promise.resolve(kalan.shift() ?? []);
@@ -45,7 +46,12 @@ function sahteDb(okumalar: unknown[][]) {
     select: () => sel(),
     update: () => ({
       set: () => ({
-        where: () => { yazmalar.push('update'); const p = Promise.resolve([{ id: 'x' }]) as never; return p; },
+        where: () => {
+          yazmalar.push('update');
+          const p = Promise.resolve([{ id: 'x' }]) as unknown as Promise<unknown[]> & { returning: () => Promise<unknown[]> };
+          p.returning = async () => [{ id: 'x' }];   // satirSahiplen (#994816)
+          return p as never;
+        },
       }),
     }),
     insert: () => ({
@@ -92,10 +98,15 @@ describe('gonderimTuru — prova kipi', () => {
   const TETIK = [{ akis: AKIS.HOS_GELDIN, email: 'musteri@ornek.com', cartId: null, iptalSebebi: null, iysOnayi: true }];
   const SON_KUPON: unknown[] = [];   // hiç kupon yok ⇒ 60 gün freni KAPALI (adım 1 KUPONLU)
 
-  it('PROVA: ne mail gider, ne damga yazılır, ne kupon açılır', async () => {
+  it('PROVA: ne mail gider, ne damga yazılır, ne kupon açılır (Shopify dahil)', async () => {
     const { gonderimTuru } = await import('@/lib/eposta-akis-gonderim');
     const { db, yazmalar } = sahteDb([BEKLEYEN, TETIK, SON_KUPON]);
-    const ozet = await gonderimTuru(db, { simdi: new Date('2026-10-16T12:00:00Z'), prova: true });
+    const shopifyCagri: unknown[] = [];
+    const ozet = await gonderimTuru(db, {
+      simdi: new Date('2026-10-16T12:00:00Z'), prova: true,
+      shopify: async (k) => { shopifyCagri.push(k); return { ok: true, id: 'x' }; },
+    });
+    expect(shopifyCagri).toEqual([]);                  // ⛔ Shopify'da kod AÇILMAZ
     expect(yazmalar).toEqual([]);                      // ⛔ kupon satırı YOK, damga YOK
     expect(gidenler).toEqual([]);                      // ⛔ mail YOK
     expect(ozet).toMatchObject({ tarandi: 1, gonderildi: 1, hata: 0, prova: true });
@@ -111,7 +122,10 @@ describe('gonderimTuru — prova kipi', () => {
   it('POZİTİF KONTROL — prova YOKSA kupon açılıyor, damga yazılıyor, mail gidiyor', async () => {
     const { gonderimTuru } = await import('@/lib/eposta-akis-gonderim');
     const { db, yazmalar } = sahteDb([BEKLEYEN, TETIK, SON_KUPON]);
-    const ozet = await gonderimTuru(db, { simdi: new Date('2026-10-16T12:00:00Z') });
+    const ozet = await gonderimTuru(db, {
+      simdi: new Date('2026-10-16T12:00:00Z'),
+      shopify: async () => ({ ok: true, id: 'gid://shopify/DiscountCodeNode/1' }),   // gerçek mağazaya yazmaz
+    });
     expect(ozet).toMatchObject({ tarandi: 1, gonderildi: 1 });
     expect(yazmalar).toContain('insert');     // kuponAc
     expect(yazmalar).toContain('update');     // gonderimIsaretle(GONDERILDI)

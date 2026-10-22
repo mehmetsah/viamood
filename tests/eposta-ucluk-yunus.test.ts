@@ -18,6 +18,7 @@ vi.mock('@/lib/eposta-akis-kosucu', () => ({
     return { tetikId: 'tetik-1' };
   }),
   akisIptal: vi.fn(async () => 0),
+  DURUM: { PLANLANDI: 'planlandi' },
 }));
 
 /** Sırayla sonuç döndüren sahte drizzle — her select zinciri kuyruktan bir sonuç alır. */
@@ -26,6 +27,7 @@ function sahteDb(kuyruk: unknown[][]) {
   const zincir = () => {
     const o: Record<string, unknown> = {};
     o.from = () => o;
+    o.innerJoin = () => o;
     o.where = () => o;
     o.limit = () => Promise.resolve(kalan.shift() ?? []);
     return o;

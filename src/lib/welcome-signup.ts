@@ -12,6 +12,7 @@ import { welcomeSignups } from '@/db/schema';
 import { mailKanaliHazir, sendEmail } from '@/lib/email/sender';
 import { welcomeDiscountEmail } from '@/lib/email/templates';
 import { hosGeldinTetikle } from '@/lib/eposta-akis-tetik';
+import { gonderimTuru } from '@/lib/eposta-akis-gonderim';
 
 /** Onay kutusunun kanonik metni. Temadaki metinle BİREBİR aynı olmalı. */
 export const CONSENT_TEXT =
@@ -160,7 +161,15 @@ export function akisDevraldiMi(deger = process.env.EPOSTA_AKIS_AKTIF): boolean {
  */
 export async function akisDevret(signupId: string, email: string, consent: boolean): Promise<void> {
   try {
-    await hosGeldinTetikle(db as any, { email, iysOnayi: consent });
+    const t = await hosGeldinTetikle(db as any, { email, iysOnayi: consent });
+    // #994816 · "ANINDA": spec hoş geldin 1. maili anında istiyor; 15 dk'lık cron
+    // turunu beklemek yerine YALNIZ bu tetiğin vakti gelmiş adımı burada gönderilir.
+    // Çift mail riski yok: satır `satirSahiplen` ile sahiplenilir, cron turu atlar.
+    if (t.acildi && t.tetikId) {
+      await gonderimTuru(db as any, { tetikId: t.tetikId, limit: 5 }).catch((e) =>
+        console.error('[welcome] hoş geldin anında-gönderim hatası:', e),
+      );
+    }
     await db
       .update(welcomeSignups)
       .set({ emailStatus: 'skipped', emailError: '#994057 akışı devraldı (eposta_akis_tetikleri)' })

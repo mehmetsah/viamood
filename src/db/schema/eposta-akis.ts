@@ -91,6 +91,8 @@ export const epostaKuponlari = pgTable(
     /** Damgalanınca kupon ÖLÜR (tek kullanım). Satır silinmez. */
     kullanildiAni: timestamp('kullanildi_ani', { withTimezone: true }),
     kullanilanSiparisId: uuid('kullanilan_siparis_id'),
+    /** Shopify'daki indirim düğümü (gid). Kod Shopify'da açılamadıysa satır HİÇ yazılmaz (#994816). */
+    shopifyIndirimId: text('shopify_indirim_id'),
     createdAt: createdAt(),
   },
   (t) => [

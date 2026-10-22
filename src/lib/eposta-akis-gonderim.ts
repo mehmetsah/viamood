@@ -19,10 +19,10 @@
  *  · `gonder` ENJEKTE EDİLİR — çivi gerçek mail atmadan tüm dalları koşar.
  */
 import { eq } from 'drizzle-orm';
-import { ADIMLAR, SABIT_KUPON_KODU, hatirlatmaAtlanirMi, type Akis } from './eposta-akis';
-import { DURUM, bekleyenler, gonderimIsaretle } from './eposta-akis-kosucu';
-import { kuponKullanildiMi } from './eposta-kupon';
-import { kuponAc } from './eposta-kupon';
+import { ADIMLAR, hatirlatmaAtlanirMi, type Akis } from './eposta-akis';
+import { DURUM, bekleyenler, gonderimIsaretle, satirSahiplen } from './eposta-akis-kosucu';
+import { kuponAc, kuponKullanildiMi } from './eposta-kupon';
+import type { ShopifyKuponAcici } from './shopify/eposta-indirim';
 import { sendEmail } from './email/sender';
 import { akisMaili } from './email/templates';
 import { env } from './env';
@@ -71,14 +71,14 @@ function say(o: Record<string, number>, k: string) {
 }
 
 /**
- * BİR TUR: vakti gelmiş satırları gönderir. Zamanlayıcı (cron ucu) bunu çağırır.
- * ⚠ Aynı anda iki tur koşsa bile çift mail gitmez: `(tetik_id, adim)` UNIQUE
- * değil bu turu korur — koruma `durum` geçişindedir; satır 'planlandi' dışına
- * çıkar çıkmaz `bekleyenler` onu bir daha döndürmez.
+ * BİR TUR: vakti gelmiş satırları gönderir. Zamanlayıcı (cron ucu) ve hoş geldin
+ * anında-gönderimi (`welcome-signup.ts`, `tetikId` ile) bunu çağırır.
+ * ⚠ Aynı anda iki tur koşsa bile çift mail gitmez: her satır gönderimden ÖNCE
+ * `satirSahiplen` ile tek SQL'de 'isleniyor'a alınır; kaybeden tur atlar.
  */
 export async function gonderimTuru(
   db: DbGibi,
-  secenek: { simdi?: Date; limit?: number; gonder?: Gonderici; prova?: boolean } = {},
+  secenek: { simdi?: Date; limit?: number; gonder?: Gonderici; prova?: boolean; tetikId?: string; shopify?: ShopifyKuponAcici } = {},
 ): Promise<GonderimOzet> {
   const simdi = secenek.simdi ?? new Date();
   // PROVA (kuru koşu) — ÜÇ YAZMA YOLU BİRDEN KAPANIR, mail susturmak YETMEZDİ:
@@ -94,10 +94,12 @@ export async function gonderimTuru(
   const gonder: Gonderici = prova
     ? (async () => ({ ok: true }))          // PROVA: mail GİTMEZ, 'hata' da damgalanmaz
     : secenek.gonder ?? ((p) => sendEmail(p as any));
-  const satirlar = await bekleyenler(db, simdi, secenek.limit ?? 100);
+  const satirlar = await bekleyenler(db, simdi, secenek.limit ?? 100, secenek.tetikId);
   const ozet: GonderimOzet = { tarandi: satirlar.length, gonderildi: 0, atlandi: 0, hata: 0, sebepler: {}, ...(prova ? { prova: true } : {}) };
 
   for (const s of satirlar) {
+    // Sahiplenme PROVADA yapılmaz (yazma); gerçek turda kaybedilirse satır ötekinin.
+    if (!prova && !(await satirSahiplen(db, s.id))) { say(ozet.sebepler, 'baska_tur_aldi'); continue; }
     try {
       const [tetik] = await db
         .select({
@@ -152,17 +154,23 @@ export async function gonderimTuru(
       }
 
       if (kuponluAdimMi(akis, s.adim)) {
-        const k = await kuponAc(db, { email: tetik.email, akis, simdi, prova });
+        const k = await kuponAc(db, { email: tetik.email, akis, simdi, prova, shopify: secenek.shopify });
+        if (!k.ok && k.sebep === 'shopify') {
+          // Kod Shopify'da AÇILAMADI (ör. write_discounts izni yok): kullanılamayan kodla
+          // mail GİTMEZ. 'hata' + Shopify mesajı — tur sayacında ve defterde görünür.
+          await isaretle(db, s.id, DURUM.HATA, { hataMetni: `Shopify kodu açılamadı: ${k.hata ?? '?'}`.slice(0, 500) });
+          ozet.hata += 1; say(ozet.sebepler, 'kupon_shopify');
+          continue;
+        }
         if (!k.ok) {
           // 60 GÜN FRENİ: kupon verilmez ⇒ kuponlu adım HİÇ gönderilmez.
           await isaretle(db, s.id, DURUM.ATLANDI, { hataMetni: `kupon verilmedi: ${k.sebep}` });
           ozet.atlandi += 1; say(ozet.sebepler, `kupon_${k.sebep}`);
           continue;
         }
-        // Yunus kararı (#994057, 16 Eki): e-postaya giden kod SABİT HOSGELDIN10.
-        // `kuponAc` yine çağrıldı — 60 GÜN FRENİ ve bitiş tarihi ondan geliyor;
-        // üretilen kişiye özel kod (`k.kod`) kayda yazılıyor ama GÖNDERİLMİYOR.
-        kod = SABIT_KUPON_KODU; kuponId = k.id; bitisAni = k.bitisAni;
+        // #994816 (Yunus 21 Eki spec'i): e-postaya giden kod KİŞİYE ÖZEL — Shopify'da
+        // usageLimit 1 ile açılmış, defterde bu kişiye yazılmış kod.
+        kod = k.kod; kuponId = k.id; bitisAni = k.bitisAni;
       }
 
       const mail = akisMaili({
