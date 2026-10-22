@@ -9,6 +9,7 @@ import {
 } from '@/db/schema';
 import { upsertCustomerByEmail } from '@/lib/customers/service';
 import { teslimatAdresiKaydi } from './teslimat-adresi';
+import { siparisSonrasiAkis } from '@/lib/eposta-akis-tetik';
 
 /**
  * Shopify webhook payload'ından gelen order'ı local DB'ye yansıt.
@@ -28,6 +29,8 @@ export interface ShopifyOrderPayload {
   total_shipping_price_set?: { shop_money?: { amount?: string } };
   total_tax?: string;
   total_discounts?: string;
+  /** Siparişte kullanılan indirim kodları (Shopify order payload'ı). */
+  discount_codes?: Array<{ code?: string | null }> | null;
   total_price?: string;
   financial_status?: string | null;
   fulfillment_status?: string | null;
@@ -330,6 +333,23 @@ export async function ingestShopifyOrder(payload: ShopifyOrderPayload): Promise<
       name: customerName,
       phone: payload.customer?.phone ?? payload.phone ?? null,
     });
+  }
+
+  // #994816 · E-POSTA AKIŞI — sipariş geldi: (a) e-posta kuponu kullanıldıysa
+  // damgala (tek kullanım + A2 "kullandıysa hatırlatma gitmez"), (b) açık sepet/
+  // checkout terki akışlarını kapat ("sepetinizi tamamlayın" sipariş SONRASI
+  // gitmez). İkisinin de çağıranı 13 Eki'den beri yoktu. Best-effort: sipariş
+  // yazımını ASLA bozmaz; hata loga düşer.
+  if (!payload.cancelled_at) {
+    try {
+      await siparisSonrasiAkis(db as any, {
+        email: custEmail,
+        kodlar: (payload.discount_codes ?? []).map((d) => d?.code),
+        siparisId: orderId,
+      });
+    } catch (err) {
+      console.error('[order-ingest] e-posta akışı sipariş kancası hatası:', err);
+    }
   }
 
   return { ok: true, orderId, isNew: true, matchedLineItems: matched, unmatchedLineItems: unmatched };

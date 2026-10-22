@@ -17,6 +17,7 @@
  * Hesap SUNUCUDA yapılır; istemciden gelen tutara asla güvenilmez.
  */
 import { env } from '@/lib/env';
+import { epostaKuponuKisitla } from '@/lib/eposta-kupon-odeme';
 
 export interface DiscountLineInput {
   variant_id: number;
@@ -356,6 +357,18 @@ export async function resolveDiscount(
   }
   // ANA GÜVENLİK SINIRI: indirim, hak eden satırların toplamını ASLA aşamaz
   amountKurus = Math.max(0, Math.min(amountKurus, eligibleSubtotalKurus));
+
+  // E-POSTA AKIŞI KODU (#994816): kişiye özel kilit + tek kullanım + 300 TL tavanı.
+  // Kanca YALNIZ e-posta akışının ürettiği kodlara dokunur; kampanya kodları
+  // DB'ye gitmeden aynen geçer (tavan buraya sabit olarak YAZILMAZ — çivi).
+  const ek = await epostaKuponuKisitla({
+    kod: lj.discount_code?.code || code,
+    email: customer.email,
+    amountKurus,
+    eligibleSubtotalKurus,
+  });
+  if (!ek.ok) return { ok: false, error: ek.error };
+  amountKurus = ek.amountKurus;
 
   return {
     ok: true,

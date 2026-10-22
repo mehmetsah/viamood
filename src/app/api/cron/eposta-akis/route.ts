@@ -21,6 +21,7 @@ import { db } from '@/db/client';
 import { env } from '@/lib/env';
 import { gonderimTuru } from '@/lib/eposta-akis-gonderim';
 import { terkTara } from '@/lib/eposta-akis-tetik';
+import { indirimYazmaIzniVarMi } from '@/lib/shopify/eposta-indirim';
 
 export const dynamic = 'force-dynamic';
 
@@ -47,7 +48,11 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   if (!cronYetkiliMi(req.headers.get('authorization'), secret)) {
     return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
   }
-  if (!akisAktifMi()) {
+  const prova = req.nextUrl.searchParams.get('prova') === '1';
+  // #994816: KURU KOŞU bayrak KAPALIYKEN de koşar — hiçbir satır yazmaz, mail ve
+  // Shopify kodu üretmez; "açılmaya hazır mı" sorusunu (bekleyen iş + Shopify
+  // indirim yazma izni) canlıyı açmadan ölçmenin tek yolu bu.
+  if (!akisAktifMi() && !prova) {
     return NextResponse.json({ ok: true, aktif: false, not: 'EPOSTA_AKIS_AKTIF=1 verilmedi — mail gönderilmedi' });
   }
 
@@ -58,13 +63,15 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   // işaretliyor, `kuponAc` gerçek kupon açıp 60 gün frenini yakıyor, susturulan
   // gönderici yüzünden satırlar 'hata' damgalanıyordu. Artık prova her İKİ
   // katmana da geçiyor — tek yerde unutulmasın diye aynı değişken kullanılıyor.
-  const prova = req.nextUrl.searchParams.get('prova') === '1';
   const simdi = new Date();
 
   try {
     const terk = await terkTara(db as any, { simdi, limit, prova });
     const gonderim = await gonderimTuru(db as any, { simdi, limit, prova });
-    return NextResponse.json({ ok: true, aktif: true, prova, terk, gonderim });
+    // Kişiye özel kod Shopify'da açılamazsa kuponlu adımlar 'hata' düşer — izin
+    // kuru koşuda ölçülür (null = ölçülemedi, "yok" demek değil).
+    const shopifyIndirimYazma = prova ? await indirimYazmaIzniVarMi() : undefined;
+    return NextResponse.json({ ok: true, aktif: akisAktifMi(), prova, terk, gonderim, ...(prova ? { shopifyIndirimYazma } : {}) });
   } catch (e) {
     return NextResponse.json(
       { ok: false, error: e instanceof Error ? e.message : String(e) },
