@@ -1,0 +1,35 @@
+
+/* ─────────────────────────────────────────────────────────────────────────
+   #994888 m2 · /policies/* BAŞLIK BİRLİĞİ — Yunus 15 Eki 11:14 (birebir):
+   «diğerlerinde başlığın üzerinde "Yasal · Via Mood" yazıyor bunda da aynı
+   tasarımda yazalım … başlığın hemen altında "Son güncelleme: Mayıs 2026 ·
+   VIA GLOBAL …" … panelin içerisindeki Son güncellemeyi de silelim.»
+   İşaretleme snippets/via-politika-baslik.liquid'den gelir (layout yalnız
+   request.page_type == 'policy' iken onu çağırır). Buradaki değerler YENİ
+   TASARIM DEĞİL — sections/via-legal-page.liquid'deki .vl-eyebrow / .vl-title
+   / .vl-meta kurallarının BİREBİR kopyası (md.16); o kurallar bölüm kimliğine
+   (#shopify-section-…) bağlı olduğu için sistem politika sayfasına ulaşmıyor.
+   Başlık: #993391 burada 3.2rem sabitlemişti — o değer referansın YALNIZ
+   1280px'teki karşılığıydı (4vw); 1440'ta 51.2 ↔ 54.4, 430'da 51.2 ↔ 32 px
+   sapıyordu (ölçüldü 22 Eki). Referansın kendi clamp'i aynen alınır.
+   Özgüllük (0,2,1)+!important: 993391'in (0,1,1)!important kuralını ezer.
+   GERİ ALMA: bu blok silinir + layout'taki policy dalı kaldırılır.
+   ───────────────────────────────────────────────────────────────────────── */
+.shopify-policy__title .vl-eyebrow {
+  margin: 0 0 12px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #b66c55;
+}
+.shopify-policy__title.shopify-policy__title h1 {
+  margin: 0 0 12px !important;
+  font-size: clamp(2rem, 4vw, 3.4rem) !important;
+  line-height: 1.32 !important;
+}
+.shopify-policy__title .vl-meta {
+  margin: 0;
+  color: #5d6458;
+  font-size: 0.92rem;
+}
