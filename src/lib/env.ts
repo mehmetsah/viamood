@@ -73,6 +73,14 @@ const envSchema = z.object({
   // Prod'da .env ile ezilir; bu yalnız VARSAYILAN.
   EMAIL_FROM: z.string().default('Via Mood <info@viamood.com>'),
 
+  // #994827 Meta Conversions API (sunucu Purchase). JETON BOŞSA gönderim SESSİZ NO-OP —
+  // sipariş akışı etkilenmez. Jetona DEFAULT YOK (kaynağa gömülmesin); değeri loga yazılmaz.
+  // TEST_EVENT_CODE yalnız doluysa gönderilir (Events Manager → Test Events).
+  META_CAPI_TOKEN: z.string().optional(),
+  META_PIXEL_ID: z.string().default('1355197119331444'),
+  META_CAPI_TEST_EVENT_CODE: z.string().optional(),
+  META_GRAPH_VERSION: z.string().default('v21.0'),
+
   // Storefront — primary domain (custom checkout ödeme redirect'i + CORS default origin). Domain değişince TEK yer.
   STOREFRONT_URL: z.string().url().default('https://viamood.com.tr'),
 

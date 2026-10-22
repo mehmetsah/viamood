@@ -13,6 +13,7 @@ import { retrieveCheckoutForm } from '@/lib/iyzico/client';
 import { env } from '@/lib/env';
 import { getStore } from '@/lib/store';
 import { taslakTamamlanincaIlDenetle } from '@/lib/shopify/adres-uyusmaz';
+import { istemciBilgisi, metaPurchaseArkaPlanda, taslaktanGirdi, type Istemci } from '@/lib/meta/capi-bagla';
 import { completeNativeCardOrder } from '@/lib/store/native-create-order';
 
 export const dynamic = 'force-dynamic';
@@ -20,7 +21,7 @@ export const runtime = 'nodejs';
 
 const STOREFRONT = env.STOREFRONT_URL;
 
-async function completeDraftOrder(draftId: string): Promise<boolean> {
+async function completeDraftOrder(draftId: string, istemci: Istemci = {}): Promise<boolean> {
   const token = env.SHOPIFY_ADMIN_ACCESS_TOKEN;
   if (!token) return false;
   try {
@@ -39,7 +40,11 @@ async function completeDraftOrder(draftId: string): Promise<boolean> {
     if (resp.ok) {
       resp
         .json()
-        .then((j) => taslakTamamlanincaIlDenetle(j, 'iyzico'))
+        .then((j) => {
+          // #994827 Meta CAPI Purchase — event_id 'via-pur-'+draftId (temanın `order`ı). Jeton yoksa NO-OP.
+          metaPurchaseArkaPlanda(taslaktanGirdi(j, draftId, istemci));
+          return taslakTamamlanincaIlDenetle(j, 'iyzico');
+        })
         .catch(() => {});
     }
     return resp.ok;
@@ -86,7 +91,7 @@ export async function POST(req: NextRequest) {
       // Pending order'ı complete et (native → RDS paid+komisyon; aksi → Shopify draft complete)
       if (draftId) {
         if ((await getStore()).backend === 'native') await completeNativeCardOrder(draftId);
-        else await completeDraftOrder(draftId);
+        else await completeDraftOrder(draftId, istemciBilgisi(req.headers));
       }
       const okUrl =
         `${STOREFRONT}/pages/siparis-alindi` +

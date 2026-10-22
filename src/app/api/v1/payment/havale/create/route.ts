@@ -12,6 +12,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { getAllowedOrigins } from '@/lib/cors';
 import { env } from '@/lib/env';
 import { getStore, type StorefrontOrderBody } from '@/lib/store';
+import { govdedenGirdi, istemciBilgisi, metaPurchaseArkaPlanda } from '@/lib/meta/capi-bagla';
 import { resolveVendorIbans } from '@/lib/shopify/vendor-ibans';
 import { trustedDiscountDetailed } from '@/lib/shopify/discount-resolve';
 
@@ -93,6 +94,12 @@ export async function POST(req: NextRequest) {
       { status: 502, headers },
     );
   }
+
+  // #994827 Meta CAPI Purchase — event_id 'via-pur-'+order_code ('#' düşer, temanın `kod`u);
+  // havale ödeme beklese de tema başarı sayfasında
+  // Purchase atıyor; sunucu onunla AYNI event_id'yi taşımazsa Meta iki kez sayar.
+  // Jeton yoksa NO-OP; arka planda — yanıtı bekletmez.
+  metaPurchaseArkaPlanda(govdedenGirdi(body, created, istemciBilgisi(req.headers)));
 
   return NextResponse.json(
     {

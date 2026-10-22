@@ -14,6 +14,7 @@ import { env } from '@/lib/env';
 import { verifyPaytrCallback, parseDraftIdFromOid } from '@/lib/paytr/client';
 import { getStore } from '@/lib/store';
 import { taslakTamamlanincaIlDenetle } from '@/lib/shopify/adres-uyusmaz';
+import { metaPurchaseArkaPlanda, taslaktanGirdi } from '@/lib/meta/capi-bagla';
 import { completeNativeCardOrder } from '@/lib/store/native-create-order';
 
 export const dynamic = 'force-dynamic';
@@ -34,7 +35,12 @@ async function completeDraftOrder(draftId: string): Promise<boolean> {
     if (resp.ok) {
       resp
         .json()
-        .then((j) => taslakTamamlanincaIlDenetle(j, 'paytr'))
+        .then((j) => {
+          // #994827 Meta CAPI Purchase — event_id 'via-pur-'+draftId (temanın `order`ı). PayTR
+          // sunucu-sunucu çağırır: müşteri IP/UA'sı burada YOK, gönderilmez (uydurulmaz).
+          metaPurchaseArkaPlanda(taslaktanGirdi(j, draftId));
+          return taslakTamamlanincaIlDenetle(j, 'paytr');
+        })
         .catch(() => {});
     }
     return resp.ok;

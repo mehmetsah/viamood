@@ -12,6 +12,7 @@ import { orderLineItems, orders, productVariants } from '@/db/schema';
 import { env } from '@/lib/env';
 import { decrementForOrder } from '@/lib/inventory/decrement';
 import { markOrderPaid } from '@/lib/orders/lifecycle';
+import { metaPurchaseArkaPlanda, nativeGirdi } from '@/lib/meta/capi-bagla';
 import { nextOrderNumber } from '@/lib/orders/sequence';
 import { routeOrder } from '@/lib/routing/engine';
 import { syncOrderToMikro } from '@/lib/server/mikro-sync';
@@ -333,6 +334,7 @@ export async function completeNativeCardOrder(numericRef: string): Promise<boole
         id: orders.id,
         email: orders.customerEmail,
         name: orders.customerName,
+        phone: orders.customerPhone,
         total: orders.totalCents,
         fin: orders.financialStatus,
       })
@@ -365,6 +367,12 @@ export async function completeNativeCardOrder(numericRef: string): Promise<boole
 
     // paid + komisyon (idempotent)
     await markOrderPaid(o.id);
+
+    // #994827 Meta CAPI Purchase — event_id 'via-pur-'+numericRef (temanın `order`ı).
+    // Yukarıdaki 'paid' erken dönüşü sayesinde callback tekrarında İKİNCİ KEZ gitmez.
+    metaPurchaseArkaPlanda(
+      nativeGirdi({ numericRef, totalCents: o.total, email: o.email, phone: o.phone, name: o.name }),
+    );
 
     // Downstream (fire-and-forget)
     routeOrder(o.id)

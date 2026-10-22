@@ -21,6 +21,7 @@ import { env } from '@/lib/env';
 import { getStore } from '@/lib/store';
 import { completeNativeCardOrder } from '@/lib/store/native-create-order';
 import { taslakTamamlanincaIlDenetle } from '@/lib/shopify/adres-uyusmaz';
+import { istemciBilgisi, metaPurchaseArkaPlanda, taslaktanGirdi, type Istemci } from '@/lib/meta/capi-bagla';
 import {
   getToken,
   checkStatus,
@@ -75,7 +76,7 @@ function failPage(reason: string, invoiceId?: string): NextResponse {
   return redirect(`${STOREFRONT}/pages/odeme-hata?${q.toString()}`);
 }
 
-async function completeDraftOrder(draftId: string): Promise<boolean> {
+async function completeDraftOrder(draftId: string, istemci: Istemci = {}): Promise<boolean> {
   const token = env.SHOPIFY_ADMIN_ACCESS_TOKEN;
   if (!token) return false;
   try {
@@ -92,7 +93,11 @@ async function completeDraftOrder(draftId: string): Promise<boolean> {
     if (resp.ok) {
       resp
         .json()
-        .then((j) => taslakTamamlanincaIlDenetle(j, 'halkode'))
+        .then((j) => {
+          // #994827 Meta CAPI Purchase — event_id 'via-pur-'+draftId (temanın `order`ı). Jeton yoksa NO-OP.
+          metaPurchaseArkaPlanda(taslaktanGirdi(j, draftId, istemci));
+          return taslakTamamlanincaIlDenetle(j, 'halkode');
+        })
         .catch(() => {});
     }
     return resp.ok;
@@ -225,7 +230,7 @@ async function handle(req: NextRequest): Promise<NextResponse> {
         await completeNativeCardOrder(draftId);
         console.log('[halkode/callback] native sipariş tamamlandı', { invoiceId, draftId });
       } else {
-        const done = await completeDraftOrder(draftId);
+        const done = await completeDraftOrder(draftId, istemciBilgisi(req.headers));
         if (done) console.log('[halkode/callback] Shopify draft complete', { invoiceId, draftId });
         else console.error('[halkode/callback] draft complete BAŞARISIZ', { invoiceId, draftId });
       }
