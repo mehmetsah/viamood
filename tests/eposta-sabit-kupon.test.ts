@@ -8,6 +8,12 @@
  * artık sabit kodun gönderim katmanına GERİ DÖNMEDİĞİNİ ölçer.
  * Davranış ayağı: tests/eposta-akis-gonderim.test.ts (gövdede HG- VAR, HOSGELDIN10 YOK)
  * ve tests/eposta-akis-islak.test.ts (gerçek Postgres, kişiye özel kod tekil).
+ *
+ * ⚠ #994914 (Yunus 22 Eki: «HOSGELDIN10 şeklinde kod açtım, onu kullanabilir»): sabit kod
+ * GERİ GELDİ ama YALNIZ `EPOSTA_SABIT_KUPON` env'i ile ve KUPON katmanında
+ * (`eposta-kupon.ts sabitKupon()`); gönderim katmanı yine `k.kod` kullanır ve kodu
+ * gömülü taşımaz — aşağıdaki iddialar bu yüzden hâlâ doğru. Davranış çivisi:
+ * tests/eposta-sabit-kupon-modu.test.ts.
  */
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';

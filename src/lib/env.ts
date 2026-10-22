@@ -66,6 +66,9 @@ const envSchema = z.object({
   //   Bu yüzden bilinçli olarak DEFAULT YOK — kaynağa gömülmesin.
   // Mail gönderimi RESEND_API_KEY ile birlikte aktifleşir; ikisi de doluysa mail gider.
   WELCOME_DISCOUNT_CODE: z.string().optional(),
+  // #994914: doluysa e-posta akış maillerine bu SABİT kod gider (Shopify'da zaten açık;
+  // kod üretilmez/açılmaz). Defter satırı yine yazılır → fren/kilit/tavan sürer. Boş = kişiye özel kod.
+  EPOSTA_SABIT_KUPON: z.string().optional(),
   // Yunus 16 Eki: «gönderen adresi info@viamood.com kullanılabilir».
   // Prod'da .env ile ezilir; bu yalnız VARSAYILAN.
   EMAIL_FROM: z.string().default('Via Mood <info@viamood.com>'),

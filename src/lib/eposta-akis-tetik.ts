@@ -215,7 +215,7 @@ export async function siparisSonrasiAkis(
   girdi: { email?: string | null; kodlar?: Array<string | null | undefined>; siparisId?: string | null; simdi?: Date },
 ): Promise<{ damga: number; iptal: number }> {
   const damga = girdi.kodlar?.length
-    ? await siparisKuponlariniDamgala(db, { kodlar: girdi.kodlar, siparisId: girdi.siparisId, simdi: girdi.simdi })
+    ? await siparisKuponlariniDamgala(db, { kodlar: girdi.kodlar, siparisId: girdi.siparisId, simdi: girdi.simdi, email: girdi.email })
     : 0;
   const email = (girdi.email ?? '').trim().toLowerCase();
   const iptal = email.includes('@') ? await donusumIptal(db, email) : 0;

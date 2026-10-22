@@ -16,7 +16,7 @@
  * Redis'e güvenip bu kısıtı atlamak, ölçülmüş "çift mail" sınıfını açık bırakırdı.
  */
 import { sql } from 'drizzle-orm';
-import { boolean, index, integer, pgTable, text, timestamp, unique, uuid } from 'drizzle-orm/pg-core';
+import { boolean, index, integer, pgTable, text, timestamp, unique, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
 import { createdAt } from './_shared';
 
 export const epostaAkisTetikleri = pgTable(
@@ -80,8 +80,12 @@ export const epostaKuponlari = pgTable(
   'eposta_kuponlari',
   {
     id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
-    /** KİŞİYE ÖZEL kod — statik WELCOME_DISCOUNT_CODE'un yerini alır. */
-    kod: text('kod').notNull().unique(),
+    /**
+     * KİŞİYE ÖZEL kod (HG-/ST-/CT-) ya da SABİT mod kodu (#994914, EPOSTA_SABIT_KUPON).
+     * Tekillik yalnız kişisel kodlarda (0035 kısmi dizin); sabit kod her verilişte
+     * ayrı satırdır — 60 gün freni satırın created_at'inden okunur.
+     */
+    kod: text('kod').notNull(),
     email: text('email').notNull(),
     akis: text('akis').notNull(),
     indirimYuzde: integer('indirim_yuzde').notNull(),
@@ -98,5 +102,9 @@ export const epostaKuponlari = pgTable(
   (t) => [
     /** 60 GÜN FRENİ bu indeksle sorulur: bu e-postaya en son ne zaman kupon verdim? */
     index('eposta_kuponlari_email_created_idx').on(t.email, t.createdAt),
+    /** #994914: kişisel kodlar tekil kalır; sabit kod çok satırlı olabilir. */
+    uniqueIndex('eposta_kuponlari_kod_kisisel_uniq').on(t.kod).where(sql`kod ~ '^(HG|ST|CT)-'`),
+    /** Sabit kodda defter araması (kod, e-posta) ile yapılır. */
+    index('eposta_kuponlari_kod_email_idx').on(t.kod, t.email),
   ],
 );

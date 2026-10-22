@@ -16,15 +16,15 @@
  *  · tek kullanım + süre: defterdeki damga/bitiş (Shopify sayacı bizim akışımızı
  *    saymaz — discount-resolve'un 11 Ağu notu).
  */
-import { EPOSTA_KOD_DESENI, cozumle } from './eposta-kupon';
+import { bizimKodMu, cozumle, indirimTutariKurus, kuponSatirKosulu, sabitKupon } from './eposta-kupon';
 import { epostaKuponlari } from '@/db/schema';
 
 export type KuponSatiri = { id: string; email: string; bitisAni: Date; kullanildiAni: Date | null };
-export type KuponOkuyucu = (kod: string) => Promise<KuponSatiri | null>;
+export type KuponOkuyucu = (kod: string, email?: string | null) => Promise<KuponSatiri | null>;
 
-const varsayilanOkuyucu: KuponOkuyucu = async (kod) => {
+const varsayilanOkuyucu: KuponOkuyucu = async (kod, email) => {
   // Geç yükleme: discount-resolve'u içe aktaran her dosya DB istemcisini çekmesin.
-  const [{ db }, { eq }] = await Promise.all([import('@/db/client'), import('drizzle-orm')]);
+  const [{ db }, { desc }] = await Promise.all([import('@/db/client'), import('drizzle-orm')]);
   const [k] = await db
     .select({
       id: epostaKuponlari.id,
@@ -33,7 +33,8 @@ const varsayilanOkuyucu: KuponOkuyucu = async (kod) => {
       kullanildiAni: epostaKuponlari.kullanildiAni,
     })
     .from(epostaKuponlari)
-    .where(eq(epostaKuponlari.kod, kod))
+    .where(kuponSatirKosulu(kod, email))
+    .orderBy(desc(epostaKuponlari.createdAt))
     .limit(1);
   return k ?? null;
 };
@@ -52,18 +53,25 @@ export async function epostaKuponuKisitla(
   oku: KuponOkuyucu = varsayilanOkuyucu,
 ): Promise<{ ok: true; amountKurus: number } | { ok: false; error: string }> {
   const kod = (girdi.kod ?? '').trim().toUpperCase();
-  if (!EPOSTA_KOD_DESENI.test(kod)) return { ok: true, amountKurus: girdi.amountKurus };
+  if (!bizimKodMu(kod)) return { ok: true, amountKurus: girdi.amountKurus };
+  const email = (girdi.email ?? '').trim();
+  // SABİT KOD (#994914): Shopify'da herkese açık tek kod. Defterde bu e-postanın satırı
+  // varsa kurallar (kişi · tek kullanım · süre · tavan) SIKI uygulanır. Satır yoksa ya da
+  // e-posta henüz bilinmiyorsa (sepet önizlemesi) kod başka kanaldan (ör. hoş geldin
+  // formu) gelmiş olabilir: reddedilmez, yalnız 300 TL TAVANI uygulanır.
+  const sabitMi = kod === sabitKupon();
+  const yalnizTavan = () => ({ ok: true as const, amountKurus: Math.max(0, Math.min(girdi.amountKurus, indirimTutariKurus(girdi.eligibleSubtotalKurus))) });
+  if (sabitMi && !email) return yalnizTavan();
   let satir: KuponSatiri | null;
   try {
-    satir = await oku(kod);
+    satir = await oku(kod, email || null);
   } catch (e) {
     // Fail-closed: bizim desenimizdeki kod doğrulanamadan tavansız GEÇMEZ.
     console.error('[eposta-kupon] defter okunamadı — kupon reddedildi', { kod, error: String(e) });
     return { ok: false, error: 'Kupon şu anda doğrulanamıyor, lütfen tekrar deneyin.' };
   }
   // Desene uyan ama defterde olmayan kod bizim değil (elle açılmış) — dokunma.
-  if (!satir) return { ok: true, amountKurus: girdi.amountKurus };
-  const email = (girdi.email ?? '').trim();
+  if (!satir) return sabitMi ? yalnizTavan() : { ok: true, amountKurus: girdi.amountKurus };
   const r = cozumle(
     satir,
     { email: email || satir.email, sepetKurus: girdi.eligibleSubtotalKurus },

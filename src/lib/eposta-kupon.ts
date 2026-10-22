@@ -39,6 +39,20 @@ import type { ShopifyKuponAcici } from './shopify/eposta-indirim';
 export const BIRLESIR = false;
 
 /**
+ * SABİT KUPON MODU (#994914 — Yunus 22 Eki: «HOSGELDIN10 şeklinde kod açtım, onu
+ * kullanabilir»). `EPOSTA_SABIT_KUPON` doluysa akış maillerine Shopify'da ZATEN AÇIK
+ * olan bu kod gider: kod üretilmez, Shopify'da kod AÇILMAZ (`write_discounts` gerekmez).
+ * Defter satırı YİNE yazılır — 60 gün freni, kişiye kilit, tek kullanım ve 300 TL
+ * tavanı o satırdan okunur. Aynı kod birden çok kişide olduğu için defter aramaları
+ * sabit kodda (kod, e-posta) ile yapılır (0035 göçü: kod tekilliği yalnız kişisel
+ * kodlarda). Boşsa kişiye özel üretim (bugünkü davranış) birebir sürer.
+ */
+export function sabitKupon(deger: string | null | undefined = process.env.EPOSTA_SABIT_KUPON): string | null {
+  const k = (deger ?? '').trim().toUpperCase();
+  return k ? k : null;
+}
+
+/**
  * Tahmin edilemez gövde — `Math.random` DEĞİL (çekirdek dosyanın notu: tahmin
  * edilebilir kod, "tek kullanımlık" güvencesini anlamsız kılar).
  * Base32 benzeri alfabe: okunurken karışan 0/O ve 1/I/L çıkarıldı — kod müşteri
@@ -99,7 +113,11 @@ export async function kuponKullanildiMi(db: DbGibi, email: string, akis: Akis): 
 
 export async function kuponAc(
   db: DbGibi,
-  girdi: { email: string; akis: Akis; simdi?: Date; govde?: () => string; prova?: boolean; shopify?: ShopifyKuponAcici },
+  girdi: {
+    email: string; akis: Akis; simdi?: Date; govde?: () => string; prova?: boolean; shopify?: ShopifyKuponAcici;
+    /** Test/çağıran için; verilmezse `EPOSTA_SABIT_KUPON` okunur. `null` = sabit mod KAPALI. */
+    sabitKod?: string | null;
+  },
 ): Promise<KuponSonuc> {
   const simdi = girdi.simdi ?? new Date();
   const email = girdi.email.trim().toLowerCase();
@@ -108,7 +126,8 @@ export async function kuponAc(
   }
   const bitisAni = kuponBitisi(girdi.akis, simdi);
   if (!bitisAni) return { ok: false, sebep: 'omur_yok' };
-  const kod = kuponKoduUret(girdi.akis, girdi.govde ?? (() => govdeUret()));
+  const sabit = girdi.sabitKod === undefined ? sabitKupon() : sabitKupon(girdi.sabitKod);
+  const kod = sabit ?? kuponKoduUret(girdi.akis, girdi.govde ?? (() => govdeUret()));
   // PROVA (kuru koşu): KARAR aynı yerden verilir (60 gün freni + ömür yukarıda
   // ÖLÇÜLDÜ), yalnız DEFTERE YAZILMAZ. Sebep ölçüldü (#994057, 16 Eki): prova
   // çağrısı gerçek kupon satırı açıyordu ve o satır 60 GÜN FRENİNİ YAKIYORDU —
@@ -121,11 +140,16 @@ export async function kuponAc(
   // adımı 'atlandi' + sebep işaretler). Ters sıra, defterde ölü kod bırakırdı.
   // Geç yükleme: ödeme kancası (`eposta-kupon-odeme.ts`) bu dosyayı içe aktarıyor;
   // Shopify istemcisi (DB + env) yalnız gerçekten kupon açılırken yüklensin.
-  const ac = girdi.shopify ?? (await import('./shopify/eposta-indirim')).shopifyKuponAc;
-  const sh = await ac({
-    kod, akis: girdi.akis, yuzde: TABAN_INDIRIM_YUZDE, baslangic: simdi, bitis: bitisAni,
-  });
-  if (!sh.ok) return { ok: false, sebep: 'shopify', hata: sh.hata };
+  // SABİT MOD: kod Shopify'da zaten var — açıcı HİÇ çağrılmaz, kimlik yok (null).
+  let shopifyIndirimId: string | null = null;
+  if (!sabit) {
+    const ac = girdi.shopify ?? (await import('./shopify/eposta-indirim')).shopifyKuponAc;
+    const sh = await ac({
+      kod, akis: girdi.akis, yuzde: TABAN_INDIRIM_YUZDE, baslangic: simdi, bitis: bitisAni,
+    });
+    if (!sh.ok) return { ok: false, sebep: 'shopify', hata: sh.hata };
+    shopifyIndirimId = sh.id;
+  }
   const [r] = await db
     .insert(epostaKuponlari)
     .values({
@@ -135,7 +159,7 @@ export async function kuponAc(
       indirimYuzde: TABAN_INDIRIM_YUZDE,
       ustLimitKurus: UST_LIMIT_KURUS,
       bitisAni,
-      shopifyIndirimId: sh.id,
+      shopifyIndirimId,
     })
     .returning({ id: epostaKuponlari.id });
   return { ok: true, id: r.id, kod, bitisAni, indirimYuzde: TABAN_INDIRIM_YUZDE, ustLimitKurus: UST_LIMIT_KURUS };
@@ -166,6 +190,23 @@ export function cozumle(
   return { ok: true, kuponId: kupon.id, indirimKurus: indirimTutariKurus(istek.sepetKurus), indirimYuzde: TABAN_INDIRIM_YUZDE };
 }
 
+/**
+ * Defterde kodun satırını bulan koşul. Kişisel kod tekildir → yalnız kod. Sabit kod
+ * birden çok kişidedir → (kod, e-posta); e-posta yoksa satır seçilemez (eşleşmez →
+ * `cozumle` 'yok'/'baska_kisi' döner, kod başkasının satırıyla ÇÖZÜLMEZ).
+ */
+export function kuponSatirKosulu(kod: string, email?: string | null) {
+  const k = kod.trim().toUpperCase();
+  if (k !== sabitKupon()) return eq(epostaKuponlari.kod, k);
+  return and(eq(epostaKuponlari.kod, k), eq(epostaKuponlari.email, (email ?? '').trim().toLowerCase()));
+}
+
+/** Bu kod e-posta akışının mı? (kişisel desen ya da sabit mod kodu) */
+export function bizimKodMu(kod: string): boolean {
+  const k = (kod ?? '').trim().toUpperCase();
+  return EPOSTA_KOD_DESENI.test(k) || (k !== '' && k === sabitKupon());
+}
+
 /** Koda göre kuponu okur (defterden) ve `cozumle` ile hükmünü verir. */
 export async function kuponCoz(
   db: DbGibi,
@@ -181,7 +222,8 @@ export async function kuponCoz(
       kullanildiAni: epostaKuponlari.kullanildiAni,
     })
     .from(epostaKuponlari)
-    .where(eq(epostaKuponlari.kod, kod.trim().toUpperCase()))
+    .where(kuponSatirKosulu(kod, istek.email))
+    .orderBy(desc(epostaKuponlari.createdAt))
     .limit(1);
   return cozumle(k ?? null, istek, simdi);
 }
@@ -218,15 +260,19 @@ export const EPOSTA_KOD_DESENI = /^(HG|ST|CT)-[ABCDEFGHJKMNPQRSTUVWXYZ2-9]{8}$/;
  */
 export async function siparisKuponlariniDamgala(
   db: DbGibi,
-  girdi: { kodlar: Array<string | null | undefined>; siparisId?: string | null; simdi?: Date },
+  girdi: { kodlar: Array<string | null | undefined>; siparisId?: string | null; simdi?: Date; email?: string | null },
 ): Promise<number> {
-  const kodlar = [...new Set(girdi.kodlar.map((k) => (k ?? '').trim().toUpperCase()).filter((k) => EPOSTA_KOD_DESENI.test(k)))];
+  const kodlar = [...new Set(girdi.kodlar.map((k) => (k ?? '').trim().toUpperCase()).filter((k) => bizimKodMu(k)))];
   let damga = 0;
   for (const kod of kodlar) {
+    // Sabit kodda (kod, sipariş e-postası) + henüz damgalanmamış EN YENİ satır.
+    const sabitMi = kod === sabitKupon();
+    if (sabitMi && !(girdi.email ?? '').includes('@')) continue;
     const [k] = await db
       .select({ id: epostaKuponlari.id })
       .from(epostaKuponlari)
-      .where(eq(epostaKuponlari.kod, kod))
+      .where(sabitMi ? and(kuponSatirKosulu(kod, girdi.email), isNull(epostaKuponlari.kullanildiAni)) : eq(epostaKuponlari.kod, kod))
+      .orderBy(desc(epostaKuponlari.createdAt))
       .limit(1);
     if (k && (await kuponKullan(db, k.id, girdi.siparisId, girdi.simdi))) damga += 1;
   }
