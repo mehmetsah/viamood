@@ -18,6 +18,7 @@ import {
   kaynakNitelikleri,
   kaynakSuz,
   taslakKaynakAlanlari,
+  yonlendirenKaynagi,
 } from '../src/lib/kaynak/kaynak-izi';
 
 const KOK = path.resolve(__dirname, '..');
@@ -254,5 +255,123 @@ describe('beş sipariş yolu kaynağı Shopify\'a yazar', () => {
     const vco = readFileSync(path.join(sonra, 'sections__via-checkout.liquid'), 'utf8');
     const govde = vco.slice(vco.indexOf('function buildPayload(cart){'), vco.indexOf('/* ============ İyzico'));
     expect(govde).toContain('kaynak: (window.viaKaynak && window.viaKaynak.oku()) || null');
+  });
+});
+
+describe('#994962 · bilinen yönlendiren → okunur kaynak (UTM yokken)', () => {
+  // Ölçülen olay (23 Eki 2026): Google'dan organik gelen #1262/#1263 "kaynak-www.google.com" +
+  // "www.google.com / referral" ile düşüyordu; reklam ekibi "google / organic" bekliyor.
+  const tek = (yonlendiren: string, ek: Record<string, string> = {}) =>
+    kaynakSuz({ son: { yonlendiren, giris: '/', tarih: '2026-10-22T19:23:32.281Z', ...ek } })!.son!;
+
+  it('Google organik: www.google.com / google.com.tr → google · organic; ham alan adı korunur; etiket kaynak-google', () => {
+    for (const h of ['www.google.com', 'google.com.tr', 'www.google.com.tr', 'www.google.de']) {
+      const d = tek(h);
+      expect(d).toMatchObject({ kaynak: 'google', ortam: 'organic', yonlendiren: h });
+    }
+    const k = kaynakSuz({ son: { yonlendiren: 'www.google.com', giris: '/' } });
+    expect(kaynakEtiketi(k)).toBe('kaynak-google');
+    expect(kaynakNitelikleri(k)).toEqual(expect.arrayContaining([
+      { name: 'kaynak_son', value: 'google / organic' },
+      { name: 'kaynak_son_yonlendiren', value: 'www.google.com' },
+    ]));
+  });
+
+  it('sosyal ve e-posta: l.instagram.com · m.facebook.com · t.co · mail.google.com', () => {
+    expect(tek('l.instagram.com')).toMatchObject({ kaynak: 'instagram', ortam: 'social' });
+    expect(tek('m.facebook.com')).toMatchObject({ kaynak: 'facebook', ortam: 'social' });
+    expect(tek('t.co')).toMatchObject({ kaynak: 'x', ortam: 'social' });
+    expect(tek('mail.google.com')).toMatchObject({ kaynak: 'gmail', ortam: 'email' }); // google kuralından ÖNCE
+  });
+
+  it('NEGATİF: listede olmayan alan adı eskisi gibi (alan adı / referral); benzer adlar google SAYILMAZ', () => {
+    expect(tek('www.hepsiburada.com')).toMatchObject({ kaynak: 'www.hepsiburada.com', ortam: 'referral' });
+    expect(yonlendirenKaynagi('www.googleadservices.com')).toBeNull();
+    expect(yonlendirenKaynagi('google.evil.com')).toBeNull();
+    expect(yonlendirenKaynagi('notgoogle.com')).toBeNull();
+  });
+
+  it('NEGATİF: UTM ya da tıklama kimliği varsa yönlendiren eşlemesi DEVREYE GİRMEZ', () => {
+    expect(tek('www.google.com', { kaynak: 'instagram', ortam: 'social' })).toMatchObject({ kaynak: 'instagram', ortam: 'social' });
+    expect(tek('www.google.com', { tiklama: 'gclid' })).toMatchObject({ kaynak: 'google', ortam: 'cpc' });
+    expect(tek('www.google.com', { kampanya: 'ekim' })).toMatchObject({ kaynak: '(belirtilmemiş)' });
+  });
+});
+
+describe('#994962 · ÇİVİ — kapıda ödeme siparişi Shopify\'a doğru kaynağı yazar (sipariş düzeyi)', () => {
+  // Yunus'un testi: gizli sekme → Google → ViaMood → kapıda ödeme. Shopify "Kanal" alanı siparişi
+  // açan uygulamanın adını (Claude) gösterir ve değiştirilemez; kaynak etiket + note_attributes'tadır.
+  // MUTASYON: create-storefront-order.ts'te `kaynakSuz(b.kaynak)` çağrısı kaldırılırsa bu blok KIRILIR.
+  async function codSiparisi(kaynak: unknown) {
+    vi.resetModules();
+    vi.doMock('@/lib/env', () => ({
+      env: { SHOPIFY_ADMIN_ACCESS_TOKEN: 't', SHOPIFY_STORE_DOMAIN: 'test.myshopify.com', SHOPIFY_API_VERSION: '2025-01' },
+    }));
+    vi.doMock('@/lib/shopify/customer-address', () => ({ upsertCustomerAddress: vi.fn(async () => {}) }));
+    vi.doMock('@/lib/shopify/customer-locale', () => ({ ensureTrCustomer: vi.fn(async () => {}) }));
+    vi.doMock('@/lib/shopify/vendor-ibans', () => ({ resolveVendorIbans: vi.fn(async () => []) }));
+    vi.doMock('@/lib/shopify/adres-uyusmaz', () => ({ ilKoduUyusmazsaEtiketle: vi.fn(async () => {}) }));
+    vi.doMock('@/lib/email/sender', () => ({ sendEmail: vi.fn(async () => {}) }));
+    vi.doMock('@/lib/email/templates', () => ({ orderConfirmationEmail: vi.fn(() => ({ subject: '', html: '', text: '' })) }));
+    const fetchSahte = vi.fn(async () => new Response(JSON.stringify({ order: { id: 1, name: '#1', total_price: '10' } }), { status: 200 }));
+    vi.stubGlobal('fetch', fetchSahte);
+    try {
+      const { createStorefrontOrder } = await import('@/lib/shopify/create-storefront-order');
+      const r = await createStorefrontOrder(
+        {
+          line_items: [{ variant_id: 1, quantity: 1 }], first_name: 'A', last_name: 'B', phone: '05551112233',
+          email: 'a@b.co', address1: 'x', city: 'Kadıköy', province: 'İstanbul', ...(kaynak === undefined ? {} : { kaynak }),
+        },
+        'cod',
+      );
+      expect(r.ok).toBe(true);
+      return JSON.parse(String((fetchSahte.mock.calls[0] as unknown as [string, RequestInit])[1].body)).order as {
+        tags: string; note_attributes: Array<{ name: string; value: string }>;
+      };
+    } finally {
+      vi.unstubAllGlobals();
+      vi.resetModules();
+    }
+  }
+  const nitelik = (o: { note_attributes: Array<{ name: string; value: string }> }, ad: string) =>
+    o.note_attributes.find((n) => n.name === ad)?.value;
+
+  it('Google\'dan organik gelen kapıda ödeme siparişi: etiket kaynak-google · "google / organic" · yönlendiren alan adı', async () => {
+    const dokunus = { yonlendiren: 'www.google.com', giris: '/products/minix-figur', tarih: '2026-10-22T19:23:32.281Z' };
+    const o = await codSiparisi({ ilk: dokunus, son: dokunus });
+    expect(o.tags.split(',')).toEqual(expect.arrayContaining(['kapida-odeme', 'kaynak-google']));
+    expect(nitelik(o, 'kaynak_ilk')).toBe('google / organic');
+    expect(nitelik(o, 'kaynak_son')).toBe('google / organic');
+    expect(nitelik(o, 'kaynak_son_yonlendiren')).toBe('www.google.com');
+    expect(nitelik(o, 'kaynak_son_giris')).toBe('/products/minix-figur');
+  });
+
+  it('boş dokunuş (UTM yok, yönlendiren yok) → "(direkt)" · etiket kaynak-direkt', async () => {
+    const o = await codSiparisi({ son: { giris: '/', tarih: '2026-10-22T12:17:16.414Z' } });
+    expect(nitelik(o, 'kaynak_son')).toBe('(direkt)');
+    expect(o.tags.split(',')).toContain('kaynak-direkt');
+  });
+
+  it('kaynak alanı HİÇ gelmezse (eski önbellekli sayfa) uydurma kaynak yazılmaz — ödeme notları yerinde', async () => {
+    const o = await codSiparisi(undefined);
+    expect(o.tags.split(',').some((t) => t.startsWith('kaynak-'))).toBe(false);
+    expect(o.note_attributes.some((n) => n.name.startsWith('kaynak'))).toBe(false);
+    expect(nitelik(o, '_odeme_yontemi')).toBe('cod');
+  });
+
+  it('KVKK: UTM\'e gömülü e-posta/telefon, tam yönlendiren URL\'si ve giriş sorgusu siparişe SIZMAZ', async () => {
+    const o = await codSiparisi({
+      son: {
+        kaynak: 'ayse.yilmaz@example.com', kampanya: 'ara 0532 111 22 33', yonlendiren: 'https://www.google.com/search?q=ayse',
+        giris: '/products/x?email=ayse.yilmaz@example.com&tel=05321112233', tarih: '2026-10-22T19:23:32.281Z',
+      },
+    });
+    const govde = JSON.stringify(o.note_attributes) + o.tags;
+    expect(govde).not.toMatch(/ayse\.yilmaz@example\.com/);
+    expect(govde).not.toMatch(/0532\s?111\s?22\s?33|05321112233/);
+    expect(govde).not.toMatch(/https?:\/\//);
+    expect(govde).not.toMatch(/\?q=|email=|tel=/);
+    expect(nitelik(o, 'kaynak_son')).toContain('[e-posta]');
+    expect(nitelik(o, 'kaynak_son')).toContain('[numara]');
   });
 });
