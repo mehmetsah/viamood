@@ -25,7 +25,7 @@
 export interface KaynakDokunus {
   /** utm_source ya da türetilmiş kaynak (yönlendiren alan adı / tıklama türü / '(direkt)') */
   kaynak: string;
-  ortam: string; // utm_medium ya da türetilmiş ('referral' · 'cpc' · '')
+  ortam: string; // utm_medium ya da türetilmiş ('organic' · 'social' · 'email' · 'referral' · 'cpc' · '')
   kampanya: string;
   icerik: string;
   terim: string;
@@ -80,6 +80,38 @@ function tarihSuz(ham: unknown): string {
   return Number.isFinite(t) ? new Date(t).toISOString() : '';
 }
 
+/**
+ * #994962 · Bilinen yönlendiren alan adı → okunur kaynak + ortam (UTM yokken).
+ *
+ * ÖLÇÜLEN (23 Eki 2026, Elif): Google'dan organik gelen kapıda ödeme siparişleri (#1262, #1263)
+ * `kaynak-www.google.com` etiketi ve "www.google.com / referral" özetiyle düşüyordu — reklam
+ * ekibi "google / organic" bekliyor. Ham alan adı `yonlendiren` alanında AYNEN kalır; yalnız
+ * kaynak/ortam okunur ada çevrilir. Listede olmayan alan adı eskisi gibi (alan adı / referral).
+ * Sıra önemlidir: mail.google.com e-postadır, arama değil — google kuralından ÖNCE gelir.
+ */
+const YONLENDIREN_KAYNAGI: Array<[RegExp, string, string]> = [
+  [/^mail\.google\.com$/, 'gmail', 'email'],
+  [/(^|\.)google\.[a-z]{2,3}(\.[a-z]{2})?$/, 'google', 'organic'],
+  [/(^|\.)bing\.com$/, 'bing', 'organic'],
+  [/(^|\.)yandex\.(com|com\.tr|ru)$/, 'yandex', 'organic'],
+  [/(^|\.)duckduckgo\.com$/, 'duckduckgo', 'organic'],
+  [/(^|\.)yahoo\.com$/, 'yahoo', 'organic'],
+  [/(^|\.)instagram\.com$/, 'instagram', 'social'],
+  [/(^|\.)facebook\.com$/, 'facebook', 'social'],
+  [/^t\.co$|(^|\.)(twitter|x)\.com$/, 'x', 'social'],
+  [/(^|\.)tiktok\.com$/, 'tiktok', 'social'],
+  [/(^|\.)youtube\.com$/, 'youtube', 'social'],
+  [/(^|\.)pinterest\.(com|com\.tr)$/, 'pinterest', 'social'],
+  [/^(wa\.me|(web|api)\.whatsapp\.com)$/, 'whatsapp', 'social'],
+];
+
+export function yonlendirenKaynagi(alanAdi: string): { kaynak: string; ortam: string } | null {
+  for (const [desen, kaynak, ortam] of YONLENDIREN_KAYNAGI) {
+    if (desen.test(alanAdi)) return { kaynak, ortam };
+  }
+  return null;
+}
+
 function dokunusSuz(ham: unknown): KaynakDokunus | null {
   if (!ham || typeof ham !== 'object' || Array.isArray(ham)) return null;
   const o = ham as Record<string, unknown>;
@@ -99,7 +131,11 @@ function dokunusSuz(ham: unknown): KaynakDokunus | null {
   if (!d.kaynak) {
     if (d.ortam || d.kampanya || d.icerik || d.terim) d.kaynak = '(belirtilmemiş)';
     else if (d.tiklama) { d.kaynak = TIKLAMA_KAYNAGI[d.tiklama] ?? d.tiklama; d.ortam = d.ortam || 'cpc'; }
-    else if (d.yonlendiren) { d.kaynak = d.yonlendiren; d.ortam = d.ortam || 'referral'; }
+    else if (d.yonlendiren) {
+      const bilinen = yonlendirenKaynagi(d.yonlendiren);
+      d.kaynak = bilinen?.kaynak ?? d.yonlendiren;
+      d.ortam = d.ortam || bilinen?.ortam || 'referral';
+    }
     else d.kaynak = '(direkt)';
   }
   return d;

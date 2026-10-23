@@ -18,6 +18,7 @@ import {
   kaynakNitelikleri,
   kaynakSuz,
   taslakKaynakAlanlari,
+  yonlendirenKaynagi,
 } from '../src/lib/kaynak/kaynak-izi';
 
 const KOK = path.resolve(__dirname, '..');
@@ -254,5 +255,45 @@ describe('beş sipariş yolu kaynağı Shopify\'a yazar', () => {
     const vco = readFileSync(path.join(sonra, 'sections__via-checkout.liquid'), 'utf8');
     const govde = vco.slice(vco.indexOf('function buildPayload(cart){'), vco.indexOf('/* ============ İyzico'));
     expect(govde).toContain('kaynak: (window.viaKaynak && window.viaKaynak.oku()) || null');
+  });
+});
+
+describe('#994962 · bilinen yönlendiren → okunur kaynak (UTM yokken)', () => {
+  // Ölçülen olay (23 Eki 2026): Google'dan organik gelen #1262/#1263 "kaynak-www.google.com" +
+  // "www.google.com / referral" ile düşüyordu; reklam ekibi "google / organic" bekliyor.
+  const tek = (yonlendiren: string, ek: Record<string, string> = {}) =>
+    kaynakSuz({ son: { yonlendiren, giris: '/', tarih: '2026-10-22T19:23:32.281Z', ...ek } })!.son!;
+
+  it('Google organik: www.google.com / google.com.tr → google · organic; ham alan adı korunur; etiket kaynak-google', () => {
+    for (const h of ['www.google.com', 'google.com.tr', 'www.google.com.tr', 'www.google.de']) {
+      const d = tek(h);
+      expect(d).toMatchObject({ kaynak: 'google', ortam: 'organic', yonlendiren: h });
+    }
+    const k = kaynakSuz({ son: { yonlendiren: 'www.google.com', giris: '/' } });
+    expect(kaynakEtiketi(k)).toBe('kaynak-google');
+    expect(kaynakNitelikleri(k)).toEqual(expect.arrayContaining([
+      { name: 'kaynak_son', value: 'google / organic' },
+      { name: 'kaynak_son_yonlendiren', value: 'www.google.com' },
+    ]));
+  });
+
+  it('sosyal ve e-posta: l.instagram.com · m.facebook.com · t.co · mail.google.com', () => {
+    expect(tek('l.instagram.com')).toMatchObject({ kaynak: 'instagram', ortam: 'social' });
+    expect(tek('m.facebook.com')).toMatchObject({ kaynak: 'facebook', ortam: 'social' });
+    expect(tek('t.co')).toMatchObject({ kaynak: 'x', ortam: 'social' });
+    expect(tek('mail.google.com')).toMatchObject({ kaynak: 'gmail', ortam: 'email' }); // google kuralından ÖNCE
+  });
+
+  it('NEGATİF: listede olmayan alan adı eskisi gibi (alan adı / referral); benzer adlar google SAYILMAZ', () => {
+    expect(tek('www.hepsiburada.com')).toMatchObject({ kaynak: 'www.hepsiburada.com', ortam: 'referral' });
+    expect(yonlendirenKaynagi('www.googleadservices.com')).toBeNull();
+    expect(yonlendirenKaynagi('google.evil.com')).toBeNull();
+    expect(yonlendirenKaynagi('notgoogle.com')).toBeNull();
+  });
+
+  it('NEGATİF: UTM ya da tıklama kimliği varsa yönlendiren eşlemesi DEVREYE GİRMEZ', () => {
+    expect(tek('www.google.com', { kaynak: 'instagram', ortam: 'social' })).toMatchObject({ kaynak: 'instagram', ortam: 'social' });
+    expect(tek('www.google.com', { tiklama: 'gclid' })).toMatchObject({ kaynak: 'google', ortam: 'cpc' });
+    expect(tek('www.google.com', { kampanya: 'ekim' })).toMatchObject({ kaynak: '(belirtilmemiş)' });
   });
 });
