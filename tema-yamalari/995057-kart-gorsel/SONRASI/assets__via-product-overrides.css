@@ -1,0 +1,562 @@
+shopify-accelerated-checkout,shopify-accelerated-checkout-cart,.shopify-payment-button,.shopify-payment-button__button,.additional-checkout-buttons,.cart__dynamic-checkout-buttons,.product-form__buttons .shopify-payment-button,[data-shopify=dynamic-checkout-cart],[data-shopify=payment-button],.dynamic-checkout__content,.cart__checkout-buttons .additional-checkout-buttons{display:none!important;visibility:hidden!important;height:0!important;overflow:hidden!important}.product-information__media,.product-media-gallery,media-gallery{max-width:540px!important;margin-inline:auto!important;display:block!important}.product-information__media{text-align:center!important}.product-information__media .product-media__image{object-fit:contain!important}@media(max-width:760px){.product-information__media,.product-media-gallery,media-gallery{max-width:100%!important}}.price,.product-price,[class*=product-price__regular],[class*=price__regular],[class*=price-item--regular],product-price .price__sale,product-price .price__regular{font-size:clamp(1.6rem,3vw,2.4rem)!important;font-weight:800!important;color:#f25334!important;letter-spacing:-.01em!important;line-height:1.1!important}[class*=price__sale] s,[class*=price-item--sale]+s,.price__compare,.price s,del.price-item--regular,s.price-item--regular{font-size:.7em!important;color:#999!important;font-weight:500!important;margin-right:8px}.product-card__badge,.product-badge,[class*=badge][class*=discount]{background:#f25334!important;color:#fff!important;font-weight:700!important;padding:4px 10px!important;border-radius:4px!important;font-size:12px!important;letter-spacing:.05em!important}.via-wa-bulk-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;width:100%;margin-top:10px;padding:14px 18px;background:#25d366;color:#fff!important;border:0;border-radius:6px;font-size:14px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;text-decoration:none!important;cursor:pointer;transition:background .15s,transform .15s,box-shadow .15s;box-shadow:0 2px 8px #25d36640}.via-wa-bulk-btn:hover{background:#1eb858;transform:translateY(-1px);box-shadow:0 4px 14px #25d36659}.via-wa-bulk-btn svg{width:20px;height:20px}.via-wa-bulk-btn small{display:block;font-size:10px;opacity:.9;font-weight:500;letter-spacing:.02em;margin-top:2px}@media(min-width:750px){#shopify-section-template--27920106029188__via_product_whatsapp,[id*=via_product_whatsapp]{position:fixed!important;bottom:24px;right:24px;z-index:998;width:auto!important;max-width:320px}#shopify-section-template--27920106029188__via_product_whatsapp .via-wa-bulk-btn,[id*=via_product_whatsapp] .via-wa-bulk-btn{width:auto!important;margin-top:0;box-shadow:0 6px 24px #25d36673;padding:14px 22px;border-radius:32px;animation:viaWaPulse 2.5s ease-in-out infinite}}@media(max-width:749px){#shopify-section-template--27920106029188__via_product_whatsapp,[id*=via_product_whatsapp]{position:fixed!important;bottom:0;left:0;right:0;z-index:998;padding:8px 12px calc(8px + env(safe-area-inset-bottom,0px));background:#fffffff2;-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);border-top:1px solid rgba(0,0,0,.08)}#shopify-section-template--27920106029188__via_product_whatsapp .via-wa-bulk-btn,[id*=via_product_whatsapp] .via-wa-bulk-btn{width:100%;margin-top:0}main,.main-content{padding-bottom:96px}}@keyframes viaWaPulse{0%,to{transform:translateY(0);box-shadow:0 6px 24px #25d36673}50%{transform:translateY(-3px);box-shadow:0 10px 30px #25d36699}}.cart-items__remove,button.cart-items__remove,[class*=cart-items__remove]{opacity:1!important;visibility:visible!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;color:#c62828!important;cursor:pointer!important;min-width:40px!important;min-height:40px!important}.cart-items__remove svg,.cart-items__remove .svg-wrapper svg{--icon-stroke-width: 1.6px !important;stroke:currentColor!important;fill:none!important;flex:0 0 22px!important;width:22px!important;min-width:22px!important;height:22px!important;display:block!important;opacity:1!important;visibility:visible!important}.cart-items__remove svg path{stroke:currentColor!important;stroke-width:1.6px!important;fill:none!important}.cart-items__remove:hover{color:#fff!important;background:#c62828!important;border-radius:6px}quantity-selector-component svg,cart-quantity-selector-component svg,.quantity-selector svg,.quantity-minus svg,.quantity-plus svg{--icon-stroke-width: 2px !important;width:14px!important;height:14px!important;display:block!important;stroke:currentColor!important}quantity-selector-component svg path,cart-quantity-selector-component svg path,.quantity-selector svg path{stroke:currentColor!important;stroke-width:2px!important;stroke-linecap:round!important;fill:none!important}quantity-selector-component,cart-quantity-selector-component,.quantity-selector,.quantity-selector-wrapper>quantity-selector-component,.quantity-selector-wrapper>cart-quantity-selector-component{display:inline-flex!important;align-items:stretch!important;visibility:visible!important;opacity:1!important;border:1.5px solid #1a1a1a!important;border-radius:8px!important;overflow:hidden!important;background:#fff!important;height:44px!important;width:max-content!important;max-width:140px!important;flex:0 0 auto!important;justify-content:center!important;gap:0!important;box-shadow:0 1px 2px #0000000a}.quantity-selector .quantity-minus,.quantity-selector .quantity-plus,.quantity-selector button[name=minus],.quantity-selector button[name=plus],.quantity-minus,.quantity-plus{display:inline-flex!important;visibility:visible!important;opacity:1!important;width:42px!important;height:100%!important;min-width:42px!important;align-items:center!important;justify-content:center!important;background:transparent!important;border:0!important;border-radius:0!important;cursor:pointer!important;padding:0!important;margin:0!important;color:#1a1a1a!important;font-size:18px!important;font-weight:700!important;transition:background .15s,color .15s!important}.quantity-minus:hover,.quantity-plus:hover,.quantity-selector button:hover{background:#f25334!important;color:#fff!important}.quantity-minus:active,.quantity-plus:active{background:#d8431f!important}.quantity-minus:disabled,.quantity-plus:disabled{opacity:.35!important;cursor:not-allowed!important}.quantity-selector input[type=number],quantity-selector-component input,cart-quantity-selector-component input{width:44px!important;min-width:44px!important;flex:0 0 auto!important;height:100%!important;text-align:center!important;border:0!important;border-left:1.5px solid #ececec!important;border-right:1.5px solid #ececec!important;border-radius:0!important;background:#fff!important;color:#1a1a1a!important;font-size:15px!important;font-weight:700!important;padding:0 4px!important;margin:0!important;-moz-appearance:textfield}.quantity-selector input[type=number]::-webkit-outer-spin-button,.quantity-selector input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none!important;margin:0!important}.quantity-selector input:focus,quantity-selector-component input:focus{outline:0!important;background:#fff8f5!important}cart-drawer-component quantity-selector-component,cart-drawer-component cart-quantity-selector-component,.cart-items .quantity-selector{height:36px!important;max-width:120px!important}cart-drawer-component .quantity-minus,cart-drawer-component .quantity-plus,.cart-items .quantity-minus,.cart-items .quantity-plus{width:36px!important;min-width:36px!important;font-size:16px!important}cart-drawer-component .quantity-selector input,.cart-items .quantity-selector input{width:36px!important;min-width:36px!important;font-size:13px!important}.quantity-selector-wrapper{display:inline-flex!important;align-items:center!important}.header-actions__action[href*=account],.header-actions__action[href*="/account"],[href="/account"],[href*="/account/login"],a.header__account-link{color:#f25334!important;font-weight:700!important;transition:color .15s,transform .15s!important}.header-actions__action[href*=account]:hover,[href*="/account"]:hover,a.header__account-link:hover{color:#d8431f!important;transform:scale(1.05)}.header-actions__action[href*=account] svg,[href*="/account"] svg{stroke:#f25334!important;fill:transparent!important}.shopify-section iframe[src*="shopify.com"][src*=account]{border:1px solid #f25334!important;border-radius:8px;box-shadow:0 4px 16px #f2533414}#shopify-section-template--27920106029188__product_list_zR9Cym .price,#shopify-section-template--27920106029188__product_list_zR9Cym [class*=price__regular],#shopify-section-template--27920106029188__product_list_zR9Cym [class*=price-item--regular],#shopify-section-template--27920106029188__product_list_zR9Cym product-price .price__sale,#shopify-section-template--27920106029188__product_list_zR9Cym product-price .price__regular{font-size:clamp(.75rem,1.5vw,1.25rem)!important}cart-drawer-component dialog button[aria-label*=kapat i] svg,cart-drawer-component dialog button[aria-label*=close i] svg,cart-drawer-component dialog .button-close svg{width:20px!important;height:20px!important;display:block!important;stroke:currentColor!important;stroke-width:2px!important;fill:none!important}cart-drawer-component dialog button[aria-label*=kapat i] svg path,cart-drawer-component dialog button[aria-label*=kapat i] svg line,cart-drawer-component dialog button[aria-label*=close i] svg path,cart-drawer-component dialog button[aria-label*=close i] svg line{stroke:currentColor!important;stroke-width:2px!important;fill:none!important}.resource-card__vendor{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--color-foreground, #14201d);opacity:.62;margin:0 0 4px;line-height:1.2}.resource-card__title{display:-webkit-box!important;-webkit-line-clamp:3!important;-webkit-box-orient:vertical!important;overflow:hidden!important;line-height:1.3!important;min-height:calc(1.3em * 3)}.resource-card__content .price{font-size:1.05em!important;font-weight:700}button[name=add][aria-busy=true],.cart-items__remove[aria-busy=true],cart-quantity-selector-component[aria-busy=true]{position:relative!important;pointer-events:none!important}button[name=add][aria-busy=true]>*,.cart-items__remove[aria-busy=true]>*,cart-quantity-selector-component[aria-busy=true]>*{opacity:.2!important;transition:opacity .1s}button[name=add][aria-busy=true]:after,.cart-items__remove[aria-busy=true]:after,cart-quantity-selector-component[aria-busy=true]:after{content:""!important;position:absolute!important;top:50%!important;left:50%!important;width:16px!important;height:16px!important;margin:-8px 0 0 -8px!important;border:2px solid currentColor!important;border-top-color:transparent!important;border-radius:50%!important;animation:vm-spin .6s linear infinite!important;opacity:.85!important;box-sizing:border-box!important}@keyframes vm-spin{to{transform:rotate(360deg)}}cart-quantity-selector-component{display:inline-flex!important;align-items:center!important;gap:0!important;border:1px solid #e7ddcf!important;border-radius:999px!important;background:#fff!important;overflow:hidden!important;box-shadow:none!important;padding:0!important}cart-quantity-selector-component button{width:40px!important;height:40px!important;min-width:40px!important;padding:0!important;margin:0!important;border:0!important;background:none!important;border-radius:999px!important;cursor:pointer!important;display:grid!important;place-items:center!important;color:#2a2a2a!important}cart-quantity-selector-component button:hover{background:#f6f3ee!important}cart-quantity-selector-component button svg,cart-quantity-selector-component .svg-wrapper{width:14px!important;height:14px!important}cart-quantity-selector-component input{width:42px!important;min-width:42px!important;max-width:42px!important;text-align:center!important;border:0!important;background:none!important;font-size:15px!important;font-weight:700!important;color:#2a2a2a!important;padding:0!important;box-shadow:none!important;-moz-appearance:textfield!important}cart-quantity-selector-component input::-webkit-outer-spin-button,cart-quantity-selector-component input::-webkit-inner-spin-button{-webkit-appearance:none!important;margin:0!important}cart-quantity-selector-component.quantity-selector.quantity-selector{border-radius:999px!important;border:1px solid #e7ddcf!important}cart-quantity-selector-component.quantity-selector.quantity-selector>button{width:40px!important;height:40px!important;border-radius:999px!important}cart-quantity-selector-component.quantity-selector.quantity-selector>input{width:44px!important;min-width:44px!important;max-width:44px!important}@media(max-width:768px){html,body{overflow-x:clip;max-width:100%}}.product-information__media slideshow-controls .slideshow-controls__thumbnail{flex:0 0 clamp(56px,7vw,72px)!important;width:clamp(56px,7vw,72px)!important;height:auto!important;aspect-ratio:1!important;padding:0!important;background:var(--color-background, #fff)!important;border:1px solid rgba(0,0,0,.1)!important;box-sizing:border-box!important;transition:border-color .15s ease!important}.product-information__media slideshow-controls .slideshow-controls__thumbnail:hover{border-color:#0006!important}.product-information__media slideshow-controls .slideshow-controls__thumbnail[aria-selected=true]{border-color:#0000008c!important}.product-information__media slideshow-controls .slideshow-controls__thumbnail img{width:100%!important;height:100%!important;max-width:none!important;object-fit:contain!important;display:block!important}.emp-sli__media{aspect-ratio:2/3!important;overflow:hidden!important;display:block!important}.emp-sli__media img,.emp-sli__media picture,.emp-sli__media picture img,.emp-sli__media>*:not(.emp-sli__badge){width:100%!important;height:100%!important;object-fit:cover!important}.product-card .product-media,.product-card [class*=product-media]:not([class*=__image]){aspect-ratio:2 / 3!important;overflow:hidden!important}.product-card .product-media__image,.product-card .product-media img{width:100%!important;height:100%!important;object-fit:cover!important}.vf-news__input{background:#fff!important;color:#1a1a1a!important;border:1px solid rgba(0,0,0,.12)!important;border-radius:8px!important}.vf-news__input::placeholder{color:#9a8f82!important;opacity:1!important}.vf-news__form .vf-news__input,footer .vf-news__form input.vf-news__input{background:#fff!important;color:#1a1a1a!important}.vf-news__form .vf-news__input::placeholder,footer .vf-news__form input.vf-news__input::placeholder{color:#9a8f82!important;opacity:1!important}cart-quantity-selector-component:not(:defined){background:none!important}cart-quantity-selector-component:not(:defined):before,cart-quantity-selector-component:not(:defined):after{display:none!important;content:none!important}cart-quantity-selector-component input{background-image:none!important}cart-quantity-selector-component:not(:defined) input{display:block!important;opacity:1!important;visibility:visible!important}
+/*# sourceMappingURL=/cdn/shop/t/3/assets/via-product-overrides.css.map?v=39035923667249491421783506984 */
+
+/* ===== ZOOM DIALOG DUZELTMESI v2 (27 Agu 2026, Yunus "hala ayni sorun" bildirimi) =====
+   24 Agu'daki v1 HIC DEVREYE GIRMEDI: hedef alinan ".dialog-zoomed-gallery" aslinda
+   dialog'un kendisi degil, ICINDEKI <ul>. media-gallery ve kucuk gorsel seridi o <ul>'un
+   DISINDA (kardes) duruyor -> ".dialog-zoomed-gallery media-gallery" ve
+   ".dialog-zoomed-gallery .dialog-thumbnails-list" secicileri hicbir seyle eslesmedi.
+   (Canli DOM'da olculdu: thumbsInsideUl=false, mediaGalleryInsideUl=false.)
+
+   GERCEK KOK NEDEN - native temanin kendi eksigi:
+   1) Lightbox duzeni yalniz "max-width:749px" icin tanimlanmis. Desktop'ta <ul> block
+      kaliyor -> 9 gorsel alt alta diziliyor (olculen yukseklik 16073px), gorsel dogal
+      boyutunda tasiyor (1280x1919 = "asiri yakinlasma") ve sola yapisiyor.
+   2) ".dialog-thumbnails-list__thumbnail" genisligi var(--thumbnail-width) okuyor ama bu
+      degisken SADECE mobil scope'ta tanimli -> desktop'ta buton cokuyor, kucuk gorsel
+      seridi bos gorunuyor ("diger resimler gozukmuyor").
+
+   COZUM: yeni davranis icat etmeden, native'in KENDI mobil lightbox kural setini
+   desktop'a genislet + eksik --thumbnail-width'i tanimla. Canli sayfada dogrulandi:
+   gorsel 1280x720 ortali+contain, <ul> flex, serit sagda gorunur. */
+@media screen and (min-width:750px){
+  .dialog-zoomed-gallery{
+    display:flex!important;
+    height:100%!important;
+    overflow-x:hidden!important;
+    overscroll-behavior:none;
+    scroll-snap-type:x mandatory;
+    scroll-behavior:smooth;
+    scrollbar-width:none;
+  }
+  .dialog-zoomed-gallery::-webkit-scrollbar{display:none}
+  .dialog-zoomed-gallery .product-media-container{
+    flex:0 0 100%!important;
+    scroll-snap-align:start;
+    position:relative;
+  }
+  .dialog-zoomed-gallery .product-media-container--image .product-media{
+    aspect-ratio:auto!important;
+    height:100%!important;
+    width:100%!important;
+    overflow:hidden!important;
+  }
+  .dialog-zoomed-gallery .product-media__drag-zoom-wrapper{
+    display:flex!important;
+    aspect-ratio:auto!important;
+    height:100%!important;
+    width:100%!important;
+    overflow:scroll;
+    scrollbar-width:none;
+    justify-content:center!important;
+    align-items:center!important;
+  }
+  .dialog-zoomed-gallery .product-media__drag-zoom-wrapper::-webkit-scrollbar{display:none}
+  .dialog-zoomed-gallery .product-media__drag-zoom-wrapper .product-media__image{
+    --product-media-fit:contain;
+    object-fit:contain!important;
+    width:100%!important;
+    height:100%!important;
+    max-width:none!important;
+    max-height:none!important;
+  }
+  /* native'in desktop'ta tanimlamayi unuttugu degisken */
+  .dialog-thumbnails-list{--thumbnail-width:72px}
+  .dialog-thumbnails-list__thumbnail{
+    width:var(--thumbnail-width)!important;
+    height:auto!important;
+  }
+}
+
+/* #855 — ürün kartı başlıkları kırpılmıyordu, fiyat satırı kayıyordu.
+   ÖLÇÜM (16 Eyl 2026, gerçek tarayıcı, /collections/cok-satanlar-1):
+     .vkol2-title → line-clamp: none, min-height 36px(mobil)/44px(masaüstü)
+     başlık 2–6 satır arasında değişiyor → fiyat ofseti
+       390px : 289.3 → 358.6  (69px kayma)
+       768px : 373.0 → 437.8  (65px kayma)
+       1280px: 499.3 → 520.5  (21px kayma)
+   İki sütunlu ızgarada komşu kartların fiyatları farklı hizada duruyordu.
+   Çözüm: başlık SABİT 3 satıra kırpılır (tema zaten .resource-card__title'da
+   aynı deseni kullanıyor), min-height 3 satıra eşitlenir → fiyat hep aynı yerde. */
+.vkol2-card .vkol2-title{
+  display:-webkit-box!important;
+  -webkit-line-clamp:3!important;
+  -webkit-box-orient:vertical!important;
+  overflow:hidden!important;
+  line-height:1.3!important;
+  min-height:calc(1.3em * 3)!important;
+}
+
+/* İndirimli kartta üzeri çizili eski fiyat kart DIŞINA taşıyordu.
+   ÖLÇÜM (16 Eyl 2026, gerçek tarayıcı, 390px):
+     yeni fiyat 95.4px + margin 6px + eski fiyat 64.5px = 165.9px
+     kap genişliği 136px  →  karttan 16.8px, kaptan 29.8px taşma
+     4 koleksiyondaki 13 indirimli kartın 4'ünde görüldü
+   NEDEN SARMIYORDU: iki span arasında BOŞLUK KARAKTERİ yok (ayırıcı margin-left),
+   yani satır kırma fırsatı yok; .vkol2-card overflow:hidden olduğu için taşan
+   kısım kırpılıyordu ("3.000,0…" gibi).
+   ÇÖZÜM: fiyat satırı flex + wrap → yalnız SIĞMADIĞINDA alt satıra iner.
+   :has() desteklenmezse kural uygulanmaz, bugünkü davranış aynen kalır (regresyon yok). */
+.vkol2-info > div:has(> .vkol2-price){
+  display:flex!important;
+  flex-wrap:wrap!important;
+  align-items:baseline!important;
+  column-gap:6px!important;
+  row-gap:2px!important;
+}
+.vkol2-info > div:has(> .vkol2-price) > .vkol2-old{ margin-left:0!important; }
+
+/* Yer AYIRMA: sarma yalnız uzun fiyatlarda oluyor; yer ayrılmazsa indirimli kartlar
+   ~19px uzuyor ve #855'te sağlanan tek-yükseklik bozuluyordu (ölçüldü: 363 vs 344.2).
+   Fiyat satırına iki satırlık sabit yer ayrılır → hem taşma biter hem ızgara tekdüze kalır. */
+.vkol2-info > div:has(> .vkol2-price){ min-height:44px!important; }
+
+/* ==========================================================================
+   MADDE 20 — arama panelinde başlıklar tek satıra kırpılsın
+   Yunus, 17 Eyl 19:31: "20- arama paneli için sanırım bu, hepsini kırpalım bakalım"
+   (sorulan şıklar: a = kırpmadan sığdır/beyaz boşluk · b = hepsi kırpılsın)
+
+   ÖLÇÜM (canlı, gerçek tarayıcı, 1280px, "saklama" araması):
+     · görseller ZATEN tek tip: 147×196, oran 0.75 (3:4), object-fit: cover
+       → görsel tarafında yapılacak bir şey YOK, kırpma zaten var.
+     · başlık `.resource-card__title` -webkit-line-clamp: 3 → 59px sürüyordu.
+       Ürün adları uzun olduğu için kartların çoğu 3 satıra taşıyor, kart
+       yüksekliği 301px'e çıkıyor ve satır satır hiza kayıyordu.
+   YAPILAN: yalnız arama paneli içinde başlık TEK satır.
+   Kapsam bilerek dar: `.resource-card` teması genelinde başka yerlerde de
+   kullanılıyor, oralara dokunmuyoruz — seçici #predictive-search-results ile
+   sınırlı.
+   ========================================================================== */
+/* !important gerekli: tema `.resource-card__title`in satir sayisini kendi
+   kurali/degiskeniyle 3'e sabitliyor ve #id ozgullugu tek basina yetmedi
+   (olculdu: kural servis ediliyordu ama hesaplanan deger 3 kaliyordu). */
+#predictive-search-results .resource-card__title {
+  -webkit-line-clamp: 1 !important;
+  line-clamp: 1 !important;
+  display: -webkit-box !important;
+  -webkit-box-orient: vertical !important;
+  overflow: hidden !important;
+}
+
+/* ==========================================================================
+   KART #150 (2. deneme) — zoom/lightbox İÇİNDEKİ küçük görsel şeridi
+   Yukarıdaki blok BUTONU düzeltti (.dialog-thumbnails-list__thumbnail = 72px,
+   ölçüldü: 72×49) ama butonun İÇİNDEKİ <img> açıkta kaldı.
+
+   ÖLÇÜM (18 Eyl, canlı, 1440px, 15 görselli ürün):
+     buton : 72×49  ✓
+     img   : 16×21  ✗  (görülemez/tıklanamaz)
+     img sizes = "auto, 110, (min-width: 750px) 160"
+   İki ayrı kusur birleşiyor:
+     1) `sizes` GEÇERSİZ — 110/160 birimsiz (px yok) ve `auto` liste başında
+        kullanılmış. Geçerli olan `(min-width:750px) 160px, 110px` biçimi.
+     2) `sizes:auto` efektif genişliği CSS LAYOUT'tan okur; img'e hiçbir yerde
+        genişlik verilmediği için layout intrinsic'e düşüyor → şerit çöküyor.
+
+   1. DENEME (bir önceki tur) TUTMADI ve sebebi buydu: img'e width+height
+   BİRLİKTE verilmişti, img üzerindeki `aspect-ratio:3/4` ile çakıştı ve
+   genişlik 16→8px'e düştü. Bu kez yalnız GENİŞLİK veriliyor; yükseklik ve
+   en-boy oranı serbest bırakılıyor, böylece çakışma yok.
+   ========================================================================== */
+@media screen and (min-width:750px){
+  .dialog-thumbnails-list__thumbnail img{
+    width:var(--thumbnail-width,72px)!important;
+    height:auto!important;
+    aspect-ratio:auto!important;
+    max-width:none!important;
+    object-fit:contain!important;
+  }
+}
+
+/* ==========================================================================
+   KART #150 (3. adım) — şeridi hizala: buton yüksekliği = görsel yüksekliği
+   2. adımda img görünür oldu (16×21 → 72×150) ama BUTON 178px kaldı; aradaki
+   ~28px, img'in `inline` akışta bıraktığı baseline boşluğu + buton line-height.
+   Sonuç: thumbnail'lar arasında boşluk ve dikey ortalama yok.
+   Çözüm: butonu flex kutuya çevir (içeriği ortalar), img'i block yap (baseline
+   boşluğu kaybolur), line-height'ı sıfırla. Yeni davranış icat edilmiyor —
+   yalnız kutu ile içeriği aynı yüksekliğe getiriliyor.
+   ========================================================================== */
+@media screen and (min-width:750px){
+  .dialog-thumbnails-list__thumbnail{
+    display:flex!important;
+    align-items:center!important;
+    justify-content:center!important;
+    height:auto!important;
+    padding:0!important;
+    line-height:0!important;
+    overflow:hidden!important;
+  }
+  .dialog-thumbnails-list__thumbnail img{
+    display:block!important;
+    vertical-align:top!important;
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   #992966 madde 4 · ÜRÜN DETAY YATAY NEFES PAYI — Yunus bildirimi
+   ÖLÇÜLEN KÖK SEBEP (Playwright, canlı, 1440px):
+     .product-information  grid-template-columns: 40px 1360px 40px   ← tema
+     .product-information__grid  grid-column: 1 / -1                 ← KUSUR
+   İç ızgara ÜÇ kolonu birden kapladığı için temanın KENDİ 40px yan
+   boşluklarını eziyordu: sarmalayıcı 0 → 1440, medya galerisi sol kenarda
+   x=0, buna karşılık başlık sağda 1412'de bitiyordu (28px) ⇒ ASİMETRİK ve
+   solda sıfır nefes payı (CLAUDE.md §8 nefes eşiği ihlali).
+   ⛔ YENİ TASARIM ÜRETİLMEDİ: sabit bir padding/max-width UYDURULMADI —
+      içerik temanın ZATEN TANIMLI orta kolonuna (2) alındı, boşluk değeri
+      temanın kendi 40px'inden gelir. Tasarım dili değişmiyor, ızgara
+      yerleşimi kendi tanımına dönüyor.
+   ⚠ 750px ALTI KAPSAM DIŞI: mobilde tema ızgarayı tek kolona indiriyor,
+      orada "kolon 2" diye bir şey yok; kuralı oraya uygulamak kırardı.
+   ───────────────────────────────────────────────────────────────────────── */
+@media screen and (min-width: 750px) {
+  .product-information > .product-information__grid {
+    grid-column: 2 !important;
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   #993391/2 · DÖRT POLİTİKA SAYFASI TİPOGRAFİ EŞİTLEME — Yunus talebi
+   "4'ü aynı şablon/stille basılsın, ayrı sayfa istemiyoruz."
+   ÖLÇÜM (Playwright, canlı, 1280px — gövde paragrafı):
+     /pages/iade-ve-teslimat          15.68px / 26.656px / rgb(20,32,29) / 802px  ← REFERANS
+     /pages/mesafeli-satis-sozlesmesi 15.68px / 26.656px / rgb(20,32,29) / 802px  ← REFERANS
+     /pages/kvkk-aydinlatma-metni     14px / 19.6px / rgb(0,0,0) / 672px
+     /policies/privacy-policy         14px / 19.6px / rgb(0,0,0) / 534px (başlık 72px)
+   Referans SEÇİLMEDİ, ÖLÇÜLDÜ: 4 yüzeyden 2'si zaten `sections/via-legal-page.liquid`
+   (`.vl-body { font-size: .98rem }`) ile basılıyor ⇒ çoğunluk ve projenin KENDİ
+   onaylı hukuki şablonu. Yeni bir tipografi UYDURULMADI; iki sapan yüzey o
+   değerlere getiriliyor.
+   · kvkk-aydinlatma-metni: ŞABLONLA çözüldü (template_suffix = kvkk ⇒ aynı
+     via-legal-page bölümü). CSS gerekmedi. Metin birebir aynı kaldı (6575 kr).
+   · /policies/privacy-policy: Shopify'ın SİSTEM politika sayfası — tema `page`
+     şablonu o adreste DEVREYE GİRMEZ (ölçüldü: `main` bölümü yok, yalnız
+     `.shopify-policy__container`). Şablon verilemediği için tipografi burada
+     CSS ile eşitlenir. Bu dosya layout/theme.liquid:56'da SİTE GENELİNDE yükleniyor.
+   ⛔ METİN İÇERİĞİNE DOKUNULMADI — yalnız boyut/satır/renk/genişlik.
+   ───────────────────────────────────────────────────────────────────────── */
+.shopify-policy__container {
+  max-width: 802px !important;
+  margin-inline: auto !important;
+}
+.shopify-policy__title h1 {
+  font-size: 3.2rem !important;   /* 51.2px — referans başlık */
+  line-height: 1.1 !important;
+}
+.shopify-policy__body,
+.shopify-policy__body p,
+.shopify-policy__body li {
+  font-size: 0.98rem !important;  /* 15.68px — .vl-body ile aynı */
+  line-height: 1.7 !important;
+  color: rgb(20, 32, 29) !important;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   #994058 · YASAL SAYFALARDA `.vl-body` ARKA PLAN / DÜZEN BİREBİR EŞİTLEME
+   Yunus 13 Eki talebi: dört yasal sayfanın arka planı/düzeni DİĞERLERİYLE
+   birebir aynı olsun — standart `.vl-body` görünümü.
+
+   ÖLÇÜM (Playwright, canlı, 1280px) — ÖNCE:
+     /pages/iade-ve-teslimat           .vl-body ✅ bg rgb(250,246,236) · 1px rgb(217,223,209) · r18 · pad 48 · 900px
+     /pages/mesafeli-satis-sozlesmesi  .vl-body ✅ aynı                                            ← REFERANS
+     /pages/kvkk-aydinlatma-metni      .vl-body ⛔ YOK · şeffaf · kenar yok · 672px
+     /policies/privacy-policy          .vl-body ⛔ YOK · şeffaf · kenar yok · 762px (kap 802px)
+
+   Referans UYDURULMADI, ÖLÇÜLDÜ: kaynağı `sections/via-legal-page.liquid`
+     .vl-page  { background:#fff; padding-block: clamp(36px,6vw,80px) }
+     .vl-wrap  { width: min(900px, calc(100% - 32px)); margin-inline:auto }
+     .vl-body  { background:#faf6ec; border:1px solid #d9dfd1; border-radius:18px;
+                 padding: clamp(24px,4vw,48px) }
+   900px kap − (2×48 pad) − (2×1 kenar) = 802px metin genişliği; #993391'de
+   `.shopify-policy__container{max-width:802px}` ile eşitlenen değer TAM BUYDU,
+   yani metin genişliği doğruydu ama KART (arka plan) hiç yoktu.
+
+   · kvkk-aydinlatma-metni ŞABLONLA çözüldü (templates/page.yasal-sayfa.json →
+     via-legal-page `doc_handle: "sayfa"` → gövde `{{ page.content }}`), CSS gerekmez.
+     #993391'in metin kaybı (2.604 kr) bu yolla OLMAZ: metin sayfanın kendisinden basılır,
+     bölümün gömülü kvkk metninden DEĞİL.
+   · /policies/privacy-policy Shopify SİSTEM sayfası — tema `page` şablonu o adreste
+     devreye GİRMEZ (ölçüldü: `main` bölümü yok, yalnız `.shopify-policy__container`).
+     Şablon verilemediği için kart görünümü BURADA, CSS ile kurulur.
+   ⛔ METİN İÇERİĞİNE DOKUNULMADI — yalnız arka plan/kenar/yarıçap/iç boşluk/genişlik.
+   ───────────────────────────────────────────────────────────────────────── */
+.shopify-policy__container.shopify-policy__container {
+  /* .vl-wrap'in BİREBİR aynısı — kabın kendi iç boşluğu SIFIRLANIR, yoksa kart
+     900'e değil 868'e oturur ve x=206 olur (ölçüldü: 13 Eki, 1280px). */
+  width: min(900px, calc(100% - 32px)) !important;
+  max-width: none !important;
+  margin-inline: auto !important;
+  padding-inline: 0 !important;
+  padding-block: clamp(36px, 6vw, 80px) !important;
+  box-sizing: border-box !important;
+}
+.shopify-policy__title.shopify-policy__title {
+  /* .vl-title + .vl-meta'nın karttan önce bıraktığı boşluk */
+  margin: 0 0 36px !important;
+  /* Shopify sistem politika sayfası başlığı ORTALI basıyor; referans iki sayfada
+     (.vl-title) sola yaslı — "düzen birebir" için hizalama da eşitlenir. */
+  text-align: left !important;
+}
+.shopify-policy__body.shopify-policy__body {
+  /* .vl-body karşılığı — birebir aynı kart */
+  background: #faf6ec !important;
+  border: 1px solid #d9dfd1 !important;
+  border-radius: 18px !important;
+  padding: clamp(24px, 4vw, 48px) !important;
+  box-sizing: border-box !important;
+}
+/* ⚠ 749px ALTINDA ÖZGÜLLÜK ÇARPIŞMASI — ölçülerek bulundu (13 Eki, #994058).
+   `assets/via-mobile-app.css` içindeki yakala-hepsini kuralı
+     [class*="container"]:not(.cart-totals__container):not([class*="cart-item"])
+   `:not()` argümanlarıyla (0,3,0) özgüllüğe çıkıyor ve `!important` taşıyor; bu
+   yüzden yukarıdaki (0,2,0) çift-sınıf kuralını MOBİLDE eziyordu
+   (ölçüm: 749px'te kap 725px/padL 12px, 750px'te 718px/padL 0 — tam kırılım).
+   `.vl-wrap` sınıfında "container" geçmediği için referans sayfalar bu kuraldan
+   ETKİLENMİYOR; eşitlemek için özgüllük (0,3,1)'e çıkarılır. */
+@media screen and (max-width: 749px) {
+  main .shopify-policy__container.shopify-policy__container.shopify-policy__container {
+    width: min(900px, calc(100% - 32px)) !important;
+    max-width: none !important;
+    padding-inline: 0 !important;
+    margin-inline: auto !important;
+  }
+}
+
+/* ==================================================================
+   #994753 m4 · TİPOGRAFİ + BOŞLUK ÖLÇEĞİ — ayse:704 (Ayşe %96 + ŞAH %100)
+   Kaynak: raporlar/994753-m4-tipografi-olcek-20261019.md §2.1 · §3.1 · §5.4
+   ⚠ EŞİK 1.30 DEĞİL 1.32 (rapor §3.1): kayan noktada 26×1.3 = 33.8 →
+     33.8/26 = 1.2999999… < 1.3 ⇒ tam eşiğe nişan alınmaz, bir basamak üstü.
+   ⚠ Bu blok EKLEMEDİR; dosyanın kendi kuralları silinmedi, sonda ezilir.
+   ⚠ Yerleşim · renk · YAZI BOYUTU DEĞİŞTİRİLMEDİ — yalnız satır yüksekliği
+     ve boşluk tokenları.
+   GERİ ALMA: bu blok silinir (yedek: CANLI-YEDEK__assets__via-product-overrides.css).
+   ================================================================== */
+
+/* --- 1 · BOŞLUK TOKENLARI (19 adet, rapor §2.1) ------------------
+   `html:root` kullanıldı: tema kendi :root'unu sonra yüklerse tek sınıf
+   özgüllük farkıyla bu blok kazanır (saf :root ile kaynak sırasına kalırdı). */
+html:root{
+  --padding-3xs: 4px;  --padding-sm: 12px;  --padding-md: 12px;
+  --margin-3xs: 4px;   --margin-2xs: 4px;   --margin-sm: 12px;  --margin-md: 12px;
+  --gap-3xs: 4px;      --gap-2xs: 4px;      --gap-sm: 12px;     --gap-md: 16px;
+  --input-padding: 12px; --input-padding-x: 12px; --input-padding-y: 12px;
+  --checkbox-label-padding: 8px;
+  --checkout-button-gap: 12px;
+  --drawer-content-block-padding: 12px;
+  --drawer-inline-padding: 24px;
+  --drawer-padding: 20px;
+  --badge-rectangle-padding-inline: 12px;
+  --button-size-sm: 32px;
+}
+
+/* --- 2 · BAŞLIKLAR — ÖĞE DÜZEYİ (rapor §4.1: token yolu ÇALIŞMIYOR) ---
+   Başlık tokenları iki kez ölçüldü, etkisizdi. Bu yüzden doğrudan öğe kuralı. */
+h1,h2,h3{ line-height: 1.32 !important; }
+h4{ line-height: 1.34 !important; }
+h5,h6{ line-height: 1.40 !important; }
+
+/* --- 3 · FİYAT (1.1 → 1.32) --- */
+.price,.product-price,
+[class*=product-price__regular],[class*=price__regular],[class*=price-item--regular],
+product-price .price__sale,product-price .price__regular{
+  line-height: 1.32 !important;
+}
+
+/* --- 4 · KART MARKA SATIRI (1.2 → 1.40) --- */
+.resource-card__vendor{ line-height: 1.40 !important; }
+
+/* --- 5 · KENDİ BİLEŞENLERİMİZ (via-* snippet'leri) — 1.1/1.2 → 1.40 ---
+   Bu seçicilerin kuralları snippet'lerin kendi <style> bloklarında; burada
+   ezilir, snippet dosyalarına DOKUNULMAZ (tek dosyalık geri alma korunur). */
+.vp-tab,.vuy-btn,.vuy-btn-solid,.tax-note,.predictive-search-results__title{
+  line-height: 1.40 !important;
+}
+
+/* --- 6 · İKON-GLİF DÜĞMESİ (×) — ORTALAMA SATIR KUTUSUNDAN ALINIR ---
+   Tek karakterlik düğmede satır yüksekliği metin nefesi değil ORTALAMA aracıdır;
+   1.32'yi doğrudan vermek glifi kaydırırdı. grid + place-items ortalamayı
+   devralır ⇒ glif piksel piksel aynı yerde, ölçüt de yeşil (rapor §2.1 C). */
+.vuy-modal-close{
+  display: grid !important;
+  place-items: center !important;
+  line-height: 1.32 !important;
+}
+
+/* --- 7 · TIKLANABİLİR YÜKSEKLİK: breadcrumb + "Tümü →" ---
+   16px/19.6px olan dokunma hedefleri dikey dolguyla eşiğe çıkar. */
+.via-breadcrumb a,.vbk-all{ padding-block: 8px !important; }
+nav.via-breadcrumb{ padding-block: 8px !important; }
+
+/* ===== #994753 m6 · KAMPANYA ROZETİ (ŞIK A) — Ayşe ayse:703, ŞAH+Ayşe %100/%100 =====
+   assets/via-product-overrides.css SONUNA eklenir. Markup: snippets/via-kampanya-rozeti.liquid
+   TUR 5 · İKİ ÇÖZÜMÜN BİRLEŞİMİ:
+     (A) Okan T1-T4 → "boyanan görsel" geometrisi (.vkr ızgarası + .vkr__ol ölçeri)
+     (B) ŞAH b472686 → ÇİFT KUTUPLU çerçeve (koyu fotoğrafta kontrast 1.51 ölçümü)
+
+   TUR 3-4 DERSİ (iki tur kaybettirdi): rozet önce galeri köküne, sonra <img> ELEMAN
+   kutusuna bağlıydı; teknik ölçüm 6/6 yeşil veriyordu ama object-fit:contain yüzünden
+   boyanan görsel eleman kutusundan dar olduğu için rozet fotoğrafın ~18px SOLUNA, beyaz
+   zemine taşıyordu. getBoundingClientRect() eleman kutusunu ölçer, BOYANAN görseli değil.
+   Artık çıpa .vkr__ol — görselin oranını taşıyan boş inline SVG; yerleştirilmiş eleman
+   olduğu için max-%/auto kıskacında oranını spec gereği korur ⇒ kutusu = boyanan dikdörtgen.
+   6 oran senaryosunda ölçülen sapma 0.0 px (bkz. raporlar/994753-m6-birlesik-20261019.md).
+
+   Ölçüler Ayşe'nin ölçtüğü değerlerdir: 11px/1.35, 8px/12px dolgu, 4px yarıçap. */
+.product-media-constraint-wrapper:has(> .vkr) { position: relative; }
+
+.vkr {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;   /* ızgara gözü ölçerin kutusuna oturur, o da ortalanır */
+  z-index: 3;
+  pointer-events: none;    /* galeri ok/zoom tıklamasını yutmaz */
+}
+/* ORAN ÖLÇERİ: görünmez ama YER KAPLAR — ızgara gözünü boyanan görselle eşitler.
+   display:none / width:0 YAPILMAZ: o zaman göz çöker ve rozet yine mektup kutusuna kaçar
+   (negatif kanıt: tests/994753-m6-rozet-kapi.mjs §4b, ölçersiz sapma 177px). */
+.vkr__ol {
+  grid-area: 1 / 1;
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  display: block;
+  opacity: 0;
+}
+.vkr__rozet {
+  grid-area: 1 / 1;
+  align-self: start;
+  justify-self: start;
+  margin: 12px;            /* Ayşe: fotoğrafın sol üstünden 12px içeride */
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;       /* nefes: dikey 8px ≥6px VE 4px ızgarasında */
+  border-radius: 4px;      /* temanın buton yarıçapı */
+  background: #1C6B45;
+  color: #fff;
+  font-family: inherit;
+  font-size: 11px;         /* nefes: ≥11px */
+  line-height: 1.35;       /* nefes: ≥1.3, px'e çakılmadı */
+  font-weight: 600;
+  letter-spacing: .01em;
+  white-space: nowrap;
+  /* ÇİFT KUTUPLU ÇERÇEVE — ŞAH ölçümü (bu üründe sol üst köşe KOYU granit, kontrast 1.51):
+     1) beyaz saç teli: KOYU fotoğrafta rozeti ayırır
+     2) koyu gölge:     AÇIK fotoğrafta rozeti ayırır
+     Tek yönlü gölge yetmiyordu — koyu fotoğrafta koyu gölge görünmez.
+     Yeni renk ÜRETİLMEDİ (md.16): beyaz zaten rozetin kendi yazı rengi. */
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, .55),
+    0 1px 3px rgba(16, 16, 24, .35);
+}
+.vkr__ikon { width: 13px; height: 13px; flex: 0 0 auto; display: block; }
+/* Mobilde de AYNI yazı boyu: 11px taban eşiktir, küçültülmez (nefes kuralı). */
+@media (max-width: 749px) { .vkr__rozet { margin: 8px; } }
+
+/* #994771 4px izgara — urun detay grubunun ust dolgusu temada max(20px, scale*32px):
+   mobil/tablette (scale .7) 22.4px. Ayar degeri korunur, yalniz 4px'e yuvarlanir
+   (PC 32 -> 32 degismez, mobil 22.4 -> 24). round() desteklemeyen tarayici bildirimi
+   yok sayar ve eski degere duser (zararsiz). Ozgulluk (0,3,0) > .spacing-style (0,1,0). */
+.product-details > .group-block.spacing-style {
+  padding-block-start: calc(round(nearest, var(--padding-block-start), 4px) + var(--section-top-offset, 0px));
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   #994888 m2 · /policies/* BAŞLIK BİRLİĞİ — Yunus 15 Eki 11:14 (birebir):
+   «diğerlerinde başlığın üzerinde "Yasal · Via Mood" yazıyor bunda da aynı
+   tasarımda yazalım … başlığın hemen altında "Son güncelleme: Mayıs 2026 ·
+   VIA GLOBAL …" … panelin içerisindeki Son güncellemeyi de silelim.»
+   İşaretleme snippets/via-politika-baslik.liquid'den gelir (layout yalnız
+   request.page_type == 'policy' iken onu çağırır). Buradaki değerler YENİ
+   TASARIM DEĞİL — sections/via-legal-page.liquid'deki .vl-eyebrow / .vl-title
+   / .vl-meta kurallarının BİREBİR kopyası (md.16); o kurallar bölüm kimliğine
+   (#shopify-section-…) bağlı olduğu için sistem politika sayfasına ulaşmıyor.
+   Başlık: #993391 burada 3.2rem sabitlemişti — o değer referansın YALNIZ
+   1280px'teki karşılığıydı (4vw); 1440'ta 51.2 ↔ 54.4, 430'da 51.2 ↔ 32 px
+   sapıyordu (ölçüldü 22 Eki). Referansın kendi clamp'i aynen alınır.
+   Özgüllük (0,2,1)+!important: 993391'in (0,1,1)!important kuralını ezer.
+   GERİ ALMA: bu blok silinir + layout'taki policy dalı kaldırılır.
+   ───────────────────────────────────────────────────────────────────────── */
+.shopify-policy__title .vl-eyebrow {
+  margin: 0 0 12px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #b66c55;
+}
+.shopify-policy__title.shopify-policy__title h1 {
+  margin: 0 0 12px !important;
+  font-size: clamp(2rem, 4vw, 3.4rem) !important;
+  line-height: 1.32 !important;
+}
+.shopify-policy__title .vl-meta {
+  margin: 0;
+  color: #5d6458;
+  font-size: 0.92rem;
+}
+/* ── #994917 · ayse:730 REVİZYON 3 (ŞAH) · Hemen al + ürüne özel WhatsApp — ÖNİZLEME, canlıya basılmadı ──
+   Değişenler (Ayşe RET maddeleri): (1) ≤359px fiyat kırpılmasın · (3) mobilde indirim öncesi fiyat çubukta
+   gizli — GEREKÇELİ (sayfa içi fiyatta görünür) · (4) çok al şablonu: vqb__btn altına, o bloğun kendi tokenlarıyla
+   · (5) hex yerine tema değişkenleri. Hiyerarşi, 114px, nav hizası, akış DEĞİŞMEDİ. */
+.via-satinal-ek{display:flex;flex-direction:column;gap:12px;margin-top:12px;width:100%}
+.via-hemen-al{display:flex;align-items:center;justify-content:center;box-sizing:border-box;width:100%;height:52px;min-height:52px;margin:0;padding:0 28px;background:var(--empire-bg,#fff);color:var(--empire-orange);border:2px solid var(--empire-orange);border-radius:4px;font-size:15px;font-weight:600;line-height:1.4;cursor:pointer;text-transform:none;letter-spacing:0}
+.via-hemen-al:hover{color:var(--empire-orange-hover);border-color:var(--empire-orange-hover)}
+.via-hemen-al[aria-busy="true"]{opacity:.6;pointer-events:none}
+.via-wa-siparis{display:flex;align-items:center;justify-content:center;gap:8px;box-sizing:border-box;min-height:44px;padding:0 16px;background:var(--empire-bg,#fff);color:var(--empire-ink-soft);border:1px solid var(--empire-line);border-radius:4px;font-size:14px;font-weight:600;line-height:1.4;text-decoration:none}
+/* #25D366 / #f3fdf4: temada değişkeni YOK — canlı wa-fab'ın kendi değerleri (whatsapp-sticky.liquid), birebir */
+.via-wa-siparis svg{flex:0 0 20px;width:20px;height:20px;color:#25D366}
+.via-wa-siparis:hover{border-color:#25D366;background:#f3fdf4}
+
+/* ÇOK AL ŞABLONU (templates/product.cok-al.json): blok vqb__btn'in ALTINA render edilir; o bloğun dili
+   (--vqb-turuncu, radius 12px, 16/700) — yeni değer YOK, vqb__btn'in kendi tokenları. */
+.via-satinal-ek--vqb{margin-top:12px}
+.via-satinal-ek--vqb .via-hemen-al{height:52px;min-height:52px;padding:0 16px;color:var(--vqb-turuncu,#E8552B);border-color:var(--vqb-turuncu,#E8552B);border-radius:12px;font-size:16px;font-weight:700}
+.via-satinal-ek--vqb .via-hemen-al:hover{color:#C6431E;border-color:#C6431E}
+.via-satinal-ek--vqb .via-wa-siparis{border-radius:12px}
+
+/* sabit çubuk: ızgara — yükseklik 114 KORUNUR (12 + 18 + 20 + 52 + 12) */
+sticky-add-to-cart[data-variant-available="true"] .sticky-add-to-cart__bar{display:grid;grid-template-columns:52px minmax(0,1fr) auto auto;grid-template-areas:"satir satir satir satir" "gorsel bilgi hemen sepet" "gorsel fiyat hemen sepet";column-gap:16px;row-gap:0;align-items:center}
+.sticky-add-to-cart__bar > .vks-satir{grid-area:satir;margin-bottom:20px !important}
+.sticky-add-to-cart__image{grid-area:gorsel}
+.sticky-add-to-cart__info{grid-area:bilgi;align-self:end}
+.sticky-add-to-cart__price{grid-area:fiyat;align-self:start;white-space:nowrap}
+.sticky-add-to-cart__price [class*="price"]{font-size:16px !important;line-height:1.3 !important}
+/* KARAR (Ayşe RET md.3 → şık a, TÜM genişlikler): çubukta İNDİRİM ÖNCESİ fiyat gösterilmez. Ölçülen gerekçe:
+   sayfa içi fiyat bloğu eski fiyatı (mobil dahil) ZATEN gösteriyor; tema bugün de ≤375'te çubukta gizliyor;
+   PC kapsülde 5.000/6.000 TL ürününde eski fiyat sütuna sığmıyor (kırpılıyor) ve 430/390'da yan yana sığmıyor. */
+.sticky-add-to-cart__price .compare-at-price{display:none}
+.sticky-add-to-cart__hemen{grid-area:hemen;width:auto;height:52px;padding:0 28px}
+.sticky-add-to-cart__button{grid-area:sepet}
+@media (max-width:749px){
+  sticky-add-to-cart[data-variant-available="true"] .sticky-add-to-cart__bar{column-gap:12px}
+  .sticky-add-to-cart__hemen{padding:0 16px;font-size:14px;font-weight:700;border-radius:10px}
+}
+/* ≤359px: fiyat ("5.000,00TL" = 93,2px) TAM sığsın. Ölçüldü: iç boşluk daraltma İŞLEMEZ — tema
+   via-mobile-app.css `[class*="add-to-cart"] button{padding:12px!important}` dayatıyor; daraltılsa bile sütun
+   ~84px kalırdı. Çözüm: bu genişlikte çubuktaki küçük görsel çizilmez (ürün görseli sayfada zaten ekranda),
+   başlık+fiyat sütunu ~136px olur. Yazı boyutu DEĞİŞMEZ (16/800 fiyat, 14/700 Hemen al). */
+@media (max-width:359px){
+  sticky-add-to-cart[data-variant-available="true"] .sticky-add-to-cart__bar{grid-template-columns:minmax(0,1fr) auto auto;grid-template-areas:"satir satir satir" "bilgi hemen sepet" "fiyat hemen sepet";column-gap:8px}
+  sticky-add-to-cart[data-variant-available="true"] .sticky-add-to-cart__image{display:none}
+}
+
+/* ==================================================================
+   #995057 · ARAMA/ÜRÜN KARTI GÖRSEL KUTUSU — MOBİL 12px İÇ BOŞLUK ÇARPIŞMASI
+   Ölçüldü (24 Eki 2026, /search?q=how+wheels+premium, 390px): slayt 154×231 (2/3)
+   ama içteki medya kutusu 130×231 (≈0,56). Sebep: `via-mobile-app.css:41`
+   yakala-hepsi kuralı [class*="container"]:not(...):not(...) — (0,3,0) +
+   !important — `product-media-container` sınıfına da uyuyor ve 12px yatay iç
+   boşluk veriyor (#994058 ile aynı çarpışma sınıfı). Kart görseli bu yüzden
+   2/3 kutudan sapıp daralıyor ve yanlarda beyaz şerit kalıyordu.
+   Yalnız .product-card altında, yalnız ≤749px; özgüllük (0,4,0) > (0,3,0).
+   Oran (2/3) ve object-fit kararlarına DOKUNULMAZ.
+   ================================================================== */
+@media screen and (max-width: 749px) {
+  .product-card .product-media-container.product-media-container.product-media-container {
+    padding-inline: 0 !important;
+  }
+}

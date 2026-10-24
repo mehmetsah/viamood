@@ -1,0 +1,17 @@
+
+/* ==================================================================
+   #995057 · ARAMA/ÜRÜN KARTI GÖRSEL KUTUSU — MOBİL 12px İÇ BOŞLUK ÇARPIŞMASI
+   Ölçüldü (24 Eki 2026, /search?q=how+wheels+premium, 390px): slayt 154×231 (2/3)
+   ama içteki medya kutusu 130×231 (≈0,56). Sebep: `via-mobile-app.css:41`
+   yakala-hepsi kuralı [class*="container"]:not(...):not(...) — (0,3,0) +
+   !important — `product-media-container` sınıfına da uyuyor ve 12px yatay iç
+   boşluk veriyor (#994058 ile aynı çarpışma sınıfı). Kart görseli bu yüzden
+   2/3 kutudan sapıp daralıyor ve yanlarda beyaz şerit kalıyordu.
+   Yalnız .product-card altında, yalnız ≤749px; özgüllük (0,4,0) > (0,3,0).
+   Oran (2/3) ve object-fit kararlarına DOKUNULMAZ.
+   ================================================================== */
+@media screen and (max-width: 749px) {
+  .product-card .product-media-container.product-media-container.product-media-container {
+    padding-inline: 0 !important;
+  }
+}
