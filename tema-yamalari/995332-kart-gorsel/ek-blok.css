@@ -1,0 +1,13 @@
+
+/* ==================================================================
+   #995332 · ayse:802 · ÜRÜN KARTI GÖRSELİ — TUTARLI YERLEŞİM
+   Kap oranı DEĞİŞMEZ (2/3, satır 1). Görsel `cover` yerine `contain`: hiçbir
+   ürün kırpılmaz (ölçüm 29 Eki: cover 15/33 kartı en çok %28 kırpıyordu).
+   Beyaz çerçeveyi kırpıp büyütme `assets/via-kart-gorsel.js` içinde (scale +
+   translate); betik çalışmazsa bu kural tek başına güvenli yedektir.
+   Yeni renk/jeton YOK. Taşan büyütme kabın kendi overflow:hidden'ı ile kesilir.
+   ================================================================== */
+.product-card .product-media__image.product-media__image,
+.product-card .product-media .product-media__image {
+  object-fit: contain !important;
+}
