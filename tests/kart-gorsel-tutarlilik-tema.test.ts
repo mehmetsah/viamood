@@ -54,6 +54,13 @@ describe('#995332 kart görseli yama paketi', () => {
     expect(sonra.join('\n')).toContain('.vkol2-media{aspect-ratio:2/3;');
   });
 
+  it('tek hâl: kategori ÖNCESİ = #995388 SONRASI (canlıdaki 2/3) — iki paket birbirinden kopamaz', () => {
+    const p388 = path.join(__dirname, '..', 'tema-yamalari', '995388-kategori-gorsel');
+    const sonra388 = readFileSync(path.join(p388, 'SONRASI', 'sections__via-koleksiyon-v2.liquid'), 'utf8');
+    expect(oku('ONCESI/sections__via-koleksiyon-v2.liquid')).toBe(sonra388);
+    expect(M['sections/via-koleksiyon-v2.liquid']!.once).toBe(JSON.parse(readFileSync(path.join(p388, 'md5.json'), 'utf8')).sonra);
+  });
+
   it('betik: kapatma anahtarı, yalnız kart seçicisi, medyaya yazma yok', () => {
     const js = oku('YENI/assets__via-kart-gorsel.js');
     expect(js).toContain('via_kirp=0');

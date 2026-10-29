@@ -14,3 +14,9 @@
 - Ölçüm (3 kategori × 1280/768/390, 12'şer kart): içerik kesilen kart canlı 0/7–8/7 → önizleme 0/0/0. Kart · kap · başlık · fiyat · rozet · kalp konumu canlıyla 0 fark (ürün sırası aynı yüklemelerde). Arama kartı (33×3) 0 fark. Hover 1,04 yakınlaşmada içerik kabın %92'si.
 - Canlı md5 (tur sonu): theme.liquid c7f54c89 · overrides 0d5fc0a3 · koleksiyon fbd001dd · JS 404 → DEĞİŞMEDİ.
 - Canlıya alma tek adım (onaydan sonra): `KIP=CANLI bash calistir.sh` (4 dosya, md5 kapılı).
+
+## Ayak 3 · tek hâl — 29 Eki 2026 ~19:00 (Elif)
+- PR #10 (#995388, `tema-yamalari/995388-kategori-gorsel/`, 05795a8) bu dala merge edildi; PR #10 kapatıldı. Tek PR: #9.
+- Bağ: bu paketin kategori ÖNCESİ'si (fbd001dd) = #995388 SONRASI = canlıdaki dosya (md5 ile ölçüldü). Çivi bunu sabitliyor.
+- Canlıya alma sırası değişmedi: #995388 zaten canlı; `KIP=CANLI bash calistir.sh` 4 dosyayı basar.
+- Önizleme 197044142212 ölçümü (4 kategori × 1280/768/390): içerik kesilen kart 0, taşma 0, hiza farkı 0 (sıra-sabit yüklemeler). Canlı md5 değişmedi.
