@@ -1,0 +1,504 @@
+{%- comment -%}
+  Via Mood — Koleksiyon V2 ("preview (2).html" tasarımının birebir portu).
+  V1 (templates/collection.json eski hali) YEDEKTE — rollback:
+  clarity-theme/templates/collection-v1-YEDEK.json içeriğini templates/collection.json'a PUT et.
+  Theme Editor: hero ayarları + chip blokları + editoryal bant bloğu; ürünler/sıralama/
+  filtreler/sayfalama GERÇEK Shopify verisi. Kartta sepete-ekle yok (Madde 22/28) —
+  "Hızlı incele" ürün sayfasına gider.
+{%- endcomment -%}
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+
+{%- assign sec = section.settings -%}
+{%- assign urun_adedi = sec.sayfa_urun | default: 12 -%}
+
+<div class="vkol2">
+
+  {%- comment -%} ============ HERO KARTI ============ {%- endcomment -%}
+  {%- if sec.hero_goster -%}
+  <section class="vkol2-hero">
+    <div class="vkol2-hero-card">
+      <div class="vkol2-hero-copy">
+        {%- if sec.hero_eyebrow != blank -%}<span class="vkol2-eyebrow">{{ sec.hero_eyebrow }}</span>{%- endif -%}
+        <h1>{% if sec.hero_baslik != blank %}{{ sec.hero_baslik }}{% else %}{{ collection.title }}{% endif %}</h1>
+        {%- if sec.hero_metin != blank -%}<p>{{ sec.hero_metin }}</p>{%- endif -%}
+        <div class="vkol2-hero-actions">
+          {%- if sec.hero_cta1 != blank -%}<a class="vkol2-btn vkol2-primary" href="{{ sec.hero_cta1_link | default: '#vkol2-products' }}">{{ sec.hero_cta1 }}</a>{%- endif -%}
+          {%- if sec.hero_cta2 != blank -%}<a class="vkol2-btn vkol2-secondary" href="{{ sec.hero_cta2_link | default: '/collections/all' }}">{{ sec.hero_cta2 }}</a>{%- endif -%}
+        </div>
+      </div>
+      <div class="vkol2-hero-visual">
+        {%- if sec.hero_gorsel -%}
+          <img class="vkol2-hero-img" src="{{ sec.hero_gorsel | image_url: width: 1200 }}" alt="{{ collection.title | escape }}" loading="eager">
+        {%- else -%}
+          <div class="vkol2-stack" aria-hidden="true"><div class="vkol2-box vkol2-b1"></div><div class="vkol2-box vkol2-b2"></div><div class="vkol2-box vkol2-b3"></div></div>
+        {%- endif -%}
+      </div>
+    </div>
+  </section>
+  {%- comment -%} Hero varyantları — her sayfa yüklemesinde JS rastgele birini seçer
+      (Liquid'de gerçek random yok + HTML edge-cache'li; client-side seçim ikisini de çözer).
+      Varyant bloğu yoksa yukarıdaki sabit hero içeriği kalır. {%- endcomment -%}
+  {%- assign varyant_sayisi = 0 -%}
+  {%- capture varyant_json -%}[
+    {%- for block in section.blocks -%}
+      {%- if block.type == "hero_varyant" -%}
+        {%- if varyant_sayisi > 0 -%},{%- endif -%}
+        {%- liquid
+          assign v_img = ''
+          if block.settings.gorsel
+            assign v_img = block.settings.gorsel | image_url: width: 1200
+          elsif block.settings.gorsel_url != blank
+            assign v_img = block.settings.gorsel_url
+          endif
+        -%}
+        {"e":{{ block.settings.eyebrow | json }},"b":{{ block.settings.baslik | json }},"m":{{ block.settings.metin | json }},"g":{{ v_img | json }}}
+        {%- assign varyant_sayisi = varyant_sayisi | plus: 1 -%}
+      {%- endif -%}
+    {%- endfor -%}
+  ]{%- endcapture -%}
+  {%- if varyant_sayisi > 0 -%}
+    <script type="application/json" data-vkol2-heroset>{{ varyant_json }}</script>
+    <script>
+      (function(){
+        // Görsel havuzu — varyantın kendi görseli yoksa buradan rastgele seçilir
+        var HAVUZ=[
+          'https://images.unsplash.com/photo-1556911220-bff31c812dba?auto=format&fit=crop&w=1200&q=85',
+          'https://images.unsplash.com/photo-1600566753086-00f18fb6b3ea?auto=format&fit=crop&w=1200&q=85',
+          'https://images.unsplash.com/photo-1494438639946-1ebd1d20bf85?auto=format&fit=crop&w=1200&q=85',
+          'https://images.unsplash.com/photo-1523413651479-597eb2da0ad6?auto=format&fit=crop&w=1200&q=85',
+          'https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?auto=format&fit=crop&w=1200&q=85',
+          'https://images.unsplash.com/photo-1600607687920-4e2a09cf159d?auto=format&fit=crop&w=1200&q=85',
+          'https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?auto=format&fit=crop&w=1200&q=85',
+          'https://images.unsplash.com/photo-1556912172-45b7abe8b7e1?auto=format&fit=crop&w=1200&q=85'
+        ];
+        function sec(){
+          var el=document.querySelector('[data-vkol2-heroset]'); if(!el) return;
+          var list; try{ list=JSON.parse(el.textContent); }catch(err){ return; }
+          if(!list || !list.length) return;
+          var v=list[Math.floor(Math.random()*list.length)];
+          var kok=document.querySelector('.vkol2-hero'); if(!kok || !v) return;
+          var e=kok.querySelector('.vkol2-eyebrow'); if(e && v.e) e.textContent=v.e;
+          var h=kok.querySelector('h1'); if(h && v.b) h.textContent=v.b;
+          var pEl=kok.querySelector('.vkol2-hero-copy p'); if(pEl && v.m) pEl.textContent=v.m;
+          // görsel: varyantınki ya da havuzdan rastgele
+          var g=v.g || HAVUZ[Math.floor(Math.random()*HAVUZ.length)];
+          var gorselAlan=kok.querySelector('.vkol2-hero-visual');
+          if(gorselAlan && g){
+            var img=gorselAlan.querySelector('.vkol2-hero-img');
+            if(!img){
+              var stack=gorselAlan.querySelector('.vkol2-stack'); if(stack) stack.remove();
+              img=document.createElement('img'); img.className='vkol2-hero-img'; img.alt='';
+              gorselAlan.appendChild(img);
+            }
+            var pre=new Image();
+            pre.onload=function(){ img.src=g; img.classList.add('vkol2-hg-tam'); };
+            pre.src=g;
+          }
+        }
+        sec();
+        window.addEventListener('pageshow',function(ev){ if(ev && ev.persisted) sec(); });
+      })();
+    </script>
+  {%- endif -%}
+  {%- endif -%}
+
+  {%- comment -%} ============ CHIP RAYI ============ {%- endcomment -%}
+  {%- assign chip_var = false -%}
+  {%- for block in section.blocks -%}{%- if block.type == "chip" -%}{%- assign chip_var = true -%}{%- endif -%}{%- endfor -%}
+  {%- if chip_var -%}
+  <div class="vkol2-chips">
+    {%- for block in section.blocks -%}
+      {%- if block.type == "chip" -%}
+        {%- assign chip_url = block.settings.link | default: '/collections/all' -%}
+        <a class="vkol2-chip{% if chip_url == collection.url %} vkol2-active{% endif %}" href="{{ chip_url }}" {{ block.shopify_attributes }}>{{ block.settings.baslik }}</a>
+      {%- endif -%}
+    {%- endfor -%}
+  </div>
+  {%- endif -%}
+
+  {%- comment -%} ============ İÇERİK: TOOLBAR + FİLTRE + GRID ============ {%- endcomment -%}
+  {%- paginate collection.products by urun_adedi -%}
+  <section class="vkol2-content" id="vkol2-products">
+    <div class="vkol2-toolbar">
+      <div>
+        <h2>{{ collection.title }}</h2>
+        <p>{{ collection.products_count }} ürün{% if sec.toolbar_not != blank %} — {{ sec.toolbar_not }}{% endif %}</p>
+      </div>
+      {%- comment -%}
+        2026-08-08 FIX — sıralama hiç çalışmıyordu. Eskiden buradaki inline onchange
+        `new URL(location.href)` kuruyordu; inline handler'ın kapsam zincirinde
+        `document` bulunduğu ve `document.URL` bir STRING olduğu için global URL
+        yapıcısı gölgeleniyor, handler daha ilk satırda
+        "TypeError: URL is not a constructor" ile patlıyordu → adres hiç değişmiyor,
+        sadece açılır listenin etiketi değişiyordu. Handler artık normal bir
+        addEventListener içinde (kapsam gölgelemesi yok).
+      {%- endcomment -%}
+      <select class="vkol2-sort" data-vkol2-sort aria-label="Sıralama">
+        {%- for opt in collection.sort_options -%}
+          <option value="{{ opt.value }}" {% if opt.value == collection.sort_by %}selected{% endif %}>{{ opt.name }}</option>
+        {%- endfor -%}
+      </select>
+      <script>
+        (function(){
+          var s = document.querySelector('[data-vkol2-sort]');
+          if (!s || s.dataset.vkol2Bagli) return;
+          s.dataset.vkol2Bagli = '1';
+          s.addEventListener('change', function(){
+            var u = new window.URL(window.location.href);
+            u.searchParams.set('sort_by', this.value);
+            u.searchParams.delete('page');
+            window.location.href = u.toString();
+          });
+        })();
+      </script>
+    </div>
+
+    <div class="vkol2-catalog{% unless sec.filtre_goster %} vkol2-filtresiz{% endunless %}">
+      {%- if sec.filtre_goster -%}
+      <aside class="vkol2-filters">
+        <h3>Filtreler</h3>
+        {%- if collection.filters.size > 0 -%}
+          <form method="get" id="vkol2-filtre-form">
+            {%- if collection.sort_by != blank -%}<input type="hidden" name="sort_by" value="{{ collection.sort_by }}">{%- endif -%}
+            {%- for filter in collection.filters -%}
+              <div class="vkol2-group">
+                {%- liquid
+                  assign grup_ad = filter.label
+                  case filter.label
+                    when 'Availability' or 'Stok durumu'
+                      assign grup_ad = 'Stok durumu'
+                    when 'Price' or 'Fiyat'
+                      assign grup_ad = 'Fiyat aralığı'
+                  endcase
+                -%}
+                <div class="vkol2-group-title"><span>{{ grup_ad }}</span></div>
+                {%- case filter.type -%}
+                  {%- when 'boolean', 'list' -%}
+                    {%- for value in filter.values -%}
+                      <label class="vkol2-check">
+                        <input type="checkbox" name="{{ value.param_name }}" value="{{ value.value }}" {% if value.active %}checked{% endif %} {% if value.count == 0 and value.active == false %}disabled{% endif %} onchange="document.getElementById('vkol2-filtre-form').submit()">
+                        {%- liquid
+                          assign deger_ad = value.label
+                          case value.label
+                            when 'Stokta' or 'In stock'
+                              assign deger_ad = 'Stokta olanlar'
+                            when 'Stokta yok' or 'Out of stock'
+                              assign deger_ad = 'Tükenenler'
+                          endcase
+                        -%}
+                        {{ deger_ad }} <span class="vkol2-adet">({{ value.count }})</span>
+                      </label>
+                    {%- endfor -%}
+                  {%- when 'price_range' -%}
+                    <div class="vkol2-price-row">
+                      <input type="number" name="{{ filter.min_value.param_name }}" placeholder="Min ₺" min="0" {% if filter.min_value.value %}value="{{ filter.min_value.value | money_without_currency | replace: ',', '.' }}"{% endif %}>
+                      <input type="number" name="{{ filter.max_value.param_name }}" placeholder="Max ₺" min="0" {% if filter.max_value.value %}value="{{ filter.max_value.value | money_without_currency | replace: ',', '.' }}"{% endif %}>
+                    </div>
+                    <button class="vkol2-btn vkol2-primary vkol2-uygula" type="submit">Uygula</button>
+                {%- endcase -%}
+              </div>
+            {%- endfor -%}
+            {%- comment -%} Kategori — koleksiyon tag'lerinden (native /collections/handle/tag filtresi) {%- endcomment -%}
+            {%- if collection.all_tags.size > 0 -%}
+              <div class="vkol2-group">
+                <div class="vkol2-group-title"><span>Kategori</span></div>
+                {%- assign gosterilen = 0 -%}
+                {%- for tag in collection.all_tags -%}
+                  {%- comment -%} teknik slug tag'leri gizle (alt-*, kat-*, via-mood, görsel-eklenecek...) — düzgün kategori adlarında tire olmaz {%- endcomment -%}
+                  {%- if tag contains '-' or gosterilen >= 8 -%}{%- continue -%}{%- endif -%}
+                  {%- assign gosterilen = gosterilen | plus: 1 -%}
+                  {%- if current_tags contains tag -%}
+                    <label class="vkol2-check vkol2-aktif-tag">{{ tag | link_to_remove_tag: tag }}</label>
+                  {%- else -%}
+                    <label class="vkol2-check">{{ tag | link_to_add_tag: tag }}</label>
+                  {%- endif -%}
+                {%- endfor -%}
+              </div>
+            {%- endif -%}
+            {%- assign aktif_filtre = false -%}
+            {%- for filter in collection.filters -%}{%- if filter.active_values.size > 0 or filter.min_value.value or filter.max_value.value -%}{%- assign aktif_filtre = true -%}{%- endif -%}{%- endfor -%}
+            {%- if aktif_filtre -%}
+              <a class="vkol2-temizle" href="{{ collection.url }}">Filtreleri temizle ✕</a>
+            {%- endif -%}
+          </form>
+        {%- else -%}
+          <p class="vkol2-filtre-yok">Bu koleksiyon için filtre tanımlı değil. (Shopify Admin → Search &amp; Discovery uygulamasından filtre ekleyebilirsin.)</p>
+        {%- endif -%}
+      </aside>
+      {%- endif -%}
+
+      <div class="vkol2-products">
+        {%- assign gun_simdi = 'now' | date: '%s' | plus: 0 -%}
+        {%- for p in collection.products -%}
+
+          {%- comment -%} Editoryal bant — 1. sayfada, ayarlanan sıradan sonra {%- endcomment -%}
+          {%- for block in section.blocks -%}
+            {%- if block.type == "editoryal" -%}
+              {%- assign konum = block.settings.konum | default: 3 | plus: 1 -%}
+              {%- if forloop.parentloop.index == konum and paginate.current_page == 1 -%}
+                <div class="vkol2-editorial" {{ block.shopify_attributes }}>
+                  <div class="vkol2-editorial-copy">
+                    {%- if block.settings.kicker != blank -%}<span class="vkol2-eyebrow">{{ block.settings.kicker }}</span>{%- endif -%}
+                    <h3>{{ block.settings.baslik }}</h3>
+                    <p>{{ block.settings.metin }}</p>
+                    {%- if block.settings.cta != blank -%}<a class="vkol2-btn vkol2-primary vkol2-editorial-cta" href="{{ block.settings.link | default: '/blogs/news' }}">{{ block.settings.cta }}</a>{%- endif -%}
+                  </div>
+                  <div class="vkol2-editorial-img" {% if block.settings.gorsel %}style="background-image:url('{{ block.settings.gorsel | image_url: width: 1000 }}')"{% else %}style="background:#3a453c"{% endif %}></div>
+                </div>
+              {%- endif -%}
+            {%- endif -%}
+          {%- endfor -%}
+
+          <article class="vkol2-card">
+            <a href="{{ p.url }}" class="vkol2-media">
+              {%- if p.featured_image -%}
+                <img src="{{ p.featured_image | image_url: width: 360 }}&quality=65" srcset="{{ p.featured_image | image_url: width: 240 }}&quality=65 240w, {{ p.featured_image | image_url: width: 360 }}&quality=65 360w, {{ p.featured_image | image_url: width: 540 }}&quality=65 540w" sizes="(min-width: 750px) 360px, 42vw" alt="{{ p.title | escape }}" loading="lazy">
+              {%- endif -%}
+              {%- liquid
+                assign rozet = ''
+                assign rozet_sale = false
+                if p.compare_at_price > p.price
+                  assign ind = p.compare_at_price | minus: p.price | times: 100 | divided_by: p.compare_at_price
+                  assign rozet = '%' | append: ind | append: ' indirim'
+                  assign rozet_sale = true
+                else
+                  assign p_ts = p.created_at | date: '%s' | plus: 0
+                  assign yas = gun_simdi | minus: p_ts
+                  if yas < 3888000
+                    assign rozet = 'Yeni'
+                  elsif forloop.first and paginate.current_page == 1
+                    assign rozet = 'Çok satan'
+                  endif
+                endif
+              -%}
+              {%- if rozet != blank -%}<span class="vkol2-badge{% if rozet_sale %} vkol2-sale{% endif %}">{{ rozet }}</span>{%- endif -%}
+              <button class="vkol2-wish" type="button" aria-label="Favorilere ekle" onclick="event.preventDefault();this.textContent=this.textContent==='♡'?'♥':'♡';">♡</button>
+              <span class="vkol2-quick">Hızlı incele</span>
+            </a>
+            <div class="vkol2-info">
+              <div class="vkol2-category">{{ p.type | default: p.vendor | default: "Via Mood" }}</div>
+              <a href="{{ p.url }}" class="vkol2-title">{{ p.title }}</a>
+              <div>
+                <span class="vkol2-price">{{ p.price | money }}</span>
+                {%- if p.compare_at_price > p.price -%}<span class="vkol2-old">{{ p.compare_at_price | money }}</span>{%- endif -%}
+              </div>
+              {%- assign puan = p.metafields.reviews.rating.value -%}
+              {%- if puan -%}
+                <div class="vkol2-rating">★★★★★ {{ puan.rating | default: puan }}{% if p.metafields.reviews.rating_count %} ({{ p.metafields.reviews.rating_count }}){% endif %}</div>
+              {%- endif -%}
+            </div>
+          </article>
+        {%- else -%}
+          <p class="vkol2-bos">Bu koleksiyonda ürün bulunamadı.</p>
+        {%- endfor -%}
+      </div>
+    </div>
+
+    {%- if paginate.pages > 1 -%}
+      <nav class="vkol2-sayfalama" aria-label="Sayfalama">
+        {%- if paginate.previous -%}<a href="{{ paginate.previous.url }}">←</a>{%- endif -%}
+        {%- for part in paginate.parts -%}
+          {%- if part.is_link -%}
+            <a href="{{ part.url }}">{{ part.title }}</a>
+          {%- elsif part.title == paginate.current_page -%}
+            <span class="vkol2-simdiki">{{ part.title }}</span>
+          {%- else -%}
+            <span>{{ part.title }}</span>
+          {%- endif -%}
+        {%- endfor -%}
+        {%- if paginate.next -%}<a href="{{ paginate.next.url }}">→</a>{%- endif -%}
+      </nav>
+    {%- endif -%}
+  </section>
+  {%- endpaginate -%}
+
+</div>
+
+{% style %}
+  .vkol2{
+    --vkol2-bg:#f8f5f0; --vkol2-surface:#fff; --vkol2-ink:#1f2522; --vkol2-muted:#6f756f;
+    --vkol2-line:#e8e2d9; --vkol2-accent:#ef6b43; --vkol2-dark:#202622;
+    --vkol2-radius:22px; --vkol2-shadow:0 18px 45px rgba(42,37,30,.09);
+    font-family:"DM Sans",sans-serif !important; background:var(--vkol2-bg); color:var(--vkol2-ink);
+  }
+  .vkol2 *{box-sizing:border-box}
+  .vkol2 a{text-decoration:none;color:inherit}
+  .vkol2 img{width:100%;display:block}
+  .vkol2 p,.vkol2 a,.vkol2 span,.vkol2 small,.vkol2 label,.vkol2 button,.vkol2 input,.vkol2 select,.vkol2 div{font-family:"DM Sans",sans-serif !important}
+  .vkol2 h1,.vkol2 h2,.vkol2 h3{font-family:"Playfair Display",serif !important;margin:0}
+
+  .vkol2-hero{max-width:1440px;margin:28px auto 0;padding:0 28px}
+  .vkol2-hero-card{min-height:420px;border-radius:30px;overflow:hidden;display:grid;grid-template-columns:1.05fr .95fr;background:linear-gradient(120deg,#efe7db,#f7f3ee 55%,#e2eadf);box-shadow:var(--vkol2-shadow)}
+  .vkol2-hero-copy{padding:64px;display:flex;flex-direction:column;justify-content:center}
+  .vkol2-eyebrow{width:max-content;padding:8px 12px;border-radius:999px;background:#fff9;font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#8b5d46}
+  .vkol2-hero h1{font-size:clamp(46px,5vw,76px);line-height:.98;margin:18px 0}
+  .vkol2-hero p{font-size:17px;line-height:1.7;color:#58605b;max-width:580px;margin-top:0}
+  .vkol2-hero-actions{display:flex;gap:12px;flex-wrap:wrap}
+  .vkol2-btn{border:0;border-radius:14px;padding:14px 20px;font-weight:700;cursor:pointer;display:inline-block}
+  .vkol2-primary{background:var(--vkol2-accent);color:#fff !important}
+  .vkol2-secondary{background:#fff;border:1px solid var(--vkol2-line)}
+  .vkol2-hero-visual{position:relative;display:flex;align-items:center;justify-content:center;padding:30px}
+  .vkol2-hero-visual::before{content:"";position:absolute;inset:38px 34px 38px 0;border-radius:28px;background:radial-gradient(circle at 28% 22%,rgba(255,255,255,.9),transparent 34%),linear-gradient(145deg,#d8c6af,#eee6da)}
+  .vkol2-hero-img{position:relative;z-index:1;border-radius:22px;max-height:360px;width:auto;max-width:100%;object-fit:cover;box-shadow:0 25px 40px rgba(55,43,30,.25);opacity:0;transition:opacity .7s ease}
+  .vkol2-hero-img[src]{opacity:1}
+  .vkol2-hero-img.vkol2-hg-tam{position:absolute;inset:22px;width:auto;height:auto;max-height:none;object-fit:cover;border-radius:24px}
+  .vkol2-stack{position:relative;width:480px;height:300px;max-width:100%;filter:drop-shadow(0 25px 30px rgba(55,43,30,.22))}
+  .vkol2-box{position:absolute;border-radius:18px;border:3px solid #ffffffd9;background:linear-gradient(#fff,#e4ece6);box-shadow:inset 0 0 0 1px #33463c1f}
+  .vkol2-box::before{content:"";position:absolute;left:-5%;right:-5%;top:-10px;height:18px;background:#303633;border-radius:12px}
+  .vkol2-b1{width:260px;height:104px;right:35px;bottom:12px;transform:rotate(-4deg)}
+  .vkol2-b2{width:230px;height:96px;right:85px;bottom:112px;transform:rotate(3deg);background:linear-gradient(#fff,#f4e8db)}
+  .vkol2-b3{width:200px;height:88px;right:120px;bottom:205px;transform:rotate(-2deg)}
+
+  .vkol2-chips{max-width:1440px;margin:0 auto 26px;padding:12px 28px 0;display:flex;gap:10px;overflow:auto;scrollbar-width:none}
+  /* 2026-07-21: hero gizlenince (madde 5) chips ilk eleman oldu — 26px üst boşluk sadece hero varken */
+  .vkol2-hero ~ .vkol2-chips{margin-top:26px;padding-top:0}
+  .vkol2-chips::-webkit-scrollbar{display:none}
+  .vkol2-chip{white-space:nowrap;padding:11px 16px;border-radius:999px;background:#fff;border:1px solid var(--vkol2-line);font-weight:600}
+  .vkol2-chip.vkol2-active{background:var(--vkol2-dark);color:#fff}
+
+  .vkol2-content{max-width:1440px;margin:auto;padding:20px 28px 80px}
+  .vkol2-toolbar{display:flex;justify-content:space-between;align-items:end;margin-bottom:22px}
+  .vkol2-toolbar h2{font-size:34px;margin:0 0 6px}
+  .vkol2-toolbar p{margin:0;color:var(--vkol2-muted)}
+  .vkol2-sort{padding:12px 38px 12px 14px;border:1px solid var(--vkol2-line);border-radius:12px;background:#fff}
+
+  .vkol2-catalog{display:grid;grid-template-columns:250px 1fr;gap:26px}
+  .vkol2-catalog.vkol2-filtresiz{grid-template-columns:1fr}
+  .vkol2-filters{position:sticky;top:100px;align-self:start;background:#fff;border:1px solid var(--vkol2-line);border-radius:20px;padding:22px}
+  .vkol2-filters h3{margin:0 0 4px;font-size:22px}
+  .vkol2-group{border-top:1px solid var(--vkol2-line);padding:18px 0}
+  .vkol2-group:first-of-type{border-top:0}
+  .vkol2-group-title{display:flex;justify-content:space-between;font-weight:700;font-size:14px}
+  .vkol2-check{display:flex;gap:10px;margin:10px 0;color:#515852;font-size:14px;align-items:center;cursor:pointer}
+  .vkol2-adet{color:#9aa19a;font-size:12px}
+  .vkol2-price-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+  .vkol2-price-row input{width:100%;padding:10px;border:1px solid var(--vkol2-line);border-radius:10px}
+  .vkol2-uygula{width:100%;margin-top:8px}
+  .vkol2-temizle{display:block;margin-top:14px;color:var(--vkol2-accent) !important;font-weight:600;font-size:13px}
+  .vkol2-filtre-yok{color:var(--vkol2-muted);font-size:13px;line-height:1.6}
+
+  .vkol2-products{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px}
+  .vkol2-card{background:#fff;border:1px solid var(--vkol2-line);border-radius:20px;overflow:hidden;transition:.25s}
+  .vkol2-card:hover{transform:translateY(-6px);box-shadow:var(--vkol2-shadow)}
+  .vkol2-media{aspect-ratio:3/4;position:relative;overflow:hidden;background:#eee9e2;display:block}
+  .vkol2-media img{width:100%;height:100%;object-fit:cover;transition:.4s}
+  .vkol2-card:hover .vkol2-media img{transform:scale(1.04)}
+  .vkol2-badge{position:absolute;left:14px;top:14px;background:#fff;padding:8px 10px;border-radius:999px;font-size:11px;font-weight:800;box-shadow:0 8px 20px #0002}
+  .vkol2-badge.vkol2-sale{background:var(--vkol2-accent);color:#fff}
+  .vkol2-wish{position:absolute;right:14px;top:14px;width:38px;height:38px;border-radius:50%;border:0;background:#fff;cursor:pointer}
+  .vkol2-quick{position:absolute;left:14px;right:14px;bottom:14px;padding:12px;border:0;border-radius:12px;background:var(--vkol2-dark);color:#fff !important;font-weight:700;opacity:0;transform:translateY(10px);transition:.25s;text-align:center}
+  .vkol2-card:hover .vkol2-quick{opacity:1;transform:none}
+  .vkol2-info{padding:17px}
+  .vkol2-category{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:#999}
+  .vkol2-title{display:block;font-size:15px;line-height:1.45;font-weight:600;margin:8px 0 12px;min-height:44px}
+  .vkol2-price{font-size:24px;font-weight:800;color:var(--vkol2-accent)}
+  .vkol2-old{font-size:13px;color:#999;text-decoration:line-through;margin-left:6px}
+  .vkol2-rating{font-size:12px;color:#7a817c;margin-top:10px}
+  .vkol2-bos{grid-column:1/-1;text-align:center;color:var(--vkol2-muted);padding:40px 0}
+
+  .vkol2-editorial{grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr;background:#293029;color:#fff;border-radius:22px;overflow:hidden;min-height:280px}
+  .vkol2-editorial-copy{padding:42px;display:flex;flex-direction:column;justify-content:center}
+  .vkol2-editorial h3{font-size:38px;margin:14px 0;color:#fff !important}
+  .vkol2-editorial p{color:#d8ded8 !important;line-height:1.6;margin:0}
+  .vkol2-editorial-cta{width:max-content;margin-top:18px}
+  .vkol2-editorial-img{background-size:cover;background-position:center}
+  .vkol2-editorial .vkol2-eyebrow{background:rgba(255,255,255,.14);color:#ffd8ca}
+  .vkol2-check a{color:#515852 !important;display:flex;align-items:center;gap:10px}
+  .vkol2-check a::before{content:"";width:16px;height:16px;border:1.5px solid #cfc9bf;border-radius:5px;flex:none;background:#fff}
+  .vkol2-check a[href*="/"]:visited{color:#515852}
+  .vkol2-check:has(a) input{display:none}
+  .vkol2-aktif-tag a{font-weight:700;color:var(--vkol2-ink) !important}
+  .vkol2-aktif-tag a::before{background:var(--vkol2-accent);border-color:var(--vkol2-accent);content:"✓";color:#fff;font-size:11px;display:grid;place-items:center}
+
+  .vkol2-sayfalama{display:flex;justify-content:center;gap:8px;margin-top:38px}
+  .vkol2-sayfalama a,.vkol2-sayfalama span{min-width:42px;height:42px;display:inline-flex;align-items:center;justify-content:center;border-radius:12px;background:#fff;border:1px solid var(--vkol2-line);font-weight:700}
+  .vkol2-sayfalama a:hover{border-color:var(--vkol2-accent);color:var(--vkol2-accent)}
+  .vkol2-sayfalama .vkol2-simdiki{background:var(--vkol2-dark);color:#fff;border-color:var(--vkol2-dark)}
+
+  @media(max-width:1100px){
+    .vkol2-hero-card{grid-template-columns:1fr}
+    .vkol2-hero-visual{min-height:320px}
+    .vkol2-products{grid-template-columns:repeat(2,1fr)}
+  }
+  @media(max-width:760px){
+    .vkol2-hero,.vkol2-chips,.vkol2-content{padding-left:16px;padding-right:16px}
+    .vkol2-hero-copy{padding:38px 24px}
+    .vkol2-catalog{grid-template-columns:1fr}
+    .vkol2-filters{display:none}
+    .vkol2-toolbar{align-items:flex-start;flex-direction:column;gap:15px}
+    .vkol2-products{gap:12px}
+    .vkol2-editorial{grid-template-columns:1fr}
+    .vkol2-editorial-img{min-height:220px}
+  }
+  @media(max-width:520px){
+    .vkol2-products{grid-template-columns:repeat(2,1fr);gap:10px}
+    .vkol2-card{border-radius:14px}
+    .vkol2-info{padding:11px 12px 14px}
+    .vkol2-title{font-size:13px;line-height:1.35;margin:6px 0 8px;min-height:36px}
+    .vkol2-price{font-size:18px}
+    .vkol2-old{font-size:12px}
+    .vkol2-category{font-size:10px}
+    .vkol2-quick{padding:9px;font-size:12px;left:10px;right:10px;bottom:10px}
+    .vkol2-badge{font-size:10px;padding:6px 8px;left:10px;top:10px}
+    .vkol2-wish{width:32px;height:32px;right:10px;top:10px}
+    .vkol2-hero-visual{display:none}
+    .vkol2-hero-card{min-height:auto}
+  }
+{% endstyle %}
+
+{% schema %}
+{
+  "name": "Via Mood Koleksiyon v2",
+  "settings": [
+    { "type": "header", "content": "Hero kartı" },
+    { "type": "checkbox", "id": "hero_goster", "label": "Hero kartını göster", "default": true },
+    { "type": "text", "id": "hero_eyebrow", "label": "Üst rozet", "default": "Mutfakta yeni düzen" },
+    { "type": "text", "id": "hero_baslik", "label": "Başlık (boşsa koleksiyon adı)", "default": "Her şey yerli yerinde." },
+    { "type": "textarea", "id": "hero_metin", "label": "Alt metin", "default": "Şık, dayanıklı ve farklı ihtiyaçlara göre seçilmiş saklama çözümleriyle mutfağınızı ferahlatın." },
+    { "type": "text", "id": "hero_cta1", "label": "Buton 1", "default": "Ürünleri keşfet →" },
+    { "type": "url", "id": "hero_cta1_link", "label": "Buton 1 linki" },
+    { "type": "text", "id": "hero_cta2", "label": "Buton 2", "default": "Kampanya setleri" },
+    { "type": "url", "id": "hero_cta2_link", "label": "Buton 2 linki" },
+    { "type": "image_picker", "id": "hero_gorsel", "label": "Hero görseli (boşsa dekoratif kutular)" },
+    { "type": "header", "content": "Liste" },
+    { "type": "text", "id": "toolbar_not", "label": "Başlık yanı not", "default": "düzenli mutfaklar için seçildi" },
+    { "type": "range", "id": "sayfa_urun", "label": "Sayfa başına ürün", "min": 6, "max": 24, "step": 3, "default": 12 },
+    { "type": "checkbox", "id": "filtre_goster", "label": "Filtre panelini göster", "default": true }
+  ],
+  "blocks": [
+    {
+      "type": "hero_varyant", "name": "Hero varyantı", "limit": 30,
+      "settings": [
+        { "type": "image_picker", "id": "gorsel", "label": "Görsel (boşsa havuzdan rastgele)" },
+        { "type": "text", "id": "gorsel_url", "label": "Görsel URL (alternatif)" },
+        { "type": "text", "id": "eyebrow", "label": "Üst rozet", "default": "Evde iyi hisset" },
+        { "type": "text", "id": "baslik", "label": "Başlık", "default": "Düzen, iyi hissettirir." },
+        { "type": "textarea", "id": "metin", "label": "Alt metin", "default": "Aradığını hemen bulduğun bir ev, günün her anını kolaylaştırır." }
+      ]
+    },
+    {
+      "type": "chip", "name": "Hızlı filtre chip", "limit": 10,
+      "settings": [
+        { "type": "text", "id": "baslik", "label": "Başlık", "default": "Tüm ürünler" },
+        { "type": "url", "id": "link", "label": "Link" }
+      ]
+    },
+    {
+      "type": "editoryal", "name": "Editoryal bant", "limit": 1,
+      "settings": [
+        { "type": "text", "id": "kicker", "label": "Kicker", "default": "Via Mood rehberi" },
+        { "type": "text", "id": "baslik", "label": "Başlık", "default": "Mutfağınızda daha çok alan açın." },
+        { "type": "textarea", "id": "metin", "label": "Metin", "default": "Doğru saklama kabını seçmek, yalnızca düzen değil; tazelik ve kullanım kolaylığı da kazandırır." },
+        { "type": "text", "id": "cta", "label": "Buton", "default": "Rehberi oku →" },
+        { "type": "url", "id": "link", "label": "Buton linki" },
+        { "type": "image_picker", "id": "gorsel", "label": "Görsel" },
+        { "type": "range", "id": "konum", "label": "Kaç üründen sonra", "min": 2, "max": 12, "step": 1, "default": 3 }
+      ]
+    }
+  ],
+  "presets": [{ "name": "Via Mood Koleksiyon v2" }]
+}
+{% endschema %}
