@@ -2,13 +2,15 @@
 # KIP=ONIZLEME : canlıyı themeDuplicate ile kopyalar (ya da ONIZLEME_ID verilen temayı kullanır) ve yamayı ONA basar. CANLIYA YAZMAZ.
 # KIP=CANLI    : yamayı canlı temaya (195348856964) basar — YALNIZ onaydan sonra.
 # KIP=GERI     : TEMA_ID temasında 3 dosyayı ÖNCESİ'ne döndürür (yeni JS silinir).
+# SIFIRLA=1    : (yalnız ONIZLEME_ID ile) önizleme temasını önce CANLI TABANINA eşitler — her dosya ÖNCESİ içeriğine yazılır,
+#                yeni JS silinir — sonra yamayı basar. Canlının md5'i ÖNCESİ değilse DURUR (taban bayatsa yazmaz).
 # KURU=1       : kapılar koşar, yazma yok.  Her dosya: canlı md5 == ÖNCESİ kapısı → yama → md5 == SONRASI → PUT → GET-back.
 import json, urllib.request, urllib.parse, urllib.error, os, hashlib, time, sys
 B = os.path.dirname(os.path.abspath(__file__)); sys.path.insert(0, B); import yama
 T = os.environ['SHOPIFY_ADMIN_ACCESS_TOKEN']; D = os.environ['SHOPIFY_STORE_DOMAIN']; V = os.environ['SHOPIFY_API_VERSION']
 H = {'X-Shopify-Access-Token': T}; CANLI = '195348856964'; M = json.load(open(B + '/md5.json'))
 md5 = lambda s: hashlib.md5(s.encode()).hexdigest(); KIP = os.environ.get('KIP', 'ONIZLEME')
-SIRA = ['assets/via-kart-gorsel.js', 'assets/via-product-overrides.css', 'layout/theme.liquid']
+SIRA = ['assets/via-kart-gorsel.js', 'assets/via-product-overrides.css', 'sections/via-koleksiyon-v2.liquid', 'layout/theme.liquid']
 
 def gql(q, v=None):
     r = json.load(urllib.request.urlopen(urllib.request.Request(f'https://{D}/admin/api/{V}/graphql.json', data=json.dumps({'query': q, 'variables': v or {}}).encode(), headers={**H, 'Content-Type': 'application/json'}), timeout=90))
@@ -53,6 +55,17 @@ else:
         print('KOPYA HAZIR', s)
         if s['role'] == 'MAIN': raise SystemExit('DUR: kopya MAIN görünüyor')
 if t == CANLI and KIP != 'CANLI' and not os.environ.get('KURU'): raise SystemExit('DUR: canlıya yalnız KIP=CANLI ile yazılır')
+if os.environ.get('SIFIRLA'):
+    if t == CANLI: raise SystemExit('DUR: SIFIRLA canlıda koşmaz')
+    for k in SIRA:
+        c = get(CANLI, k); h = md5(c) if c is not None else None
+        if h != M[k]['once']: print('DUR: canlı tabanı != ÖNCESİ', k, h); sys.exit(1)
+    for k in SIRA:
+        v = get(t, k); h = md5(v) if v is not None else None
+        if h == M[k]['once']: continue
+        if os.environ.get('KURU'): print('KURU SIFIRLA (yazılmadı)', k, h, '→', M[k]['once']); continue
+        if M[k]['once'] is None: sil(t, k); print('SIFIRLA', k, 'SIL', get(t, k) is None)
+        else: put(t, k, open(B + '/ONCESI/' + k.replace('/', '__'), encoding='utf-8').read()); print('SIFIRLA', k, bekle(t, k, M[k]['once']) == M[k]['once'])
 
 yeni = {}; once = {}
 for k in SIRA:

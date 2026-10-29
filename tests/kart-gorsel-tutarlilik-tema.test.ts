@@ -17,7 +17,7 @@ const M = JSON.parse(oku('md5.json')) as Record<string, { once: string | null; s
 
 describe('#995332 kart görseli yama paketi', () => {
   it('ÖNCESİ/SONRASI/YENİ dosyaları md5.json ile birebir', () => {
-    for (const k of ['layout/theme.liquid', 'assets/via-product-overrides.css']) {
+    for (const k of ['layout/theme.liquid', 'assets/via-product-overrides.css', 'sections/via-koleksiyon-v2.liquid']) {
       const f = k.replace('/', '__');
       expect(md5(oku(`ONCESI/${f}`))).toBe(M[k]!.once);
       expect(md5(oku(`SONRASI/${f}`))).toBe(M[k]!.sonra);
@@ -42,10 +42,22 @@ describe('#995332 kart görseli yama paketi', () => {
     expect(kurallar).not.toMatch(/aspect-ratio|#[0-9a-f]{3,8}\b|rgb|hsl|var\(--/i);
   });
 
+  it('ayak 2 · koleksiyon kartı: yalnız TEK satır eklenir; oran 2/3 aynen, yeni renk yok', () => {
+    const once = oku('ONCESI/sections__via-koleksiyon-v2.liquid').split('\n');
+    const sonra = oku('SONRASI/sections__via-koleksiyon-v2.liquid').split('\n');
+    expect(sonra.length).toBe(once.length + 1);
+    const eklenen = sonra.filter((s) => !once.includes(s));
+    expect(eklenen).toHaveLength(1);
+    const kural = eklenen[0]!.replace(/\/\*[\s\S]*?\*\//g, '');
+    expect(kural).toMatch(/\.vkol2-media img\{object-fit:contain\}/);
+    expect(kural).not.toMatch(/aspect-ratio|#[0-9a-f]{3,8}\b|rgb|hsl|var\(--/i);
+    expect(sonra.join('\n')).toContain('.vkol2-media{aspect-ratio:2/3;');
+  });
+
   it('betik: kapatma anahtarı, yalnız kart seçicisi, medyaya yazma yok', () => {
     const js = oku('YENI/assets__via-kart-gorsel.js');
     expect(js).toContain('via_kirp=0');
-    expect(js).toContain("'.product-card .product-media__image'");
+    expect(js).toContain("'.product-card .product-media__image, .vkol2-media img'");
     expect(js).not.toMatch(/fetch\(|XMLHttpRequest|\.src\s*=/);
     expect(js).toMatch(/style\.scale/);
     expect(js).not.toMatch(/style\.transform\s*=/); // tema hover transform'unu ezmez

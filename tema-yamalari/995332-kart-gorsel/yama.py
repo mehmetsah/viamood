@@ -5,6 +5,9 @@ CAPA_LAYOUT = "    <link rel=\"stylesheet\" href=\"{{ 'via-mobile-app.css' | ass
 EK_LAYOUT = "    <script src=\"{{ 'via-kart-gorsel.js' | asset_url }}\" defer></script>\n"
 EK_CSS = open(os.path.join(B, 'ek-blok.css'), encoding='utf-8').read()
 ISARET = '#995332 · ayse:802'
+# Ayak 2 — koleksiyon kartı: 387. satırın HEMEN ALTINA tek satır (aynı <style> içinde sonra geldiği için kazanır).
+CAPA_KOL = '  .vkol2-media img{width:100%;height:100%;object-fit:cover;transition:.4s}\n'
+EK_KOL = '  .vkol2-card .vkol2-media{background:transparent} .vkol2-card .vkol2-media img{object-fit:contain} /* #995332 · ayse:802 ayak 2: kırpmadan sığdır, zemin kartın beyazı; beyaz kenar ölçümü assets/via-kart-gorsel.js */\n'
 
 def uygula(k, v):
     if k == 'layout/theme.liquid':
@@ -15,6 +18,11 @@ def uygula(k, v):
     if k == 'assets/via-product-overrides.css':
         if v.count(ISARET) != 0: raise SystemExit(f'DUR {k}: işaret zaten var')
         return v + EK_CSS
+    if k == 'sections/via-koleksiyon-v2.liquid':
+        n = v.count(CAPA_KOL)
+        if n != 1: raise SystemExit(f'DUR {k}: çapa {n} kez (1 beklenirdi)')
+        if ISARET in v: raise SystemExit(f'DUR {k}: işaret zaten var')
+        return v.replace(CAPA_KOL, CAPA_KOL + EK_KOL)
     raise SystemExit('bilinmeyen dosya ' + k)
 
 if __name__ == '__main__':
@@ -22,7 +30,7 @@ if __name__ == '__main__':
     md5 = lambda s: hashlib.md5(s.encode()).hexdigest()
     M = {}
     os.makedirs(os.path.join(B, 'SONRASI'), exist_ok=True)
-    for k in ['layout/theme.liquid', 'assets/via-product-overrides.css']:
+    for k in ['layout/theme.liquid', 'assets/via-product-overrides.css', 'sections/via-koleksiyon-v2.liquid']:
         f = k.replace('/', '__'); o = open(os.path.join(B, 'ONCESI', f), encoding='utf-8').read(); s = uygula(k, o)
         open(os.path.join(B, 'SONRASI', f), 'w', encoding='utf-8').write(s); M[k] = {'once': md5(o), 'sonra': md5(s)}
     j = open(os.path.join(B, 'YENI', 'assets__via-kart-gorsel.js'), encoding='utf-8').read(); M['assets/via-kart-gorsel.js'] = {'once': None, 'sonra': md5(j)}

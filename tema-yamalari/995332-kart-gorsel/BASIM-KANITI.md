@@ -6,3 +6,11 @@
 - **Canlıya alma (tek adım, onaydan sonra):** `KIP=CANLI bash calistir.sh` — canlı md5 = ÖNCESİ kapısı, yama, GET-back; hata olursa otomatik geri alma.
 - Geri alma: `KIP=GERI TEMA_ID=<id> bash calistir.sh` (JS silinir, iki dosya ÖNCESİ'ne döner).
 - Önizleme temasının işi bitince silinmesi sahibin kararı (tema silme = kalıcı silme kapısı); ben silmedim.
+
+## Ayak 2 · koleksiyon (kategori) kartı — 29 Eki 2026 18:37 TSİ (Elif)
+- Önizleme 197044142212 önce `SIFIRLA=1` ile CANLI tabanına eşitlendi (kopya 17:31'de alındığı için kategori bölümü eski 3/4'teydi; canlıda #995388 ile 2/3), sonra 4 dosya basıldı. Her biri PUT 200 + GET-back ✓.
+- `sections/via-koleksiyon-v2.liquid` fbd001dd → 5452b172: 387. satırın altına tek satır `.vkol2-card .vkol2-media{background:transparent} .vkol2-card .vkol2-media img{object-fit:contain}`. Oran (2/3) ve renkler değişmedi; zemin kartın kendi beyazı.
+- `assets/via-kart-gorsel.js` a15d7297 → 28ac48f7: seçici `+ .vkol2-media img`. Ölçek sınırları aynı.
+- Ölçüm (3 kategori × 1280/768/390, 12'şer kart): içerik kesilen kart canlı 0/7–8/7 → önizleme 0/0/0. Kart · kap · başlık · fiyat · rozet · kalp konumu canlıyla 0 fark (ürün sırası aynı yüklemelerde). Arama kartı (33×3) 0 fark. Hover 1,04 yakınlaşmada içerik kabın %92'si.
+- Canlı md5 (tur sonu): theme.liquid c7f54c89 · overrides 0d5fc0a3 · koleksiyon fbd001dd · JS 404 → DEĞİŞMEDİ.
+- Canlıya alma tek adım (onaydan sonra): `KIP=CANLI bash calistir.sh` (4 dosya, md5 kapılı).

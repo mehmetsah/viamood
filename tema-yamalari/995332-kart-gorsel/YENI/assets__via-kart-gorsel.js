@@ -5,11 +5,13 @@
    kutusunu küçük bir tuvalde ölçer, görseli `scale` + `translate` ile içerik kutuya aynı payla
    (%6) oturacak şekilde büyütür. Ürün medyasına DOKUNMAZ; görsel dosyası aynen kalır.
    Ölçülemeyen görselde (CORS, boş, şeffaf) hiçbir şey yapmaz → `object-fit: contain` kalır.
-   Kapatma: URL'ye `via_kirp=0` eklenirse betik çalışmaz (önizlemede karşılaştırma için). */
+   Kapatma: URL'ye `via_kirp=0` eklenirse betik çalışmaz (önizlemede karşılaştırma için).
+   Ayak 2 (29 Eki): koleksiyon/kategori kartı `.vkol2-media img` de aynı seçiciye alındı
+   (sections/via-koleksiyon-v2.liquid). Ölçek sınırları DEĞİŞMEDİ — hedef sığdırmak, büyütmek değil. */
 (function () {
   if (/[?&]via_kirp=0(?:&|$)/.test(location.search)) return;
   var PAY = 0.06, ESIK = 18, OLCU = 64, EN_AZ = 0.85, EN_COK = 3;
-  var SECICI = '.product-card .product-media__image';
+  var SECICI = '.product-card .product-media__image, .vkol2-media img';
   var tuval = document.createElement('canvas');
   var cx = tuval.getContext('2d', { willReadFrequently: true });
 
