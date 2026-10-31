@@ -26,7 +26,7 @@ function kos(betik: string, o: { damgaVar?: boolean; kuruCikis?: number; uygulaC
   return { cikis, izler, damgaVar: existsSync(damga), damga: existsSync(damga) ? readFileSync(damga, 'utf8') : '', log: existsSync(log) ? readFileSync(log, 'utf8') : '' };
 }
 
-for (const betik of ['sss-ilk-20-kur.sh', 'aciklama-ic-not-kur.sh', 'sss-dalga2-kur.sh', 'aciklama-ic-baslik-kur.sh', 'sss-dalga3-kur.sh', 'aciklama-baslik-tekrar-kur.sh', 'sss-dalga4-kur.sh', 'aciklama-pazar-blok-kur.sh', 'aciklama-baslik-tekrar-2-kur.sh', 'sss-dalga5-kur.sh']) {
+for (const betik of ['sss-ilk-20-kur.sh', 'aciklama-ic-not-kur.sh', 'sss-dalga2-kur.sh', 'aciklama-ic-baslik-kur.sh', 'sss-dalga3-kur.sh', 'aciklama-baslik-tekrar-kur.sh', 'sss-dalga4-kur.sh', 'aciklama-pazar-blok-kur.sh', 'aciklama-baslik-tekrar-2-kur.sh', 'sss-dalga5-kur.sh', 'aciklama-pazar-blok-2-kur.sh']) {
   describe(betik, () => {
     it('damga VARKEN hiçbir komut koşmaz, damgaya dokunulmaz', () => {
       const r = kos(betik, { damgaVar: true });
@@ -68,11 +68,13 @@ it('deploy.sh iki kancayı eposta-akis kalıbıyla (best-effort) çağırır', (
   expect(s).toContain('bash scripts/aciklama-baslik-tekrar-kur.sh || echo');
   expect(s).toContain('bash scripts/sss-dalga4-kur.sh || echo');
   expect(s.indexOf('aciklama-baslik-tekrar-kur.sh')).toBeLessThan(s.indexOf('sss-dalga4-kur.sh')); // A2 önce
-  for (const k of ['aciklama-pazar-blok-kur.sh', 'aciklama-baslik-tekrar-2-kur.sh', 'sss-dalga5-kur.sh']) expect(s).toContain(`bash scripts/${k} || echo`);
+  for (const k of ['aciklama-pazar-blok-kur.sh', 'aciklama-baslik-tekrar-2-kur.sh', 'sss-dalga5-kur.sh', 'aciklama-pazar-blok-2-kur.sh']) expect(s).toContain(`bash scripts/${k} || echo`);
   // dalga 5 cevapları temizlenmiş gövdeden alıntı: iki temizlik adımı SSS'ten ÖNCE koşar
   expect(s.indexOf('aciklama-pazar-blok-kur.sh')).toBeLessThan(s.indexOf('sss-dalga5-kur.sh'));
   expect(s.indexOf('aciklama-baslik-tekrar-2-kur.sh')).toBeLessThan(s.indexOf('sss-dalga5-kur.sh'));
   expect(s.indexOf('sss-dalga4-kur.sh')).toBeLessThan(s.indexOf('aciklama-pazar-blok-kur.sh'));
+  expect(s).toContain('bash scripts/aciklama-pazar-blok-2-kur.sh || echo');
+  expect(s.indexOf('sss-dalga5-kur.sh')).toBeLessThan(s.indexOf('aciklama-pazar-blok-2-kur.sh')); // dalga 6 en sonda
 });
 
 it('dalga 2 girdisi: 50 ürün, ürün başına 3–4 soru, kargo/iade sorusu yok, handle biçimi geçerli, ilk 20 ile çakışma yok', () => {
