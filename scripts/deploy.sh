@@ -288,6 +288,11 @@ bash scripts/aciklama-pazar-blok-kur.sh || echo "  (aciklama-pazar-blok adımı 
 bash scripts/aciklama-baslik-tekrar-2-kur.sh || echo "  (aciklama-baslik-tekrar-2 adımı atlandı)"
 bash scripts/sss-dalga5-kur.sh || echo "  (sss-dalga5 adımı atlandı)"
 bash scripts/aciklama-pazar-blok-2-kur.sh || echo "  (aciklama-pazar-blok-2 adımı atlandı)"
+bash scripts/aciklama-bas-blok-kur.sh || echo "  (aciklama-bas-blok adımı atlandı)"
+bash scripts/sss-dalga7-kur.sh || echo "  (sss-dalga7 adımı atlandı)"
+bash scripts/aciklama-duzeltme-kur.sh || echo "  (aciklama-duzeltme adımı atlandı)"
+bash scripts/aciklama-pilot-kur.sh || echo "  (aciklama-pilot adımı atlandı)"
+bash scripts/aciklama-dalga2-kur.sh || echo "  (aciklama-dalga2 adımı atlandı)"
 
 echo ""
 echo "════════════════════════════════════════════"
