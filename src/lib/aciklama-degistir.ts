@@ -20,6 +20,13 @@
  *   7. idempotent: canlı zaten hedefse değişiklik-yok.
  * Başlık ve handle DEĞİŞMEZ.
  *
+ * YARIM CÜMLE KİPİ (#994831 kalan içerik, Mehmet kararı 31 Eki 2026: «yarım cümle ÇIKARILIR, yerine hiçbir şey
+ * UYDURULMAZ»). Girdi satırı { handle, baslik, oncekiHtml, yarimParca } — açıklama noktalama olmadan «… Ürünün» gibi
+ * yarım biten bir parçayla bitiyor. KAPI: canlı = öncesi · parça 1-3 sözcük, noktalamasız · düz metin bu parçayla
+ * biter ve parçadan hemen önce cümle sonu (. ! ?) vardır · yeni HTML = öncesinden YALNIZ « parça» baytları silinmiş hâl
+ * (başka bayt değişmez, yeni sözcük yok) · yeni düz metin cümle sonu işaretiyle biter · iç blok gelmez. Kalite kapısı
+ * bu kipte UYGULANMAZ: hiçbir şey yazılmıyor, yalnız yarım parça düşüyor.
+ *
  * Çivi: tests/aciklama-degistir.test.ts.
  */
 import { duzMetin } from './aciklama-ic-not';
@@ -71,7 +78,7 @@ export function yanlisCumleleriCikar(html: string, yanlisAdlar: string[]): strin
 }
 
 export type Karar =
-  | { durum: 'yazilacak'; kip: 'degistir' | 'cikar'; html: string; onceBayt: number; sonraBayt: number }
+  | { durum: 'yazilacak'; kip: 'degistir' | 'cikar' | 'yarim'; html: string; onceBayt: number; sonraBayt: number }
   | { durum: 'degisiklik-yok'; sebep: string }
   | { durum: 'atlandi'; sebep: string };
 
@@ -99,13 +106,46 @@ export function karar(g: Giris, canli: string): Karar {
   return { durum: 'yazilacak', kip, html, onceBayt: Buffer.byteLength(canli), sonraBayt: Buffer.byteLength(html) };
 }
 
+export type YarimGiris = { handle: string; baslik: string; oncekiHtml: string; yarimParca: string };
+export const yarimMi = (g: Giris | YarimGiris): g is YarimGiris => 'yarimParca' in g;
+const CUMLE_SONU = /[.!?…]$/;
+
+/** Son metinli <p>/<li> bloğunun sonundaki « parça»yı siler; o blok başka bir şeyle bitiyorsa null. Başka bayta dokunmaz. */
+export function yarimCumleCikar(html: string, parca: string): string | null {
+  const bloklar = [...html.matchAll(/<(p|li)\b[^>]*>([\s\S]*?)<\/\1>/g)].filter((m) => duzMetin(m[2] ?? ''));
+  const son = bloklar[bloklar.length - 1];
+  if (!son || son.index === undefined) return null;
+  const ic = son[2] ?? '', icBas = son.index + son[0].indexOf('>') + 1;
+  const kirp = ic.replace(/\s+$/, '');
+  if (!kirp.endsWith(' ' + parca)) return null;
+  const sil = icBas + kirp.length - parca.length - 1;
+  return html.slice(0, sil) + html.slice(sil + parca.length + 1);
+}
+
+export function yarimKarar(g: YarimGiris, canli: string): Karar {
+  const p = g.yarimParca;
+  if (!p || p !== p.trim() || /[.!?…<>]/.test(p) || p.split(/\s+/).length > 3) return { durum: 'atlandi', sebep: 'yarım parça geçersiz (boş · noktalamalı · 3 sözcükten uzun) — yazılmadı' };
+  const html = yarimCumleCikar(g.oncekiHtml, p);
+  if (html !== null && satirSonsuz(canli) === satirSonsuz(html)) return { durum: 'degisiklik-yok', sebep: 'zaten yazılı (satır sonu normalleştirmesiyle)' };
+  if (satirSonsuz(canli) !== satirSonsuz(g.oncekiHtml)) return { durum: 'atlandi', sebep: 'canlı açıklama kütükteki öncesinden farklı — yazılmadı' };
+  const once = duzMetin(g.oncekiHtml);
+  if (!once.endsWith(' ' + p)) return { durum: 'atlandi', sebep: 'açıklama yarım parçayla bitmiyor — yarım cümle ölçülmedi, yazılmadı' };
+  if (!CUMLE_SONU.test(once.slice(0, -p.length - 1))) return { durum: 'atlandi', sebep: 'yarım parçadan önce cümle sonu yok — tam cümle kesilebilir, yazılmadı' };
+  if (html === null) return { durum: 'atlandi', sebep: 'yarım parça son metin bloğunun sonunda değil — yazılmadı' };
+  const yeni = duzMetin(html);
+  if (Buffer.byteLength(g.oncekiHtml) - Buffer.byteLength(html) !== Buffer.byteLength(' ' + p) || yeni + ' ' + p !== once) return { durum: 'atlandi', sebep: 'metin kapısı: öncesinden yarım parça dışında bir şey değişiyor — yazılmadı' };
+  if (!CUMLE_SONU.test(yeni)) return { durum: 'atlandi', sebep: 'parça çıkınca metin cümle sonuyla bitmiyor — yazılmadı' };
+  if (!('yok' in kuyrukBul(html, g.baslik)) || !('yok' in basDiziBul(html, g.baslik))) return { durum: 'atlandi', sebep: 'yeni metin iç blok içeriyor — yazılmadı' };
+  return { durum: 'yazilacak', kip: 'yarim', html, onceBayt: Buffer.byteLength(canli), sonraBayt: Buffer.byteLength(html) };
+}
+
 export type Urun = { id: string; handle: string; html: string };
-export type KutukSatiri = { handle: string; durum: 'yazilacak' | 'yazildi' | 'degisiklik-yok' | 'atlandi' | 'hata'; kip?: 'degistir' | 'cikar'; sebep?: string; onceBayt?: number; sonraBayt?: number; onceHtml?: string };
+export type KutukSatiri = { handle: string; durum: 'yazilacak' | 'yazildi' | 'degisiklik-yok' | 'atlandi' | 'hata'; kip?: 'degistir' | 'cikar' | 'yarim'; sebep?: string; onceBayt?: number; sonraBayt?: number; onceHtml?: string };
 export type Ozet = { taranan: number; yazilacak: number; yazildi: number; degisiklikYok: number; atlandi: number; hata: number };
 
-/** `uygula` false iken `yaz` HİÇ çağrılmaz. Yazmadan önce ürün YENİDEN okunur; değiştiyse yazılmaz. ÖNCESİ HTML kütüğe yazılır. */
+/** Yarım cümle satırları (`yarimParca`) yarimKarar'dan, diğerleri karar'dan geçer. `uygula` false iken `yaz` HİÇ çağrılmaz. Yazmadan önce ürün YENİDEN okunur; değiştiyse yazılmaz. ÖNCESİ HTML kütüğe yazılır. */
 export async function degistirCalistir(
-  girisler: Giris[],
+  girisler: Array<Giris | YarimGiris>,
   dep: { bul: (handle: string) => Promise<Urun | null>; oku: (id: string) => Promise<string | null>; yaz: (id: string, html: string) => Promise<{ ok: true } | { ok: false; hata: string }>; kutuk: (s: KutukSatiri) => void },
   sec: { uygula: boolean },
 ): Promise<Ozet> {
@@ -115,7 +155,7 @@ export async function degistirCalistir(
     try {
       const u = await dep.bul(g.handle);
       if (!u) { oz.atlandi++; dep.kutuk({ handle: g.handle, durum: 'atlandi', sebep: 'aktif ürün bulunamadı' }); continue; }
-      const k = karar(g, u.html);
+      const k = yarimMi(g) ? yarimKarar(g, u.html) : karar(g, u.html);
       if (k.durum === 'degisiklik-yok') { oz.degisiklikYok++; dep.kutuk({ handle: g.handle, durum: 'degisiklik-yok', sebep: k.sebep }); continue; }
       if (k.durum === 'atlandi') { oz.atlandi++; dep.kutuk({ handle: g.handle, durum: 'atlandi', sebep: k.sebep }); continue; }
       const olcu = { kip: k.kip, onceBayt: k.onceBayt, sonraBayt: k.sonraBayt, onceHtml: u.html };

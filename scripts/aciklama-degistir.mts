@@ -12,7 +12,7 @@
 import { appendFileSync, mkdirSync, readFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import path from 'node:path';
-import { degistirCalistir, type Giris, type KutukSatiri } from '../src/lib/aciklama-degistir.ts';
+import { degistirCalistir, type Giris, type KutukSatiri, type YarimGiris } from '../src/lib/aciklama-degistir.ts';
 
 const args = process.argv.slice(2);
 const uygula = args.includes('--uygula');
@@ -21,7 +21,7 @@ if (!girdi || args.some((a) => a.startsWith('--') && a !== '--uygula' && !a.star
 const kutukYolu = args.find((a) => a.startsWith('--kutuk='))?.slice(8)
   || path.join(process.env.LOG_DIR || path.join(homedir(), '.viamood-log'), `aciklama-degistir-${new Date().toISOString().replace(/[:.]/g, '-')}.jsonl`);
 mkdirSync(path.dirname(kutukYolu), { recursive: true });
-const girisler = readFileSync(girdi, 'utf8').trim().split('\n').map((l) => JSON.parse(l) as Giris);
+const girisler = readFileSync(girdi, 'utf8').trim().split('\n').map((l) => JSON.parse(l) as Giris | YarimGiris);
 
 const domain = (process.env.SHOPIFY_STORE_DOMAIN ?? '').trim();
 const token = (process.env.SHOPIFY_ADMIN_ACCESS_TOKEN ?? '').trim();
