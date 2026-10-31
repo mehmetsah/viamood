@@ -328,6 +328,19 @@ export const FIKSTUR: GorselTanim[] = [
   // F17 contain eşitlik kenarı: W / oran === H birebir (46×141 kap, 46×141 görsel, tuval 21×64, kutu x 4–17 · y 7–42).
   // `dh > H` yerine `>=` yazılırsa dw = H·oran yolu 1 ulp sapar ve dikey kaydırma 14.438% → 14.437% yuvarlanır.
   { ad: 'F17-esitlik-kenari', nw: 46, nh: 141, W: 46, H: 141, pix: beyazZemin([[4 / 21, 7 / 64, 18 / 21, 43 / 64, K]]) },
+  // ─── A1 (Ayşe md.31, 31 Eki): ölçek tabanda kaydırma kabın beyazını açmasın ───
+  // F18 2:3 neredeyse dolu fotoğraf (Super Bag sınıfı): iki eksende de kabı doldurur, ölçek 1'e kenetlenir, içerik kenara
+  // değmez → eskiden içerik merkeze çekiliyor ve kenarda yeni beyaz bant açılıyordu; artık iki eksende de kaydırma 0.
+  { ad: 'F18-dolu-kayik', nw: 800, nh: 1200, W: 288, H: 432, pix: beyazZemin([[0.03, 0.05, 0.95, 0.9, [120, 140, 90, 255]]]) },
+  // F19 / F20 kare fotoğraf, ölçek 1, içerik üst / alt kenara değiyor: dikey eksen kabı DOLDURMAZ ama kenara değen içerik
+  // kaydırılmaz (kenar kuralı); yatay eksen dolu → 0.
+  { ad: 'F19-kare-ust-kenar', nw: 1000, nh: 1000, W: 288, H: 432, pix: beyazZemin([[0.04, 0, 0.94, 0.95, K]]) },
+  { ad: 'F20-kare-alt-kenar', nw: 1000, nh: 1000, W: 288, H: 432, pix: beyazZemin([[0.04, 0.05, 0.94, 1, K]]) },
+  // F21 kare fotoğraf, ölçek 1, içerik kenara değmez: yatay eksen dolu → 0; dikey eksen dolmaz → kaydırma KORUNUR.
+  { ad: 'F21-kare-bos-eksen', nw: 1000, nh: 1000, W: 288, H: 432, pix: beyazZemin([[0.04, 0.1, 0.94, 0.95, K]]) },
+  // F22 uzun ince görsel (1:3), ölçek 1: dikey eksen dolu + içerik ÜST kenara değiyor; yatay eksen dolmuyor ve içerik yan
+  // kenarlara değmiyor → yatay kaydırma KORUNUR. Eksenlerin kendi kutusunu aldığını ayırt eder (A1 envanteri A14-B).
+  { ad: 'F22-uzun-ust-kenar', nw: 400, nh: 1200, W: 288, H: 432, pix: beyazZemin([[0.1, 0, 0.8, 0.95, K]]) },
 ];
 
 export type Iz = Record<string, unknown>;

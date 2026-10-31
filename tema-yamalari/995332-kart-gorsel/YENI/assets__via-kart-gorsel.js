@@ -7,7 +7,10 @@
    Ölçülemeyen görselde (CORS, boş, şeffaf) hiçbir şey yapmaz → `object-fit: contain` kalır.
    Kapatma: URL'ye `via_kirp=0` eklenirse betik çalışmaz (önizlemede karşılaştırma için).
    Ayak 2 (29 Eki): koleksiyon/kategori kartı `.vkol2-media img` de aynı seçiciye alındı
-   (sections/via-koleksiyon-v2.liquid). Ölçek sınırları DEĞİŞMEDİ — hedef sığdırmak, büyütmek değil. */
+   (sections/via-koleksiyon-v2.liquid). Ölçek sınırları DEĞİŞMEDİ — hedef sığdırmak, büyütmek değil.
+   A1 (31 Eki, Ayşe md.31 turu): kaydırma görüntü kenarını kap kenarından İÇERİ çekmez. Görsel bir eksende
+   kabı dolduruyorsa (s·d ≥ K) o eksende |kaydırma| ≤ (s·d − K)/2 — s = 1 ve eksen dolu ise 0; içerik kutusu
+   görselin bir kenarına değiyorsa (ölçek tabanda) o eksende kaydırma yok. Aksi hâlde kartın beyazı bir-iki kenarda açılıyordu. */
 (function () {
   if (/[?&]via_kirp=0(?:&|$)/.test(location.search)) return;
   var PAY = 0.06, ESIK = 18, OLCU = 64, EN_AZ = 1, EN_COK = 3;
@@ -36,6 +39,17 @@
     return { x0: x0 / w, y0: y0 / h, x1: (x1 + 1) / w, y1: (y1 + 1) / h, oran: nw / nh };
   }
 
+  // A1 · bir eksendeki kaydırma (kabın yüzdesi). Görsel o eksende kabı dolduruyorsa (sd ≥ K) görüntü kenarı kap
+  // kenarından içeri girmeyecek kadar sınırlı: |kaydırma| ≤ (s·d − K)/2, s = 1'de 0. Ölçek tabanda (s = EN_AZ) ve içerik
+  // görselin bir kenarına değiyorsa o eksende kaydırma yok. Ölçek > 1'de kenara değen içeriği yerinde bırakmak içeriği
+  // keser; orada üstteki sınır görüntü kenarını kap kenarına oturtur (ölçüm: raporlar/995332-a1-kapanis-20261031.md).
+  function sinirla(yuzde, sd, K, a0, a1, s) {
+    if (s === EN_AZ && (a0 <= 0 || a1 >= 1)) return 0;
+    if (sd < K) return yuzde;
+    var m = 100 * (sd - K) / (2 * K);
+    return Math.max(-m, Math.min(m, yuzde));
+  }
+
   function yerlestir(img) {
     var b = img._viaKutu, W = img.offsetWidth, H = img.offsetHeight;
     if (!b || !W || !H) return;
@@ -48,7 +62,7 @@
     var s = Math.min(W * (1 - 2 * PAY) / cw, H * (1 - 2 * PAY) / ch);
     s = Math.max(EN_AZ, Math.min(EN_COK, s));
     img.style.scale = s.toFixed(4);
-    img.style.translate = (-100 * s * (ccx - W / 2) / W).toFixed(3) + '% ' + (-100 * s * (ccy - H / 2) / H).toFixed(3) + '%';
+    img.style.translate = sinirla((-100 * s * (ccx - W / 2) / W), s * dw, W, b.x0, b.x1, s).toFixed(3) + '% ' + sinirla((-100 * s * (ccy - H / 2) / H), s * dh, H, b.y0, b.y1, s).toFixed(3) + '%';
     img.dataset.viaKirp = s.toFixed(2);
   }
 

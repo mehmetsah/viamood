@@ -32,7 +32,7 @@
    {
     "ad": "F5-kose",
     "scale": "2.9642",
-    "translate": "90.316% -54.035%",
+    "translate": "90.316% -48.807%",
     "kirp": "2.96",
     "load": 1
    },
@@ -74,14 +74,14 @@
    {
     "ad": "F11-sol-sutun",
     "scale": "3.0000",
-    "translate": "147.656% 0.000%",
+    "translate": "100.000% 0.000%",
     "kirp": "3.00",
     "load": 1
    },
    {
     "ad": "F12-sola-yasli",
     "scale": "1.7600",
-    "translate": "44.000% 0.000%",
+    "translate": "38.000% 0.000%",
     "kirp": "1.76",
     "load": 1
    },
@@ -118,6 +118,41 @@
     "scale": "1.3200",
     "translate": "-3.143% 14.438%",
     "kirp": "1.32",
+    "load": 1
+   },
+   {
+    "ad": "F18-dolu-kayik",
+    "scale": "1.0000",
+    "translate": "0.000% 0.000%",
+    "kirp": "1.00",
+    "load": 1
+   },
+   {
+    "ad": "F19-kare-ust-kenar",
+    "scale": "1.0000",
+    "translate": "0.000% 0.000%",
+    "kirp": "1.00",
+    "load": 1
+   },
+   {
+    "ad": "F20-kare-alt-kenar",
+    "scale": "1.0000",
+    "translate": "0.000% 0.000%",
+    "kirp": "1.00",
+    "load": 1
+   },
+   {
+    "ad": "F21-kare-bos-eksen",
+    "scale": "1.0000",
+    "translate": "0.000% -1.563%",
+    "kirp": "1.00",
+    "load": 1
+   },
+   {
+    "ad": "F22-uzun-ust-kenar",
+    "scale": "1.0000",
+    "translate": "2.381% 0.000%",
+    "kirp": "1.00",
     "load": 1
    }
   ],
@@ -326,7 +361,7 @@
    {
     "ad": "kademeli",
     "scale": "2.9642",
-    "translate": "90.316% -54.035%",
+    "translate": "90.316% -48.807%",
     "kirp": "2.96",
     "load": 1
    }
@@ -392,7 +427,7 @@
    {
     "ad": "F5-kose",
     "scale": "2.9642",
-    "translate": "90.316% -54.035%",
+    "translate": "90.316% -48.807%",
     "kirp": "2.96",
     "load": 1
    }
@@ -478,7 +513,7 @@
    {
     "ad": "gizli-W0",
     "scale": "2.9642",
-    "translate": "90.316% -54.035%",
+    "translate": "90.316% -48.807%",
     "kirp": "2.96",
     "load": 1
    },

@@ -4,6 +4,8 @@
  * çalışma zamanı dallarının çoğunu göremiyordu (31 Eki dal envanteri: B kipinde 0'dan büyük sağ mutant).
  * Bu çivi betiği sahte DOM + tuval içinde ÇALIŞTIRIR (kart-gorsel-davranis.kosum.ts) ve gözlenebilir çıktıyı
  * d5102cc'nin ölçülmüş davranışına sabitler; yama.py'nin `uygula` kapılarını da gerçek girdilerle koşturur.
+ * A1 (31 Eki): beklenen.json yeniden üretildi — değişen YALNIZ A1'in hedeflediği 6 çıktı (F5 ×4 senaryo · F11 · F12) +
+ * eklenen F18–F22 fikstürleri; ayrıntı raporlar/995332-a1-kapanis-20261031.md.
  * MUTASYON: betikte ya da yama.py'de herhangi bir karar noktası iki yönünden biriyle çevrilirse (md5.json yeniden
  * üretilse bile) bu dosyadaki en az bir iddia KIRILIR — envanter: raporlar/995332-sah-imza2-20261031.md.
  */
@@ -11,7 +13,7 @@ import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { izler, type Iz } from './kart-gorsel-davranis.kosum';
+import { FIKSTUR, izler, type Iz } from './kart-gorsel-davranis.kosum';
 
 const P = path.join(__dirname, '..', 'tema-yamalari', '995332-kart-gorsel');
 const JS = readFileSync(path.join(P, 'YENI', 'assets__via-kart-gorsel.js'), 'utf8');
@@ -54,6 +56,32 @@ describe('#995332 E8 · via-kart-gorsel.js davranışı', () => {
 
   it('contain eşitlik kenarı (W / oran === H): sığdırma dalı yalnız dh > H iken alınır', () => {
     expect(ad('S1', 'F17-esitlik-kenari')).toMatchObject({ scale: '1.3200', translate: '-3.143% 14.438%' });
+  });
+
+  it('A1 · ölçek tabanda (s = EN_AZ) ve eksen dolu ⇒ o eksende translate 0; kaydırma görüntü kenarını kap kenarından içeri çekmez', () => {
+    // Ayşe md.31 turu (31 Eki): s = 1'de içerik merkeze çekiliyor, kabı dolduran fotoğrafın bir-iki kenarında kartın beyazı açılıyordu.
+    expect(ad('S1', 'F18-dolu-kayik')).toMatchObject({ scale: '1.0000', translate: '0.000% 0.000%' }); // eski: 1.163% 2.344%
+    expect(ad('S1', 'F2-dolu')).toMatchObject({ scale: '1.0000', translate: '0.000% 0.000%' });
+    // kenara değen içerik (s = 1): o eksende kaydırma yok — dolmayan eksende bile
+    expect(ad('S1', 'F19-kare-ust-kenar').translate).toBe('0.000% 0.000%'); // eski: 0.781% 1.563%
+    expect(ad('S1', 'F20-kare-alt-kenar').translate).toBe('0.000% 0.000%'); // eski: 0.781% -1.563%
+    // dolmayan ve kenara değmeyen eksende kaydırma KORUNUR (contain'in boşluğunda içerik ortalanır)
+    expect(ad('S1', 'F21-kare-bos-eksen').translate).toBe('0.000% -1.563%');
+    // her eksen KENDİ kutusuna bakar: üst kenara değen içerik yatay kaydırmayı sıfırlamaz
+    expect(ad('S1', 'F22-uzun-ust-kenar')).toMatchObject({ scale: '1.0000', translate: '2.381% 0.000%' });
+    // s > 1: kaydırma |t| ≤ (s·d − K)/2 ile sınırlı — görüntü kenarı kap kenarından içeri girmez
+    expect(ad('S1', 'F5-kose').translate).toBe('90.316% -48.807%'); // eski: 90.316% -54.035% (alt kenarda beyaz açılıyordu)
+    // s > 1 ve içerik kenara değiyor: kaydırma sıfırlanmaz, sınıra çekilir — içerik kabın kenarına oturur, KESİLMEZ
+    expect(ad('S1', 'F11-sol-sutun')).toMatchObject({ scale: '3.0000', translate: '100.000% 0.000%' }); // 0 olsaydı içerik kabın dışında kalırdı
+    expect(ad('S1', 'F12-sola-yasli')).toMatchObject({ scale: '1.7600', translate: '38.000% 0.000%' });
+    // genel değişmez: her çıktıda |kaydırma| ≤ (s·d − K)/2 (dolu eksen) — fikstürün kendi geometrisiyle
+    for (const t of FIKSTUR) {
+      const c = ad('S1', t.ad); if (!c || c.scale === null || !t.nh) continue;
+      const s = Number(c.scale), o = t.nw / t.nh; let dw = t.W, dh = t.W / o; if (dh > t.H) { dh = t.H; dw = t.H * o; }
+      const [tx, ty] = c.translate!.split(' ').map((v) => Number(v.replace('%', '')));
+      if (s * dw >= t.W) expect(Math.abs(tx!), `${t.ad} x`).toBeLessThanOrEqual((100 * (s * dw - t.W)) / (2 * t.W) + 0.001);
+      if (s * dh >= t.H) expect(Math.abs(ty!), `${t.ad} y`).toBeLessThanOrEqual((100 * (s * dh - t.H)) / (2 * t.H) + 0.001);
+    }
   });
 
   it('kapatma anahtarı yalnız tam "via_kirp=0" parametresinde çalışır', () => {
