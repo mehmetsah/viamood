@@ -28,7 +28,7 @@ function kos(betik: string, o: { damgaVar?: boolean; kuruCikis?: number; uygulaC
   return { cikis, izler, damgaVar: existsSync(damga), damga: existsSync(damga) ? readFileSync(damga, 'utf8') : '', log: existsSync(log) ? readFileSync(log, 'utf8') : '' };
 }
 
-for (const betik of ['sss-ilk-20-kur.sh', 'aciklama-ic-not-kur.sh', 'sss-dalga2-kur.sh', 'aciklama-ic-baslik-kur.sh', 'sss-dalga3-kur.sh', 'aciklama-baslik-tekrar-kur.sh', 'sss-dalga4-kur.sh', 'aciklama-pazar-blok-kur.sh', 'aciklama-baslik-tekrar-2-kur.sh', 'sss-dalga5-kur.sh', 'aciklama-pazar-blok-2-kur.sh', 'aciklama-bas-blok-kur.sh', 'sss-dalga7-kur.sh', 'aciklama-duzeltme-kur.sh', 'aciklama-pilot-kur.sh', 'aciklama-dalga2-kur.sh', 'aciklama-degistir-kur.sh', 'aciklama-kalan-kur.sh', 'aciklama-jada-olcu-kur.sh', 'sss-dalga8-kur.sh', 'sss-jada-boyut-kur.sh']) {
+for (const betik of ['sss-ilk-20-kur.sh', 'aciklama-ic-not-kur.sh', 'sss-dalga2-kur.sh', 'aciklama-ic-baslik-kur.sh', 'sss-dalga3-kur.sh', 'aciklama-baslik-tekrar-kur.sh', 'sss-dalga4-kur.sh', 'aciklama-pazar-blok-kur.sh', 'aciklama-baslik-tekrar-2-kur.sh', 'sss-dalga5-kur.sh', 'aciklama-pazar-blok-2-kur.sh', 'aciklama-bas-blok-kur.sh', 'sss-dalga7-kur.sh', 'aciklama-duzeltme-kur.sh', 'aciklama-pilot-kur.sh', 'aciklama-dalga2-kur.sh', 'aciklama-degistir-kur.sh', 'aciklama-kalan-kur.sh', 'aciklama-jada-olcu-kur.sh', 'sss-dalga8-kur.sh', 'sss-jada-boyut-kur.sh', 'sss-iade-dusur-kur.sh']) {
   describe(betik, () => {
     it('damga VARKEN hiçbir komut koşmaz, damgaya dokunulmaz', () => {
       const r = kos(betik, { damgaVar: true });
@@ -94,6 +94,8 @@ it('deploy.sh iki kancayı eposta-akis kalıbıyla (best-effort) çağırır', (
   expect(s.indexOf('aciklama-jada-olcu-kur.sh')).toBeLessThan(s.indexOf('sss-dalga8-kur.sh')); // metin düzeltmeleri → dalga 8
   expect(s).toContain('bash scripts/sss-jada-boyut-kur.sh || echo');
   expect(s.indexOf('aciklama-jada-olcu-kur.sh')).toBeLessThan(s.indexOf('sss-jada-boyut-kur.sh')); // açıklama ölçüsü → SSS ölçüsü
+  expect(s).toContain('bash scripts/sss-iade-dusur-kur.sh || echo');
+  expect(s.indexOf('sss-jada-boyut-kur.sh')).toBeLessThan(s.indexOf('sss-iade-dusur-kur.sh'));
 });
 
 it('dalga 2 girdisi: 50 ürün, ürün başına 3–4 soru, kargo/iade sorusu yok, handle biçimi geçerli, ilk 20 ile çakışma yok', () => {
