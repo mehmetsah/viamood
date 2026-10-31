@@ -20,3 +20,12 @@
 - Bağ: bu paketin kategori ÖNCESİ'si (fbd001dd) = #995388 SONRASI = canlıdaki dosya (md5 ile ölçüldü). Çivi bunu sabitliyor.
 - Canlıya alma sırası değişmedi: #995388 zaten canlı; `KIP=CANLI bash calistir.sh` 4 dosyayı basar.
 - Önizleme 197044142212 ölçümü (4 kategori × 1280/768/390): içerik kesilen kart 0, taşma 0, hiza farkı 0 (sıra-sabit yüklemeler). Canlı md5 değişmedi.
+
+## E1 kapanışı · EN_AZ 0,85 → 1 — 31 Eki 2026 20:28 TSİ (ŞAH)
+- Sebep (ŞAH md.31 imza turu, 31 Eki): `EN_AZ = 0.85` kenardan kenara dolu görselleri ~%88'e küçültüp etrafında yapay beyaz paspartu oluşturuyordu (141/240 görsel düz contain'in altında; Pola beyaz oranı medyanı %3 → %25).
+- Kod 74c2ddd: `YENI/assets__via-kart-gorsel.js` satır 13 `EN_AZ = 1` — başka sabit/dosya değişmedi. JS md5 28ac48f7 → **1ff0b65f** (`md5.json` yama.py ile yeniden üretildi; ÖNCESİ/SONRASI 3 dosya aynen).
+- Önizleme 197044142212: `KIP=ONIZLEME ONIZLEME_ID=197044142212 SIFIRLA=1` — canlı = ÖNCESİ kapısı ✓, 4 dosya ÖNCESİ'ne sıfırlandı, PUT 200 ×4 + GET-back ✓ ×4. Bağımsız GET: önizleme 81c6fe64 · 650ac685 · 5452b172 · 1ff0b65f; CANLI c7f54c89 · 0d5fc0a3 · fbd001dd · JS 404 (YAZILMADI).
+- Ölçüm (5 sayfa × 390/768/1280, 240 görsel, servis edilen JS'te EN_AZ 1 doğrulandı): ölçek < 1 **0/240** · kesik > %1 **0** · taşma **0** · Pola beyaz medyanı %3,7/3,5/3,5 (canlı %3,3/3,5/3,5). Ham veri: `raporlar/995332-kanit/e1-kapanis/olcum.json`.
+- Açık bulgu E6 (bu commit'te düzeltilmedi): 1280'de ızgara «uzaklaştır» geçişinden hemen sonra 3/32 kartta ≤ %1,96 kesik (betik kaydırmayı px yazıyor, kap boyunu izlemiyor); pencere boyutu değişince 0. Kaydırmayı % yazan tek satırlık düzeltme benzetimde 0/32 verdi.
+- tsc: PR yeni hata eklemiyor (taban 61 = dal 61, PR dosyalarında 0) — taban origin/main 1e9a375, 31 Eki ölçümü.
+- md.31 imzası bu turda YAZILMADI; canlıya basım YOK (müşteri kararı bekleniyor).
