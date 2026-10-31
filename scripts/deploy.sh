@@ -280,6 +280,8 @@ bash scripts/eposta-akis-kur.sh || echo "  (eposta-akis kurulum adımı atlandı
 bash scripts/sss-ilk-20-kur.sh || echo "  (sss-ilk-20 adımı atlandı)"
 bash scripts/aciklama-ic-not-kur.sh || echo "  (aciklama-ic-not adımı atlandı)"
 bash scripts/sss-dalga2-kur.sh || echo "  (sss-dalga2 adımı atlandı)"
+bash scripts/aciklama-ic-baslik-kur.sh || echo "  (aciklama-ic-baslik adımı atlandı)"
+bash scripts/sss-dalga3-kur.sh || echo "  (sss-dalga3 adımı atlandı)"
 
 echo ""
 echo "════════════════════════════════════════════"
