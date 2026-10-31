@@ -28,7 +28,7 @@ function kos(betik: string, o: { damgaVar?: boolean; kuruCikis?: number; uygulaC
   return { cikis, izler, damgaVar: existsSync(damga), damga: existsSync(damga) ? readFileSync(damga, 'utf8') : '', log: existsSync(log) ? readFileSync(log, 'utf8') : '' };
 }
 
-for (const betik of ['sss-ilk-20-kur.sh', 'aciklama-ic-not-kur.sh', 'sss-dalga2-kur.sh', 'aciklama-ic-baslik-kur.sh', 'sss-dalga3-kur.sh', 'aciklama-baslik-tekrar-kur.sh', 'sss-dalga4-kur.sh', 'aciklama-pazar-blok-kur.sh', 'aciklama-baslik-tekrar-2-kur.sh', 'sss-dalga5-kur.sh', 'aciklama-pazar-blok-2-kur.sh', 'aciklama-bas-blok-kur.sh', 'sss-dalga7-kur.sh', 'aciklama-duzeltme-kur.sh', 'aciklama-pilot-kur.sh', 'aciklama-dalga2-kur.sh', 'aciklama-degistir-kur.sh', 'aciklama-kalan-kur.sh', 'aciklama-jada-olcu-kur.sh']) {
+for (const betik of ['sss-ilk-20-kur.sh', 'aciklama-ic-not-kur.sh', 'sss-dalga2-kur.sh', 'aciklama-ic-baslik-kur.sh', 'sss-dalga3-kur.sh', 'aciklama-baslik-tekrar-kur.sh', 'sss-dalga4-kur.sh', 'aciklama-pazar-blok-kur.sh', 'aciklama-baslik-tekrar-2-kur.sh', 'sss-dalga5-kur.sh', 'aciklama-pazar-blok-2-kur.sh', 'aciklama-bas-blok-kur.sh', 'sss-dalga7-kur.sh', 'aciklama-duzeltme-kur.sh', 'aciklama-pilot-kur.sh', 'aciklama-dalga2-kur.sh', 'aciklama-degistir-kur.sh', 'aciklama-kalan-kur.sh', 'aciklama-jada-olcu-kur.sh', 'sss-dalga8-kur.sh']) {
   describe(betik, () => {
     it('damga VARKEN hiçbir komut koşmaz, damgaya dokunulmaz', () => {
       const r = kos(betik, { damgaVar: true });
@@ -90,6 +90,8 @@ it('deploy.sh iki kancayı eposta-akis kalıbıyla (best-effort) çağırır', (
   expect(s.indexOf('aciklama-degistir-kur.sh')).toBeLessThan(s.indexOf('aciklama-kalan-kur.sh'));
   expect(s).toContain('bash scripts/aciklama-jada-olcu-kur.sh || echo');
   expect(s.indexOf('aciklama-kalan-kur.sh')).toBeLessThan(s.indexOf('aciklama-jada-olcu-kur.sh'));
+  expect(s).toContain('bash scripts/sss-dalga8-kur.sh || echo');
+  expect(s.indexOf('aciklama-jada-olcu-kur.sh')).toBeLessThan(s.indexOf('sss-dalga8-kur.sh')); // metin düzeltmeleri → dalga 8
 });
 
 it('dalga 2 girdisi: 50 ürün, ürün başına 3–4 soru, kargo/iade sorusu yok, handle biçimi geçerli, ilk 20 ile çakışma yok', () => {
@@ -192,6 +194,36 @@ it('dalga 7 girdisi: 69 ürün (tahmin ~85 zorlanmadı), 2–4 soru, CEVAP AÇIK
       expect(cevapUygunMu(q.soru, q.cevap), `${x.handle} · ${q.soru} → ${q.cevap}`).toEqual({ ok: true });
       expect(UYGULANMAYAN).not.toContain(q.soru);
       expect((q.soru + ' ' + q.cevap).toLocaleLowerCase('tr')).not.toMatch(/kargo|teslimat|iade|doğrula|teyit|sipariş/);
+    }
+  }
+});
+
+it('dalga 8 girdisi: 9 ürün (havuz 17, hedef zorlanmadı), 2–4 soru, CEVAP GÜNCEL AÇIKLAMADAN BİREBİR, eksen kapısı, asorti/karakter sorusu yok, önceki 318 SSS\'li ürünle çakışma 0', () => {
+  const satir = <T,>(f: string) => readFileSync(path.join(KOK, 'veri', f), 'utf8').trim().split('\n').map((l) => JSON.parse(l) as T);
+  type S = { handle: string; sss: Array<{ soru: string; cevap: string }> };
+  const d8 = satir<S>('994831-sss-dalga8.jsonl');
+  const kaynak = new Map(satir<{ handle: string; baslik: string; html: string }>('994831-sss-dalga8-kaynak.jsonl').map((x) => [x.handle, x]));
+  const onceki = new Set((JSON.parse(readFileSync(path.join(KOK, 'veri', '994831-sss-dalga8-onceki.json'), 'utf8')) as { handles: string[] }).handles);
+  const dosyadan = ['994831-sss-ilk-20.jsonl', '994831-sss-dalga2.jsonl', '994831-sss-dalga3.jsonl', '994831-sss-dalga4.jsonl', '994831-sss-dalga5.jsonl', '994831-sss-dalga7.jsonl'].flatMap((f) => satir<S>(f)).map((x) => x.handle);
+  expect(onceki.size).toBe(318);
+  for (const h of dosyadan) expect(onceki.has(h), h).toBe(true);
+  expect(d8).toHaveLength(9);
+  expect(new Set(d8.map((x) => x.handle)).size).toBe(9);
+  expect(d8.filter((x) => onceki.has(x.handle))).toHaveLength(0);
+  for (const x of d8) {
+    expect(x.handle).toMatch(/^[a-z0-9-]+$/);
+    expect(x.sss.length).toBeGreaterThanOrEqual(2);
+    expect(x.sss.length).toBeLessThanOrEqual(4);
+    expect(new Set(x.sss.map((q) => q.soru)).size).toBe(x.sss.length);
+    const k = kaynak.get(x.handle)!;
+    expect(k, x.handle).toBeDefined();
+    const asortiUrun = /değiş|rastgele|asorti|stok durum/.test(duzMetin(k.html).toLocaleLowerCase('tr'));
+    for (const q of x.sss) {
+      expect(duzMetin(k.html), `${x.handle} · ${q.soru}`).toContain(q.cevap);
+      expect(cevapUygunMu(q.soru, q.cevap), `${x.handle} · ${q.soru} → ${q.cevap}`).toEqual({ ok: true });
+      expect(UYGULANMAYAN).not.toContain(q.soru);
+      expect((q.soru + ' ' + q.cevap).toLocaleLowerCase('tr')).not.toMatch(/kargo|teslimat|iade|doğrula|teyit|sipariş|değiş|rastgele|asorti|hangi (figür|karakter)/);
+      if (asortiUrun) expect(q.soru).not.toBe('Pakette neler var?');
     }
   }
 });
