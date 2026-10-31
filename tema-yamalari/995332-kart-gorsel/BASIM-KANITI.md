@@ -29,3 +29,12 @@
 - Açık bulgu E6 (bu commit'te düzeltilmedi): 1280'de ızgara «uzaklaştır» geçişinden hemen sonra 3/32 kartta ≤ %1,96 kesik (betik kaydırmayı px yazıyor, kap boyunu izlemiyor); pencere boyutu değişince 0. Kaydırmayı % yazan tek satırlık düzeltme benzetimde 0/32 verdi.
 - tsc: PR yeni hata eklemiyor (taban 61 = dal 61, PR dosyalarında 0) — taban origin/main 1e9a375, 31 Eki ölçümü.
 - md.31 imzası bu turda YAZILMADI; canlıya basım YOK (müşteri kararı bekleniyor).
+
+## E6 kapanışı · kaydırma px → % — 31 Eki 2026 21:02 TSİ (ŞAH)
+- Sebep (E1 kapanışında ölçüldü): betik kaydırmayı px yazıyor ve kap boyunu izlemiyordu; 1280'de ızgara «uzaklaştır» geçişinde (kap 288 → 105,6, pencere boyutu değişmeden) 3/32 kartta ≤ %1,96 kesik. EN_AZ 0,85'in küçültme payı bunu örtüyordu.
+- Kod 91d8a5f: `YENI/assets__via-kart-gorsel.js` satır 51 — `translate` görselin kendi kutusuna göre % (`-100*s*(ccx-W/2)/W`); kap oranı sabit (2/3) olduğundan kap genişliği değişse de kaydırma doğru kalır. `EN_AZ = 1` dahil başka satır değişmedi. Dosya E1 turundaki benzetim dosyasıyla (`e6-benzetim/js-enaz1-yuzde.js`) bayt bayt aynı (cmp). JS md5 1ff0b65f → **56315963** (`md5.json` yama.py ile; ÖNCESİ/SONRASI 3 dosya aynen).
+- Önizleme 197044142212: `KIP=ONIZLEME ONIZLEME_ID=197044142212 SIFIRLA=1` — canlı = ÖNCESİ kapısı ✓, 4 dosya ÖNCESİ'ne sıfırlandı, PUT 200 ×4 + GET-back ✓ ×4. Bağımsız GET: önizleme 81c6fe64 · 650ac685 · 5452b172 · 56315963; CANLI c7f54c89 · 0d5fc0a3 · fbd001dd · JS 404 (YAZILMADI).
+- Ölçüm: ızgara «uzaklaştır» 1280 geçiş sonrası **0/32** (iki ayrı koşu, en çok %0,39); 5 sayfa × 390/768/1280, 240 görsel: ölçek < 1 **0** · kesik > %1 **0** · taşma **0** · beyaz ve görsel boyu medyanı 15/15 satırda d18f720 paketiyle birebir (fark 0,0) · hover 1280 ilk 8 kart en çok %0,38. Servis edilen JS'te kaydırma %, 240/240 görselin hesaplanmış translate'i %. Ham veri: `raporlar/995332-kanit/e6-kapanis/`.
+- Çivi 8/8 (+ «E6 · kaydırma YÜZDE biriminde yazılır, px yazılmaz»); mutasyon (JS px + md5.json yeniden = d18f720 paketi) → yalnız E6 iddiası kırmızı.
+- tsc: PR yeni hata eklemiyor (taban 61 = dal 61, PR dosyalarında 0) — taban origin/main 9b674f2, 31 Eki ölçümü.
+- md.31 imzası bu turda YAZILMADI; canlıya basım YOK (müşteri kararı bekleniyor).
