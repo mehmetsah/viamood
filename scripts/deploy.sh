@@ -298,6 +298,7 @@ bash scripts/aciklama-kalan-kur.sh || echo "  (aciklama-kalan adımı atlandı)"
 bash scripts/aciklama-jada-olcu-kur.sh || echo "  (aciklama-jada-olcu adımı atlandı)"
 bash scripts/sss-dalga8-kur.sh || echo "  (sss-dalga8 adımı atlandı)"
 bash scripts/sss-jada-boyut-kur.sh || echo "  (sss-jada-boyut adımı atlandı)"
+bash scripts/sss-iade-dusur-kur.sh || echo "  (sss-iade-dusur adımı atlandı)"
 
 echo ""
 echo "════════════════════════════════════════════"
