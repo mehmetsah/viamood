@@ -3,7 +3,8 @@
  * Paket (ÖNCESİ → SONRASI) md5'leri, tek script satırı, kap oranına dokunulmadığı,
  * yeni renk eklenmediği ve betiğin kapatma anahtarı (via_kirp=0) ölçülür.
  * MUTASYON: ek-blok.css'e `aspect-ratio` ya da bir renk yazılırsa ya da betikten
- * `via_kirp=0` kapısı silinirse ilgili iddia KIRILIR.
+ * `via_kirp=0` kapısı silinirse ilgili iddia KIRILIR. E1: betikte `EN_AZ` 1'in altına
+ * çekilirse (görsel contain'in altına küçülür → yapay beyaz paspartu) son iddia KIRILIR.
  */
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
@@ -68,5 +69,14 @@ describe('#995332 kart görseli yama paketi', () => {
     expect(js).not.toMatch(/fetch\(|XMLHttpRequest|\.src\s*=/);
     expect(js).toMatch(/style\.scale/);
     expect(js).not.toMatch(/style\.transform\s*=/); // tema hover transform'unu ezmez
+  });
+
+  it('E1 · betik görseli contain\'in altına KÜÇÜLTMEZ (EN_AZ >= 1) — dolu görselde yapay beyaz paspartu yok', () => {
+    // 31 Eki ölçümü: EN_AZ = 0.85 iken 141/240 görsel ~%88'e küçüldü, Pola beyaz oranı %3 → %25.
+    const js = oku('YENI/assets__via-kart-gorsel.js');
+    const tanim = [...js.matchAll(/\bEN_AZ\s*=\s*([0-9.]+)/g)];
+    expect(tanim).toHaveLength(1);
+    expect(Number(tanim[0]![1])).toBeGreaterThanOrEqual(1);
+    expect(js).toMatch(/s\s*=\s*Math\.max\(EN_AZ,\s*Math\.min\(EN_COK,\s*s\)\)/); // alt sınır gerçekten uygulanıyor
   });
 });
