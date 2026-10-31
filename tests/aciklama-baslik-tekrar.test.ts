@@ -4,7 +4,7 @@
  * kaldırılırsa ilgili iddialar KIRILIR.
  */
 import { describe, expect, it } from 'vitest';
-import { adParagrafiMi, karar, tekrarCalistir, tekrarSoy, type KutukSatiri } from '../src/lib/aciklama-baslik-tekrar';
+import { adParagrafiMi, AZAMI_SOZCUK, ESIK, karar, sonSozcukFiilMi, tekrarCalistir, tekrarSoy, type KutukSatiri } from '../src/lib/aciklama-baslik-tekrar';
 
 // Canlı biçim (31 Eki 2026, iç başlık temizliği SONRASI, pola-bambu-erkek-cocuk-arakonc-corap-speed-motorsiklet-6li-set, kısaltıldı)
 const BASLIK = "Pola Bambu Erkek Çocuk Arakonç Çorap Speed - Motorsiklet 6'lı SET";
@@ -70,4 +70,33 @@ describe('metin kapısı ve akış', () => {
     expect((await tekrarCalistir(u(), dep, { uygula: true })).soyuldu).toBe(1); expect(kutuk.at(-1)?.onceHtml).toBe(P1 + P2 + GOVDE);
     expect((await tekrarCalistir(u(), dep, { uygula: true })).soyuldu).toBe(0);
   });
+});
+
+describe('ADIM 2 — dört yanlış pozitif (fiil ölçütü SON sözcükte; eşik değişmedi)', () => {
+  // Canlı biçim, 31 Eki 2026 (kısaltılmadı). Eski sezgi «Sneaker»/«Super» içindeki -er ekini fiil sanıyordu.
+  const DORT: Array<[string, string, string, string]> = [
+    ['pola-bambu-erkek-sneaker-corap-duz-renk-siyah-6li-set', "Pola Bambu Erkek Sneaker Çorap Düz Renk Siyah 6'lı SET", "Pola Bambu Erkek Sneaker Çorap Düz Renk Siyah 6'lı Set | 40-44 Beden", "Pola Bambu Erkek Sneaker Çorap Düz Renk Siyah 6'lı Set"],
+    ['pola-bambu-kadin-sneaker-corap-duz-renk-6li-set', "Pola Bambu Kadın Sneaker Çorap Düz Renk 6'lı SET", "Pola Bambu Kadın Sneaker Çorap Düz Renk Beyaz 6'lı Set | 36-40 Beden", "Pola Bambu Kadın Sneaker Çorap Düz Renk Beyaz 6'lı Set"],
+    ['pola-kiz-bebek-super-girl-kelebek-desenli-dizalti-corap-dikissiz-burun-4lu-set', "Pola Kız Bebek Super Girl Kelebek Desenli Dizaltı Çorap Dikişsiz Burun 4'lü SET", "Pola Kız Bebek Super Girl Kelebek Desenli Dizaltı Çorap Dikişsiz Burun 4'lü Set Pembe &amp; Gri &amp; Beyaz &amp; Lacivert", "Pola Kız Bebek Super Girl Kelebek Desenli Dizaltı Çorap Dikişsiz Burun 4'lü Set"],
+    ['pola-kiz-cocuk-super-girl-kelebek-desenli-dizalti-corap-dikissiz-burun-4lu-set', "Pola Kız Çocuk Super Girl Kelebek Desenli Dizaltı Çorap Dikişsiz Burun 4'lü SET", "Pola Kız Çocuk Super Girl Kelebek Desenli Dizaltı Çorap Dikişsiz Burun 4'lü Set Pembe &amp; Gri &amp; Beyaz &amp; Lacivert", "Pola Kız Çocuk Super Girl Kelebek Desenli Dizaltı Çorap Dikişsiz Burun 4'lü Set"],
+  ];
+  const GOV = '<p>Pola Concept bambu çorap seti, günlük kullanım için tasarlanmıştır. Dikişsiz burun yapısına sahiptir.</p><p>Öne Çıkanlar</p>';
+  for (const [h, baslik, a, b] of DORT) {
+    it(`${h}: iki ad paragrafı silinir, gövde aynen kalır`, () => {
+      const k = karar(h, baslik, `<p>${a}</p><p>${b}</p>` + GOV);
+      expect(k).toMatchObject({ durum: 'soyulacak', html: GOV });
+    });
+  }
+  it('Sneaker/Super sözcüğü fiil sayılmaz; son sözcükteki gerçek çekim eki sayılır', () => {
+    expect(sonSozcukFiilMi("Pola Bambu Erkek Sneaker Çorap Düz Renk Siyah 6'lı Set")).toBe(false);
+    expect(sonSozcukFiilMi('Pola Kız Bebek Super Girl Kelebek Desenli 4lü Set')).toBe(false);
+    expect(sonSozcukFiilMi('Pola Concept çorap günlük kullanım için tasarlanmıştır')).toBe(true);
+    expect(sonSozcukFiilMi('Esnek yapısı ayağa uyum sağlar.')).toBe(true);
+  });
+  it(`güvenlik ağı: ${AZAMI_SOZCUK} sözcükten uzun, noktasız, yüksek örtüşmeli paragraf SİLİNMEZ`, () => {
+    const B = "Pola Bambu Erkek Sneaker Çorap Düz Renk Siyah 6'lı SET";
+    const uzun = Array(3).fill("Pola Bambu Erkek Sneaker Çorap Düz Renk Siyah 6'lı Set").join(' ');
+    expect(adParagrafiMi(uzun, B)).toMatchObject({ evet: false });
+  });
+  it('örtüşme eşiği 0,6 DEĞİŞMEDİ', () => { expect(ESIK).toBe(0.6); });
 });
