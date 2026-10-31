@@ -88,9 +88,16 @@ function tarihSuz(ham: unknown): string {
  * ekibi "google / organic" bekliyor. Ham alan adı `yonlendiren` alanında AYNEN kalır; yalnız
  * kaynak/ortam okunur ada çevrilir. Listede olmayan alan adı eskisi gibi (alan adı / referral).
  * Sıra önemlidir: mail.google.com e-postadır, arama değil — google kuralından ÖNCE gelir.
+ *
+ * #995582 · ÖLÇÜLEN (31 Eki 2026, Elif): #1278 ve #1282 `kaynak-l.wl.co` ile düştü. `l.wl.co`,
+ * WhatsApp'ın dış bağlantı yönlendiricisidir (l.instagram.com'un karşılığı) → whatsapp / social.
+ * Android uygulamaları yönlendireni `android-app://<paket>/…` olarak verir; tema yakalayıcı paket
+ * adını alan adı gibi alır. Google uygulaması (arama) ve Gmail paketi burada okunur ada çevrilir.
+ * Bu ikisi sahada henüz görülmedi, bilinen tarayıcı davranışına göre eklendi.
  */
 const YONLENDIREN_KAYNAGI: Array<[RegExp, string, string]> = [
-  [/^mail\.google\.com$/, 'gmail', 'email'],
+  [/^mail\.google\.com$|^com\.google\.android\.gm$/, 'gmail', 'email'],
+  [/^com\.google\.android\.googlequicksearchbox$/, 'google', 'organic'],
   [/(^|\.)google\.[a-z]{2,3}(\.[a-z]{2})?$/, 'google', 'organic'],
   [/(^|\.)bing\.com$/, 'bing', 'organic'],
   [/(^|\.)yandex\.(com|com\.tr|ru)$/, 'yandex', 'organic'],
@@ -102,7 +109,7 @@ const YONLENDIREN_KAYNAGI: Array<[RegExp, string, string]> = [
   [/(^|\.)tiktok\.com$/, 'tiktok', 'social'],
   [/(^|\.)youtube\.com$/, 'youtube', 'social'],
   [/(^|\.)pinterest\.(com|com\.tr)$/, 'pinterest', 'social'],
-  [/^(wa\.me|(web|api)\.whatsapp\.com)$/, 'whatsapp', 'social'],
+  [/^(wa\.me|l\.wl\.co|(web|api)\.whatsapp\.com)$/, 'whatsapp', 'social'],
 ];
 
 export function yonlendirenKaynagi(alanAdi: string): { kaynak: string; ortam: string } | null {
