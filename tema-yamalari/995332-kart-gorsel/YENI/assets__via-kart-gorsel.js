@@ -48,7 +48,7 @@
     var s = Math.min(W * (1 - 2 * PAY) / cw, H * (1 - 2 * PAY) / ch);
     s = Math.max(EN_AZ, Math.min(EN_COK, s));
     img.style.scale = s.toFixed(4);
-    img.style.translate = (-s * (ccx - W / 2)).toFixed(1) + 'px ' + (-s * (ccy - H / 2)).toFixed(1) + 'px';
+    img.style.translate = (-100 * s * (ccx - W / 2) / W).toFixed(3) + '% ' + (-100 * s * (ccy - H / 2) / H).toFixed(3) + '%';
     img.dataset.viaKirp = s.toFixed(2);
   }
 

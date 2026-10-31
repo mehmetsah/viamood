@@ -4,7 +4,8 @@
  * yeni renk eklenmediği ve betiğin kapatma anahtarı (via_kirp=0) ölçülür.
  * MUTASYON: ek-blok.css'e `aspect-ratio` ya da bir renk yazılırsa ya da betikten
  * `via_kirp=0` kapısı silinirse ilgili iddia KIRILIR. E1: betikte `EN_AZ` 1'in altına
- * çekilirse (görsel contain'in altına küçülür → yapay beyaz paspartu) son iddia KIRILIR.
+ * çekilirse (görsel contain'in altına küçülür → yapay beyaz paspartu) E1 iddiası KIRILIR.
+ * E6: kaydırma `px` ile yazılırsa (kap küçülünce bayatlar → ızgara «uzaklaştır»da kesik) E6 iddiası KIRILIR.
  */
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
@@ -78,5 +79,17 @@ describe('#995332 kart görseli yama paketi', () => {
     expect(tanim).toHaveLength(1);
     expect(Number(tanim[0]![1])).toBeGreaterThanOrEqual(1);
     expect(js).toMatch(/s\s*=\s*Math\.max\(EN_AZ,\s*Math\.min\(EN_COK,\s*s\)\)/); // alt sınır gerçekten uygulanıyor
+  });
+
+  it('E6 · kaydırma YÜZDE biriminde yazılır, px yazılmaz — kap küçülünce kaydırma bayatlamaz', () => {
+    // 31 Eki ölçümü: px kaydırma, 1280 «uzaklaştır» geçişinde (kap 288 → 105,6, betik yeniden koşmaz) 3/32 kartta ≤ %2 kesik.
+    // % görselin kendi kutusuna göredir; kap oranı sabit (2/3) olduğundan genişlik değişse de kaydırma doğru kalır.
+    const js = oku('YENI/assets__via-kart-gorsel.js');
+    const atama = js.split('\n').filter((s) => /style\.translate\s*=/.test(s));
+    expect(atama).toHaveLength(1);
+    expect(atama[0]).not.toMatch(/px/);
+    expect(atama[0]).toMatch(/'%\s?'/);
+    expect(atama[0]).toMatch(/\/\s*W\)/); // yatay pay kap genişliğine bölünür
+    expect(atama[0]).toMatch(/\/\s*H\)/); // dikey pay kap yüksekliğine bölünür
   });
 });
