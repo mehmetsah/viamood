@@ -275,6 +275,11 @@ bash scripts/hesap-ssl.sh || echo "  (hesap-ssl adımı atlandı)"
 # origin/main'den çekip koşuyor (kanıt: push sonrası /api/health buildId eşitlendi).
 bash scripts/eposta-akis-kur.sh || echo "  (eposta-akis kurulum adımı atlandı)"
 
+# Onaylı tek seferlik içerik işleri (#994831 SSS ilk 20 · #994995 iç not temizliği) — AYNI KALIP:
+# damga varsa dokunmaz; yoksa KURU → (temizse) UYGULA → damga. Ayrıntı: scripts/_damgali-kur.sh.
+bash scripts/sss-ilk-20-kur.sh || echo "  (sss-ilk-20 adımı atlandı)"
+bash scripts/aciklama-ic-not-kur.sh || echo "  (aciklama-ic-not adımı atlandı)"
+
 echo ""
 echo "════════════════════════════════════════════"
 echo "  ✓ Deploy tamam: $OLD_COMMIT → $NEW_COMMIT"
