@@ -293,6 +293,8 @@ bash scripts/sss-dalga7-kur.sh || echo "  (sss-dalga7 adımı atlandı)"
 bash scripts/aciklama-duzeltme-kur.sh || echo "  (aciklama-duzeltme adımı atlandı)"
 bash scripts/aciklama-pilot-kur.sh || echo "  (aciklama-pilot adımı atlandı)"
 bash scripts/aciklama-dalga2-kur.sh || echo "  (aciklama-dalga2 adımı atlandı)"
+bash scripts/aciklama-degistir-kur.sh || echo "  (aciklama-degistir adımı atlandı)"
+bash scripts/aciklama-kalan-kur.sh || echo "  (aciklama-kalan adımı atlandı)"
 
 echo ""
 echo "════════════════════════════════════════════"
