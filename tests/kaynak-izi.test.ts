@@ -298,44 +298,45 @@ describe('#994962 · bilinen yönlendiren → okunur kaynak (UTM yokken)', () =>
   });
 });
 
+/** Kapıda ödeme siparişinin Shopify'a giden gövdesi (fetch sahte — gerçek sipariş AÇILMAZ). */
+async function codSiparisi(kaynak: unknown) {
+  vi.resetModules();
+  vi.doMock('@/lib/env', () => ({
+    env: { SHOPIFY_ADMIN_ACCESS_TOKEN: 't', SHOPIFY_STORE_DOMAIN: 'test.myshopify.com', SHOPIFY_API_VERSION: '2025-01' },
+  }));
+  vi.doMock('@/lib/shopify/customer-address', () => ({ upsertCustomerAddress: vi.fn(async () => {}) }));
+  vi.doMock('@/lib/shopify/customer-locale', () => ({ ensureTrCustomer: vi.fn(async () => {}) }));
+  vi.doMock('@/lib/shopify/vendor-ibans', () => ({ resolveVendorIbans: vi.fn(async () => []) }));
+  vi.doMock('@/lib/shopify/adres-uyusmaz', () => ({ ilKoduUyusmazsaEtiketle: vi.fn(async () => {}) }));
+  vi.doMock('@/lib/email/sender', () => ({ sendEmail: vi.fn(async () => {}) }));
+  vi.doMock('@/lib/email/templates', () => ({ orderConfirmationEmail: vi.fn(() => ({ subject: '', html: '', text: '' })) }));
+  const fetchSahte = vi.fn(async () => new Response(JSON.stringify({ order: { id: 1, name: '#1', total_price: '10' } }), { status: 200 }));
+  vi.stubGlobal('fetch', fetchSahte);
+  try {
+    const { createStorefrontOrder } = await import('@/lib/shopify/create-storefront-order');
+    const r = await createStorefrontOrder(
+      {
+        line_items: [{ variant_id: 1, quantity: 1 }], first_name: 'A', last_name: 'B', phone: '05551112233',
+        email: 'a@b.co', address1: 'x', city: 'Kadıköy', province: 'İstanbul', ...(kaynak === undefined ? {} : { kaynak }),
+      },
+      'cod',
+    );
+    expect(r.ok).toBe(true);
+    return JSON.parse(String((fetchSahte.mock.calls[0] as unknown as [string, RequestInit])[1].body)).order as {
+      tags: string; note_attributes: Array<{ name: string; value: string }>; [alan: string]: unknown;
+    };
+  } finally {
+    vi.unstubAllGlobals();
+    vi.resetModules();
+  }
+}
+const nitelik = (o: { note_attributes: Array<{ name: string; value: string }> }, ad: string) =>
+  o.note_attributes.find((n) => n.name === ad)?.value;
+
 describe('#994962 · ÇİVİ — kapıda ödeme siparişi Shopify\'a doğru kaynağı yazar (sipariş düzeyi)', () => {
   // Yunus'un testi: gizli sekme → Google → ViaMood → kapıda ödeme. Shopify "Kanal" alanı siparişi
   // açan uygulamanın adını (Claude) gösterir ve değiştirilemez; kaynak etiket + note_attributes'tadır.
   // MUTASYON: create-storefront-order.ts'te `kaynakSuz(b.kaynak)` çağrısı kaldırılırsa bu blok KIRILIR.
-  async function codSiparisi(kaynak: unknown) {
-    vi.resetModules();
-    vi.doMock('@/lib/env', () => ({
-      env: { SHOPIFY_ADMIN_ACCESS_TOKEN: 't', SHOPIFY_STORE_DOMAIN: 'test.myshopify.com', SHOPIFY_API_VERSION: '2025-01' },
-    }));
-    vi.doMock('@/lib/shopify/customer-address', () => ({ upsertCustomerAddress: vi.fn(async () => {}) }));
-    vi.doMock('@/lib/shopify/customer-locale', () => ({ ensureTrCustomer: vi.fn(async () => {}) }));
-    vi.doMock('@/lib/shopify/vendor-ibans', () => ({ resolveVendorIbans: vi.fn(async () => []) }));
-    vi.doMock('@/lib/shopify/adres-uyusmaz', () => ({ ilKoduUyusmazsaEtiketle: vi.fn(async () => {}) }));
-    vi.doMock('@/lib/email/sender', () => ({ sendEmail: vi.fn(async () => {}) }));
-    vi.doMock('@/lib/email/templates', () => ({ orderConfirmationEmail: vi.fn(() => ({ subject: '', html: '', text: '' })) }));
-    const fetchSahte = vi.fn(async () => new Response(JSON.stringify({ order: { id: 1, name: '#1', total_price: '10' } }), { status: 200 }));
-    vi.stubGlobal('fetch', fetchSahte);
-    try {
-      const { createStorefrontOrder } = await import('@/lib/shopify/create-storefront-order');
-      const r = await createStorefrontOrder(
-        {
-          line_items: [{ variant_id: 1, quantity: 1 }], first_name: 'A', last_name: 'B', phone: '05551112233',
-          email: 'a@b.co', address1: 'x', city: 'Kadıköy', province: 'İstanbul', ...(kaynak === undefined ? {} : { kaynak }),
-        },
-        'cod',
-      );
-      expect(r.ok).toBe(true);
-      return JSON.parse(String((fetchSahte.mock.calls[0] as unknown as [string, RequestInit])[1].body)).order as {
-        tags: string; note_attributes: Array<{ name: string; value: string }>;
-      };
-    } finally {
-      vi.unstubAllGlobals();
-      vi.resetModules();
-    }
-  }
-  const nitelik = (o: { note_attributes: Array<{ name: string; value: string }> }, ad: string) =>
-    o.note_attributes.find((n) => n.name === ad)?.value;
-
   it('Google\'dan organik gelen kapıda ödeme siparişi: etiket kaynak-google · "google / organic" · yönlendiren alan adı', async () => {
     const dokunus = { yonlendiren: 'www.google.com', giris: '/products/minix-figur', tarih: '2026-10-22T19:23:32.281Z' };
     const o = await codSiparisi({ ilk: dokunus, son: dokunus });
@@ -373,5 +374,53 @@ describe('#994962 · ÇİVİ — kapıda ödeme siparişi Shopify\'a doğru kayn
     expect(govde).not.toMatch(/\?q=|email=|tel=/);
     expect(nitelik(o, 'kaynak_son')).toContain('[e-posta]');
     expect(nitelik(o, 'kaynak_son')).toContain('[numara]');
+  });
+});
+
+describe('#995582 · ÇİVİ — Google oturumu siparişe «google» yazar, «claude» HİÇBİR koşulda yazılmaz', () => {
+  // Yunus 11. madde (22 + 27 Eki): "gizli sekmeden Google'da aratıp kapıda ödeme sipariş oluşturdum,
+  // kaynak hâlâ claude yazıyor". Ölçüm (31 Eki): «Claude» Shopify'daki özel uygulamanın ADI; 146/146
+  // siparişte `sourceName` = uygulama kimliği. Kanal sütunu koddan değiştirilemez (sourceName yalnız
+  // satış kanalı uygulamasının atıf tanımını kabul eder). Kaynak etikette + Ek ayrıntılardadır.
+  // Bu blok zinciri UÇTAN UCA koşar: tema yakalayıcı (gerçek betik) → kaynakSuz → sipariş gövdesi.
+
+  it('(a) Google aramasından gelen oturum → sipariş etiketi kaynak-google · "google / organic"', async () => {
+    const { kayit } = sayfa('https://viamood.com.tr/products/minix-figur', 'https://www.google.com/');
+    const o = await codSiparisi(kayit);
+    expect(o.tags.split(',')).toContain('kaynak-google');
+    expect(nitelik(o, 'kaynak_son')).toBe('google / organic');
+    expect(nitelik(o, 'kaynak_son_yonlendiren')).toBe('www.google.com');
+  });
+
+  it('(a) Android Google uygulaması (android-app://…googlequicksearchbox) → google / organic; Gmail uygulaması → gmail / email', async () => {
+    const g = sayfa('https://viamood.com.tr/', 'android-app://com.google.android.googlequicksearchbox/https/www.google.com');
+    const o = await codSiparisi(g.kayit);
+    expect(o.tags.split(',')).toContain('kaynak-google');
+    expect(nitelik(o, 'kaynak_son')).toBe('google / organic');
+    const m = sayfa('https://viamood.com.tr/', 'android-app://com.google.android.gm/');
+    expect(kaynakSuz(m.kayit)!.son).toMatchObject({ kaynak: 'gmail', ortam: 'email' });
+  });
+
+  it('WhatsApp bağlantı yönlendiricisi l.wl.co → whatsapp / social (ölçülen: #1278, #1282 kaynak-l.wl.co)', async () => {
+    const { kayit } = sayfa('https://viamood.com.tr/products/x', 'https://l.wl.co/l?u=https%3A%2F%2Fviamood.com.tr%2Fproducts%2Fx');
+    const o = await codSiparisi(kayit);
+    expect(o.tags.split(',')).toContain('kaynak-whatsapp');
+    expect(nitelik(o, 'kaynak_son')).toBe('whatsapp / social');
+    expect(nitelik(o, 'kaynak_son_yonlendiren')).toBe('l.wl.co');
+  });
+
+  it('(b) yönlendiren YOK → "(direkt)"; gövdenin hiçbir yerinde «claude» yok; Kanal alanı (source_name) taklit edilmez', async () => {
+    const { kayit } = sayfa('https://viamood.com.tr/', '');
+    for (const o of [await codSiparisi(kayit), await codSiparisi(undefined)]) {
+      expect(JSON.stringify(o), 'sipariş gövdesine «claude» yazıldı').not.toMatch(/claude/i);
+      expect(Object.keys(o).filter((a) => /source/i.test(a)), 'Kanal alanı uydurma değerle dolduruldu').toEqual([]);
+    }
+    const o = await codSiparisi(kayit);
+    expect(nitelik(o, 'kaynak_son')).toBe('(direkt)');
+    expect(o.tags.split(',')).toContain('kaynak-direkt');
+    // kart yolları (taslak): iz yok ya da direkt → «claude» yok
+    for (const ham of [undefined, kayit]) {
+      expect(JSON.stringify(taslakKaynakAlanlari(ham, 'via-mood-storefront,halkode-pending'))).not.toMatch(/claude/i);
+    }
   });
 });
