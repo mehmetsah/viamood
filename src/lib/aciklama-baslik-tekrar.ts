@@ -10,7 +10,9 @@
  *   2. açıklamanın EN BAŞINDAKİ ardışık paragraflardandır — ilk kapıdan geçemeyen paragrafta durulur,
  *      sonrasındaki hiçbir paragrafa dokunulmaz,
  *   3. ürün başlığıyla sözcük örtüşmesi ≥ ESIK (`|` sonrası SEO eki örtüşmeden düşülür),
- *   4. gövde cümlesi değildir: içinde cümle sonu noktası yok ve çekimli fiil kalıbı yok.
+ *   4. gövde cümlesi değildir: içinde cümle sonu noktası yok, en fazla AZAMI_SOZCUK sözcük ve SON sözcüğü
+ *      Türkçe çekimli fiil ekiyle bitmiyor (#994831 ADIM 2: ek eskiden sözcük İÇİNDE aranıyordu; «Sneaker»,
+ *      «Super» fiil sanılıp 4 ad paragrafı yerinde kalmıştı — ölçüt düzeltildi, eşik 0,6 DEĞİŞMEDİ).
  * Ayrıca: silme sonrası en az bir paragraf kalmalı; düz metin, öncesinin düz metninden yalnız silinen
  * paragrafların metni baştan çıkarılmış hâli olmalı (METİN KAPISI).
  *
@@ -23,8 +25,14 @@ import { duzMetin } from './aciklama-ic-not';
 
 export const ESIK = 0.6;
 const KUCUK = (s: string) => s.replace(/İ/g, 'i').replace(/I/g, 'ı').toLowerCase();
-/** Türkçe çekimli fiil ekleri — sözcük sonunda. Geniş tutuldu: şüphede paragraf SİLİNMEZ. */
-const FIIL = /[\wçğıöşü]+(?:dır|dir|dur|dür|tır|tir|tur|tür|ar|er|ır|ir|ur|ür)(?![\wçğıöşü])/;
+/** Ad paragrafı en fazla bu kadar sözcük olabilir (güvenlik ağı; ölçüm: ad paragrafları 10–20, gövde 30+). */
+export const AZAMI_SOZCUK = 20;
+/** Türkçe çekimli fiil ekleri — YALNIZ paragrafın SON sözcüğünde (isteğe bağlı nokta). Şüphede paragraf SİLİNMEZ. */
+const FIIL_SON = /(?:mıştır|miştir|muştur|müştür|maktadır|mektedir|dır|dir|dur|dür|tır|tir|tur|tür|ar|er|ır|ir|ur|ür)\.?$/;
+export function sonSozcukFiilMi(metin: string): boolean {
+  const s = KUCUK(metin).trim().split(/\s+/).pop() ?? '';
+  return FIIL_SON.test(s);
+}
 
 export function sozcukler(s: string): Set<string> {
   return new Set((KUCUK(s).match(/[\wçğıöşü'’]+/g) ?? []).filter((w) => w.length > 1));
@@ -44,7 +52,8 @@ export function adParagrafiMi(metin: string, baslik: string): { evet: boolean; s
   const o = ortusme(metin, baslik);
   if (o < ESIK) return { evet: false, sebep: `örtüşme ${o.toFixed(2)} < ${ESIK}` };
   if (/[.!?](\s|$)/.test(on.replace(/\d\.\d/g, ''))) return { evet: false, sebep: 'cümle sonu noktası var' };
-  if (FIIL.test(KUCUK(on))) return { evet: false, sebep: 'çekimli fiil kalıbı var' };
+  if (on.split(/\s+/).filter((w) => /[\wçğıöşüÇĞİÖŞÜ]/.test(w)).length > AZAMI_SOZCUK) return { evet: false, sebep: `${AZAMI_SOZCUK} sözcükten uzun` };
+  if (sonSozcukFiilMi(on)) return { evet: false, sebep: 'son sözcük çekimli fiil' };
   return { evet: true };
 }
 

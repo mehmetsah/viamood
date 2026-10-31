@@ -284,6 +284,9 @@ bash scripts/aciklama-ic-baslik-kur.sh || echo "  (aciklama-ic-baslik adımı at
 bash scripts/sss-dalga3-kur.sh || echo "  (sss-dalga3 adımı atlandı)"
 bash scripts/aciklama-baslik-tekrar-kur.sh || echo "  (aciklama-baslik-tekrar adımı atlandı)"
 bash scripts/sss-dalga4-kur.sh || echo "  (sss-dalga4 adımı atlandı)"
+bash scripts/aciklama-pazar-blok-kur.sh || echo "  (aciklama-pazar-blok adımı atlandı)"
+bash scripts/aciklama-baslik-tekrar-2-kur.sh || echo "  (aciklama-baslik-tekrar-2 adımı atlandı)"
+bash scripts/sss-dalga5-kur.sh || echo "  (sss-dalga5 adımı atlandı)"
 
 echo ""
 echo "════════════════════════════════════════════"
