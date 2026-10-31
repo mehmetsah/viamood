@@ -14,7 +14,9 @@
  *   3. METİN KAPISI: yeni düz metin = öncesinin düz metni + ekin düz metni (öncesi aynen başta),
  *   4. ek, temizlediğimiz sınıfları geri getirmez: kuyruk iç bloğu (kuyrukBul) · baş iç dizisi (basDiziBul) ·
  *      pazar yeri/SEO/sohbet artığı/kargo-iade sözcükleri YOK,
- *   5. idempotent: canlı zaten hedefse değişiklik-yok.
+ *   5. idempotent: canlı zaten hedefse değişiklik-yok. Karşılaştırma SATIR SONU NORMALLEŞTİRMELİ (`satirSonsuz`):
+ *      Shopify `descriptionHtml` kaydederken <ul>/<table> içine `\n` ekliyor (ölçüldü 31 Eki 2026, 11/11 ürün; satır
+ *      sonları hariç bayt bayt eşit). Normalleştirme YALNIZ eşitlik kontrolündedir — yazılan HTML değişmez.
  *   (dalga 2) KALİTE KAPISI: ≥ 10 kaynaklı satır VE «Teknik Bilgiler»de Ölçek/Malzeme/Paket adedinden biri.
  *
  * Çivi: tests/aciklama-ekle.test.ts.
@@ -29,6 +31,8 @@ export type Giris = {
   eslem?: Array<{ bolum: string; metin: string }>;
 };
 export const YASAK_SOZ = /trendyol|shopify|\bseo\b|etiketleri \(seo\)|meta alan|bu konuşma|kargo|teslimat|iade|garanti/;
+/** Yalnız satır sonlarını (\r, \n) atar; başka hiçbir bayta dokunmaz. */
+export const satirSonsuz = (s: string) => s.replace(/[\r\n]/g, '');
 const kucuk = (s: string) => s.replace(/İ/g, 'i').replace(/I/g, 'ı').toLocaleLowerCase('tr');
 
 export function oncesi(g: Giris): string { return g.mevcutHtml ?? ''; }
@@ -50,6 +54,7 @@ export function karar(g: Giris, canli: string, sec: { kalite?: boolean } = {}): 
   const h = hedef(g), o = oncesi(g), e = ek(g);
   if (!e.trim()) return { durum: 'atlandi', sebep: 'ek boş — yazılmadı' };
   if (canli === h) return { durum: 'degisiklik-yok', sebep: 'zaten yazılı' };
+  if (satirSonsuz(canli) === satirSonsuz(h)) return { durum: 'degisiklik-yok', sebep: 'zaten yazılı (satır sonu normalleştirmesiyle)' };
   if (canli !== o) return { durum: 'atlandi', sebep: o === '' ? `açıklama artık boş değil (${Buffer.byteLength(canli)} bayt) — yazılmadı` : 'mevcut açıklama taslaktaki öncesinden farklı — yazılmadı' };
   if (sec.kalite) { const q = kaliteKapisi(g); if (!q.gecti) return { durum: 'atlandi', sebep: `kalite kapısı: ${q.satir} satır, teknik ${q.teknik.length} — ince taslak, yazılmadı` }; }
   const yeni = o + e;
