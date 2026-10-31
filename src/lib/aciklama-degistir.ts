@@ -27,14 +27,24 @@
  * (başka bayt değişmez, yeni sözcük yok) · yeni düz metin cümle sonu işaretiyle biter · iç blok gelmez. Kalite kapısı
  * bu kipte UYGULANMAZ: hiçbir şey yazılmıyor, yalnız yarım parça düşüyor.
  *
- * Çivi: tests/aciklama-degistir.test.ts.
+ * ÖLÇÜ KİPİ (#994831 Jada Stitch, Mehmet kararı 1 Kas 2026: «ölçü ifadeleri TEK ve kaynaklı hâle getirilecek»).
+ * Girdi satırı { handle, baslik, oncekiHtml, olcu{ifade, kaynak}, degisimler[{eski, yeni}], yasakOlculer, korunan, yeniHtml }
+ * — açıklamada aynı ürün için birden çok, kaynaksız ölçü geçiyor. Metin yeniden YAZILMAZ; yalnız ölçü taşıyan
+ * parçalar (satır/hücre/sözcük öbeği) değiştirilir ya da düşer. KAPI: canlı = öncesi · her `eski` öncesinde TAM BİR
+ * kez geçer, parçalar örtüşmez · METİN KAPISI: yeniHtml = olcuUygula(öncesi, değişimler) (başka bayt değişmez) ·
+ * öncesinde yasak ölçülerden en az biri geçer (sorun ölçüldü), yenide HİÇBİRİ geçmez · yeni metin `olcu.ifade`yi
+ * içerir · KAYNAK: değişimlerin yazdığı her sayı, ürünün kendi görselindeki ölçü alıntısındaki bir sayıya 0,1'den
+ * yakındır (5 ← 5.08cm · 2 ← 2in) — kaynakta olmayan sayı yazılamaz · `korunan` cümleler öncesindeki sayıda kalır
+ * (karar bekleyen cümlelere dokunulmaz) · iç blok / yasak sözcük gelmez. Kalite kapısı UYGULANMAZ: yeni içerik yok.
+ *
+ * Çivi: tests/aciklama-degistir.test.ts · tests/aciklama-jada-olcu.test.ts.
  */
 import { duzMetin } from './aciklama-ic-not';
 import { kuyrukBul } from './aciklama-pazar-blok';
 import { basDiziBul } from './aciklama-bas-blok';
 import { kaliteKapisi, satirSonsuz, YASAK_SOZ } from './aciklama-ekle';
 
-export type Kaynak = { tur: 'baslik' | 'uretici' | 'ambalaj'; kaynak: string; alinti: string };
+export type Kaynak = { tur: 'baslik' | 'uretici' | 'ambalaj' | 'urun-gorseli'; kaynak: string; alinti: string };
 export type Eslem = { bolum: 'gövde' | 'Öne Çıkanlar' | 'Teknik Bilgiler' | 'Paket İçeriği'; metin: string; kaynaklar: Kaynak[] };
 export type Giris = {
   handle: string; baslik: string; oncekiHtml: string;
@@ -78,7 +88,7 @@ export function yanlisCumleleriCikar(html: string, yanlisAdlar: string[]): strin
 }
 
 export type Karar =
-  | { durum: 'yazilacak'; kip: 'degistir' | 'cikar' | 'yarim'; html: string; onceBayt: number; sonraBayt: number }
+  | { durum: 'yazilacak'; kip: 'degistir' | 'cikar' | 'yarim' | 'olcu'; html: string; onceBayt: number; sonraBayt: number }
   | { durum: 'degisiklik-yok'; sebep: string }
   | { durum: 'atlandi'; sebep: string };
 
@@ -139,13 +149,55 @@ export function yarimKarar(g: YarimGiris, canli: string): Karar {
   return { durum: 'yazilacak', kip: 'yarim', html, onceBayt: Buffer.byteLength(canli), sonraBayt: Buffer.byteLength(html) };
 }
 
+export type OlcuGiris = {
+  handle: string; baslik: string; oncekiHtml: string;
+  olcu: { ifade: string; kaynak: Kaynak }; degisimler: Array<{ eski: string; yeni: string }>;
+  yasakOlculer: string[]; korunan: string[]; yeniHtml: string;
+};
+export const olcuMu = (g: Giris | YarimGiris | OlcuGiris): g is OlcuGiris => 'degisimler' in g;
+const sayilar = (s: string) => (s.match(/\d+(?:[.,]\d+)?/g) ?? []).map((x) => Number(x.replace(',', '.')));
+const kacKez = (metin: string, parca: string) => (parca ? metin.split(parca).length - 1 : 0);
+
+/** Değişimleri öncesindeki konumlarına göre uygular; bir `eski` tam bir kez geçmiyorsa ya da parçalar örtüşüyorsa null. */
+export function olcuUygula(html: string, degisimler: OlcuGiris['degisimler']): string | null {
+  const yer = degisimler.map((d) => ({ ...d, i: d.eski && kacKez(html, d.eski) === 1 ? html.indexOf(d.eski) : -1 }));
+  if (!yer.length || yer.some((d) => d.i < 0)) return null;
+  yer.sort((a, b) => a.i - b.i);
+  for (let k = 1; k < yer.length; k++) if (yer[k]!.i < yer[k - 1]!.i + yer[k - 1]!.eski.length) return null;
+  let h = html;
+  for (const d of [...yer].reverse()) h = h.slice(0, d.i) + d.yeni + h.slice(d.i + d.eski.length);
+  return h;
+}
+
+export function olcuKarar(g: OlcuGiris, canli: string): Karar {
+  const html = olcuUygula(g.oncekiHtml, g.degisimler);
+  if (html !== null && satirSonsuz(canli) === satirSonsuz(html)) return { durum: 'degisiklik-yok', sebep: 'zaten yazılı (satır sonu normalleştirmesiyle)' };
+  if (satirSonsuz(canli) !== satirSonsuz(g.oncekiHtml)) return { durum: 'atlandi', sebep: 'canlı açıklama kütükteki öncesinden farklı — yazılmadı' };
+  if (html === null) return { durum: 'atlandi', sebep: 'değişim parçası öncesinde tam bir kez geçmiyor ya da parçalar örtüşüyor — yazılmadı' };
+  if (g.yeniHtml !== html) return { durum: 'atlandi', sebep: 'metin kapısı: yeni HTML değişimlerin öncesine birebir uygulanmış hâli değil — yazılmadı' };
+  const once = duzMetin(g.oncekiHtml), yeni = duzMetin(html);
+  if (!g.yasakOlculer.length || !g.yasakOlculer.some((o) => once.includes(o))) return { durum: 'atlandi', sebep: 'öncesinde kaynaksız ölçü geçmiyor — sorun ölçülmedi, yazılmadı' };
+  const kalan = g.yasakOlculer.filter((o) => yeni.includes(o));
+  if (kalan.length) return { durum: 'atlandi', sebep: `yeni metinde kaynaksız ölçü geçiyor: ${kalan.join(', ')} — yazılmadı` };
+  if (!g.olcu.ifade || !kucuk(yeni).includes(kucuk(g.olcu.ifade))) return { durum: 'atlandi', sebep: 'yeni metinde kaynaklı ölçü ifadesi yok — yazılmadı' };
+  const k = g.olcu.kaynak, ks = sayilar(k?.alinti ?? '');
+  if (k?.tur !== 'urun-gorseli' || !k.kaynak || !ks.length) return { durum: 'atlandi', sebep: 'ölçü kaynağı ürünün kendi görselindeki ölçü alıntısı değil — yazılmadı' };
+  const uydurma = g.degisimler.flatMap((d) => sayilar(duzMetin(d.yeni))).filter((x) => !ks.some((y) => Math.abs(x - y) < 0.1));
+  if (uydurma.length) return { durum: 'atlandi', sebep: `kaynakta olmayan sayı yazılıyor: ${uydurma.join(', ')} — yazılmadı` };
+  const bozulan = g.korunan.filter((c) => !kacKez(once, c) || kacKez(once, c) !== kacKez(yeni, c));
+  if (bozulan.length) return { durum: 'atlandi', sebep: `korunan cümle değişiyor: ${bozulan.join(' | ')} — yazılmadı` };
+  if (!('yok' in kuyrukBul(html, g.baslik)) || !('yok' in basDiziBul(html, g.baslik))) return { durum: 'atlandi', sebep: 'yeni metin iç blok içeriyor — yazılmadı' };
+  if (YASAK_SOZ.test(kucuk(yeni))) return { durum: 'atlandi', sebep: 'yeni metin yasak sözcük içeriyor — yazılmadı' };
+  return { durum: 'yazilacak', kip: 'olcu', html, onceBayt: Buffer.byteLength(canli), sonraBayt: Buffer.byteLength(html) };
+}
+
 export type Urun = { id: string; handle: string; html: string };
-export type KutukSatiri = { handle: string; durum: 'yazilacak' | 'yazildi' | 'degisiklik-yok' | 'atlandi' | 'hata'; kip?: 'degistir' | 'cikar' | 'yarim'; sebep?: string; onceBayt?: number; sonraBayt?: number; onceHtml?: string };
+export type KutukSatiri = { handle: string; durum: 'yazilacak' | 'yazildi' | 'degisiklik-yok' | 'atlandi' | 'hata'; kip?: 'degistir' | 'cikar' | 'yarim' | 'olcu'; sebep?: string; onceBayt?: number; sonraBayt?: number; onceHtml?: string };
 export type Ozet = { taranan: number; yazilacak: number; yazildi: number; degisiklikYok: number; atlandi: number; hata: number };
 
-/** Yarım cümle satırları (`yarimParca`) yarimKarar'dan, diğerleri karar'dan geçer. `uygula` false iken `yaz` HİÇ çağrılmaz. Yazmadan önce ürün YENİDEN okunur; değiştiyse yazılmaz. ÖNCESİ HTML kütüğe yazılır. */
+/** Yarım cümle satırları (`yarimParca`) yarimKarar'dan, ölçü satırları (`degisimler`) olcuKarar'dan, diğerleri karar'dan geçer. `uygula` false iken `yaz` HİÇ çağrılmaz. Yazmadan önce ürün YENİDEN okunur; değiştiyse yazılmaz. ÖNCESİ HTML kütüğe yazılır. */
 export async function degistirCalistir(
-  girisler: Array<Giris | YarimGiris>,
+  girisler: Array<Giris | YarimGiris | OlcuGiris>,
   dep: { bul: (handle: string) => Promise<Urun | null>; oku: (id: string) => Promise<string | null>; yaz: (id: string, html: string) => Promise<{ ok: true } | { ok: false; hata: string }>; kutuk: (s: KutukSatiri) => void },
   sec: { uygula: boolean },
 ): Promise<Ozet> {
@@ -155,7 +207,7 @@ export async function degistirCalistir(
     try {
       const u = await dep.bul(g.handle);
       if (!u) { oz.atlandi++; dep.kutuk({ handle: g.handle, durum: 'atlandi', sebep: 'aktif ürün bulunamadı' }); continue; }
-      const k = yarimMi(g) ? yarimKarar(g, u.html) : karar(g, u.html);
+      const k = olcuMu(g) ? olcuKarar(g, u.html) : yarimMi(g) ? yarimKarar(g, u.html) : karar(g, u.html);
       if (k.durum === 'degisiklik-yok') { oz.degisiklikYok++; dep.kutuk({ handle: g.handle, durum: 'degisiklik-yok', sebep: k.sebep }); continue; }
       if (k.durum === 'atlandi') { oz.atlandi++; dep.kutuk({ handle: g.handle, durum: 'atlandi', sebep: k.sebep }); continue; }
       const olcu = { kip: k.kip, onceBayt: k.onceBayt, sonraBayt: k.sonraBayt, onceHtml: u.html };
