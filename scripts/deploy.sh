@@ -296,6 +296,7 @@ bash scripts/aciklama-dalga2-kur.sh || echo "  (aciklama-dalga2 adımı atlandı
 bash scripts/aciklama-degistir-kur.sh || echo "  (aciklama-degistir adımı atlandı)"
 bash scripts/aciklama-kalan-kur.sh || echo "  (aciklama-kalan adımı atlandı)"
 bash scripts/aciklama-jada-olcu-kur.sh || echo "  (aciklama-jada-olcu adımı atlandı)"
+bash scripts/sss-dalga8-kur.sh || echo "  (sss-dalga8 adımı atlandı)"
 
 echo ""
 echo "════════════════════════════════════════════"
