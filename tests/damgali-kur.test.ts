@@ -23,7 +23,7 @@ function kos(betik: string, o: { damgaVar?: boolean; kuruCikis?: number; uygulaC
   return { cikis, izler, damgaVar: existsSync(damga), damga: existsSync(damga) ? readFileSync(damga, 'utf8') : '', log: existsSync(log) ? readFileSync(log, 'utf8') : '' };
 }
 
-for (const betik of ['sss-ilk-20-kur.sh', 'aciklama-ic-not-kur.sh', 'sss-dalga2-kur.sh']) {
+for (const betik of ['sss-ilk-20-kur.sh', 'aciklama-ic-not-kur.sh', 'sss-dalga2-kur.sh', 'aciklama-ic-baslik-kur.sh', 'sss-dalga3-kur.sh']) {
   describe(betik, () => {
     it('damga VARKEN hiçbir komut koşmaz, damgaya dokunulmaz', () => {
       const r = kos(betik, { damgaVar: true });
@@ -59,6 +59,9 @@ it('deploy.sh iki kancayı eposta-akis kalıbıyla (best-effort) çağırır', (
   expect(s).toContain('bash scripts/sss-ilk-20-kur.sh || echo');
   expect(s).toContain('bash scripts/aciklama-ic-not-kur.sh || echo');
   expect(s).toContain('bash scripts/sss-dalga2-kur.sh || echo');
+  expect(s).toContain('bash scripts/aciklama-ic-baslik-kur.sh || echo');
+  expect(s).toContain('bash scripts/sss-dalga3-kur.sh || echo');
+  expect(s.indexOf('aciklama-ic-baslik-kur.sh')).toBeLessThan(s.indexOf('sss-dalga3-kur.sh'));
 });
 
 it('dalga 2 girdisi: 50 ürün, ürün başına 3–4 soru, kargo/iade sorusu yok, handle biçimi geçerli, ilk 20 ile çakışma yok', () => {
@@ -71,6 +74,21 @@ it('dalga 2 girdisi: 50 ürün, ürün başına 3–4 soru, kargo/iade sorusu yo
     expect(ilk.has(x.handle)).toBe(false);
     expect(x.sss.length).toBeGreaterThanOrEqual(3);
     expect(x.sss.length).toBeLessThanOrEqual(4);
-    for (const q of x.sss) expect(q.soru + ' ' + q.cevap).not.toMatch(/kargo|teslimat|iade/i);
+    for (const q of x.sss) expect((q.soru + ' ' + q.cevap).toLocaleLowerCase('tr')).not.toMatch(/kargo|teslimat|iade/); // 'İade' de yakalanır
+  }
+});
+
+it('dalga 3 girdisi: 100 ürün, 2–4 soru, kargo/iade yok, handle geçerli, ilk 20 ve dalga 2 ile çakışma yok', () => {
+  const satir = (f: string) => readFileSync(path.join(KOK, 'veri', f), 'utf8').trim().split('\n').map((l) => JSON.parse(l) as { handle: string; sss: Array<{ soru: string; cevap: string }> });
+  const d3 = satir('994831-sss-dalga3.jsonl');
+  const once = new Set([...satir('994831-sss-ilk-20.jsonl'), ...satir('994831-sss-dalga2.jsonl')].map((x) => x.handle));
+  expect(d3).toHaveLength(100);
+  expect(new Set(d3.map((x) => x.handle)).size).toBe(100);
+  for (const x of d3) {
+    expect(x.handle).toMatch(/^[a-z0-9-]+$/);
+    expect(once.has(x.handle)).toBe(false);
+    expect(x.sss.length).toBeGreaterThanOrEqual(2);
+    expect(x.sss.length).toBeLessThanOrEqual(4);
+    for (const q of x.sss) expect((q.soru + ' ' + q.cevap).toLocaleLowerCase('tr')).not.toMatch(/kargo|teslimat|iade|doğrula|teyit/); // 'İade' de yakalanır
   }
 });
