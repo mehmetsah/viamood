@@ -23,7 +23,7 @@ function kos(betik: string, o: { damgaVar?: boolean; kuruCikis?: number; uygulaC
   return { cikis, izler, damgaVar: existsSync(damga), damga: existsSync(damga) ? readFileSync(damga, 'utf8') : '', log: existsSync(log) ? readFileSync(log, 'utf8') : '' };
 }
 
-for (const betik of ['sss-ilk-20-kur.sh', 'aciklama-ic-not-kur.sh']) {
+for (const betik of ['sss-ilk-20-kur.sh', 'aciklama-ic-not-kur.sh', 'sss-dalga2-kur.sh']) {
   describe(betik, () => {
     it('damga VARKEN hiçbir komut koşmaz, damgaya dokunulmaz', () => {
       const r = kos(betik, { damgaVar: true });
@@ -58,4 +58,19 @@ it('deploy.sh iki kancayı eposta-akis kalıbıyla (best-effort) çağırır', (
   const s = readFileSync(path.join(KOK, 'scripts', 'deploy.sh'), 'utf8');
   expect(s).toContain('bash scripts/sss-ilk-20-kur.sh || echo');
   expect(s).toContain('bash scripts/aciklama-ic-not-kur.sh || echo');
+  expect(s).toContain('bash scripts/sss-dalga2-kur.sh || echo');
+});
+
+it('dalga 2 girdisi: 50 ürün, ürün başına 3–4 soru, kargo/iade sorusu yok, handle biçimi geçerli, ilk 20 ile çakışma yok', () => {
+  const satir = (f: string) => readFileSync(path.join(KOK, 'veri', f), 'utf8').trim().split('\n').map((l) => JSON.parse(l) as { handle: string; sss: Array<{ soru: string; cevap: string }> });
+  const d2 = satir('994831-sss-dalga2.jsonl'), ilk = new Set(satir('994831-sss-ilk-20.jsonl').map((x) => x.handle));
+  expect(d2).toHaveLength(50);
+  expect(new Set(d2.map((x) => x.handle)).size).toBe(50);
+  for (const x of d2) {
+    expect(x.handle).toMatch(/^[a-z0-9-]+$/);
+    expect(ilk.has(x.handle)).toBe(false);
+    expect(x.sss.length).toBeGreaterThanOrEqual(3);
+    expect(x.sss.length).toBeLessThanOrEqual(4);
+    for (const q of x.sss) expect(q.soru + ' ' + q.cevap).not.toMatch(/kargo|teslimat|iade/i);
+  }
 });
