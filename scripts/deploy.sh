@@ -287,6 +287,7 @@ bash scripts/sss-dalga4-kur.sh || echo "  (sss-dalga4 adımı atlandı)"
 bash scripts/aciklama-pazar-blok-kur.sh || echo "  (aciklama-pazar-blok adımı atlandı)"
 bash scripts/aciklama-baslik-tekrar-2-kur.sh || echo "  (aciklama-baslik-tekrar-2 adımı atlandı)"
 bash scripts/sss-dalga5-kur.sh || echo "  (sss-dalga5 adımı atlandı)"
+bash scripts/aciklama-pazar-blok-2-kur.sh || echo "  (aciklama-pazar-blok-2 adımı atlandı)"
 
 echo ""
 echo "════════════════════════════════════════════"

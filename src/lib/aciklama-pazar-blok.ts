@@ -8,6 +8,13 @@
  *   «Trendyol Ürün Açıklaması» (31) / «Trendyol Açıklaması» (23) + madde (`-` / `•`) paragrafları.
  * Aralarında `____` / `--` ayraç paragrafları olabiliyor.
  *
+ * #994831 dalga 6 (31 Eki 2026, aynı 505 ürün): bu bloklar kalktıktan sonra kuyrukta Shopify iç blokları kaldı —
+ *   «Shopify Ürün Organizasyonu» (54) + `Anahtar: değer` satırları (bir üründe «Varyantlar»/«Koleksiyonlar»
+ *   alt başlıkları altında maddeler), «Kategori» (53) + tek kırıntı yolu satırı («A > B > C»),
+ *   «Kategori Meta Alanları» (53) + `Anahtar: değer` satırları; bir üründe en sonda sohbet arayüzü artığı
+ *   «Bu konuşma şimdiye kadar faydalı oldu mu?». Hepsi yalnız Pola'da. «Kategori» GENEL bir sözcük: yalnız
+ *   gövdesi tek kırıntı yolu satırıysa blok sayılır; değilse kuyruk şüphelidir ve ürün atlanır.
+ *
  * KAPI — kuyruk ancak HEPSİ sağlanırsa silinir (dar; gevşetilmez):
  *   1. ilk blok başlığından açıklamanın SONUNA kadar her paragraf bir bloğa aittir (başlık · gövde · ayraç);
  *      blok dışı TEK paragraf bile varsa (ör. sohbet artığı) ürün ATLANIR,
@@ -16,6 +23,11 @@
  *      sözcük, cümle sonu yok, son sözcük çekimli fiil değil. A2'nin 0,6 örtüşme eşiği burada KULLANILMAZ:
  *      Trendyol adı varyant ayrıntısı taşıyor (ölçüm: 11 üründe örtüşme 0,38–0,57); sinyal blok başlığının kendisi,
  *   4. Trendyol açıklama gövdesi: en az 1, yalnız madde paragrafı,
+ *   4b. Shopify organizasyon gövdesi: en az 1 `Anahtar: değer`; yalnız `Anahtar: değer`, madde ve
+ *      «Varyantlar»/«Koleksiyonlar» alt başlıkları; Kategori gövdesi: TEK kırıntı yolu satırı;
+ *      Kategori meta gövdesi: en az 1, yalnız `Anahtar: değer`,
+ *   4c. sohbet artığı satırı (SOHBET_ARTIKLARI, birebir) kuyruğun herhangi bir yerinde tek başına durabilir,
+ *   4d. kuyruğun hemen önündeki ayraç paragrafları da kuyruğa dahildir (yalnız ayraç),
  *   5. her blok türü en fazla bir kez; kuyruk paragraf dışı içerik taşımaz.
  * Ayrıca: önünde en az bir paragraf kalır; düz metin = öncesinin düz metninden silinen kuyruk metni SONDAN
  * çıkarılmış hâli (METİN KAPISI); dönüşüm idempotent. Gövde, «Öne Çıkanlar», «Teknik Bilgiler» kuyruktan
@@ -30,7 +42,18 @@ export const BLOKLAR = {
   seo: ['Ürün Etiketleri (SEO)', 'SEO Etiketleri'],
   ad: ['Trendyol Ürün Adı'],
   aciklama: ['Trendyol Ürün Açıklaması', 'Trendyol Açıklaması'],
+  org: ['Shopify Ürün Organizasyonu'],
+  kategori: ['Kategori'],
+  meta: ['Kategori Meta Alanları'],
+  sohbet: ['Bu konuşma şimdiye kadar faydalı oldu mu?'],
 } as const;
+/** Sohbet arayüzünden kopyalanmış, ürünle ilgisiz satırlar (birebir eşleşme). */
+export const SOHBET_ARTIKLARI = BLOKLAR.sohbet;
+const ORG_ALT = ['Varyantlar', 'Koleksiyonlar'];
+/** `Anahtar: değer` satırı — anahtar ≤ 40 karakter, satır ≤ 250 karakter. */
+export const anahtarDegerMi = (m: string) => m.length <= 250 && /^[^:.!?]{1,40}:\s*\S/.test(m);
+/** Kırıntı yolu — «Giyim ve Aksesuar > Çocuk Giyim > Çoraplar»; cümle sonu ve `:` yok. */
+export const kirintiYoluMu = (m: string) => /^[^.!?:>]+( > [^.!?:>]+)+$/.test(m);
 type Tur = keyof typeof BLOKLAR;
 
 const KUCUK = (s: string) => s.replace(/İ/g, 'i').replace(/I/g, 'ı').toLowerCase();
@@ -65,8 +88,9 @@ export type Kuyruk = { bas: number; silinen: string[]; turler: Tur[] } | { yok: 
 /** Açıklama sonundaki iç blok kuyruğunu bulur. Şüphede `supheli` döner — hiçbir şey silinmez. */
 export function kuyrukBul(html: string, baslik: string): Kuyruk {
   const ps = paragraflar(html);
-  const i = ps.findIndex((p) => blokTuru(p.metin));
+  let i = ps.findIndex((p) => blokTuru(p.metin));
   if (i < 0) return { yok: true };
+  while (i > 1 && AYRAC.test(ps[i - 1]!.metin)) i--; // kuyruğun hemen önündeki ayraç da iç bloğa aittir
   if (i === 0) return { supheli: 'blok başlığı açıklamanın ilk paragrafı — önünde içerik kalmıyor' };
   for (let k = i; k < ps.length; k++) {
     const arasi = html.slice(ps[k - 1]!.son, ps[k]!.bas);
@@ -80,6 +104,7 @@ export function kuyrukBul(html: string, baslik: string): Kuyruk {
     if (AYRAC.test(m)) { j++; continue; }
     const t = blokTuru(m);
     if (!t) return { supheli: `blok dışı paragraf: «${m.slice(0, 60)}»` };
+    if (t === 'sohbet') { if (!turler.includes(t)) turler.push(t); j++; continue; }
     if (turler.includes(t)) return { supheli: `«${m}» iki kez geçiyor` };
     turler.push(t);
     const g = ps[j + 1]?.metin;
@@ -89,10 +114,24 @@ export function kuyrukBul(html: string, baslik: string): Kuyruk {
     } else if (t === 'ad') {
       if (g === undefined || !adGovdesiMi(g, baslik)) return { supheli: `«${m}» gövdesi ürün adı değil` };
       j += 2;
-    } else {
+    } else if (t === 'aciklama') {
       let k = j + 1;
       while (k < ps.length && MADDE.test(ps[k]!.metin)) k++;
       if (k === j + 1) return { supheli: `«${m}» altında madde yok` };
+      j = k;
+    } else if (t === 'kategori') {
+      if (g === undefined || !kirintiYoluMu(g)) return { supheli: `«${m}» gövdesi kırıntı yolu değil` };
+      j += 2;
+    } else {
+      // org · meta: blok başlığına / sohbet artığına / sona kadar yalnız izinli satırlar
+      let k = j + 1, kv = 0;
+      for (; k < ps.length && !blokTuru(ps[k]!.metin) && !AYRAC.test(ps[k]!.metin); k++) {
+        const x = ps[k]!.metin;
+        if (anahtarDegerMi(x)) { kv++; continue; }
+        if (t === 'org' && (MADDE.test(x) || ORG_ALT.includes(x))) continue;
+        return { supheli: `«${m}» altında izin dışı satır: «${x.slice(0, 60)}»` };
+      }
+      if (!kv) return { supheli: `«${m}» altında anahtar: değer satırı yok` };
       j = k;
     }
   }
