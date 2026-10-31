@@ -279,6 +279,7 @@ bash scripts/eposta-akis-kur.sh || echo "  (eposta-akis kurulum adımı atlandı
 # damga varsa dokunmaz; yoksa KURU → (temizse) UYGULA → damga. Ayrıntı: scripts/_damgali-kur.sh.
 bash scripts/sss-ilk-20-kur.sh || echo "  (sss-ilk-20 adımı atlandı)"
 bash scripts/aciklama-ic-not-kur.sh || echo "  (aciklama-ic-not adımı atlandı)"
+bash scripts/sss-dalga2-kur.sh || echo "  (sss-dalga2 adımı atlandı)"
 
 echo ""
 echo "════════════════════════════════════════════"
