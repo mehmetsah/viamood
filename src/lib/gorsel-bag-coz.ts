@@ -7,7 +7,8 @@
  *
  * YOL: `fileUpdate(files:[{id, referencesToRemove:[ürün]}])` — yalnız ürün bağını kaldırır, dosya Files'ta durur.
  * ⛔ `productDeleteMedia` KULLANILMAZ: belgeye göre geri alınamaz siler. Geri alma: aynı kapıdan `referencesToAdd:[ürün]`
- * (görsel galerinin sonuna eklenir; burada zaten SON sıradaydı, sıra birebir geri gelir).
+ * (görsel galerinin sonuna eklenir). #995712 (Hello Kitty) hedefi galerinin ORTASINDAydı: bu yüzden geri almada, sona eklenen medya
+ * `productReorderMedia` ile kütükteki eski konumuna taşınır (`sirala` adımı) ve sıra yine ÖNCESİ ile birebir ölçülür.
  *
  * KAPI — ürün ancak HEPSİ sağlanırsa yazılır:
  *   1. canlı ürün id'si ve handle'ı girdiyle aynı,
@@ -103,19 +104,30 @@ export async function bagCozCalistir(girisler: Giris[], dep: Bagimlilik, sec: { 
   return oz;
 }
 
-/** GERİ ALMA: bağı yeniden kurar (referencesToAdd) ve galeri sırasının ÖNCESİ ile birebir aynı olduğunu ölçer. */
+/** GERİ ALMA: bağı yeniden kurar (referencesToAdd); medya eski konumunda değilse `sirala` ile oraya taşır; galeri sırasının ÖNCESİ ile birebir aynı olduğunu ölçer. */
 export async function geriAlCalistir(
   girisler: Giris[],
-  dep: Pick<Bagimlilik, 'oku' | 'kutuk'> & { bagKur: (mediaId: string, urunId: string) => Promise<{ ok: true } | { ok: false; hata: string }> },
+  dep: Pick<Bagimlilik, 'oku' | 'kutuk'> & {
+    bagKur: (mediaId: string, urunId: string) => Promise<{ ok: true } | { ok: false; hata: string }>;
+    /** Medyayı galeride 0 tabanlı `konum`a taşır (productReorderMedia). Verilmezse sıra düzeltilmez. */
+    sirala?: (urunId: string, mediaId: string, konum: number) => Promise<{ ok: true } | { ok: false; hata: string }>;
+  },
 ): Promise<{ geriAlindi: number; hata: number }> {
   let geriAlindi = 0, hata = 0;
   for (const g of girisler) {
     const tem = { handle: g.handle, mediaId: g.mediaId };
     const c = await dep.oku(g.handle);
     if (c?.galeri.some((m) => m.id === g.mediaId)) { dep.kutuk({ ...tem, durum: 'degisiklik-yok', sebep: 'bağ zaten kurulu' }); continue; }
-    const r = await dep.bagKur(g.mediaId, g.urunId);
-    const s = await dep.oku(g.handle);
-    const ids = s?.galeri.map((m) => m.id) ?? [];
+    let r = await dep.bagKur(g.mediaId, g.urunId);
+    let s = await dep.oku(g.handle);
+    let ids = s?.galeri.map((m) => m.id) ?? [];
+    const konum = g.galeriOnce.indexOf(g.mediaId);
+    // Bağ sona kuruldu ve kalanlar aynı kümeyse: medyayı eski konumuna taşı (yalnız sıra; başka hiçbir şey değişmez).
+    if (r.ok && dep.sirala && JSON.stringify(ids) !== JSON.stringify(g.galeriOnce) && [...ids].sort().join() === [...g.galeriOnce].sort().join()) {
+      r = await dep.sirala(g.urunId, g.mediaId, konum);
+      s = await dep.oku(g.handle);
+      ids = s?.galeri.map((m) => m.id) ?? [];
+    }
     if (!r.ok || JSON.stringify(ids) !== JSON.stringify(g.galeriOnce)) { hata++; dep.kutuk({ ...tem, durum: 'hata', sebep: r.ok ? 'geri alındı ama galeri sırası öncesinden farklı' : r.hata, galeriSonra: ids }); continue; }
     geriAlindi++; dep.kutuk({ ...tem, durum: 'geri-alindi', galeriSonra: ids });
   }

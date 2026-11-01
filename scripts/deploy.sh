@@ -303,6 +303,7 @@ bash scripts/sss-dalga9-kur.sh || echo "  (sss-dalga9 adımı atlandı)"
 bash scripts/sss-yer-tutucu-dusur-kur.sh || echo "  (sss-yer-tutucu-dusur adımı atlandı)"
 bash scripts/aciklama-yer-tutucu-kur.sh || echo "  (aciklama-yer-tutucu adımı atlandı)"
 bash scripts/gorsel-bag-coz-kur.sh || echo "  (gorsel-bag-coz adımı atlandı)"
+bash scripts/gorsel-bag-coz-sanrio-kur.sh || echo "  (gorsel-bag-coz-sanrio adımı atlandı)"
 
 echo ""
 echo "════════════════════════════════════════════"
