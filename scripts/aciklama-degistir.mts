@@ -12,7 +12,8 @@
 import { appendFileSync, mkdirSync, readFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import path from 'node:path';
-import { degistirCalistir, type Giris, type KutukSatiri, type OlcuGiris, type YarimGiris } from '../src/lib/aciklama-degistir.ts';
+import { degistirCalistir, type Giris, type KutukSatiri, type OlcuGiris, type YarimGiris, type YerTutucuGiris } from '../src/lib/aciklama-degistir.ts';
+import { aciklamaYazKapisi } from '../src/lib/aciklama-yer-tutucu.ts';
 
 const args = process.argv.slice(2);
 const uygula = args.includes('--uygula');
@@ -21,7 +22,7 @@ if (!girdi || args.some((a) => a.startsWith('--') && a !== '--uygula' && !a.star
 const kutukYolu = args.find((a) => a.startsWith('--kutuk='))?.slice(8)
   || path.join(process.env.LOG_DIR || path.join(homedir(), '.viamood-log'), `aciklama-degistir-${new Date().toISOString().replace(/[:.]/g, '-')}.jsonl`);
 mkdirSync(path.dirname(kutukYolu), { recursive: true });
-const girisler = readFileSync(girdi, 'utf8').trim().split('\n').map((l) => JSON.parse(l) as Giris | YarimGiris | OlcuGiris);
+const girisler = readFileSync(girdi, 'utf8').trim().split('\n').map((l) => JSON.parse(l) as Giris | YarimGiris | OlcuGiris | YerTutucuGiris);
 
 const domain = (process.env.SHOPIFY_STORE_DOMAIN ?? '').trim();
 const token = (process.env.SHOPIFY_ADMIN_ACCESS_TOKEN ?? '').trim();
@@ -45,6 +46,7 @@ const ozet = await degistirCalistir(girisler, {
   },
   oku: async (id) => (await gql<{ product: { descriptionHtml: string | null } | null }>('query($id:ID!){product(id:$id){descriptionHtml}}', { id })).product?.descriptionHtml ?? null,
   yaz: async (id, html) => {
+    const kapi = aciklamaYazKapisi(html); if (!kapi.ok) return kapi; // #994831 yer tutucu / iç not yazılmaz (md.52)
     const m: { productUpdate: { userErrors: Array<{ message: string }> } } = await gql('mutation($p:ProductUpdateInput!){productUpdate(product:$p){userErrors{field message}}}', { p: { id, descriptionHtml: html } });
     const e = m.productUpdate.userErrors; return e.length ? { ok: false, hata: e.map((x) => x.message).join('; ') } : { ok: true };
   },

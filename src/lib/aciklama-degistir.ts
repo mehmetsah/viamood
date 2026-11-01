@@ -37,12 +37,27 @@
  * yakındır (5 ← 5.08cm · 2 ← 2in) — kaynakta olmayan sayı yazılamaz · `korunan` cümleler öncesindeki sayıda kalır
  * (karar bekleyen cümlelere dokunulmaz) · iç blok / yasak sözcük gelmez. Kalite kapısı UYGULANMAZ: yeni içerik yok.
  *
- * Çivi: tests/aciklama-degistir.test.ts · tests/aciklama-jada-olcu.test.ts.
+ * YER TUTUCU KİPİ (#994831, koordinasyon kararı 1 Kas 2026, md.46/md.52: «kaynaklı değer VARSA yaz, YOKSA satırı kaldır;
+ * uydurma değer yazma»). Girdi satırı { handle, baslik, oncekiHtml, yerTutucu{degisimler[{eski, yeni, kaynak}], gerekce}, yeniHtml }
+ * — açıklamada müşteriye görünen iç not / yer tutucu var («34XXX (kutudaki EAN'ı gir)» · «___ (… doldur)»). Metin yeniden
+ * YAZILMAZ; yalnız yer tutucu taşıyan bütün blok (tablo satırı · başlık + paragraf) düşer ya da kaynaklı değere döner.
+ * KAPI: canlı = öncesi · her `eski` öncesinde TAM BİR kez geçer, örtüşmez · METİN KAPISI: yeniHtml = olcuUygula(öncesi,
+ * değişimler) (başka bayt değişmez) · her `eski` bütün HTML bloğudur (etiketle başlar/biter, açılan her etiket kapanır) ve
+ * düz metninde yer tutucu VARDIR (yalnız sorunlu blok gider) · yeni açıklamada yer tutucu 0 · `yeni` boşsa kaldırma; doluysa
+ * kaynağı zorunlu (başlık · ambalaj · ürün görseli · üretici) ve yazılan düz metin kaynak alıntısının içinde geçer · yeni
+ * değer yasak sözcük / yer tutucu taşımaz · içi boş başlık kalmaz · iç blok gelmez. Kalite kapısı UYGULANMAZ.
+ *
+ * ÖNCESİ KÜTÜĞÜ: `uygula` kipinde her ürünün ÖNCESİ HTML'i `oncesi-kaydedildi` satırıyla kütüğe yazılır, ANCAK ondan sonra
+ * `yaz` çağrılır (kütük yazılamazsa yazma koşmaz) — geri alma = kütükteki onceHtml'i aynı yoldan yazmak.
+ *
+ * Çivi: tests/aciklama-degistir.test.ts · tests/aciklama-jada-olcu.test.ts · tests/aciklama-yer-tutucu.test.ts.
  */
 import { duzMetin } from './aciklama-ic-not';
 import { kuyrukBul } from './aciklama-pazar-blok';
 import { basDiziBul } from './aciklama-bas-blok';
 import { kaliteKapisi, satirSonsuz, YASAK_SOZ } from './aciklama-ekle';
+import { aciklamaYerTutucuBul } from './aciklama-yer-tutucu';
+import { yerTutucuBul } from './sss-yer-tutucu';
 
 export type Kaynak = { tur: 'baslik' | 'uretici' | 'ambalaj' | 'urun-gorseli'; kaynak: string; alinti: string };
 export type Eslem = { bolum: 'gövde' | 'Öne Çıkanlar' | 'Teknik Bilgiler' | 'Paket İçeriği'; metin: string; kaynaklar: Kaynak[] };
@@ -88,7 +103,7 @@ export function yanlisCumleleriCikar(html: string, yanlisAdlar: string[]): strin
 }
 
 export type Karar =
-  | { durum: 'yazilacak'; kip: 'degistir' | 'cikar' | 'yarim' | 'olcu'; html: string; onceBayt: number; sonraBayt: number }
+  | { durum: 'yazilacak'; kip: 'degistir' | 'cikar' | 'yarim' | 'olcu' | 'yer-tutucu'; html: string; onceBayt: number; sonraBayt: number }
   | { durum: 'degisiklik-yok'; sebep: string }
   | { durum: 'atlandi'; sebep: string };
 
@@ -117,7 +132,7 @@ export function karar(g: Giris, canli: string): Karar {
 }
 
 export type YarimGiris = { handle: string; baslik: string; oncekiHtml: string; yarimParca: string };
-export const yarimMi = (g: Giris | YarimGiris): g is YarimGiris => 'yarimParca' in g;
+export const yarimMi = (g: Giris | YarimGiris | OlcuGiris | YerTutucuGiris): g is YarimGiris => 'yarimParca' in g;
 const CUMLE_SONU = /[.!?…]$/;
 
 /** Son metinli <p>/<li> bloğunun sonundaki « parça»yı siler; o blok başka bir şeyle bitiyorsa null. Başka bayta dokunmaz. */
@@ -154,7 +169,7 @@ export type OlcuGiris = {
   olcu: { ifade: string; kaynak: Kaynak }; degisimler: Array<{ eski: string; yeni: string }>;
   yasakOlculer: string[]; korunan: string[]; yeniHtml: string;
 };
-export const olcuMu = (g: Giris | YarimGiris | OlcuGiris): g is OlcuGiris => 'degisimler' in g;
+export const olcuMu = (g: Giris | YarimGiris | OlcuGiris | YerTutucuGiris): g is OlcuGiris => 'degisimler' in g;
 const sayilar = (s: string) => (s.match(/\d+(?:[.,]\d+)?/g) ?? []).map((x) => Number(x.replace(',', '.')));
 const kacKez = (metin: string, parca: string) => (parca ? metin.split(parca).length - 1 : 0);
 
@@ -191,13 +206,63 @@ export function olcuKarar(g: OlcuGiris, canli: string): Karar {
   return { durum: 'yazilacak', kip: 'olcu', html, onceBayt: Buffer.byteLength(canli), sonraBayt: Buffer.byteLength(html) };
 }
 
+export type YerTutucuGiris = {
+  handle: string; baslik: string; oncekiHtml: string;
+  yerTutucu: { degisimler: Array<{ eski: string; yeni: string; kaynak: Kaynak | null }>; gerekce: string };
+  yeniHtml: string;
+};
+export const yerTutucuMu = (g: Giris | YarimGiris | OlcuGiris | YerTutucuGiris): g is YerTutucuGiris => 'yerTutucu' in g;
+
+/** Bütün HTML bloğu mu: etiketle başlar ve biter, açılan her (boş olmayan) etiket kapanır. */
+export function butunBlokMu(parca: string): boolean {
+  const t = parca.trim();
+  if (!/^<[a-z]/i.test(t) || !/>$/.test(t)) return false;
+  const yigin: string[] = [];
+  for (const m of t.matchAll(/<(\/?)([a-z][a-z0-9]*)\b[^>]*?(\/?)>/gi)) {
+    const ad = m[2]!.toLowerCase();
+    if (m[3] === '/' || /^(br|hr|img|wbr|meta|link|input)$/.test(ad)) continue;
+    if (m[1] !== '/') { yigin.push(ad); continue; }
+    if (yigin.pop() !== ad) return false;
+  }
+  return yigin.length === 0;
+}
+/** İçi boş başlık sayısı: başlıktan sonra başka metin gelmeden yeni başlık ya da metin sonu. */
+export const bosBaslikSayisi = (html: string) => [...html.matchAll(/<\/h[1-6]>(?=(?:\s|<(?!h[1-6]\b)[^>]*>)*(?:<h[1-6]\b|$))/gi)].length;
+
+export function yerTutucuKarar(g: YerTutucuGiris, canli: string): Karar {
+  const ds = g.yerTutucu?.degisimler ?? [];
+  const html = ds.length ? olcuUygula(g.oncekiHtml, ds) : null;
+  if (html !== null && satirSonsuz(canli) === satirSonsuz(html)) return { durum: 'degisiklik-yok', sebep: 'zaten yazılı (satır sonu normalleştirmesiyle)' };
+  if (satirSonsuz(canli) !== satirSonsuz(g.oncekiHtml)) return { durum: 'atlandi', sebep: 'canlı açıklama kütükteki öncesinden farklı — yazılmadı' };
+  if (html === null) return { durum: 'atlandi', sebep: 'değişim parçası öncesinde tam bir kez geçmiyor ya da parçalar örtüşüyor — yazılmadı' };
+  if (g.yeniHtml !== html) return { durum: 'atlandi', sebep: 'metin kapısı: yeni HTML değişimlerin öncesine birebir uygulanmış hâli değil — yazılmadı' };
+  if (!g.yerTutucu.gerekce?.trim()) return { durum: 'atlandi', sebep: 'gerekçe boş — yazılmadı' };
+  for (const d of ds) {
+    if (!butunBlokMu(d.eski)) return { durum: 'atlandi', sebep: 'değişim parçası bütün bir HTML bloğu değil — yazılmadı' };
+    if (!yerTutucuBul(duzMetin(d.eski)).length) return { durum: 'atlandi', sebep: 'değişim parçasında yer tutucu yok — sorunlu olmayan blok düşürülemez, yazılmadı' };
+    if (!d.yeni) { if (d.kaynak) return { durum: 'atlandi', sebep: 'kaldırma satırında kaynak var — kaynak varsa değer yazılır, yazılmadı' }; continue; }
+    const k = d.kaynak, yd = duzMetin(d.yeni);
+    if (!k || !['baslik', 'ambalaj', 'urun-gorseli', 'uretici'].includes(k.tur) || !k.kaynak || !k.alinti) return { durum: 'atlandi', sebep: 'yeni değerin kaynağı yok — uydurma değer yazılmaz (md.52)' };
+    // Bloğa EKLENEN her sözcük (eski blokta olmayan) kaynak alıntısında geçmeli — «Model kodu» etiketi kalır, değer kaynaktan gelir.
+    const eskiS = new Set(kucuk(duzMetin(d.eski)).split(' ')), yeniS = kucuk(yd).split(' ').filter((w) => w && !eskiS.has(w));
+    if (!butunBlokMu(d.yeni) || !yeniS.length || yeniS.some((w) => !kucuk(k.alinti).includes(w))) return { durum: 'atlandi', sebep: 'yeni değer kaynak alıntısında geçmiyor — yazılmadı' };
+    if (yerTutucuBul(yd).length || YASAK_SOZ.test(kucuk(yd))) return { durum: 'atlandi', sebep: 'yeni değer yer tutucu ya da yasak sözcük taşıyor — yazılmadı' };
+  }
+  if (!aciklamaYerTutucuBul(g.oncekiHtml).length) return { durum: 'atlandi', sebep: 'öncesinde yer tutucu yok — sorun ölçülmedi, yazılmadı' };
+  const kalan = aciklamaYerTutucuBul(html);
+  if (kalan.length) return { durum: 'atlandi', sebep: `yeni açıklamada yer tutucu kalıyor (${kalan.join(', ')}) — yazılmadı` };
+  if (bosBaslikSayisi(html) > bosBaslikSayisi(g.oncekiHtml)) return { durum: 'atlandi', sebep: 'değişim içi boş başlık bırakıyor — yazılmadı' };
+  if (!('yok' in kuyrukBul(html, g.baslik)) || !('yok' in basDiziBul(html, g.baslik))) return { durum: 'atlandi', sebep: 'yeni metin iç blok içeriyor — yazılmadı' };
+  return { durum: 'yazilacak', kip: 'yer-tutucu', html, onceBayt: Buffer.byteLength(canli), sonraBayt: Buffer.byteLength(html) };
+}
+
 export type Urun = { id: string; handle: string; html: string };
-export type KutukSatiri = { handle: string; durum: 'yazilacak' | 'yazildi' | 'degisiklik-yok' | 'atlandi' | 'hata'; kip?: 'degistir' | 'cikar' | 'yarim' | 'olcu'; sebep?: string; onceBayt?: number; sonraBayt?: number; onceHtml?: string };
+export type KutukSatiri = { handle: string; durum: 'yazilacak' | 'oncesi-kaydedildi' | 'yazildi' | 'degisiklik-yok' | 'atlandi' | 'hata'; kip?: 'degistir' | 'cikar' | 'yarim' | 'olcu' | 'yer-tutucu'; sebep?: string; onceBayt?: number; sonraBayt?: number; onceHtml?: string };
 export type Ozet = { taranan: number; yazilacak: number; yazildi: number; degisiklikYok: number; atlandi: number; hata: number };
 
-/** Yarım cümle satırları (`yarimParca`) yarimKarar'dan, ölçü satırları (`degisimler`) olcuKarar'dan, diğerleri karar'dan geçer. `uygula` false iken `yaz` HİÇ çağrılmaz. Yazmadan önce ürün YENİDEN okunur; değiştiyse yazılmaz. ÖNCESİ HTML kütüğe yazılır. */
+/** Yer tutucu satırları (`yerTutucu`) yerTutucuKarar'dan, yarım cümle satırları (`yarimParca`) yarimKarar'dan, ölçü satırları (`degisimler`) olcuKarar'dan, diğerleri karar'dan geçer. `uygula` false iken `yaz` HİÇ çağrılmaz. Yazmadan önce ürün YENİDEN okunur; değiştiyse yazılmaz. ÖNCESİ HTML kütüğe yazma ÖNCESİNDE yazılır (`oncesi-kaydedildi`; kütük atarsa yazma koşmaz). */
 export async function degistirCalistir(
-  girisler: Array<Giris | YarimGiris | OlcuGiris>,
+  girisler: Array<Giris | YarimGiris | OlcuGiris | YerTutucuGiris>,
   dep: { bul: (handle: string) => Promise<Urun | null>; oku: (id: string) => Promise<string | null>; yaz: (id: string, html: string) => Promise<{ ok: true } | { ok: false; hata: string }>; kutuk: (s: KutukSatiri) => void },
   sec: { uygula: boolean },
 ): Promise<Ozet> {
@@ -207,12 +272,13 @@ export async function degistirCalistir(
     try {
       const u = await dep.bul(g.handle);
       if (!u) { oz.atlandi++; dep.kutuk({ handle: g.handle, durum: 'atlandi', sebep: 'aktif ürün bulunamadı' }); continue; }
-      const k = olcuMu(g) ? olcuKarar(g, u.html) : yarimMi(g) ? yarimKarar(g, u.html) : karar(g, u.html);
+      const k = yerTutucuMu(g) ? yerTutucuKarar(g, u.html) : olcuMu(g) ? olcuKarar(g, u.html) : yarimMi(g) ? yarimKarar(g, u.html) : karar(g, u.html);
       if (k.durum === 'degisiklik-yok') { oz.degisiklikYok++; dep.kutuk({ handle: g.handle, durum: 'degisiklik-yok', sebep: k.sebep }); continue; }
       if (k.durum === 'atlandi') { oz.atlandi++; dep.kutuk({ handle: g.handle, durum: 'atlandi', sebep: k.sebep }); continue; }
       const olcu = { kip: k.kip, onceBayt: k.onceBayt, sonraBayt: k.sonraBayt, onceHtml: u.html };
       if (!sec.uygula) { oz.yazilacak++; dep.kutuk({ handle: g.handle, durum: 'yazilacak', ...olcu }); continue; }
       if ((await dep.oku(u.id)) !== u.html) { oz.atlandi++; dep.kutuk({ handle: g.handle, durum: 'atlandi', sebep: 'okuma ile yazma arasında açıklama değişti — yazılmadı' }); continue; }
+      dep.kutuk({ handle: g.handle, durum: 'oncesi-kaydedildi', ...olcu }); // atarsa aşağısı KOŞMAZ
       const r = await dep.yaz(u.id, k.html);
       if (!r.ok) { oz.hata++; dep.kutuk({ handle: g.handle, durum: 'hata', sebep: r.hata, ...olcu }); continue; }
       oz.yazildi++; dep.kutuk({ handle: g.handle, durum: 'yazildi', ...olcu });
