@@ -13,9 +13,11 @@
  *  (e) her satır kütüğe düşer (handle · sonuç · sebep · kip)
  * Ek güvenlik: üründe FARKLI bir SSS zaten varsa EZİLMEZ ("mevcut-sss-var") — elle yazılmış
  * içerik toplu betikle kaybolmasın. Ürün başına en çok SSS_URUN_BASI_EN_COK soru.
+ * Yer tutucu / iç not taşıyan soru ya da cevap reddedilir (sss-yer-tutucu.ts · #994831 m-bison «34XXX (kutudaki EAN'ı gir)»).
  * Hatalı handle / Shopify'da olmayan ürün süreci DURDURMAZ — o satır reddedilir, sıradakine geçilir.
  */
 import { handleTemizle, sssDogrula, type SssKayit } from './urun-sss';
+import { yerTutucuBul } from './sss-yer-tutucu';
 
 export const SSS_URUN_BASI_EN_COK = 4;
 
@@ -82,6 +84,8 @@ export function satirAyristir(ham: string): Ayristirilmis | { hata: string; hand
     const g = r.sss[i] as { soru?: unknown; cevap?: unknown } | null;
     const d = sssDogrula({ soru: typeof g?.soru === 'string' ? g.soru : '', cevap: typeof g?.cevap === 'string' ? g.cevap : '', sira: i });
     if ('hata' in d) return { hata: `${i + 1}. soru: ${d.hata}`, handle };
+    const y = [...new Set([...yerTutucuBul(d.kayit.soru), ...yerTutucuBul(d.kayit.cevap)])];
+    if (y.length) return { hata: `${i + 1}. soru: yer tutucu / iç not (${y.join(', ')}) — müşteriye yarım metin gitmez`, handle };
     const anahtar = d.kayit.soru.toLocaleLowerCase('tr');
     if (gorulen.has(anahtar)) return { hata: `${i + 1}. soru tekrar ediyor`, handle };
     gorulen.add(anahtar);
