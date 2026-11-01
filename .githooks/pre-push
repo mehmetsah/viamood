@@ -1,4 +1,75 @@
 #!/usr/bin/env bash
+# ViaMood pre-push — üç ayak, SIRA KASITLI (bozma):
+#   1. EZME KAPISI (#995653, 1 Kas 2026) ......... DURDURUR
+#   2. TİP KAPISI (main'e push, 25 Eyl 2026) ...... DURDURUR
+#   3. OKAN KAYDI (genel kanca, 26 Eyl 2026) ...... asla durdurmaz
+# Bağlama: `bash scripts/kancalari-kur.sh` → `git config core.hooksPath .githooks`.
+# ÖLÇÜLEN KUSUR (#995653): 1 Kas'a kadar core.hooksPath genel dizini gösteriyordu; o dizindeki kanca yalnız Okan kaydı
+# yazıyordu ve bu dosyadaki TİP KAPISI hiç çalışmıyordu. Ezme kapısı da kanca değil, elle çağrılan bir betikti.
+set -o pipefail
+uzak="${1:-origin}"
+# İki tüketici (ezme + tip) aynı girdiyi okur; girdi bir kez değişkene alınır.
+_girdi=$(cat)
+
+# ── 1 · EZME KAPISI: ÇAĞRILMAYI BEKLEMEZ ─────────────────────────────────────
+# ÖLÇÜLEN OLAY (31 Eki 2026): `ezme-kontrol.sh … | tail` → betik ⛔ verdi, çıkış kodu BORUDA yutuldu, `git push` koştu.
+# Borunun çıkış kodu ÇAĞIRANIN kabuğuna aittir; çağrılan betiğin içine pipefail koymak bunu değiştiremez. Bu yüzden karar
+# git'in kendi kancasında: pre-push exit≠0 verirse `git push` başarısız olur; `&&`, `;`, boru ya da `|| true` ref'i İTEMEZ.
+# Çekirdek: ~/asistan .githooks/pre-push ezme bloğu (#994582). FARK — kapsam: ViaMood'da main'e hiç push edilmez, birleştirme
+# GitHub'da (`gh pr merge`) olur ve orada yerel kanca koşmaz; olay da bir DAL push'uydu. Bu yüzden `yedek/*` dışındaki her dal
+# ölçülür. `yedek/*` serbest: yedekleme kapı yüzünden engellenirse yedeksiz commit kaybı kapının KENDİSİNDEN doğar.
+# Kapatma bayrağı BİLEREK yok. Meşru yollar kapının içinde: `git merge origin/main` · kanıt kütüğü (ezme-kanit.tsv).
+_ezmeBetik="$HOME/asistan-veri/mehmet/araclar/ezme-kontrol.sh"
+_ezmeKanit="$HOME/asistan-veri/mehmet/araclar/ezme-kanit.tsv"
+_ezmeKok=$(git rev-parse --show-toplevel 2>/dev/null || echo ".")
+_ezmeLog="$(git rev-parse --git-common-dir 2>/dev/null || echo .git)/ezme-kapisi.log"
+_olculecek=""
+while read -r _yRef _ySha _uRef _uSha; do
+  [ -z "$_yRef" ] && continue
+  case "$_uRef" in
+    refs/heads/yedek/*|refs/tags/*) continue ;;
+  esac
+  case "$_ySha" in
+    0000000000000000000000000000000000000000)
+      # Dal SİLME: main silinemez; başka dalın silinmesi main'i ezemez.
+      if [ "$_uRef" = "refs/heads/main" ]; then
+        echo "  ⛔ EZME KAPISI: main ref'ini SİLEN push — push ENGELLENDİ." >&2; exit 1
+      fi
+      continue ;;
+    ''|*[!0-9a-f]*) echo "  ⛔ EZME KAPISI: çözülemeyen sha ($_ySha) — ölçülemeyen şey temiz değildir, push ENGELLENDİ." >&2; exit 1 ;;
+  esac
+  case " $_olculecek " in *" $_ySha "*) ;; *) _olculecek="$_olculecek $_ySha" ;; esac
+done <<< "$_girdi"
+
+if [ -n "$_olculecek" ]; then
+  if [ ! -f "$_ezmeBetik" ]; then
+    # Betiği olmayan bir klonda (CI, taze makine) push'u kilitlemek yanlış reddir — Asistan kancasıyla aynı karar.
+    echo "  ⚠ EZME KAPISI ÖLÇEMEDİ: $_ezmeBetik yok — push ENGELLENMEDİ." >&2
+  else
+    for _sha in $_olculecek; do
+      echo "── $(date -u +%Y-%m-%dT%H:%M:%SZ) · push → $uzak · $_sha" >> "$_ezmeLog"
+      # Çıktı hem kütüğe hem ekrana; pipefail sayesinde çıkış kodu `tee`nin değil ezme-kontrol'ün.
+      EZME_KANIT_KUTUK="$_ezmeKanit" GIT_TERMINAL_PROMPT=0 bash "$_ezmeBetik" "$_ezmeKok" "$_sha" 2>&1 | tee -a "$_ezmeLog" >&2
+      _ezmeKod=$?
+      if [ "$_ezmeKod" != "0" ]; then
+        cat >&2 <<MSG
+
+  ⛔ EZME KAPISI — PUSH ENGELLENDİ (ezme-kontrol çıkışı: $_ezmeKod · $_sha)
+  Kapı git'in pre-push kancasında: "&&" / ";" / boru / "|| true" ile atlatılamaz. Okan onayı da geçmez.
+  Çıkış 1 = ezme riski ÖLÇÜLDÜ · çıkış 2 = ÖLÇÜLEMEDİ (ikisi de geçmez).
+  Doğru hamle:  git merge origin/main   → sonra push'u YİNELE
+  Silme KASITLIYSA kanıtı kütüğe yaz: $_ezmeKanit
+  Yedek gerekiyorsa (kapıdan bağımsız): git push $uzak HEAD:refs/heads/yedek/<dal>-<tarih>
+  Kütük: $_ezmeLog
+
+MSG
+        exit 1
+      fi
+    done
+  fi
+fi
+
+# ── 2 · TİP KAPISI (main'e giden push) — 25 Eyl 2026 içeriği aynen ──────────────
 # main'e giden her push'ta tip kapısı. 25 Eyl 2026: tip hatalı bir commit main'e girdi,
 # sunucuda build düştü, .next yarım kaldı ve canlı 502 verdi (30 dk'da 8 kez).
 # vitest yeşil olması build'in geçtiğini GÖSTERMEZ — tip denetimi ayrı kapıdır.
@@ -10,4 +81,9 @@ while read -r _ _ uzak_ref _; do
     exit 1
   fi
   echo "✓ tip denetimi temiz"
-done
+done <<< "$_girdi"
+
+# ── 3 · OKAN KAYDI — genel kanca, asla durdurmaz ─────────────────────────────────
+_genel="$HOME/asistan-veri/mehmet/githooks-genel/pre-push"
+[ -f "$_genel" ] && { bash "$_genel" "$@" <<< "$_girdi" || true; }
+exit 0
