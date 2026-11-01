@@ -13,6 +13,7 @@ import { appendFileSync, mkdirSync, readFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import path from 'node:path';
 import { taslakCalistir, type Is, type KutukSatiri } from '../src/lib/aciklama-ic-not.ts';
+import { aciklamaYazKapisi } from '../src/lib/aciklama-yer-tutucu.ts';
 
 const args = process.argv.slice(2);
 const uygula = args.includes('--uygula');
@@ -55,6 +56,7 @@ const ozet = await taslakCalistir(
       return d.productByHandle ? { id: d.productByHandle.id, html: d.productByHandle.descriptionHtml ?? '' } : null;
     },
     yaz: async (id, html) => {
+      const kapi = aciklamaYazKapisi(html); if (!kapi.ok) return kapi; // #994831 yer tutucu / iç not yazılmaz (md.52)
       const m: { productUpdate: { userErrors: Array<{ message: string }> } } = await gql(
         'mutation($p:ProductUpdateInput!){productUpdate(product:$p){userErrors{field message}}}', { p: { id, descriptionHtml: html } });
       const e = m.productUpdate.userErrors;

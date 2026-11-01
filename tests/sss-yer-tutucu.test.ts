@@ -12,6 +12,7 @@ import { cevapUygunMu, kucuk as eksenKucuk } from '../src/lib/sss-eksen';
 import { karar, type SssDusurGiris, type SssSatir } from '../src/lib/sss-dusur';
 import { kucuk, YER_TUTUCU_DESENLERI, yerTutucuBul, yerTutucuMu } from '../src/lib/sss-yer-tutucu';
 import { satirAyristir } from '../src/lib/urun-sss-ice-aktar';
+import { MESRU } from './yer-tutucu-ornek';
 
 const VERI = path.join(__dirname, '..', 'veri');
 const satir = <T,>(f: string) => readFileSync(path.join(VERI, f), 'utf8').trim().split('\n').map((l) => JSON.parse(l) as T);
@@ -38,19 +39,6 @@ const YAKALANMALI: Array<[string, string]> = [
   ['editör önerisi', 'Öneri: buraya bakım cümlesi gelsin.'],
 ];
 
-/** Meşru zor örnekler (canlı DB'den birebir + sınır vakaları) — yanlış alarm 0 olmalı. */
-const MESRU = [
-  'Yıkama: Önerisi 30°C.', // yalın «önerisi» desen DEĞİL (canlı, pola bambu çorap)
-  '50 ml ürünü 1 litre temiz ve oda sıcaklığındaki suya ekleyin. Kahve makinenizin kullanım kılavuzunda süt sistemi için özel bir temizlik işlemi belirtilmemişse hazırlanan solüsyonu makineye çektirin. Temizlik tamamlandıktan sonra sistemi temiz suyla iyice durulayın.',
-  'Ürünümüz yüksek performanslı sert (5 numaralı) PP plastikten üretilmiştir.',
-  'Kirli sepeti 55 litre (46 × 34,5 × 58 cm), çok amaçlı sepet 35 litre (54 × 33,5 × 26 cm).',
-  'Bakım: (bakım talimatı kutudadır) nemli bezle silinir.', // «bak» `\b` ile «bakım»da eşleşirdi
-  'Bedenler XS, S, M, L, XL, XXL ve XXXL.', // beden kodu şablon değil
-  'Teknik bilgiler, ürün kodu ve ölçüler Via Mood ürün sayfasından doğrulanmıştır.', // geçmiş zaman beyan
-  'Kullanmadan önce parçaları kontrol edin.', // müşteriye talimat, editör emri değil
-  'Gözlük 1:64 ölçekli; kutu içeriği (1 adet) görseldeki gibidir.',
-  'Yaş: 13+.',
-];
 
 describe('derlem — bugüne dek yazılan TÜM SSS çiftleri', () => {
   it('derlem boş değil ve dalga 2…9 dosyalarını kapsıyor', () => {

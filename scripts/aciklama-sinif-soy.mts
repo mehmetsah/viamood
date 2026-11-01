@@ -16,6 +16,7 @@ import { appendFileSync, mkdirSync } from 'node:fs';
 import { homedir } from 'node:os';
 import path from 'node:path';
 import { KALINTI_ISARETI, sinifSoyCalistir, type KutukSatiri, type Urun } from '../src/lib/aciklama-sinif-soy.ts';
+import { aciklamaYazKapisi } from '../src/lib/aciklama-yer-tutucu.ts';
 
 const args = process.argv.slice(2);
 const uygula = args.includes('--uygula');
@@ -67,6 +68,7 @@ const ozet = await sinifSoyCalistir(
   hedefler(),
   {
     yaz: async (u, yeniHtml) => {
+      const kapi = aciklamaYazKapisi(yeniHtml); if (!kapi.ok) return kapi; // #994831 yer tutucu / iç not yazılmaz (md.52)
       // Okuma ile yazma arasında ürün elle düzenlendiyse onun üstüne yazılmaz.
       const g: { product: { descriptionHtml: string | null } | null } = await gql('query($id:ID!){product(id:$id){descriptionHtml}}', { id: u.id });
       if ((g.product?.descriptionHtml ?? '') !== u.html) return { ok: false, hata: 'okuma ile yazma arasında açıklama değişti — yazılmadı' };

@@ -13,6 +13,7 @@ import { appendFileSync, mkdirSync } from 'node:fs';
 import { homedir } from 'node:os';
 import path from 'node:path';
 import { DUZELTMELER, duzeltmeCalistir, type KutukSatiri, type Urun } from '../src/lib/aciklama-duzeltme.ts';
+import { aciklamaYazKapisi } from '../src/lib/aciklama-yer-tutucu.ts';
 
 const args = process.argv.slice(2);
 const uygula = args.includes('--uygula');
@@ -47,6 +48,7 @@ async function* hedefler(): AsyncGenerator<Urun> {
 const ozet = await duzeltmeCalistir(hedefler(), {
   oku: async (id) => (await gql<{ product: { descriptionHtml: string | null } | null }>('query($id:ID!){product(id:$id){descriptionHtml}}', { id })).product?.descriptionHtml ?? null,
   yaz: async (id, html) => {
+    const kapi = aciklamaYazKapisi(html); if (!kapi.ok) return kapi; // #994831 yer tutucu / iç not yazılmaz (md.52)
     const m: { productUpdate: { userErrors: Array<{ message: string }> } } = await gql('mutation($p:ProductUpdateInput!){productUpdate(product:$p){userErrors{field message}}}', { p: { id, descriptionHtml: html } });
     const e = m.productUpdate.userErrors; return e.length ? { ok: false, hata: e.map((x) => x.message).join('; ') } : { ok: true };
   },
