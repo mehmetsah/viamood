@@ -36,7 +36,7 @@ describe('paket ve md5', () => {
     expect(M['snippets/via-product-tabs.liquid']).toEqual({ once: md5(ONCE), sonra: md5(SONRA) });
   });
   it('yama.py: uygula(ÖNCESİ) = SONRASI; ikinci uygulama ve çapasız dosya REDDEDİLİR', () => {
-    const py = (kod: string) => execFileSync('python3', ['-c', `import sys; sys.path.insert(0, ${JSON.stringify(P)}); import yama\n${kod}`], { encoding: 'utf8' });
+    const py = (kod: string) => execFileSync('python3', ['-c', `import sys; sys.path.insert(0, ${JSON.stringify(P)}); import yama\n${kod}`], { encoding: 'utf8', env: { ...process.env, PYTHONDONTWRITEBYTECODE: '1' } });
     expect(md5(py(`import sys; sys.stdout.write(yama.uygula('snippets/via-product-tabs.liquid', open(${JSON.stringify(path.join(P, 'ONCESI/snippets__via-product-tabs.liquid'))}, encoding='utf-8').read()))`))).toBe(md5(SONRA));
     expect(() => py(`yama.uygula('snippets/via-product-tabs.liquid', open(${JSON.stringify(path.join(P, 'SONRASI/snippets__via-product-tabs.liquid'))}, encoding='utf-8').read())`)).toThrow();
     expect(() => py(`yama.uygula('snippets/via-product-tabs.liquid', 'çapa yok')`)).toThrow();
