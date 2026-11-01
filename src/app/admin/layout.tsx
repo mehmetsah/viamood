@@ -55,6 +55,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           {/* #991691: emoji BİLEREK konmadı (Mehmet Şah kalıcı kuralı: emoji/AI-kokan ikon yasak).
               Komşu satırlardaki emojiler eski; yeni satır kurala uyuyor. */}
           <Link href="/admin/mail-gecmisi" className="px-3 py-2 rounded-lg hover:bg-white/10">Mail Gönderim Geçmişi</Link>
+          {/* #995397: emoji BİLEREK konmadı (aynı kural). */}
+          <Link href="/admin/eposta-akislari" className="px-3 py-2 rounded-lg hover:bg-white/10">E-posta Akışları</Link>
           <Link href="/admin/settings" className="px-3 py-2 rounded-lg hover:bg-white/10">⚙️ Ayarlar</Link>
           <Link href="/admin/theme" className="px-3 py-2 rounded-lg hover:bg-white/10">🎨 Tema Editörü</Link>
           <Link href="/admin/pages" className="px-3 py-2 rounded-lg hover:bg-white/10">📄 İçerik Sayfaları</Link>
