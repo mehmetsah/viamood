@@ -4,7 +4,8 @@
  *   cd /var/www/viamood && set -a && . ./.env.production && set +a
  *   npx tsx scripts/gorsel-bag-coz.mts <girdi.jsonl>              # DRY-RUN (varsayılan) — tek bayt yazmaz
  *   npx tsx scripts/gorsel-bag-coz.mts <girdi.jsonl> --uygula     # fileUpdate(referencesToRemove) — yalnız bağ
- *   npx tsx scripts/gorsel-bag-coz.mts <girdi.jsonl> --geri-al    # fileUpdate(referencesToAdd) — bağı geri kurar
+ *   npx tsx scripts/gorsel-bag-coz.mts <girdi.jsonl> --geri-al    # fileUpdate(referencesToAdd) — bağı geri kurar; gerekirse
+ *                                                                 # productReorderMedia ile eski konumuna taşır (yalnız sıra)
  *   isteğe bağlı: --kutuk=<yol.jsonl>   (ÖNCESİ galeri sırası yazılmadan bağ çözme koşmaz)
  *
  * ⛔ productDeleteMedia KULLANILMAZ (geri alınamaz siler). Kapılar: src/lib/gorsel-bag-coz.ts (çivi: tests/gorsel-bag-coz.test.ts).
@@ -56,7 +57,17 @@ const referans = (alan: 'referencesToRemove' | 'referencesToAdd') => async (medi
 const kutuk = (s: KutukSatiri) => appendFileSync(kutukYolu, JSON.stringify({ ts: new Date().toISOString(), ...s }) + '\n');
 
 if (geriAl) {
-  const oz = await geriAlCalistir(girisler, { oku, kutuk, bagKur: referans('referencesToAdd') });
+  // Sona eklenen medyayı eski konumuna taşır; iş zaman uyumsuz olduğundan sıra okunarak beklenir (en çok ~15 sn).
+  const sirala = async (urunId: string, mediaId: string, konum: number) => {
+    const m = await gql<{ productReorderMedia: { mediaUserErrors: Array<{ message: string }> } }>(
+      'mutation($p:ID!,$m:[MoveInput!]!){productReorderMedia(id:$p,moves:$m){job{id done} mediaUserErrors{field message}}}', { p: urunId, m: [{ id: mediaId, newPosition: String(konum) }] });
+    const e = m.productReorderMedia.mediaUserErrors;
+    if (e.length) return { ok: false as const, hata: e.map((x) => x.message).join('; ') };
+    const h = girisler.find((x) => x.mediaId === mediaId)!.handle;
+    for (let i = 0; i < 15; i++) { const c = await oku(h); if (c?.galeri.findIndex((x) => x.id === mediaId) === konum) break; await new Promise((z) => setTimeout(z, 1000)); }
+    return { ok: true as const };
+  };
+  const oz = await geriAlCalistir(girisler, { oku, kutuk, bagKur: referans('referencesToAdd'), sirala });
   console.log(JSON.stringify({ kip: 'geri-al', girdi, kutuk: kutukYolu, ozet: oz }, null, 1));
   process.exit(oz.hata > 0 ? 1 : 0);
 }
