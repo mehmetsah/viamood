@@ -9,15 +9,17 @@
  *
  * Girdi satırı: { handle, soru, onceCevap, gerekce }
  * KAPI — ürün ancak HEPSİ sağlanırsa yazılır:
- *   1. yalnız KURAL DIŞI soru düşer: soru kargo/teslimat/iade/cayma eksenindedir,
+ *   1. yalnız KURAL DIŞI soru ya da YER TUTUCULU cevap düşer: soru kargo/teslimat/iade/cayma eksenindedir YA DA
+ *      öncesi cevap yer tutucu / iç not taşır (sss-yer-tutucu.ts — #994831 m-bison «34XXX (kutudaki EAN'ı gir)»),
  *   2. açık SSS'te bu soru TAM bir kez var ve cevabı = onceCevap (açıkta yok, kapalıda aynısı varsa değişiklik-yok),
  *   3. yeni açık küme = eski açık küme eksi bu satır; öteki soruların soru/cevap/sıra değerleri bayt bayt aynı, en az 1 soru kalır,
  *   4. ÖNCESİ küme (soru + cevap TAM metin + sıra) kütüğe YAZILMADAN DB'ye yazma koşmaz,
  *   5. yazmadan önce SSS yeniden okunur; değiştiyse yazılmaz. `uygula` false iken yaz/senkron çağrılmaz.
  *
- * Çivi: tests/sss-dusur.test.ts.
+ * Çivi: tests/sss-dusur.test.ts + tests/sss-yer-tutucu.test.ts (yer tutucu yolu).
  */
 import { kucuk } from './sss-eksen';
+import { yerTutucuMu } from './sss-yer-tutucu';
 import type { SssKayit } from './urun-sss';
 
 export type SssSatir = SssKayit & { acik: boolean };
@@ -33,7 +35,7 @@ export type Karar =
 const kayit = (x: SssSatir): SssKayit => ({ soru: x.soru, cevap: x.cevap, sira: x.sira });
 
 export function karar(g: SssDusurGiris, satirlar: SssSatir[]): Karar {
-  if (!DUSURULEBILIR.test(kucuk(g.soru))) return { durum: 'atlandi', sebep: 'soru kural dışı eksende değil (kargo/teslimat/iade/cayma) — düşürülmez' };
+  if (!DUSURULEBILIR.test(kucuk(g.soru)) && !yerTutucuMu(g.onceCevap)) return { durum: 'atlandi', sebep: 'soru kural dışı eksende değil (kargo/teslimat/iade/cayma) ve cevapta yer tutucu yok — düşürülmez' };
   const acik = satirlar.filter((x) => x.acik);
   const es = acik.filter((x) => x.soru === g.soru);
   if (es.length === 0 && satirlar.some((x) => !x.acik && x.soru === g.soru && x.cevap === g.onceCevap)) return { durum: 'degisiklik-yok', sebep: 'soru zaten kapalı' };

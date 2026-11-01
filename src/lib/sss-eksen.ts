@@ -15,7 +15,10 @@
  * Uygulanmayan eksenler (ölçülen isabet düşük, Mehmet kararı): «Nasıl kullanılır?» · «Lisans/seri» · «Güç/şarj».
  *
  * Çivi: tests/damgali-kur.test.ts (dalga 7 verisi) + tests/sss-eksen.test.ts.
+ * Yer tutucu / iç not süzgeci (#994831, 1 Kas 2026): sss-yer-tutucu.ts — eksenden önce koşar.
  */
+import { yerTutucuBul } from './sss-yer-tutucu';
+
 export const kucuk = (s: string) => s.replace(/İ/g, 'i').replace(/I/g, 'ı').toLocaleLowerCase('tr');
 
 /** Hiçbir eksende cevapta geçemez (kargo/iade çelişkisi #994995 · satış/fiyat · doğrulanmamış bilgi). */
@@ -63,6 +66,8 @@ export const UYGULANMAYAN = ['Nasıl kullanılır?', 'Lisanslı / orijinal mi?',
 export function cevapUygunMu(soru: string, cevap: string): { ok: boolean; sebep?: string } {
   const e = EKSENLER[soru];
   if (!e) return { ok: false, sebep: `bilinmeyen ya da uygulanmayan eksen: ${soru}` };
+  const y = yerTutucuBul(cevap);
+  if (y.length) return { ok: false, sebep: `yer tutucu / iç not: ${y.join(', ')}` };
   const c = kucuk(cevap);
   if (GENEL_YASAK.test(c)) return { ok: false, sebep: 'genel yasak sözcük' };
   if (!e.sart.test(c)) return { ok: false, sebep: 'cevap soruyu karşılamıyor (şart)' };
