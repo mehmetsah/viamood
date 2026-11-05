@@ -1,0 +1,10 @@
+{
+ "templates/product.json": {
+  "once": "cf7c0cf059ebf9cab39c3f84f6d38e82",
+  "sonra": "5ab2187bf9f2e6c9e56dc7e9509fee1f"
+ },
+ "assets/via-product-overrides.css": {
+  "once": "0d5fc0a39d59d137211d9f6991cc2183",
+  "sonra": "965806defa50555e83be0b6d42565c66"
+ }
+}
