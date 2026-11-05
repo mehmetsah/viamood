@@ -304,6 +304,7 @@ bash scripts/sss-yer-tutucu-dusur-kur.sh || echo "  (sss-yer-tutucu-dusur adım�
 bash scripts/aciklama-yer-tutucu-kur.sh || echo "  (aciklama-yer-tutucu adımı atlandı)"
 bash scripts/gorsel-bag-coz-kur.sh || echo "  (gorsel-bag-coz adımı atlandı)"
 bash scripts/gorsel-bag-coz-sanrio-kur.sh || echo "  (gorsel-bag-coz-sanrio adımı atlandı)"
+bash scripts/aciklama-dalga10-kur.sh || echo "  (aciklama-dalga10 adımı atlandı)"
 
 echo ""
 echo "════════════════════════════════════════════"
