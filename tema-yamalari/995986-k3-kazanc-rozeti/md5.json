@@ -1,0 +1,14 @@
+{
+ "blocks/via-kazanc.liquid": {
+  "once": null,
+  "sonra": "36a4455867454a6e429317b6bc4b957a"
+ },
+ "templates/product.json": {
+  "once": "2f6b27d99fe24d810723c34ce93af272",
+  "sonra": "7ee2e9d91d914a4bbbef8e3f189b47a1"
+ },
+ "templates/product.cok-al.json": {
+  "once": "83c746edd0e6e50a85b0e366fd243299",
+  "sonra": "4519432e9fc9b0cf52bfad4030a1d8c2"
+ }
+}
