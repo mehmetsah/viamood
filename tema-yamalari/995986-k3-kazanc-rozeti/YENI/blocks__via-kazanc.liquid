@@ -1,0 +1,68 @@
+{%- comment -%}
+  #995986 · ayse:863 KALEM 3 — kazanç rozeti (Yunus 6 Kas 08:05: «ne kadar kazancımız var ise … yeşil bir buton yapısı
+  ile gösterilmeli. Örnek: "Kazancınız 250₺"»). Yer: ürün adının ÜSTÜ (product-details block_order'da başlıktan önce).
+  · Tutar = seçili varyant compare_at_price − price (Liquid, tek kaynak). İndirim yoksa HİÇBİR rozet basılmaz (md.52):
+    sıfır, boş ya da gizli rozet yok.
+  · Para biçimi mağazanın kendi biçimi (money_without_trailing_zeros): sayfadaki fiyatla aynı «TL» eki — «₺» üretilmedi.
+  · Görsel dil .vkr__rozet'in birebiri (via-product-overrides.css:448 — görseldeki «Kargo Ücretsiz» rozeti):
+    #1C6B45 zemin · #fff yazı · 4px köşe · 8px 12px · 11px/600 · 1.35. YENİ renk/jeton/yazı ölçüsü YOK.
+  · Varyant değişince tema bu bloğu yeniden basmıyor (ölçüldü: yalnız `variant:update` olayı, bloklar yerinde kalıyor).
+    Çok varyantlı üründe olaydaki yeni bölüm HTML'inden rozet alınır (tutar yine Liquid'den); JS para biçimlemez.
+{%- endcomment -%}
+{%- liquid
+  assign urun = closest.product
+  assign secili = urun.selected_or_first_available_variant
+  assign kazanc = 0
+  if secili.compare_at_price > secili.price
+    assign kazanc = secili.compare_at_price | minus: secili.price
+  endif
+-%}
+{%- if kazanc > 0 -%}
+  <p class="via-kazanc" data-via-kazanc {{ block.shopify_attributes }}>Kazancınız {{ kazanc | money_without_trailing_zeros }}</p>
+{%- endif -%}
+{%- if urun.variants.size > 1 -%}
+  <script>
+    (function () {
+      if (window.__viaKazanc) return;
+      window.__viaKazanc = true;
+      document.addEventListener('variant:update', function (e) {
+        var html = e.detail && e.detail.data && e.detail.data.html;
+        if (!html) return;
+        var doc = typeof html === 'string' ? new DOMParser().parseFromString(html, 'text/html') : html;
+        var yeni = doc.querySelector('[data-via-kazanc]');
+        var eski = document.querySelector('.product-details [data-via-kazanc]');
+        if (eski && yeni) { eski.textContent = yeni.textContent; return; }
+        if (eski) { eski.remove(); return; }
+        if (!yeni) return;
+        var h1 = document.querySelector('.product-details h1');
+        var baslik = h1 && h1.closest('.text-block');
+        if (baslik) baslik.parentNode.insertBefore(document.importNode(yeni, true), baslik);
+      });
+    })();
+  </script>
+{%- endif -%}
+
+{% stylesheet %}
+  .via-kazanc {
+    align-self: flex-start;
+    display: inline-flex;
+    align-items: center;
+    margin: 0;
+    padding: 8px 12px;
+    border-radius: 4px;
+    background: #1c6b45;
+    color: #fff;
+    font-size: 11px;
+    line-height: 1.35;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    white-space: nowrap;
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "Kazanç rozeti",
+  "settings": []
+}
+{% endschema %}
