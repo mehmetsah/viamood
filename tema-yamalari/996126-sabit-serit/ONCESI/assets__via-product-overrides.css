@@ -579,6 +579,33 @@ sticky-add-to-cart[data-variant-available="true"] .sticky-add-to-cart__bar{displ
   sticky-add-to-cart[data-variant-available="true"] .sticky-add-to-cart__bar{grid-template-columns:minmax(0,1fr) auto auto;grid-template-areas:"satir satir satir" "bilgi hemen sepet" "fiyat hemen sepet";column-gap:8px}
   sticky-add-to-cart[data-variant-available="true"] .sticky-add-to-cart__image{display:none}
 }
+/* ── #996126 · ayse:888 · YALNIZ MASAÜSTÜ (≥750) — Yunus 9 Kas 11:20: «Sadece Pc için değişikliği uygulayalım,
+   mobil için ayrıca güncelleme vereceğim». Yukarıdaki şerit kuralları (≤749 ve ≤359 dahil) AYNEN duruyor; aşağıdaki
+   kuralların HEPSİ min-width:750 içinde — telefonda hiçbir şey değişmez.
+   Ad TAM (ellipsis yok) · görsel 52 → 65 (×1,25) · genişlik = sayfa ızgarası (en çok 1440) ama sağ alttaki #wa-fab'a
+   İKİ YANDAN eşit pay (20 kenar + 60 düğme + 16 nefes = 96) → 1280'de 1088, 1440'ta 1248, 1920'de 1440 (ızgarayla
+   birebir). 16 + 18 + 16 + 65 + 16 = 131. Kapsül köşesi korunur; 32px yan boşluk köşe eğrisinin içinde kalır.
+   Hiyerarşi (ayse:730) AYNEN: Sepete ekle dolu · Hemen al çerçeveli · WhatsApp şeride GİRMEZ. */
+@media (min-width:750px){
+  sticky-add-to-cart[data-variant-available="true"] .sticky-add-to-cart__bar{grid-template-columns:65px minmax(0,1fr) auto auto;width:min(1440px,calc(100% - 192px));padding:16px 32px}
+  .sticky-add-to-cart__bar > .vks-satir{margin-bottom:16px !important}
+  /* Görsel 65: tema `height:var(--height-buy-buttons)` (52) compiled_assets'te SONRA yükleniyor — seçici güçlendirildi. */
+  sticky-add-to-cart[data-variant-available="true"] .sticky-add-to-cart__image{width:65px;height:65px}
+  /* Ad kesilmez: temanın `white-space:nowrap; text-overflow:ellipsis` kuralı ezilir. */
+  sticky-add-to-cart[data-variant-available="true"] .sticky-add-to-cart__title{display:block;white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:break-word}
+}
+/* 750–1023: tek sırada ad sütunu 106px'e düşüyordu (768'de en uzun ad 10 satır, ölçüldü) → ad KENDİ sırasında
+   (görselin yanında tam genişlik), fiyat + Hemen al + Sepete ekle altında. Kapsül yüksekliği ~165 olunca köşe eğrisi
+   kargo satırı hizasında 34px içeri giriyor → yan boşluk 40 (4px ızgarası). */
+@media (min-width:750px) and (max-width:1023px){
+  sticky-add-to-cart[data-variant-available="true"] .sticky-add-to-cart__bar{grid-template-areas:"satir satir satir satir" "gorsel bilgi bilgi bilgi" "gorsel fiyat hemen sepet";padding:16px 40px}
+  .sticky-add-to-cart__info{margin-bottom:8px}
+  .sticky-add-to-cart__price{align-self:center}
+}
+/* ≥1024: iki düğme eşit ve geniş (176 = 44 × 4); ad sütunu 1280'de 559px, 1024'te 303px kalır. */
+@media (min-width:1024px){
+  .sticky-add-to-cart__hemen,.sticky-add-to-cart__button{min-width:176px}
+}
 
 /* ==================================================================
    #995057 · ARAMA/ÜRÜN KARTI GÖRSEL KUTUSU — MOBİL 12px İÇ BOŞLUK ÇARPIŞMASI
