@@ -554,21 +554,11 @@ nav.via-breadcrumb{ padding-block: 8px !important; }
 .via-satinal-ek--vqb .via-hemen-al:hover{color:#C6431E;border-color:#C6431E}
 .via-satinal-ek--vqb .via-wa-siparis{border-radius:12px}
 
-/* sabit çubuk: ızgara — #996126 · ayse:888 (Yunus 7 Kas): ürün adı TAM (ellipsis yok), görsel 52 → 65 (×1,25),
-   şerit arkadaki yatay alanı kaplar. ayse:730'un «yükseklik 114 KORUNUR» ölçüsü bu kayıtla kalktı; hiyerarşi AYNEN:
-   Sepete ekle dolu (birincil) · Hemen al çerçeveli (ikincil) · WhatsApp şeride GİRMEZ.
-   ≥750: genişlik = sayfa ızgarası (en çok 1440) ama sağ alttaki #wa-fab'a İKİ YANDAN eşit pay (20 kenar + 60 düğme
-   + 16 nefes = 96) → 1280'de 1088, 1440'ta 1248, 1920'de 1440 (ızgarayla birebir). 16 + 18 + 16 + 65 + 16 = 131.
-   Kapsül köşesi korunur; 32px yan boşluk köşe eğrisinin içinde kalır (kargo satırı üstünde eğri 23px).
-   ≤749: üç sıra — kargo satırı · [görsel 65][ad (sarar) + fiyat] · [Hemen al | Sepete ekle] yarı yarıya. */
-sticky-add-to-cart[data-variant-available="true"] .sticky-add-to-cart__bar{display:grid;grid-template-columns:65px minmax(0,1fr) auto auto;grid-template-areas:"satir satir satir satir" "gorsel bilgi hemen sepet" "gorsel fiyat hemen sepet";column-gap:16px;row-gap:0;align-items:center}
-.sticky-add-to-cart__bar > .vks-satir{grid-area:satir;margin-bottom:16px !important}
+/* sabit çubuk: ızgara — yükseklik 114 KORUNUR (12 + 18 + 20 + 52 + 12) */
+sticky-add-to-cart[data-variant-available="true"] .sticky-add-to-cart__bar{display:grid;grid-template-columns:52px minmax(0,1fr) auto auto;grid-template-areas:"satir satir satir satir" "gorsel bilgi hemen sepet" "gorsel fiyat hemen sepet";column-gap:16px;row-gap:0;align-items:center}
+.sticky-add-to-cart__bar > .vks-satir{grid-area:satir;margin-bottom:20px !important}
 .sticky-add-to-cart__image{grid-area:gorsel}
-/* Görsel 65: tema `height:var(--height-buy-buttons)` (52) compiled_assets'te SONRA yükleniyor — seçici güçlendirildi. */
-sticky-add-to-cart[data-variant-available="true"] .sticky-add-to-cart__image{width:65px;height:65px}
 .sticky-add-to-cart__info{grid-area:bilgi;align-self:end}
-/* Ad kesilmez: tema `white-space:nowrap; text-overflow:ellipsis` ve ≤389'da `display:none` veriyor — ikisi de ezilir. */
-sticky-add-to-cart[data-variant-available="true"] .sticky-add-to-cart__title{display:block;white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:break-word}
 .sticky-add-to-cart__price{grid-area:fiyat;align-self:start;white-space:nowrap}
 .sticky-add-to-cart__price [class*="price"]{font-size:16px !important;line-height:1.3 !important}
 /* KARAR (Ayşe RET md.3 → şık a, TÜM genişlikler): çubukta İNDİRİM ÖNCESİ fiyat gösterilmez. Ölçülen gerekçe:
@@ -577,8 +567,32 @@ sticky-add-to-cart[data-variant-available="true"] .sticky-add-to-cart__title{dis
 .sticky-add-to-cart__price .compare-at-price{display:none}
 .sticky-add-to-cart__hemen{grid-area:hemen;width:auto;height:52px;padding:0 28px}
 .sticky-add-to-cart__button{grid-area:sepet}
+@media (max-width:749px){
+  sticky-add-to-cart[data-variant-available="true"] .sticky-add-to-cart__bar{column-gap:12px}
+  .sticky-add-to-cart__hemen{padding:0 16px;font-size:14px;font-weight:700;border-radius:10px}
+}
+/* ≤359px: fiyat ("5.000,00TL" = 93,2px) TAM sığsın. Ölçüldü: iç boşluk daraltma İŞLEMEZ — tema
+   via-mobile-app.css `[class*="add-to-cart"] button{padding:12px!important}` dayatıyor; daraltılsa bile sütun
+   ~84px kalırdı. Çözüm: bu genişlikte çubuktaki küçük görsel çizilmez (ürün görseli sayfada zaten ekranda),
+   başlık+fiyat sütunu ~136px olur. Yazı boyutu DEĞİŞMEZ (16/800 fiyat, 14/700 Hemen al). */
+@media (max-width:359px){
+  sticky-add-to-cart[data-variant-available="true"] .sticky-add-to-cart__bar{grid-template-columns:minmax(0,1fr) auto auto;grid-template-areas:"satir satir satir" "bilgi hemen sepet" "fiyat hemen sepet";column-gap:8px}
+  sticky-add-to-cart[data-variant-available="true"] .sticky-add-to-cart__image{display:none}
+}
+/* ── #996126 · ayse:888 · YALNIZ MASAÜSTÜ (≥750) — Yunus 9 Kas 11:20: «Sadece Pc için değişikliği uygulayalım,
+   mobil için ayrıca güncelleme vereceğim». Yukarıdaki şerit kuralları (≤749 ve ≤359 dahil) AYNEN duruyor; aşağıdaki
+   kuralların HEPSİ min-width:750 içinde — telefonda hiçbir şey değişmez.
+   Ad TAM (ellipsis yok) · görsel 52 → 65 (×1,25) · genişlik = sayfa ızgarası (en çok 1440) ama sağ alttaki #wa-fab'a
+   İKİ YANDAN eşit pay (20 kenar + 60 düğme + 16 nefes = 96) → 1280'de 1088, 1440'ta 1248, 1920'de 1440 (ızgarayla
+   birebir). 16 + 18 + 16 + 65 + 16 = 131. Kapsül köşesi korunur; 32px yan boşluk köşe eğrisinin içinde kalır.
+   Hiyerarşi (ayse:730) AYNEN: Sepete ekle dolu · Hemen al çerçeveli · WhatsApp şeride GİRMEZ. */
 @media (min-width:750px){
-  sticky-add-to-cart[data-variant-available="true"] .sticky-add-to-cart__bar{width:min(1440px,calc(100% - 192px));padding:16px 32px}
+  sticky-add-to-cart[data-variant-available="true"] .sticky-add-to-cart__bar{grid-template-columns:65px minmax(0,1fr) auto auto;width:min(1440px,calc(100% - 192px));padding:16px 32px}
+  .sticky-add-to-cart__bar > .vks-satir{margin-bottom:16px !important}
+  /* Görsel 65: tema `height:var(--height-buy-buttons)` (52) compiled_assets'te SONRA yükleniyor — seçici güçlendirildi. */
+  sticky-add-to-cart[data-variant-available="true"] .sticky-add-to-cart__image{width:65px;height:65px}
+  /* Ad kesilmez: temanın `white-space:nowrap; text-overflow:ellipsis` kuralı ezilir. */
+  sticky-add-to-cart[data-variant-available="true"] .sticky-add-to-cart__title{display:block;white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:break-word}
 }
 /* 750–1023: tek sırada ad sütunu 106px'e düşüyordu (768'de en uzun ad 10 satır, ölçüldü) → ad KENDİ sırasında
    (görselin yanında tam genişlik), fiyat + Hemen al + Sepete ekle altında. Kapsül yüksekliği ~165 olunca köşe eğrisi
@@ -591,18 +605,6 @@ sticky-add-to-cart[data-variant-available="true"] .sticky-add-to-cart__title{dis
 /* ≥1024: iki düğme eşit ve geniş (176 = 44 × 4); ad sütunu 1280'de 559px, 1024'te 303px kalır. */
 @media (min-width:1024px){
   .sticky-add-to-cart__hemen,.sticky-add-to-cart__button{min-width:176px}
-}
-/* ≤749: düğmeler kendi sırasında yarı yarıya (Hemen al SOL · Sepete ekle SAĞ, sayfa içi çiftle aynı sıra — #995986).
-   Sütun 2 = %50 − 83 (65 görsel + 12 aralık + 6 yarım aralık): Hemen al (1+2) ile Sepete ekle (3) birebir eşit;
-   ad + fiyat 2–3'ü kaplar (390'da 289px, 320'de 219px). Sepete ekle yazısı geri gelir (tema ≤749'da gizliyordu;
-   artık yer var). Yükseklik 12 + 35 + 12 + 65 + 12 + 52 + 12 = 200 (390, ad iki satır). Eski ≤359 «görsel
-   çizilmez» kuralı kalktı: o kural fiyat sütunu 84px'e düştüğü için vardı, yeni düzende sütun 219px. */
-@media (max-width:749px){
-  sticky-add-to-cart[data-variant-available="true"] .sticky-add-to-cart__bar{grid-template-columns:65px calc(50% - 83px) minmax(0,1fr);grid-template-areas:"satir satir satir" "gorsel bilgi bilgi" "gorsel fiyat fiyat" "hemen hemen sepet";column-gap:12px}
-  .sticky-add-to-cart__bar > .vks-satir{margin-bottom:12px !important}
-  .sticky-add-to-cart__hemen{padding:0 16px;font-size:14px;font-weight:700;border-radius:10px;margin-top:12px}
-  sticky-add-to-cart[data-variant-available="true"] .sticky-add-to-cart__button{width:auto;margin-top:12px}
-  sticky-add-to-cart[data-variant-available="true"] .sticky-add-to-cart__bar .add-to-cart-text__content{display:inline}
 }
 
 /* ==================================================================
