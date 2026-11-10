@@ -597,13 +597,18 @@ sticky-add-to-cart[data-variant-available="true"] .sticky-add-to-cart__bar{displ
 /* 750–1023: tek sırada ad sütunu 106px'e düşüyordu (768'de en uzun ad 10 satır, ölçüldü) → ad KENDİ sırasında
    (görselin yanında tam genişlik), fiyat + Hemen al + Sepete ekle altında. Kapsül yüksekliği ~165 olunca köşe eğrisi
    kargo satırı hizasında 34px içeri giriyor → yan boşluk 40 (4px ızgarası). */
+/* #996126 · ayse:888 RET (Ayşe %96, 10 Kas 12:03) — kapsül yarıçapı SABİT. Tema 112px etkin yarıçapı yüksekliğin
+   yarısına eşitliyordu; ad 2–3 satıra inince uçlar büyüyor, yan boşluk sabit kaldığı için köşedeki kargo kamyoneti ve
+   «Sepete ekle» eğriye değiyordu (768'de −0,3 / −1,7 px). ≥1024: 65px (tek satırlı şerit 130,5 → yarısı 65,25:
+   görünüm aynı). 750–1023: 60px — 72'de «Sepete ekle» köşesi 7,5 px kalıyordu; 60 kamyonda 17,6 / düğmede 11,7. */
 @media (min-width:750px) and (max-width:1023px){
-  sticky-add-to-cart[data-variant-available="true"] .sticky-add-to-cart__bar{grid-template-areas:"satir satir satir satir" "gorsel bilgi bilgi bilgi" "gorsel fiyat hemen sepet";padding:16px 40px}
+  sticky-add-to-cart[data-variant-available="true"] .sticky-add-to-cart__bar{grid-template-areas:"satir satir satir satir" "gorsel bilgi bilgi bilgi" "gorsel fiyat hemen sepet";padding:16px 40px;border-radius:60px}
   .sticky-add-to-cart__info{margin-bottom:8px}
   .sticky-add-to-cart__price{align-self:center}
 }
 /* ≥1024: iki düğme eşit ve geniş (176 = 44 × 4); ad sütunu 1280'de 559px, 1024'te 303px kalır. */
 @media (min-width:1024px){
+  sticky-add-to-cart[data-variant-available="true"] .sticky-add-to-cart__bar{border-radius:65px}
   .sticky-add-to-cart__hemen,.sticky-add-to-cart__button{min-width:176px}
 }
 
