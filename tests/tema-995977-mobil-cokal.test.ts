@@ -2,11 +2,11 @@
  * #995977 · ayse:858 iki ayak — (1) via-mobile-app.css ≤749px ÜRÜN DETAY kuralında [class*="product-information"]
  * sızıntısı kalkar, (2) templates/product.cok-al.json equal_columns false→true. Canlıya istek gitmez; paket ölçülür.
  */
-import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { yamaKos } from './tema-ortak';
 
 const KOK = join(__dirname, '..', 'tema-yamalari', '995977-mobil-cokal');
 const oku = (y: string) => readFileSync(join(KOK, y), 'utf8');
@@ -22,8 +22,7 @@ function farklar(a: unknown, b: unknown, yol: string[] = []): string[] {
 }
 // yorumları atılmış CSS: kural metinleri (seçici → gövde) sırayla
 const kurallar = (css: string) => css.replace(/\/\*[\s\S]*?\*\//g, '');
-const pyKos = (kod: string, girdi: string) => execFileSync('python3', ['-I', '-B', '-c',
-  'import sys; sys.path.insert(0, sys.argv[1]); import yama\n' + kod, KOK], { input: girdi, encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] });
+const pyKos = (kod: string, girdi: string) => yamaKos(KOK, kod, girdi);
 
 describe('#995977 paket', () => {
   const cO = oku('ONCESI/assets__via-mobile-app.css'), cS = oku('SONRASI/assets__via-mobile-app.css');

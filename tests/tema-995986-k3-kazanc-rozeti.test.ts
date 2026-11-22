@@ -2,17 +2,18 @@
  * #995986 · ayse:863 KALEM 3 — kazanç rozeti ürün adının üstünde; tutar = compare_at − price; indirim yoksa HİÇ basılmaz.
  * Blok dosyasının kendi Liquid'i küçük bir alt küme yorumlayıcıyla KOŞTURULUR (assign · minus · if > · çıktı).
  */
-import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { lf, yamaKos } from './tema-ortak';
 
 const KOK = join(__dirname, '..', 'tema-yamalari', '995986-k3-kazanc-rozeti');
-const oku = (y: string) => readFileSync(join(KOK, y), 'utf8');
+/** md5.json LF md5 tutar; dosyalar CRLF ile checkout edilmiş olabilir (bkz. kök .gitattributes). */
+const oku = (y: string) => lf(readFileSync(join(KOK, y), 'utf8'));
 const md5 = (s: string) => createHash('md5').update(s, 'utf8').digest('hex');
 const js = (s: string) => JSON.parse(s.slice(s.indexOf('{')));
-const py = (kod: string, girdi: string) => execFileSync('python3', ['-I', '-B', '-c', 'import sys; sys.path.insert(0, sys.argv[1]); import yama\n' + kod, KOK], { input: girdi, encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] });
+const py = (kod: string, girdi: string) => yamaKos(KOK, kod, girdi);
 const BLOK = oku('YENI/blocks__via-kazanc.liquid');
 
 type Ctx = Record<string, unknown>;
@@ -59,7 +60,7 @@ describe('#995986 K3 kazanç rozeti', () => {
     for (const f of ['templates__product.json', 'templates__product.cok-al.json']) {
       const k = f.replace('__', '/'); expect(md5(oku('ONCESI/' + f))).toBe(m[k].once); expect(md5(oku('SONRASI/' + f))).toBe(m[k].sonra);
     }
-    expect(m['templates/product.json'].once).toBe(md5(readFileSync(join(KOK, '..', '995986-k1-kargo-bari', 'SONRASI', 'templates__product.json'), 'utf8')));
+    expect(m['templates/product.json'].once).toBe(md5(lf(readFileSync(join(KOK, '..', '995986-k1-kargo-bari', 'SONRASI', 'templates__product.json'), 'utf8'))));
   });
   it('indirimli ürün (750 → 500): «Kazancınız 250TL» tutarı HESAPLANIR', () => {
     expect(koştur({ variants: { size: 1 }, secili: { price: 50000, compare_at_price: 75000 } })).toMatch(/^<p class="via-kazanc" data-via-kazanc >Kazancınız 250TL<\/p>$/);

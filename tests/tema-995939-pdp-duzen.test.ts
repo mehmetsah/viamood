@@ -2,11 +2,11 @@
  * #995939 · ayse:858 — PDP %50/%50: templates/product.json equal_columns false→true + via-product-overrides.css'te
  * 540px tavanının YALNIZ yarım ızgarada kalkması. Canlıya istek gitmez; tema-yamalari/995939-pdp-duzen paketi ölçülür.
  */
-import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { yamaKos } from './tema-ortak';
 
 const KOK = join(__dirname, '..', 'tema-yamalari', '995939-pdp-duzen');
 const oku = (y: string) => readFileSync(join(KOK, y), 'utf8');
@@ -20,8 +20,7 @@ function farklar(a: unknown, b: unknown, yol: string[] = []): string[] {
   }
   return JSON.stringify(a) === JSON.stringify(b) ? [] : [yol.join('.')];
 }
-const pyKos = (kod: string, girdi: string) => execFileSync('python3', ['-I', '-B', '-c',
-  'import sys; sys.path.insert(0, sys.argv[1]); import yama\n' + kod, KOK], { input: girdi, encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] });
+const pyKos = (kod: string, girdi: string) => yamaKos(KOK, kod, girdi);
 
 describe('#995939 PDP %50/%50 paketi', () => {
   const tO = oku('ONCESI/templates__product.json'), tS = oku('SONRASI/templates__product.json');

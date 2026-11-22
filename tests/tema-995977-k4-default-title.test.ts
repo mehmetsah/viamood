@@ -2,17 +2,16 @@
  * #995977 kalem 4 — tek varyantlı ürün varyant seçiciyi BASMAZ (snippets/variant-main-picker.liquid satır 12).
  * Canlıya istek gitmez; paket ölçülür. Liquid koşulu küçük bir yorumlayıcıyla üç ürün tipinde koşturulur.
  */
-import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { yamaKos } from './tema-ortak';
 
 const KOK = join(__dirname, '..', 'tema-yamalari', '995977-k4-default-title');
 const oku = (y: string) => readFileSync(join(KOK, y), 'utf8');
 const md5 = (s: string) => createHash('md5').update(s, 'utf8').digest('hex');
-const pyKos = (kod: string, girdi: string) => execFileSync('python3', ['-I', '-B', '-c',
-  'import sys; sys.path.insert(0, sys.argv[1]); import yama\n' + kod, KOK], { input: girdi, encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] });
+const pyKos = (kod: string, girdi: string) => yamaKos(KOK, kod, girdi);
 
 type Urun = { has_only_default_variant: boolean; variants: { size: number } };
 /** Dosyanın İLK `{% unless … %}` koşulunu okur ve ürün için değerlendirir: true ⇒ seçici BASILIR. */
