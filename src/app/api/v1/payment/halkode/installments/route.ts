@@ -11,12 +11,14 @@
  *
  * ⚠️ Halköde'nin `hash_key` alanı yanıttan ÇIKARILIR — istemciye gitmesine gerek yok.
  * ⚠️ Bu uç yalnızca BIN (ilk 6 hane) alır; tam kart numarası KABUL EDİLMEZ.
+ * ⚠️ 1.000 TL ALTINDA yanıtta yalnız tek çekim (1) döner — taksit gösterilmez
+ *    (src/lib/halkode/taksit-tavan.ts, HALKODE_TAKSIT_ALT_SINIR_TL ile ayarlanır).
  */
 import { NextResponse, type NextRequest } from 'next/server';
 import { getAllowedOrigins } from '@/lib/cors';
 import { env } from '@/lib/env';
 import { getToken, getPos, halkodeConfigured, halkodeEnabled, odemeOrtami } from '@/lib/halkode/client';
-import { taksitGecerli } from '@/lib/halkode/taksit-tavan';
+import { taksitSecilebilir } from '@/lib/halkode/taksit-tavan';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -77,10 +79,16 @@ export async function POST(req: NextRequest) {
   return NextResponse.json(
     {
       ok: true,
-      // Tavan BURADA uygulanır (otorite uç). Yunus 29 Eyl: "3 taksit ile sınırlayalım".
-      // Süzgeç listeyi yalnız DARALTIR — API'de olmayan taksit üretilmez.
+      // Tavan ve ALT SINIR burada uygulanır. Yunus 29 Eyl: "3 taksit ile sınırlayalım";
+      // 22 Kas 2026: 1.000 TL altında taksit yok, yalnız tek çekim (taksit-tavan.ts).
+      // Süzgeç listeyi yalnız DARALTIR — API'de olmayan taksit üretilmez. Alt sınırın
+      // altında tek çekim (1) listede KALIR; BOŞ liste dönmeyiz, çünkü tema boş listede
+      // "ilk 6 haneyi girince listelenir" cümlesine düşüyor — müşteri haneleri GİRMİŞKEN
+      // bunu görmesi yanlış olurdu.
+      // ⚠ Buradaki `amount` İSTEMCİDEN gelir ve sunucuda doğrulanmaz; bu uç GÖSTERİM
+      // kapısıdır. Otorite initialize'dır: tutarı kendisi hesaplar (sepet + kargo − indirim).
       installments: pos.installments
-        .filter((i) => taksitGecerli(i.installments_number))
+        .filter((i) => taksitSecilebilir(i.installments_number, amount))
         .map((i) => ({
         installments_number: i.installments_number,
         amount_to_be_paid: i.amount_to_be_paid,

@@ -39,7 +39,12 @@ import {
 import { halkodeOnizlemeOrtami } from '@/lib/halkode/preview';
 import { kalemAdiKirp } from '@/lib/halkode/kalem-adi';
 import { kalemleriHizala } from '@/lib/halkode/kalem-hizala';
-import { MAKS_TAKSIT, taksitGecerli } from '@/lib/halkode/taksit-tavan';
+import {
+  MAKS_TAKSIT,
+  TAKSIT_ALT_SINIR_TL,
+  taksitSecilebilir,
+  taksitTutariYeterli,
+} from '@/lib/halkode/taksit-tavan';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -299,13 +304,26 @@ export async function POST(req: NextRequest) {
   // olarak doğmadığı için ürün kodu yoluyla tetiklenemiyor, dolayısıyla Okan'ın
   // `sapmaKurus = 0` mutasyonu hiçbir iddiayı kırmıyordu (26 Eyl denetimi, MUT-E).
   // Davranış AYNI; değişen tek şey ölçülebilirlik.
-  // Taksit tavanı — Yunus 29 Eyl (acil). 3'ten büyük gelirse SESSİZCE 3'e düşürmüyoruz:
-  // müşteri 12 taksit seçtiğini sanıp 3 taksitlik tutarla karşılaşırdı. Açıkça reddediyoruz.
-  // Bu kapı, listeyi süzen installments ucunun YEDEĞİ — istemci elle 12 gönderebilir.
-  if (body.installments_number != null && !taksitGecerli(body.installments_number)) {
+  // Taksit kapısı — tavan (Yunus 29 Eyl, acil) + ALT SINIR (Yunus 22 Kas 2026).
+  // Sınırı aşan istek SESSİZCE düşürülmez: müşteri 3 taksit seçtiğini sanıp tek çekim
+  // tutarıyla karşılaşırdı. Açıkça reddediyoruz.
+  // Bu kapı, listeyi süzen installments ucunun YEDEĞİ değil OTORİTESİ: o uç tutarı
+  // istemciden alır, burası `totalTl`yi kendisi hesaplar (sepet + kargo − indirim;
+  // indirim sunucuda doğrulanmış). İstemci elle 12 taksit de, 999 TL'ye 3 taksit de
+  // gönderebilir — ikisi de burada durur.
+  if (body.installments_number != null && !taksitSecilebilir(body.installments_number, totalTl)) {
+    const altSinir = !taksitTutariYeterli(totalTl);
     return NextResponse.json(
-      { ok: false, error: 'gecersiz_taksit_sayisi', detail: `Taksit sayısı en fazla ${MAKS_TAKSIT} olabilir.` },
-      { status: 422 },
+      {
+        ok: false,
+        error: altSinir ? 'taksit_alt_siniri' : 'gecersiz_taksit_sayisi',
+        detail: altSinir
+          ? `${TAKSIT_ALT_SINIR_TL.toLocaleString('tr-TR')} TL altındaki siparişlerde taksit yapılamaz; tek çekim seçin.`
+          : `Taksit sayısı en fazla ${MAKS_TAKSIT} olabilir.`,
+      },
+      // ⚠ `headers` ŞART: başlıksız 422 tarayıcıda CORS'a takılır, tema gövdeyi hiç
+      // okuyamaz, müşteri "Bağlantı hatası" görürdü. Bu yanıtta eksikti (ölçüldü).
+      { status: 422, headers },
     );
   }
 

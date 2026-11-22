@@ -52,17 +52,20 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 describe('taksit tavanı uçlarda GERÇEKTEN bağlı', () => {
-  it('installments ucu listeyi taksitGecerli ile süzüyor', () => {
+  /* 22 Kas 2026 — alt sınır eklenince iki uç da TEK kapıya (`taksitSecilebilir`) geçti.
+     Çivinin AMACI değişmedi: kural kaynakta gerçekten çağrılıyor mu? Yalnız çağrı şekli
+     güncellendi. Tavanın kendisi hiç değişmedi — onu yukarıdaki birim testler ölçüyor. */
+  it('installments ucu listeyi taksitSecilebilir ile süzüyor', () => {
     const src = readFileSync(join(process.cwd(), 'src/app/api/v1/payment/halkode/installments/route.ts'), 'utf8');
     expect(src).toContain("from '@/lib/halkode/taksit-tavan'");
-    expect(src).toMatch(/\.filter\(\s*\(i\)\s*=>\s*taksitGecerli\(i\.installments_number\)\s*\)/);
+    expect(src).toMatch(/\.filter\(\s*\(i\)\s*=>\s*taksitSecilebilir\(i\.installments_number,\s*amount\)\s*\)/);
   });
 
   it('initialize ucu tavanı aşan isteği reddediyor', () => {
     const src = readFileSync(join(process.cwd(), 'src/app/api/v1/payment/halkode/initialize/route.ts'), 'utf8');
     expect(src).toContain("from '@/lib/halkode/taksit-tavan'");
     expect(src).toContain('gecersiz_taksit_sayisi');
-    expect(src).toMatch(/!taksitGecerli\(body\.installments_number\)/);
+    expect(src).toMatch(/!taksitSecilebilir\(body\.installments_number,\s*totalTl\)/);
     expect(src).toContain('status: 422');
   });
 });
