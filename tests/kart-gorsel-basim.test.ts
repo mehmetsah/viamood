@@ -15,6 +15,7 @@ import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { PYTHON } from './tema-ortak';
 
 const P = path.join(__dirname, '..', 'tema-yamalari', '995332-kart-gorsel');
 const SAHTE = path.join(__dirname, 'kart-gorsel-basim.sahte.py');
@@ -53,7 +54,7 @@ const SON_SONRASI = { [JS]: 'sonra', [CSS]: 'sonra', [KOL]: 'sonra', [LAY]: 'son
 
 const kos = (s: Senaryo): Sonuc => {
   const r = JSON.parse(
-    execFileSync('python3', [SAHTE, P, JSON.stringify(s)], {
+    execFileSync(PYTHON, [SAHTE, P, JSON.stringify(s)], {
       encoding: 'utf8',
       env: { ...process.env, PYTHONDONTWRITEBYTECODE: '1' }, // tema-yamalari altına __pycache__ bırakmaz
     }),

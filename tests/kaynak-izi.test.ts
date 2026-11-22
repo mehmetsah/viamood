@@ -20,6 +20,7 @@ import {
   taslakKaynakAlanlari,
   yonlendirenKaynagi,
 } from '../src/lib/kaynak/kaynak-izi';
+import { PYTHON, lf } from './tema-ortak';
 
 const KOK = path.resolve(__dirname, '..');
 const JS = readFileSync(path.join(KOK, 'tema-yamalari/994887-kaynak-izi/via-kaynak-izi.js'), 'utf8');
@@ -245,8 +246,10 @@ describe('beş sipariş yolu kaynağı Shopify\'a yazar', () => {
       path.join(once, 'sections__via-checkout.liquid'),
       readFileSync(path.join(KOK, 'tema-yamalari/via-checkout.liquid.994773-VCO-IZGARA-SONRASI')),
     );
-    execFileSync('python3', [path.join(KOK, 'tema-yamalari/994887-kaynak-izi/yama.py'), once, sonra]);
-    const snip = readFileSync(path.join(sonra, 'snippets__via-kaynak-izi.liquid'), 'utf8');
+    execFileSync(PYTHON, [path.join(KOK, 'tema-yamalari/994887-kaynak-izi/yama.py'), once, sonra]);
+    // 994887'nin yama.py'si dosyayı metin kipinde yazar → Windows'ta CRLF düşer.
+    // Kanonik biçim LF (bkz. kök .gitattributes); karşılaştırma öncesi indiriyoruz.
+    const snip = lf(readFileSync(path.join(sonra, 'snippets__via-kaynak-izi.liquid'), 'utf8'));
     expect(snip).toBe(`<script>\n${JS}</script>\n`);
     expect(snip, 'Liquid ayıracı script içine sızarsa tema render bozulur').not.toMatch(/\{\{|\{%/);
     const tema = readFileSync(path.join(sonra, 'layout__theme.liquid'), 'utf8');

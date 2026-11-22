@@ -10,6 +10,7 @@ import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { PYTHON, lf } from './tema-ortak';
 
 const P = path.join(__dirname, '..', 'tema-yamalari', '995628-faqpage-jsonld');
 const oku = (f: string) => readFileSync(path.join(P, f), 'utf8');
@@ -36,7 +37,7 @@ describe('paket ve md5', () => {
     expect(M['snippets/via-product-tabs.liquid']).toEqual({ once: md5(ONCE), sonra: md5(SONRA) });
   });
   it('yama.py: uygula(ÖNCESİ) = SONRASI; ikinci uygulama ve çapasız dosya REDDEDİLİR', () => {
-    const py = (kod: string) => execFileSync('python3', ['-c', `import sys; sys.path.insert(0, ${JSON.stringify(P)}); import yama\n${kod}`], { encoding: 'utf8', env: { ...process.env, PYTHONDONTWRITEBYTECODE: '1' } });
+    const py = (kod: string) => lf(execFileSync(PYTHON, ['-c', `import sys; sys.path.insert(0, ${JSON.stringify(P)}); import yama\n${kod}`], { encoding: 'utf8', env: { ...process.env, PYTHONDONTWRITEBYTECODE: '1' } }));
     expect(md5(py(`import sys; sys.stdout.write(yama.uygula('snippets/via-product-tabs.liquid', open(${JSON.stringify(path.join(P, 'ONCESI/snippets__via-product-tabs.liquid'))}, encoding='utf-8').read()))`))).toBe(md5(SONRA));
     expect(() => py(`yama.uygula('snippets/via-product-tabs.liquid', open(${JSON.stringify(path.join(P, 'SONRASI/snippets__via-product-tabs.liquid'))}, encoding='utf-8').read())`)).toThrow();
     expect(() => py(`yama.uygula('snippets/via-product-tabs.liquid', 'çapa yok')`)).toThrow();

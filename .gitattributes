@@ -1,0 +1,10 @@
+# #995986 k3b — tema yamalarinda satir sonu DISIPLINI.
+# Bu depoda core.autocrlf=true: git blob'lari LF tutuyor ama calisma kopyasi CRLF'e
+# cevriliyordu. tema-yamalari/ altindaki ONCESI/SONRASI anlik goruntuleri Shopify'a
+# BAYT BAYT gidiyor ve md5 kapilari o baytlar uzerinden kuruluyor -> calisma kopyasi
+# da LF olmak ZORUNDA. (Blob'lar zaten LF oldugu icin bu kural commit edilen icerigi
+# DEGISTIRMEZ; yalniz checkout'u sabitler.) Testler de ayni dosyalari okudugu icin
+# tests/ ayni kurala bagli.
+tema-yamalari/**  text eol=lf
+tests/**          text eol=lf
+.gitattributes    text eol=lf

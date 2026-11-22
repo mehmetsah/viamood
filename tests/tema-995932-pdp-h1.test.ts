@@ -3,11 +3,11 @@
  * Canlıya istek gitmez; tema-yamalari/995932-pdp-h1 paketi ölçülür. Çivi: farkın TEK JSON yolu ve TEK satır olması,
  * paketteki yama.py'nin ÖNCESİ'nden SONRASI'nı bayt bayt üretmesi ve md5 kütüğünün dosyalarla tutması.
  */
-import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { yamaKos } from './tema-ortak';
 
 const KOK = join(__dirname, '..', 'tema-yamalari', '995932-pdp-h1');
 const oku = (y: string) => readFileSync(join(KOK, y), 'utf8');
@@ -55,16 +55,15 @@ describe('#995932 PDP h1 ön ayarı', () => {
   });
 
   it('yama.py ÖNCESİ\'nden SONRASI\'nı bayt bayt üretiyor ve ikinci uygulamayı reddediyor', () => {
-    const kos = (girdi: string) => execFileSync('python3', ['-I', '-B', '-c',
-      'import sys; sys.path.insert(0, sys.argv[1]); import yama; sys.stdout.write(yama.uygula(yama.K, sys.stdin.read()))', KOK],
-      { input: girdi, encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] });
+    const kos = (girdi: string) =>
+      yamaKos(KOK, 'sys.stdout.write(yama.uygula(yama.K, sys.stdin.read()))', girdi);
     expect(md5(kos(once))).toBe(md5(sonra));
     expect(() => kos(sonra)).toThrow(/çapa 0 kez/);
   });
 
   it('yama.py yapısal kapısı: çapa tutsa bile ikinci bir JSON alanı değişirse yazmaz', () => {
-    expect(() => execFileSync('python3', ['-I', '-B', '-c',
-      'import sys; sys.path.insert(0, sys.argv[1]); import yama; yama.YENI = yama.YENI.replace(\'"left"\', \'"center"\'); yama.uygula(yama.K, sys.stdin.read())', KOK],
-      { input: once, encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] })).toThrow(/beklenmeyen JSON farkı/);
+    expect(() => yamaKos(KOK,
+      'yama.YENI = yama.YENI.replace(\'"left"\', \'"center"\'); yama.uygula(yama.K, sys.stdin.read())',
+      once)).toThrow(/beklenmeyen JSON farkı/);
   });
 });

@@ -1,9 +1,9 @@
 /** #995986 · ayse:863 KALEM 1 — «24 saat içinde kargoda» barı basılmaz (vm_rozet_2 disabled). Canlıya istek yok; paket ölçülür. */
-import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { yamaKos } from './tema-ortak';
 
 const KOK = join(__dirname, '..', 'tema-yamalari', '995986-k1-kargo-bari');
 const oku = (y: string) => readFileSync(join(KOK, y), 'utf8');
@@ -11,7 +11,7 @@ const md5 = (s: string) => createHash('md5').update(s, 'utf8').digest('hex');
 const js = (s: string) => JSON.parse(s.slice(s.indexOf('{')));
 type B = { type: string; disabled?: boolean; settings?: Record<string, unknown>; blocks?: Record<string, B>; block_order?: string[] };
 const pd = (o: { sections: { main: { blocks: Record<string, B> } } }) => o.sections.main.blocks['product-details'] as B;
-const py = (kod: string, girdi: string) => execFileSync('python3', ['-I', '-B', '-c', 'import sys; sys.path.insert(0, sys.argv[1]); import yama\n' + kod, KOK], { input: girdi, encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] });
+const py = (kod: string, girdi: string) => yamaKos(KOK, kod, girdi);
 
 describe('#995986 K1 kargo barı', () => {
   const o = oku('ONCESI/templates__product.json'), s = oku('SONRASI/templates__product.json');

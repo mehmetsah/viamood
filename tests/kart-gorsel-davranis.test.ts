@@ -14,6 +14,7 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { FIKSTUR, izler, type Iz } from './kart-gorsel-davranis.kosum';
+import { PYTHON } from './tema-ortak';
 
 const P = path.join(__dirname, '..', 'tema-yamalari', '995332-kart-gorsel');
 const JS = readFileSync(path.join(P, 'YENI', 'assets__via-kart-gorsel.js'), 'utf8');
@@ -128,7 +129,7 @@ describe('#995332 E8 · via-kart-gorsel.js davranışı', () => {
 
 /** yama.py'yi gerçek dosyalarla koşturur. Çıktı TEK satır JSON olmalı: `import yama` yan etkisiz (üreteci koşturmaz, yazmaz). */
 const yama = (kod: string) => {
-  const cikis = execFileSync('python3', ['-c', `import sys, json, hashlib\nsys.path.insert(0, ${JSON.stringify(P)})\nimport yama\n${kod}`], {
+  const cikis = execFileSync(PYTHON, ['-c', `import sys, json, hashlib\nsys.path.insert(0, ${JSON.stringify(P)})\nimport yama\n${kod}`], {
     encoding: 'utf8',
     env: { ...process.env, PYTHONDONTWRITEBYTECODE: '1' }, // tema-yamalari altına __pycache__ bırakmaz
   });
@@ -191,14 +192,19 @@ print(json.dumps(out))`);
 
   it('üreteç: `python3 yama.py` geçici kopyada paketi BİREBİR yeniden üretir (md5.json + SONRASI)', () => {
     const r = yama(`
-import os, shutil, tempfile, filecmp
+import os, shutil, tempfile
 B = ${JSON.stringify(P)}
 T = tempfile.mkdtemp()
 for d in ['ONCESI', 'YENI']: shutil.copytree(B + '/' + d, T + '/' + d)
 for f in ['yama.py', 'ek-blok.css']: shutil.copy(B + '/' + f, T + '/' + f)
 import subprocess
 subprocess.run([sys.executable, T + '/yama.py'], check=True, capture_output=True)
-ayni = [filecmp.cmp(B + '/md5.json', T + '/md5.json', shallow=False)] + [filecmp.cmp(B + '/SONRASI/' + f, T + '/SONRASI/' + f, shallow=False) for f in sorted(os.listdir(B + '/SONRASI'))]
+# Bayt bayt, ama satir sonu KANONIK LF'e indirilerek: 995332'nin yama.py'si dosyayi metin
+# kipinde yazar, bu yuzden Windows'ta CRLF uretir (depodaki kopya LF; kok .gitattributes).
+def esit(a, b):
+    oku = lambda p: open(p, 'rb').read().replace(b'\\r\\n', b'\\n').replace(b'\\r', b'\\n')
+    return oku(a) == oku(b)
+ayni = [esit(B + '/md5.json', T + '/md5.json')] + [esit(B + '/SONRASI/' + f, T + '/SONRASI/' + f) for f in sorted(os.listdir(B + '/SONRASI'))]
 shutil.rmtree(T)
 print(json.dumps(ayni))`);
     expect(r).toEqual([true, true, true, true]);

@@ -1,16 +1,16 @@
 /** #996126 · ayse:888 — ürün sayfası sabit satın alma şeridi, YALNIZ MASAÜSTÜ (≥750; Yunus 9 Kas 11:20 «Sadece Pc için»).
  *  Bu tur: Ayşe RET %96 (10 Kas 12:03) — kapsül yarıçapı sabit (750–1023: 60px [ŞAH kararı; 72'de «Sepete ekle» 7,5 px] ·
  *  ≥1024: 65px). Telefon (≤749) canlıda birebir aynı kalmalı. Canlıya istek yok; paket ölçülür. */
-import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { yamaKos } from './tema-ortak';
 
 const KOK = join(__dirname, '..', 'tema-yamalari', '996126-sabit-serit');
 const oku = (y: string) => readFileSync(join(KOK, y), 'utf8');
 const md5 = (s: string) => createHash('md5').update(s, 'utf8').digest('hex');
-const py = (kod: string, girdi: string) => execFileSync('python3', ['-I', '-B', '-c', 'import sys; sys.path.insert(0, sys.argv[1]); import yama\n' + kod, KOK], { input: girdi, encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] });
+const py = (kod: string, girdi: string) => yamaKos(KOK, kod, girdi);
 const F = 'assets__via-product-overrides.css';
 const ILK_CANLI = '69d89501771c3eed2f23008efe40044e'; // #996126'dan önceki canlı: telefon bu hâlde kalır
 const yorumsuz = (s: string) => s.replace(/\/\*[\s\S]*?\*\//g, '');

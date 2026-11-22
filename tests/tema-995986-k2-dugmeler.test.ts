@@ -1,14 +1,14 @@
 /** #995986 · ayse:863 KALEM 2 — Hemen al SOL + Sepete ekle SAĞ (aynı çift), WhatsApp dolgulu. Canlıya istek yok; paket ölçülür. */
-import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { yamaKos } from './tema-ortak';
 
 const KOK = join(__dirname, '..', 'tema-yamalari', '995986-k2-dugmeler');
 const oku = (y: string) => readFileSync(join(KOK, y), 'utf8');
 const md5 = (s: string) => createHash('md5').update(s, 'utf8').digest('hex');
-const py = (kod: string, girdi: string) => execFileSync('python3', ['-I', '-B', '-c', 'import sys; sys.path.insert(0, sys.argv[1]); import yama\n' + kod, KOK], { input: girdi, encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] });
+const py = (kod: string, girdi: string) => yamaKos(KOK, kod, girdi);
 const D = { bb: 'blocks__buy-buttons.liquid', se: 'snippets__via-satinal-ek.liquid', css: 'assets__via-product-overrides.css' };
 const sat = (s: string) => s.split('\n');
 
